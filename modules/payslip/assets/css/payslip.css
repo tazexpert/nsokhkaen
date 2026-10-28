@@ -19,7 +19,23 @@
   color: rgba(220, 38, 38, .18); border: 6px solid rgba(220, 38, 38, .18); padding: 4px 24px; border-radius: 12px; pointer-events: none; white-space: nowrap; }
 .pay-table td, .pay-table th { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .pay-table td.num, .pay-table th.num { text-align: right; }
+/* พิมพ์: ขนาด/ตำแหน่งเท่าสลิปเดิม (ตัวอักษรเล็ก กว้างประมาณครึ่งหน้า A4 จัดกึ่งกลาง) */
+@page { size: A4; margin: 12mm; }
 @media print {
-  .payslip { border: 0; padding: 0; max-width: none; font-size: 15pt; }
   body { background: #fff; }
+  .content, .content-body { padding: 0 !important; margin: 0 !important; }
+  .ps-wrap { flex: 0 0 100% !important; max-width: 100% !important; width: 100% !important; }
+  .payslip { width: 112mm; max-width: none; margin: 26mm auto 0 !important; border: 0; border-radius: 0; padding: 0;
+    font-family: 'Prompt', 'Sarabun', sans-serif; font-weight: 300; font-size: 8.5pt; line-height: 1.55; color: #000; }
+  .payslip .ps-head { margin-bottom: 8px; line-height: 1.6; }
+  .payslip .ps-title { font-size: 8.5pt; font-weight: 400; }
+  .payslip .ps-table th, .payslip .ps-table tr.fw-bold td, .payslip .ps-table tr.ps-net td { font-weight: 500; }
+  .payslip .ps-table td { padding: 0; }
+  .payslip .ps-table td:first-child { padding-left: 0; }
+  .payslip .ps-table .amt { width: 28mm; }
+  .payslip .ps-table .unit { width: 14mm; text-align: center; }
+  .payslip .ps-table tr.ps-net td { border-top: 0; padding-top: 6px; }
+  .payslip .ps-sign { margin-top: 22px; line-height: 1.6; }
+  .payslip .sig-img { height: 34px; }
+  .payslip .ps-draft { font-size: 2rem; }
 }

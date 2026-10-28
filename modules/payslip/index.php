@@ -48,7 +48,7 @@ require __DIR__ . '/header.php';
         </div>
       </div>
     </div>
-    <div class="col-lg-9"><?= pay_render_slip($slip, $emp['code']) ?></div>
+    <div class="col-lg-9 ps-wrap"><?= pay_render_slip($slip, $emp['code']) ?></div>
   </div>
 <?php endif; ?>
 <?php require __DIR__ . '/footer.php'; ?>
