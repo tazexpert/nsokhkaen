@@ -151,11 +151,13 @@ section{padding:48px 0 0}
 @media(max-width:980px){.side{position:static}}
 .side .loc-panel{padding:0;overflow:hidden}
 .side .staff{grid-template-columns:1fr;gap:12px}
-.side .person{padding:20px 18px;min-height:128px;align-items:center;gap:16px}
-.side .person .ph{width:88px;height:88px;font-size:2.2rem}
-.side .person h3{font-size:1.05rem;margin-bottom:2px}
-.side .person .pos{margin-bottom:6px}
-.side .person .c{gap:2px}
+/* คอลัมน์ขวา: รูปใหญ่ด้านบน ชื่อใต้รูป (จัดกึ่งกลาง) */
+.side .person{flex-direction:column;align-items:center;text-align:center;padding:22px 18px;gap:12px}
+.side .person .ph{width:132px;height:132px;font-size:3.4rem;border-width:4px}
+.side .person a.ph-link{display:block;border-radius:50%;cursor:zoom-in}
+.side .person h3{font-size:1.25rem;margin-bottom:2px}
+.side .person .pos{font-size:.95rem;margin-bottom:6px}
+.side .person .c{gap:2px;align-items:center;font-size:.95rem}
 #centerMap{height:280px}
 .info-list{list-style:none;margin:0;padding:18px 22px}
 .info-list li{display:flex;gap:12px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:.95rem}
