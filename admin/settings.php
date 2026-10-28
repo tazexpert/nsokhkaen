@@ -88,4 +88,24 @@ require APP_ROOT . '/core/layout/header.php';
     <span class="ms-auto">เวอร์ชันโค้ด: <code><?= $ver ? h(substr(trim($ver), 0, 7)) : 'ไม่ทราบ (ไม่ได้ติดตั้งด้วย git)' ?></code></span>
   </div>
 </div>
+
+<?php
+// ข้อมูลสำหรับตรวจปัญหาการติดตั้ง (เช่น เพิ่มระบบใหม่แล้วไม่แสดง)
+$opc = function_exists('opcache_get_status') ? @opcache_get_status(false) : false;
+$dirs = array_map('basename', glob(APP_ROOT . '/modules/*', GLOB_ONLYDIR) ?: []);
+?>
+<details class="card mt-3" style="max-width:760px">
+  <summary class="card-header"><strong><i class="bi bi-wrench"></i> ข้อมูลตรวจสอบการติดตั้ง</strong></summary>
+  <div class="card-body small">
+    <dl class="row mb-0">
+      <dt class="col-sm-4">โฟลเดอร์โปรแกรม</dt><dd class="col-sm-8"><code><?= h(APP_ROOT) ?></code></dd>
+      <dt class="col-sm-4">โฟลเดอร์ใน modules/</dt><dd class="col-sm-8"><code><?= h(implode(', ', $dirs) ?: '-') ?></code></dd>
+      <dt class="col-sm-4">ระบบที่โหลดได้</dt><dd class="col-sm-8"><code><?= h(implode(', ', array_keys(modules()))) ?></code></dd>
+      <dt class="col-sm-4">PHP</dt><dd class="col-sm-8"><?= h(PHP_VERSION) ?> · <?= h(PHP_OS_FAMILY) ?></dd>
+      <dt class="col-sm-4">OPcache</dt><dd class="col-sm-8"><?= $opc && !empty($opc['opcache_enabled'])
+          ? 'เปิด · ตรวจไฟล์ใหม่ ' . (ini_get('opcache.validate_timestamps') ? 'ทุก ' . (int)ini_get('opcache.revalidate_freq') . ' วินาที' : '<strong class="text-danger">ปิด — ต้องรีสตาร์ต Apache หลังอัปเดตโค้ด</strong>')
+          : 'ปิด' ?></dd>
+    </dl>
+  </div>
+</details>
 <?php require APP_ROOT . '/core/layout/footer.php'; ?>
