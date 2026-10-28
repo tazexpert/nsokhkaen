@@ -60,6 +60,32 @@ require APP_ROOT . '/core/layout/header.php';
       </li>
     <?php endforeach; ?>
   </ul>
-  <div class="card-footer small text-muted">เพิ่มระบบใหม่: สร้างโฟลเดอร์ใน <code>modules/</code> พร้อมไฟล์ <code>module.php</code> (ดู docs/ARCHITECTURE.md)</div>
+  <?php
+  // โฟลเดอร์ระบบที่อ่านไม่ได้ (ไม่มี module.php หรือไฟล์ไม่ถูกต้อง) — ช่วยตรวจเมื่ออัปเดตโค้ดไม่ครบ
+  $broken = array_filter(glob(APP_ROOT . '/modules/*', GLOB_ONLYDIR) ?: [], fn($d) => !isset(modules()[basename($d)]));
+  // เวอร์ชันโค้ด (commit ของ git) — ใช้ตรวจว่าเซิร์ฟเวอร์อัปเดตโค้ดล่าสุดแล้วหรือยัง
+  $ver = null;
+  $head = @file_get_contents(APP_ROOT . '/.git/HEAD');
+  if ($head !== false) {
+      $head = trim($head);
+      if (str_starts_with($head, 'ref: ')) {
+          $ref = substr($head, 5);
+          $ver = @file_get_contents(APP_ROOT . '/.git/' . $ref);
+          if ($ver === false && preg_match('/^([0-9a-f]{40}) ' . preg_quote($ref, '/') . '$/m', (string)@file_get_contents(APP_ROOT . '/.git/packed-refs'), $mm)) {
+              $ver = $mm[1];
+          }
+      } else {
+          $ver = $head;
+      }
+  }
+  ?>
+  <?php foreach ($broken as $d): ?>
+    <div class="list-group-item list-group-item-warning small"><i class="bi bi-exclamation-triangle"></i> โฟลเดอร์ <code>modules/<?= h(basename($d)) ?>/</code>
+      ไม่มีไฟล์ module.php หรือไฟล์ไม่ถูกต้อง — ระบบนี้จึงไม่แสดง (ตรวจว่าอัปโหลดไฟล์ครบ)</div>
+  <?php endforeach; ?>
+  <div class="card-footer small text-muted d-flex flex-wrap gap-2">
+    <span>เพิ่มระบบใหม่: สร้างโฟลเดอร์ใน <code>modules/</code> พร้อมไฟล์ <code>module.php</code> (ดู docs/ARCHITECTURE.md)</span>
+    <span class="ms-auto">เวอร์ชันโค้ด: <code><?= $ver ? h(substr(trim($ver), 0, 7)) : 'ไม่ทราบ (ไม่ได้ติดตั้งด้วย git)' ?></code></span>
+  </div>
 </div>
 <?php require APP_ROOT . '/core/layout/footer.php'; ?>
