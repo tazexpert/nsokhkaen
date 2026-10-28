@@ -14,6 +14,9 @@ $pageTitle = $pageTitle ?? APP_NAME;
 $module = $module ?? null;
 $active = $active ?? '';
 $navMods = $user ? accessible_modules($user) : [];   // ชื่อเฉพาะ — กันชนกับตัวแปรของหน้าที่เรียก (เช่น $mods ในหน้าผู้ใช้งาน)
+// มีมากกว่า 5 ระบบ: แสดง 4 ระบบแรก (ตามลำดับที่ผู้ใช้จัด) ที่เหลือรวมในเมนู "ระบบอื่นๆ"
+$navMore = count($navMods) > 5 ? array_slice($navMods, 4, null, true) : [];
+$navMain = $navMore ? array_slice($navMods, 0, 4, true) : $navMods;
 $cur = $module ? module_def($module) : null;
 $notifs = $user ? user_notifications($user) : [];
 $unread = $user ? unread_notification_count($notifs, $user) : 0;
@@ -65,13 +68,13 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
           <div class="notif-head"><strong><i class="bi bi-bell"></i> การแจ้งเตือน</strong>
             <?php if ($notifs): ?><span class="small text-muted"><?= count($notifs) ?> รายการ</span><?php endif; ?></div>
           <div class="notif-list">
-            <?php foreach ($notifs as $n): $isNew = !$user['notif_seen_at'] || $n['time'] > $user['notif_seen_at']; ?>
-              <a class="notif-item<?= $isNew ? ' is-new' : '' ?>" href="<?= h($n['href']) ?>">
-                <span class="notif-icon text-bg-<?= h($n['color']) ?>"><i class="bi <?= h($n['icon']) ?>"></i></span>
+            <?php foreach ($notifs as $__n): $__isNew = !$user['notif_seen_at'] || $__n['time'] > $user['notif_seen_at']; ?>
+              <a class="notif-item<?= $__isNew ? ' is-new' : '' ?>" href="<?= h($__n['href']) ?>">
+                <span class="notif-icon text-bg-<?= h($__n['color']) ?>"><i class="bi <?= h($__n['icon']) ?>"></i></span>
                 <span class="min-w-0">
-                  <span class="d-block fw-semibold"><?= h($n['title']) ?></span>
-                  <?php if ($n['text'] !== ''): ?><span class="d-block small text-muted"><?= h($n['text']) ?></span><?php endif; ?>
-                  <span class="d-block notif-time"><?= h(time_ago($n['time'])) ?></span>
+                  <span class="d-block fw-semibold"><?= h($__n['title']) ?></span>
+                  <?php if ($__n['text'] !== ''): ?><span class="d-block small text-muted"><?= h($__n['text']) ?></span><?php endif; ?>
+                  <span class="d-block notif-time"><?= h(time_ago($__n['time'])) ?></span>
                 </span>
               </a>
             <?php endforeach; ?>
@@ -91,6 +94,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
         <ul class="dropdown-menu dropdown-menu-end shadow">
           <li class="dropdown-header"><?= h($user['full_name']) ?><?php if ($user['username']): ?><br><small class="font-monospace"><?= h($user['username']) ?></small><?php endif; ?></li>
           <li><a class="dropdown-item<?= $navActive(!$module && $active === 'account') ?>" href="<?= h(url('account.php')) ?>"><i class="bi bi-person-gear"></i> บัญชีของฉัน</a></li>
+          <li><a class="dropdown-item" href="<?= h(url('index.php#arrange')) ?>"><i class="bi bi-arrows-move"></i> จัดเรียงเมนูระบบ</a></li>
           <li><hr class="dropdown-divider"></li>
           <li><a class="dropdown-item text-danger" href="<?= h(url('logout.php')) ?>"><i class="bi bi-box-arrow-right"></i> <?= $user['via_pin'] ? 'เปลี่ยนผู้ใช้' : 'ออกจากระบบ' ?></a></li>
         </ul>
@@ -103,22 +107,39 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
     <div class="collapse navbar-collapse" id="mainNav">
       <ul class="navbar-nav me-auto">
         <li class="nav-item"><a class="nav-link<?= $navActive(!$module && $active === 'home') ?>" href="<?= h(url('index.php')) ?>"><i class="bi bi-house-door"></i> หน้าหลัก</a></li>
-        <?php foreach ($navMods as $m): $isCur = $module === $m['key']; ?>
+        <?php foreach ($navMain as $__m): $__isCur = $module === $__m['key']; ?>
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle<?= $navActive($isCur) ?>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <?= module_logo($m, 22, 'me-1') ?> <?= h($m['short']) ?></a>
+            <a class="nav-link dropdown-toggle<?= $navActive($__isCur) ?>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <?= module_logo($__m, 22, 'me-1') ?> <?= h($__m['short']) ?></a>
             <ul class="dropdown-menu shadow">
-              <li class="dropdown-header"><?= h($m['name']) ?></li>
-              <?php foreach ($m['menu'] as $item): if (!user_can($m['key'], $item['role'] ?? '', $user)) continue; ?>
-                <li><a class="dropdown-item<?= $navActive($isCur && $active === $item['id']) ?>" href="<?= h(module_url($m['key'], $item['href'])) ?>"
-                   <?= !empty($item['target']) ? 'target="' . h($item['target']) . '"' : '' ?>><i class="bi <?= h($item['icon']) ?>"></i> <?= h($item['label']) ?></a></li>
+              <li class="dropdown-header"><?= h($__m['name']) ?></li>
+              <?php foreach ($__m['menu'] as $__item): if (!user_can($__m['key'], $__item['role'] ?? '', $user)) continue; ?>
+                <li><a class="dropdown-item<?= $navActive($__isCur && $active === $__item['id']) ?>" href="<?= h(module_url($__m['key'], $__item['href'])) ?>"
+                   <?= !empty($__item['target']) ? 'target="' . h($__item['target']) . '"' : '' ?>><i class="bi <?= h($__item['icon']) ?>"></i> <?= h($__item['label']) ?></a></li>
               <?php endforeach; ?>
             </ul>
           </li>
         <?php endforeach; ?>
-        <?php if ($user['is_superadmin']): $isAdm = !$module && in_array($active, ['users', 'settings', 'audit'], true); ?>
+        <?php if ($navMore): $__isCurMore = isset($navMore[$module]); ?>
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle<?= $navActive($isAdm) ?>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-shield-lock"></i> ผู้ดูแลระบบ</a>
+            <a class="nav-link dropdown-toggle<?= $navActive($__isCurMore) ?>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-grid-3x3-gap"></i> ระบบอื่นๆ<?= $__isCurMore ? ': ' . h($navMore[$module]['short']) : '' ?></a>
+            <ul class="dropdown-menu shadow more-menu">
+              <?php foreach ($navMore as $__m): $__isCur = $module === $__m['key']; ?>
+                <li class="dropdown-header d-flex align-items-center gap-1"><?= module_logo($__m, 18) ?> <?= h($__m['name']) ?></li>
+                <?php foreach ($__m['menu'] as $__item): if (!user_can($__m['key'], $__item['role'] ?? '', $user)) continue; ?>
+                  <li><a class="dropdown-item<?= $navActive($__isCur && $active === $__item['id']) ?>" href="<?= h(module_url($__m['key'], $__item['href'])) ?>"
+                     <?= !empty($__item['target']) ? 'target="' . h($__item['target']) . '"' : '' ?>><i class="bi <?= h($__item['icon']) ?>"></i> <?= h($__item['label']) ?></a></li>
+                <?php endforeach; ?>
+                <li><hr class="dropdown-divider"></li>
+              <?php endforeach; ?>
+              <li><a class="dropdown-item small text-muted" href="<?= h(url('index.php#arrange')) ?>"><i class="bi bi-arrows-move"></i> จัดเรียงระบบในเมนู</a></li>
+            </ul>
+          </li>
+        <?php endif; ?>
+        <?php if ($user['is_superadmin']): $__isAdm = !$module && in_array($active, ['users', 'settings', 'audit'], true); ?>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle<?= $navActive($__isAdm) ?>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-shield-lock"></i> ผู้ดูแลระบบ</a>
             <ul class="dropdown-menu shadow">
               <li><a class="dropdown-item<?= $navActive(!$module && $active === 'users') ?>" href="<?= h(url('admin/users.php')) ?>"><i class="bi bi-people"></i> ผู้ใช้งานและสิทธิ์</a></li>
               <li><a class="dropdown-item<?= $navActive(!$module && $active === 'settings') ?>" href="<?= h(url('admin/settings.php')) ?>"><i class="bi bi-sliders"></i> ตั้งค่าระบบ</a></li>
@@ -137,9 +158,9 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
   <div class="container-fluid">
     <span class="mod-bar-name" style="--mod-color:<?= h($cur['color']) ?>"><?= module_logo($cur, 24) ?> <span class="d-none d-sm-inline"><?= h($cur['short']) ?></span></span>
     <nav class="mod-bar-links">
-      <?php foreach ($cur['menu'] as $item): if (!user_can($cur['key'], $item['role'] ?? '', $user)) continue; ?>
-        <a href="<?= h(module_url($cur['key'], $item['href'])) ?>" class="<?= $active === $item['id'] ? 'active' : '' ?>"
-           <?= !empty($item['target']) ? 'target="' . h($item['target']) . '"' : '' ?>><i class="bi <?= h($item['icon']) ?>"></i> <?= h($item['label']) ?></a>
+      <?php foreach ($cur['menu'] as $__item): if (!user_can($cur['key'], $__item['role'] ?? '', $user)) continue; ?>
+        <a href="<?= h(module_url($cur['key'], $__item['href'])) ?>" class="<?= $active === $__item['id'] ? 'active' : '' ?>"
+           <?= !empty($__item['target']) ? 'target="' . h($__item['target']) . '"' : '' ?>><i class="bi <?= h($__item['icon']) ?>"></i> <?= h($__item['label']) ?></a>
       <?php endforeach; ?>
     </nav>
   </div>
@@ -155,8 +176,8 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
     <?php if (!empty($pageActions)): ?><div class="ms-auto d-flex gap-2 flex-wrap"><?= $pageActions ?></div><?php endif; ?>
   </header>
   <div class="content-body">
-  <?php foreach (take_flash() as $f): ?>
-    <div class="alert alert-<?= h($f['type']) ?> alert-dismissible fade show"><?= h($f['msg']) ?>
+  <?php foreach (take_flash() as $__f): ?>
+    <div class="alert alert-<?= h($__f['type']) ?> alert-dismissible fade show"><?= h($__f['msg']) ?>
       <button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
   <?php endforeach; ?>
 <?php if ($user): ?>

@@ -3,6 +3,7 @@
  * ทะเบียนระบบย่อย (modules)
  * แต่ละระบบอยู่ในโฟลเดอร์ modules/<key>/ และมีไฟล์ module.php คืนค่า array:
  *   key, name, short, icon, color, description, order
+ *   default_role => 'viewer'  (ไม่บังคับ) ผู้ใช้ทุกคนที่ login ได้ role นี้อัตโนมัติ ถ้าไม่ได้กำหนดสิทธิ์ไว้
  *   superadmin_access => false  (ไม่บังคับ) ผู้ดูแลระบบกลางไม่ได้สิทธิ์สูงสุดอัตโนมัติ ต้องกำหนดสิทธิ์รายคน
  *                        (ใช้กับระบบที่มีข้อมูลส่วนบุคคล เช่น สลิปเงินเดือน)
  *   logo   => 'assets/img/logo.png'   (ไม่บังคับ) รูปโลโก้ระบบ สัมพัทธ์จากโฟลเดอร์ระบบ — ไม่มีจะใช้ icon แทน
@@ -24,7 +25,7 @@ function modules(): array
             }
             $m += ['short' => $m['name'], 'icon' => 'bi-grid', 'color' => '#0f6cbd', 'description' => '',
                    'order' => 100, 'menu' => [], 'links' => [], 'enabled' => true, 'logo' => null,
-                   'superadmin_access' => true];
+                   'superadmin_access' => true, 'default_role' => null];
             if ($m['enabled']) {
                 $mods[$m['key']] = $m;
             }

@@ -1,21 +1,53 @@
 <?php
-/** หน้าหลัก: เลือกระบบที่มีสิทธิ์ใช้งาน */
+/** หน้าหลัก: ตารางการปฏิบัติงาน (จากระบบที่มี home_widget.php) + กล่องเลือกระบบ (จัดเรียงเองได้) */
 require_once __DIR__ . '/core/bootstrap.php';
 $user = require_login();
 $mods = accessible_modules($user);
 
 $pageTitle = 'หน้าหลัก';
 $active = 'home';
+/** วันที่ปัจจุบันแบบไทย เช่น "วันจันทร์ที่ 28 ตุลาคม 2569" */
+function cal_home_date(): string
+{
+    $w = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'][(int)date('w')];
+    return 'วัน' . $w . 'ที่ ' . (int)date('j') . ' ' . thai_month_long((int)date('n')) . ' ' . ((int)date('Y') + 543);
+}
 require APP_ROOT . '/core/layout/header.php';
 ?>
-<div class="mb-4">
-  <h2 class="h4 mb-1">สวัสดี <?= h($user['full_name']) ?></h2>
-  <p class="text-muted mb-0">เลือกระบบที่ต้องการใช้งาน</p>
+<div class="d-flex flex-wrap align-items-end gap-2 mb-3">
+  <div>
+    <h2 class="h4 mb-1">สวัสดี <?= h($user['full_name']) ?></h2>
+    <p class="text-muted mb-0"><?= h(cal_home_date()) ?></p>
+  </div>
 </div>
 
-<div class="row g-3 mb-4">
+<?php
+// ส่วนที่ระบบย่อยแสดงบนหน้าหลัก (modules/<key>/home_widget.php) เช่น ตารางการปฏิบัติงาน
+foreach ($mods as $m) {
+    $widget = APP_ROOT . '/modules/' . $m['key'] . '/home_widget.php';
+    if (is_file($widget)) {
+        include $widget;
+    }
+}
+?>
+
+<div class="d-flex align-items-center mb-2">
+  <h3 class="h5 mb-0">เลือกระบบที่ต้องการใช้งาน</h3>
+  <?php if (count($mods) > 1): ?>
+    <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" id="arrangeBtn"><i class="bi bi-arrows-move"></i> จัดเรียงระบบ</button>
+    <div class="ms-auto d-none gap-2" id="arrangeBar">
+      <button type="button" class="btn btn-sm btn-light" id="arrangeReset">คืนค่าเริ่มต้น</button>
+      <button type="button" class="btn btn-sm btn-light" id="arrangeCancel">ยกเลิก</button>
+      <button type="button" class="btn btn-sm btn-primary" id="arrangeSave"><i class="bi bi-check2"></i> บันทึกลำดับ</button>
+    </div>
+  <?php endif; ?>
+</div>
+<div class="alert alert-info py-2 small d-none" id="arrangeHelp"><i class="bi bi-info-circle"></i>
+  ลากกล่องเพื่อสลับตำแหน่ง หรือใช้ปุ่มลูกศร — ลำดับนี้ใช้กับเมนูด้านบนด้วย<?= count($mods) > 5 ? ' (เมนูด้านบนแสดง 4 ระบบแรก ที่เหลืออยู่ใน "ระบบอื่นๆ")' : '' ?></div>
+
+<div class="row g-3 mb-4" id="modGrid">
   <?php foreach ($mods as $m): ?>
-    <div class="col-md-6 col-xl-4">
+    <div class="col-md-6 col-xl-4 mod-item" data-key="<?= h($m['key']) ?>">
       <a class="mod-card" href="<?= h(module_url($m['key'], $m['entry'] ?? 'index.php')) ?>">
         <span class="mod-icon<?= $m['logo'] ? ' has-logo' : '' ?>" style="background:<?= h($m['color']) ?>"><?= $m['logo'] ? module_logo($m, 52) : '<i class="bi ' . h($m['icon']) . '"></i>' ?></span>
         <span class="min-w-0">
@@ -24,6 +56,11 @@ require APP_ROOT . '/core/layout/header.php';
           <span class="badge text-bg-light border"><i class="bi bi-person-badge"></i> <?= h(role_short($m['key'], module_role($m['key'], $user))) ?></span>
         </span>
       </a>
+      <div class="mod-move">
+        <button type="button" class="btn btn-sm btn-light" data-move="-1" title="เลื่อนไปก่อนหน้า"><i class="bi bi-arrow-left"></i></button>
+        <span class="mod-pos"></span>
+        <button type="button" class="btn btn-sm btn-light" data-move="1" title="เลื่อนไปถัดไป"><i class="bi bi-arrow-right"></i></button>
+      </div>
     </div>
   <?php endforeach; ?>
   <?php if (!$mods): ?>
@@ -31,6 +68,50 @@ require APP_ROOT . '/core/layout/header.php';
       บัญชีของคุณยังไม่ได้รับสิทธิ์ใช้งานระบบใด กรุณาติดต่อผู้ดูแลระบบ</div></div>
   <?php endif; ?>
 </div>
+<script>
+(() => {
+  const grid = document.getElementById('modGrid'), btn = document.getElementById('arrangeBtn');
+  if (!btn) return;
+  const bar = document.getElementById('arrangeBar'), help = document.getElementById('arrangeHelp');
+  let original = null, dragEl = null;
+  const items = () => [...grid.querySelectorAll('.mod-item')];
+  const number = () => items().forEach((el, i) => el.querySelector('.mod-pos').textContent = i + 1);
+  const setMode = on => {
+    grid.classList.toggle('arranging', on);
+    btn.classList.toggle('d-none', on); bar.classList.toggle('d-none', !on); bar.classList.toggle('d-flex', on); help.classList.toggle('d-none', !on);
+    items().forEach(el => el.draggable = on);
+    if (on) { original = items(); number(); }
+  };
+  const save = order => $.post(BASE_URL_JS + 'api/prefs.php', { action: 'module_order', order })
+    .done(() => location.reload()).fail(() => alert('บันทึกไม่สำเร็จ'));
+  btn.addEventListener('click', () => setMode(true));
+  document.getElementById('arrangeCancel').addEventListener('click', () => { original.forEach(el => grid.appendChild(el)); setMode(false); });
+  document.getElementById('arrangeSave').addEventListener('click', () => save(items().map(el => el.dataset.key)));
+  document.getElementById('arrangeReset').addEventListener('click', () => save([]));
+  grid.addEventListener('click', e => {
+    if (!grid.classList.contains('arranging')) return;
+    const mv = e.target.closest('[data-move]');
+    e.preventDefault();                                   // ระหว่างจัดเรียง ไม่เปิดระบบเมื่อคลิกกล่อง
+    if (!mv) return;
+    const el = mv.closest('.mod-item'), list = items(), i = list.indexOf(el), j = i + Number(mv.dataset.move);
+    if (j < 0 || j >= list.length) return;
+    j > i ? list[j].after(el) : list[j].before(el);
+    number();
+  });
+  grid.addEventListener('dragstart', e => { dragEl = e.target.closest('.mod-item'); dragEl?.classList.add('dragging'); });
+  grid.addEventListener('dragend', () => { dragEl?.classList.remove('dragging'); dragEl = null; number(); });
+  grid.addEventListener('dragover', e => {
+    if (!dragEl) return;
+    e.preventDefault();
+    const over = e.target.closest('.mod-item');
+    if (!over || over === dragEl) return;
+    const r = over.getBoundingClientRect(), after = (e.clientX - r.left) > r.width / 2;
+    after ? over.after(dragEl) : over.before(dragEl);
+  });
+  const fromHash = () => { if (location.hash === '#arrange' && !grid.classList.contains('arranging')) { setMode(true); grid.scrollIntoView({ behavior: 'smooth' }); } };
+  window.addEventListener('hashchange', fromHash); fromHash();
+})();
+</script>
 
 <?php
 $links = [];

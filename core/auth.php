@@ -78,7 +78,11 @@ function module_role(string $module, ?array $user = null): ?string
         return top_role($module);
     }
     $role = $user['roles'][$module] ?? null;
-    return role_level($module, $role) > 0 ? $role : null;
+    if (role_level($module, $role) > 0) {
+        return $role;
+    }
+    $default = module_def($module)['default_role'];       // ระบบที่ทุกคนใช้ได้ (เช่น ปฏิทินการปฏิบัติงาน)
+    return $default !== null && role_level($module, $default) > 0 ? $default : null;
 }
 
 /** มีสิทธิ์ในระบบ $module ตั้งแต่ระดับ $minRole ขึ้นไปหรือไม่ ($minRole ว่าง = มีสิทธิ์ใดก็ได้) */
@@ -91,10 +95,45 @@ function user_can(string $module, string $minRole = '', ?array $user = null): bo
     return $minRole === '' || role_level($module, $role) >= role_level($module, $minRole);
 }
 
-/** ระบบที่ผู้ใช้เข้าได้ */
+/** ระบบที่ผู้ใช้เข้าได้ เรียงตามลำดับที่ผู้ใช้จัดเอง (ถ้ามี) */
 function accessible_modules(?array $user = null): array
 {
-    return array_filter(modules(), fn($m) => module_role($m['key'], $user) !== null);
+    $user ??= current_user();
+    $mods = array_filter(modules(), fn($m) => module_role($m['key'], $user) !== null);
+    $order = $user ? (json_decode((string)user_pref('module_order', null, $user['id']), true) ?: []) : [];
+    if ($order) {
+        $pos = array_flip(array_values(array_filter($order, 'is_string')));
+        $i = 0;
+        $base = array_map(function () use (&$i) { return $i++; }, $mods);   // ลำดับเดิม
+        uksort($mods, fn($a, $b) => [$pos[$a] ?? PHP_INT_MAX, $base[$a]] <=> [$pos[$b] ?? PHP_INT_MAX, $base[$b]]);
+    }
+    return $mods;
+}
+
+/** ค่าที่ผู้ใช้ตั้งเอง (core_user_prefs) */
+function user_pref(string $key, $default = null, ?int $userId = null)
+{
+    static $cache = [];
+    $userId ??= current_user()['id'] ?? 0;
+    if (!$userId) {
+        return $default;
+    }
+    if (!isset($cache[$userId])) {
+        try {
+            $st = db()->prepare('SELECT pref_key, pref_value FROM core_user_prefs WHERE user_id = ?');
+            $st->execute([$userId]);
+            $cache[$userId] = $st->fetchAll(PDO::FETCH_KEY_PAIR);
+        } catch (PDOException $e) {
+            $cache[$userId] = [];          // ยังไม่ได้สร้างตาราง (ยังไม่รัน migration)
+        }
+    }
+    return $cache[$userId][$key] ?? $default;
+}
+
+function save_user_pref(int $userId, string $key, string $value): void
+{
+    db()->prepare('INSERT INTO core_user_prefs (user_id, pref_key, pref_value) VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE pref_value = VALUES(pref_value)')->execute([$userId, $key, $value]);
 }
 
 function login_user(int $userId, bool $viaPin = false): void

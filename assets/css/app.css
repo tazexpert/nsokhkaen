@@ -108,3 +108,17 @@ h1,h2,h3,h4,h5,.brand,.stat-num,.btn,.card-header,.nav-tabs{font-family:'Prompt'
   .content-body{padding:0}
   body{background:#fff}
 }
+
+/* ---------- จัดเรียงกล่องระบบ (หน้าหลัก) ---------- */
+.mod-item { position: relative; }
+.mod-move { display: none; position: absolute; bottom: 10px; right: 18px; gap: 4px; align-items: center; z-index: 2; }
+.mod-move .mod-pos { min-width: 22px; text-align: center; font-weight: 600; color: var(--brand); }
+#modGrid.arranging .mod-move { display: flex; }
+#modGrid.arranging .mod-card { cursor: grab; outline: 2px dashed #93c5fd; outline-offset: -2px; }
+#modGrid.arranging .mod-card:hover { transform: none; }
+#modGrid .mod-item.dragging { opacity: .45; }
+.app-nav .dropdown-menu.more-menu { max-height: 75vh; overflow-y: auto; min-width: 260px; }
+@media (min-width:1200px) and (max-width:1439.98px){
+  .app-nav .nav-link{padding:.5rem .5rem!important;font-size:.95rem}
+  .app-brand{margin-right:8px}
+}
