@@ -1,11 +1,11 @@
 <?php
-/** รายการยืม-คืนครุภัณฑ์ (ผู้ดูแลเห็นทุกใบ / เจ้าหน้าที่เห็นของตนเอง) */
+/** รายการยืม-คืนครุภัณฑ์ (ผู้ดูแลเห็นทุกรายการ / เจ้าหน้าที่เห็นของตนเอง) — การขออนุมัติยืมทำใน e-office */
 require_once __DIR__ . '/bootstrap.php';
 $me = require_module(INV_MODULE);
 $pdo = db();
 $isAdmin = user_can(INV_MODULE, 'admin');
 
-$tab = $_GET['tab'] ?? ($isAdmin ? 'pending' : 'all');
+$tab = $_GET['tab'] ?? 'borrowed';
 $q = trim($_GET['q'] ?? '');
 $where = [];
 $params = [];
@@ -16,7 +16,7 @@ if (!$isAdmin) {
 $base = $where;
 $baseParams = $params;
 if ($q !== '') {
-    $where[] = '(l.loan_no LIKE ? OR l.borrower_name LIKE ? OR l.purpose LIKE ?
+    $where[] = '(l.loan_no LIKE ? OR l.borrower_name LIKE ? OR l.doc_no LIKE ?
         OR EXISTS (SELECT 1 FROM inv_loan_items i WHERE i.loan_id = l.id AND (i.asset_no LIKE ? OR i.brand_model LIKE ?)))';
     array_push($params, ...array_fill(0, 5, "%$q%"));
 }
@@ -41,18 +41,17 @@ foreach ($cst as $r) {
 }
 
 $st = $pdo->prepare('SELECT l.*, (SELECT COUNT(*) FROM inv_loan_items i WHERE i.loan_id = l.id) AS item_count,
-    (SELECT GROUP_CONCAT(COALESCE(i.brand_model, i.item_name) ORDER BY i.sort_order SEPARATOR ", ") FROM inv_loan_items i WHERE i.loan_id = l.id) AS item_list
+    (SELECT GROUP_CONCAT(COALESCE(i.asset_no, i.brand_model, i.item_name) ORDER BY i.sort_order SEPARATOR ", ") FROM inv_loan_items i WHERE i.loan_id = l.id) AS item_list
     FROM inv_loans l' . ($where ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY l.id DESC LIMIT 500');
 $st->execute($params);
 $loans = $st->fetchAll();
 
-$tabs = ['pending' => 'รออนุมัติ', 'borrowed' => 'กำลังยืม', 'overdue' => 'เกินกำหนดคืน', 'returned' => 'คืนแล้ว',
-         'rejected' => 'ไม่อนุมัติ', 'cancelled' => 'ยกเลิก', 'all' => 'ทั้งหมด'];
-$pageActions = '<a href="loan_form.php" class="btn btn-success"><i class="bi bi-plus-lg"></i> ขอยืมครุภัณฑ์</a>';
+$tabs = ['borrowed' => 'กำลังยืม', 'overdue' => 'เกินกำหนดคืน', 'returned' => 'คืนแล้ว', 'all' => 'ทั้งหมด'];
+$pageActions = $isAdmin ? '<a href="loan_form.php" class="btn btn-success"><i class="bi bi-plus-lg"></i> บันทึกการยืม (แนบใบยืม)</a>' : '';
 require __DIR__ . '/header.php';
 ?>
 <ul class="nav nav-pills mb-3 flex-wrap gap-1">
-  <?php foreach ($tabs as $k => $label): $n = $counts[$k] ?? 0; ?>
+  <?php foreach ($tabs as $k => $label): $n = $counts[$k] ?? 0; if (!$n && in_array($k, ['overdue'], true) && $tab !== $k) continue; ?>
     <li class="nav-item"><a class="nav-link <?= $tab === $k ? 'active' : '' ?>" href="?tab=<?= $k ?>&q=<?= urlencode($q) ?>"><?= h($label) ?>
       <?php if ($n): ?><span class="badge <?= $k === 'overdue' ? 'text-bg-danger' : ($tab === $k ? 'text-bg-light' : 'text-bg-secondary') ?>"><?= $n ?></span><?php endif; ?></a></li>
   <?php endforeach; ?>
@@ -60,7 +59,7 @@ require __DIR__ . '/header.php';
 <div class="card">
   <div class="card-header">
     <form class="row g-2"><input type="hidden" name="tab" value="<?= h($tab) ?>">
-      <div class="col-md-5"><input name="q" class="form-control" placeholder="ค้นหาเลขที่ / ผู้ยืม / เลขครุภัณฑ์ / รุ่น" value="<?= h($q) ?>"></div>
+      <div class="col-md-5"><input name="q" class="form-control" placeholder="ค้นหาเลขครุภัณฑ์ / ผู้ยืม / เลขที่หนังสือ / รุ่น" value="<?= h($q) ?>"></div>
       <div class="col-auto"><button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button></div>
     </form>
   </div>
@@ -71,7 +70,7 @@ require __DIR__ . '/header.php';
       <?php foreach ($loans as $l): $od = $l['status'] === 'borrowed' && $l['due_date'] < $today; ?>
         <tr class="<?= $od ? 'table-danger' : '' ?>">
           <td><a href="loan_view.php?id=<?= (int)$l['id'] ?>" class="fw-semibold text-decoration-none"><?= h($l['loan_no']) ?></a>
-            <div class="small text-muted"><?= h(thai_date($l['created_at'])) ?></div></td>
+            <div class="small text-muted"><?= $l['doc_no'] ? h($l['doc_no']) : h(thai_date($l['created_at'])) ?></div></td>
           <td><?= h($l['borrower_name']) ?><div class="small text-muted"><?= h($l['borrower_position']) ?></div></td>
           <td class="small" style="max-width:320px"><span class="badge text-bg-light border"><?= (int)$l['item_count'] ?> รายการ</span> <?= h(mb_strimwidth((string)$l['item_list'], 0, 90, '…')) ?></td>
           <td class="small text-nowrap"><?= h(thai_date($l['start_date'])) ?> – <?= h(thai_date($l['due_date'])) ?>
@@ -79,7 +78,7 @@ require __DIR__ . '/header.php';
           <td><?= loan_status_badge($l['status']) ?><?= $od ? ' <span class="badge text-bg-danger">เกินกำหนด</span>' : '' ?></td>
           <td class="text-end text-nowrap">
             <a href="loan_view.php?id=<?= (int)$l['id'] ?>" class="btn btn-sm btn-light" title="ดู"><i class="bi bi-eye"></i></a>
-            <a href="loan_print.php?id=<?= (int)$l['id'] ?>" target="_blank" class="btn btn-sm btn-light" title="พิมพ์"><i class="bi bi-printer"></i></a>
+            <?php if ($l['file_path']): ?><a href="loan_file.php?id=<?= (int)$l['id'] ?>" target="_blank" class="btn btn-sm btn-light" title="เปิด/พิมพ์ใบยืม"><i class="bi bi-printer"></i></a><?php endif; ?>
           </td>
         </tr>
       <?php endforeach; ?>

@@ -20,8 +20,8 @@ $__invPages = [
     'equipment_form.php'   => ['equipment', 'ครุภัณฑ์', 'admin'],
     'equipment_import.php' => ['equipment', 'นำเข้าครุภัณฑ์จากไฟล์ CSV', 'admin'],
     'loans.php'            => ['loans', 'ยืม-คืนครุภัณฑ์', ''],
-    'loan_form.php'        => ['loans', 'บันทึกขอยืมพัสดุ', ''],
-    'loan_view.php'        => ['loans', 'ใบยืมพัสดุ', ''],
+    'loan_form.php'        => ['loans', 'บันทึกการยืมครุภัณฑ์', 'admin'],
+    'loan_view.php'        => ['loans', 'รายการยืมครุภัณฑ์', ''],
 ];
 [$active, $__title, $__minRole] = $__invPages[$currentPage] ?? ['', 'ระบบบริหารจัดการวัสดุและครุภัณฑ์', ''];
 $pageTitle = $pageTitle ?? $__title;     // หน้าที่ตั้ง $pageTitle เองก่อน require จะใช้ค่านั้น

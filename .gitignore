@@ -1,6 +1,7 @@
 /config.local.php
 /uploads/**/*
 !/uploads/.htaccess
+!/uploads/inventory/loans/.htaccess
 !/uploads/**/
 !/uploads/**/.gitkeep
 /libs/phpqrcode/cache/*

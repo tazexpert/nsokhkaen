@@ -5,7 +5,7 @@ $pdo = getDbConnection();
 $materialCount = $pdo->query('SELECT COUNT(*) FROM inv_materials')->fetchColumn();
 $lowStockCount = $pdo->query('SELECT COUNT(*) FROM inv_materials WHERE stock_qty <= min_stock')->fetchColumn();
 $equipmentCount = $pdo->query('SELECT COUNT(*) FROM inv_equipment')->fetchColumn();
-$loanCounts = $pdo->query("SELECT SUM(status = 'borrowed') AS borrowed, SUM(status = 'pending') AS pending,
+$loanCounts = $pdo->query("SELECT SUM(status = 'borrowed') AS borrowed,
     SUM(status = 'borrowed' AND due_date < CURDATE()) AS overdue FROM inv_loans")->fetch();
 
 // Admin sees the 5 most recent requisitions system-wide; staff only ever
@@ -49,7 +49,7 @@ function dashboardCard(string $colorClass, int $value, string $label, string $hr
         <?php dashboardCard('text-bg-info', (int) $loanCounts['borrowed'], 'ครุภัณฑ์ที่กำลังยืม', INV_URL . 'loans.php?tab=borrowed') ?>
     </div>
     <div class="col-6 col-lg">
-        <?php dashboardCard((int) $loanCounts['overdue'] ? 'text-bg-danger' : 'text-bg-light border', (int) $loanCounts['pending'], 'คำขอยืมรออนุมัติ' . ((int) $loanCounts['overdue'] ? ' · เกินกำหนดคืน ' . (int) $loanCounts['overdue'] : ''), INV_URL . 'loans.php?tab=pending') ?>
+        <?php dashboardCard((int) $loanCounts['overdue'] ? 'text-bg-danger' : 'text-bg-light border', (int) $loanCounts['overdue'], 'เกินกำหนดคืน', INV_URL . 'loans.php?tab=overdue') ?>
     </div>
 </div>
 

@@ -253,9 +253,9 @@ INSERT IGNORE INTO inv_equipment_types (id, name, sort_order) VALUES
   (2, 'โน้ตบุ๊ค (Notebook)', 2),
   (3, 'แท็บเล็ต (Tablet)', 3);
 
--- บันทึกข้อความขออนุมัติยืมพัสดุ (เลขที่ = เลขรัน/ปี พ.ศ. เช่น 1/2569)
--- pending = รออนุมัติ, borrowed = อนุมัติ/ส่งมอบแล้ว (กำลังยืม), returned = คืนแล้ว,
--- rejected = ไม่อนุมัติ, cancelled = ผู้ยืมยกเลิก
+-- ทะเบียนการยืมครุภัณฑ์ (เลขที่ = เลขรัน/ปี พ.ศ. เช่น 1/2569)
+-- การขออนุมัติยืมทำในระบบ e-office; ระบบนี้บันทึกผลการยืม แนบไฟล์ใบยืม และติดตามการคืน
+-- borrowed = กำลังยืม, returned = คืนแล้ว (pending/rejected/cancelled สงวนไว้ ไม่ใช้งาน)
 CREATE TABLE IF NOT EXISTS inv_loans (
   id                 INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   loan_no            VARCHAR(50)  NOT NULL UNIQUE,
@@ -264,11 +264,14 @@ CREATE TABLE IF NOT EXISTS inv_loans (
   borrower_position  VARCHAR(150) NULL,
   borrower_org       VARCHAR(255) NULL,
   borrower_phone     VARCHAR(50)  NULL,
-  purpose            VARCHAR(500) NOT NULL,
+  doc_no             VARCHAR(100) NULL,               -- เลขที่หนังสือ/บันทึกข้อความในระบบ e-office
+  file_path          VARCHAR(255) NULL,               -- ไฟล์ใบยืมที่แนบ (PDF/รูป) เก็บใน uploads/inventory/loans/
+  file_name          VARCHAR(255) NULL,               -- ชื่อไฟล์เดิม
+  purpose            VARCHAR(500) NULL,
   start_date         DATE         NOT NULL,
   due_date           DATE         NOT NULL,
   status             ENUM('pending', 'borrowed', 'returned', 'rejected', 'cancelled') NOT NULL DEFAULT 'pending',
-  lender_id          INT UNSIGNED NULL,               -- ผู้ให้ยืม (ผู้ดูแลที่อนุมัติ/ส่งมอบ)
+  lender_id          INT UNSIGNED NULL,               -- ผู้บันทึกการยืม
   lender_name        VARCHAR(150) NULL,
   lender_position    VARCHAR(150) NULL,
   approver_name      VARCHAR(150) NULL,               -- ผู้อนุมัติ (ตามที่ตั้งค่าไว้ ณ วันอนุมัติ)

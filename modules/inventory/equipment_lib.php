@@ -2,7 +2,8 @@
 /**
  * ครุภัณฑ์และการยืม-คืน: ค่าคงที่และฟังก์ชันที่ใช้ร่วมกัน
  *   inv_equipment.status = สภาพการใช้งาน (normal / repair / dispose)
- *   การถูกยืม = มีรายการใน inv_loan_items ของใบยืมที่สถานะ pending (จองไว้) หรือ borrowed (ยืมอยู่)
+ *   การถูกยืม = มีรายการใน inv_loan_items ของใบยืมสถานะ borrowed (การขออนุมัติยืมทำในระบบ e-office
+ *   ระบบนี้บันทึกผลการยืม แนบไฟล์ใบยืม และอัปเดตสถานะเมื่อคืน)
  */
 
 const EQ_STATUS = [
@@ -12,39 +13,17 @@ const EQ_STATUS = [
 ];
 
 const LOAN_STATUS = [
-    'pending'   => ['รออนุมัติ', 'warning'],
     'borrowed'  => ['กำลังยืม', 'primary'],
     'returned'  => ['คืนแล้ว', 'success'],
+    'pending'   => ['รออนุมัติ', 'warning'],      // สถานะเดิม (ไม่ใช้แล้ว — อนุมัติผ่าน e-office)
     'rejected'  => ['ไม่อนุมัติ', 'danger'],
     'cancelled' => ['ยกเลิก', 'secondary'],
 ];
 
-/** ผู้รับบันทึกข้อความขออนุมัติยืมพัสดุ (คงที่) */
-const LOAN_TO = 'ผู้ว่าราชการจังหวัดขอนแก่น';
-/** โทรศัพท์/โทรสารของส่วนราชการในบันทึกข้อความ (คงที่) */
-const LOAN_ORG_PHONE = '0-4324-6639';
-const LOAN_ORG_FAX = '0-4324-6183';
-
-/**
- * ค่าตั้งค่าใบยืม (inv_settings) พร้อมค่าเริ่มต้น
- *   ผู้ให้ยืม/ผู้อนุมัติ: เลือกจากผู้ใช้งานในหน้าตั้งค่า (ตำแหน่งแก้ไขได้) — ผู้ให้ยืมใช้เป็นผู้รับคืนด้วย
- */
-const LOAN_SETTING_DEFAULTS = [
-    'loan_lender_name'       => '',
-    'loan_lender_position'   => '',
-    'loan_approver_name'     => '',
-    'loan_approver_position' => '',
-];
-
-function loan_settings(): array
-{
-    $s = LOAN_SETTING_DEFAULTS;
-    $st = db()->query("SELECT `key`, `value` FROM inv_settings WHERE `key` IN ('" . implode("','", array_keys(LOAN_SETTING_DEFAULTS)) . "')");
-    foreach ($st as $r) {
-        $s[$r['key']] = $r['value'];
-    }
-    return $s;
-}
+/** ไฟล์ใบยืมที่แนบ: ชนิดที่รับ [mime => นามสกุล] และขนาดสูงสุด */
+const LOAN_FILE_TYPES = ['application/pdf' => 'pdf', 'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+const LOAN_FILE_MAX = 10 * 1024 * 1024;
+const LOAN_FILE_DIR = 'inventory/loans';      // ภายใต้ uploads/ (ปิดการเข้าถึงตรง — เปิดผ่าน loan_file.php)
 
 function eq_status_badge(string $status): string
 {
@@ -82,7 +61,7 @@ function active_loans_by_equipment(array $ids = []): array
 {
     $sql = "SELECT li.equipment_id, l.id AS loan_id, l.loan_no, l.status, l.borrower_name, l.due_date
             FROM inv_loan_items li JOIN inv_loans l ON l.id = li.loan_id
-            WHERE li.equipment_id IS NOT NULL AND l.status IN ('pending', 'borrowed')";
+            WHERE li.equipment_id IS NOT NULL AND l.status = 'borrowed'";
     if ($ids) {
         $sql .= ' AND li.equipment_id IN (' . implode(',', array_map('intval', $ids)) . ')';
     }
@@ -143,18 +122,43 @@ function equipment_type_id(PDO $pdo, string $name): ?int
     return (int)$pdo->lastInsertId();
 }
 
-/** ผู้ให้ยืม/ผู้รับคืน: ตามที่ตั้งค่าไว้ ถ้าไม่ได้ตั้ง ใช้ผู้ดูแลที่ทำรายการ [ชื่อ, ตำแหน่ง] */
-function loan_lender(array $me): array
-{
-    $ls = loan_settings();
-    return $ls['loan_lender_name'] !== ''
-        ? [$ls['loan_lender_name'], $ls['loan_lender_position'] ?: null]
-        : [$me['full_name'], $me['position']];
-}
-
 /** ใบยืมนี้ผู้ใช้ปัจจุบันดูได้หรือไม่ (ผู้ดูแล = ทุกใบ, เจ้าหน้าที่ = ที่ตนเป็นผู้ยืม/ผู้บันทึก) */
 function can_view_loan(array $loan): bool
 {
     $me = current_user();
     return user_can(INV_MODULE, 'admin') || (int)$loan['borrower_id'] === $me['id'] || (int)$loan['created_by'] === $me['id'];
+}
+
+/**
+ * บันทึกไฟล์ใบยืมที่อัปโหลด (PDF/JPG/PNG/WebP ไม่เกิน 10 MB) คืน [path สัมพัทธ์จาก uploads/, ชื่อไฟล์เดิม]
+ * โยน RuntimeException ถ้าไฟล์ไม่ถูกต้อง; คืน null ถ้าไม่ได้เลือกไฟล์
+ */
+function save_loan_file(array $file): ?array
+{
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+    if ($file['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($file['tmp_name'])) {
+        throw new RuntimeException('อัปโหลดไฟล์ใบยืมไม่สำเร็จ (รหัส ' . $file['error'] . ')');
+    }
+    if ($file['size'] > LOAN_FILE_MAX) {
+        throw new RuntimeException('ไฟล์ใบยืมใหญ่เกิน ' . (LOAN_FILE_MAX / 1048576) . ' MB');
+    }
+    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($file['tmp_name']);
+    if (!isset(LOAN_FILE_TYPES[$mime])) {
+        throw new RuntimeException('ไฟล์ใบยืมต้องเป็น PDF หรือรูปภาพ (JPG, PNG, WebP)');
+    }
+    $dir = UPLOAD_DIR . '/' . LOAN_FILE_DIR;
+    if (!is_dir($dir) && !mkdir($dir, 0755, true)) {
+        throw new RuntimeException('ไม่สามารถสร้างโฟลเดอร์ uploads/' . LOAN_FILE_DIR);
+    }
+    if (!is_file($dir . '/.htaccess')) {           // ห้ามเปิดไฟล์ตรงจาก URL (ต้องผ่านการตรวจสิทธิ์)
+        @file_put_contents($dir . '/.htaccess', "Require all denied\n");
+    }
+    $name = date('Ymd') . '_' . bin2hex(random_bytes(8)) . '.' . LOAN_FILE_TYPES[$mime];
+    if (!move_uploaded_file($file['tmp_name'], $dir . '/' . $name)) {
+        throw new RuntimeException('บันทึกไฟล์ไม่สำเร็จ ตรวจสอบสิทธิ์การเขียนโฟลเดอร์ uploads');
+    }
+    $orig = mb_substr(preg_replace('/[\x00-\x1f\/\\\\]/u', '_', basename((string)$file['name'])), 0, 200);
+    return [LOAN_FILE_DIR . '/' . $name, $orig ?: $name];
 }
