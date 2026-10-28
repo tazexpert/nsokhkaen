@@ -102,8 +102,8 @@ $bm = (int)date('n');
 [$ny, $nm] = $bm === 12 ? [$by + 1, 1] : [$by, $bm + 1];
 $latest = $pdo->query('SELECT year, month FROM pay_slips ORDER BY year DESC, month DESC LIMIT 1')->fetch();
 $isStart = $form['effective_ym'] !== null && (int)$form['effective_ym'] === 0;
-$fy = $form['effective_ym'] ? intdiv((int)$form['effective_ym'], 100) : $ny;
-$fm = $form['effective_ym'] ? (int)$form['effective_ym'] % 100 : $nm;
+$fy = $form['effective_ym'] ? intdiv((int)$form['effective_ym'], 100) : $by;   // ค่าเริ่มต้น = เดือนปัจจุบัน
+$fm = $form['effective_ym'] ? (int)$form['effective_ym'] % 100 : $bm;
 
 $active = 'settings';
 $pageTitle = 'ตั้งค่าสลิปเงินเดือน';
