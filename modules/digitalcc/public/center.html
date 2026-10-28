@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" rel="stylesheet">
-<link href="../assets/css/site.css" rel="stylesheet">
+<link href="../assets/css/site.css?v=20261029" rel="stylesheet">
 </head>
 <body>
 
@@ -64,10 +64,11 @@
   c.activities.forEach(a => { groups['a' + a.id] = a.images; });
 
   const tabs = [
-    ['about', 'ข้อมูลศูนย์', true],
     ['gallery', 'ภาพศูนย์', c.images.length],
-    ['staff', 'ผู้ดูแลศูนย์', c.staff.length],
+    ['about', 'ข้อมูลศูนย์', true],
     ['activities', 'กิจกรรม', true],
+    ['staff', 'ผู้ดูแลศูนย์', c.staff.length],
+    ['location', 'ที่ตั้ง', true],
   ].filter(t => t[2]);
 
   app.innerHTML = `
@@ -92,31 +93,17 @@
 
   <div class="container layout">
     <div>
+      ${c.images.length ? `<div class="panel" id="gallery">
+        <h2><i class="bi bi-images"></i> ภาพศูนย์ดิจิทัลชุมชน <span class="count">${c.images.length} ภาพ</span></h2>
+        ${galleryHTML(c.images, 'center', 9, true)}
+      </div>` : ''}
+
       <div class="panel" id="about">
         <h2><i class="bi bi-info-circle"></i> เกี่ยวกับศูนย์</h2>
         <div class="desc">${c.description ? esc(c.description) : '<span style="color:var(--muted)">ยังไม่มีรายละเอียด</span>'}</div>
         ${c.services.length ? `<h3 style="font-size:1rem;margin-top:20px">บริการและอุปกรณ์</h3>
           <div class="services">${c.services.map(s => `<span class="chip teal"><i class="bi bi-check2-circle"></i> ${esc(s)}</span>`).join('')}</div>` : ''}
       </div>
-
-      ${c.images.length ? `<div class="panel" id="gallery">
-        <h2><i class="bi bi-images"></i> ภาพศูนย์ดิจิทัลชุมชน <span class="count">${c.images.length} ภาพ</span></h2>
-        ${galleryHTML(c.images, 'center', 9, true)}
-      </div>` : ''}
-
-      ${c.staff.length ? `<div class="panel" id="staff">
-        <h2><i class="bi bi-person-badge"></i> ผู้ดูแลศูนย์</h2>
-        <div class="staff">${c.staff.map(s => `<div class="person">
-          ${s.photo ? `<img class="ph" src="${esc(s.photo)}" alt="${esc(s.name)}" loading="lazy">` : '<div class="ph"><i class="bi bi-person"></i></div>'}
-          <div><h3>${esc(s.name)}</h3>${s.position ? `<div class="pos">${esc(s.position)}</div>` : ''}
-            <div class="c">
-              ${s.phone ? `<a href="tel:${esc(s.phone.replace(/[^\d+]/g, ''))}"><i class="bi bi-telephone"></i> ${esc(s.phone)}</a>` : ''}
-              ${s.email ? `<a href="mailto:${esc(s.email)}"><i class="bi bi-envelope"></i> ${esc(s.email)}</a>` : ''}
-              ${s.line_id ? `<span><i class="bi bi-line"></i> ${esc(s.line_id)}</span>` : ''}
-            </div>
-            ${s.bio ? `<p class="bio">${esc(s.bio)}</p>` : ''}
-          </div></div>`).join('')}</div>
-      </div>` : ''}
 
       <div class="panel" id="activities">
         <h2><i class="bi bi-calendar-event"></i> กิจกรรมที่จัดร่วมกับศูนย์ <span class="count">${c.activities.length} กิจกรรม</span></h2>
@@ -136,7 +123,21 @@
     </div>
 
     <aside class="side">
-      <div class="panel">
+      ${c.staff.length ? `<div class="panel staff-panel" id="staff">
+        <h2><i class="bi bi-person-badge"></i> ผู้ดูแลศูนย์</h2>
+        <div class="staff">${c.staff.map(s => `<div class="person">
+          ${s.photo ? `<img class="ph" src="${esc(s.photo)}" alt="${esc(s.name)}" loading="lazy">` : '<div class="ph"><i class="bi bi-person"></i></div>'}
+          <div><h3>${esc(s.name)}</h3>${s.position ? `<div class="pos">${esc(s.position)}</div>` : ''}
+            <div class="c">
+              ${s.phone ? `<a href="tel:${esc(s.phone.replace(/[^\d+]/g, ''))}"><i class="bi bi-telephone"></i> ${esc(s.phone)}</a>` : ''}
+              ${s.email ? `<a href="mailto:${esc(s.email)}"><i class="bi bi-envelope"></i> ${esc(s.email)}</a>` : ''}
+              ${s.line_id ? `<span><i class="bi bi-line"></i> ${esc(s.line_id)}</span>` : ''}
+            </div>
+            ${s.bio ? `<p class="bio">${esc(s.bio)}</p>` : ''}
+          </div></div>`).join('')}</div>
+      </div>` : ''}
+
+      <div class="panel loc-panel" id="location">
         ${hasLoc ? '<div id="centerMap"></div>' : `<div style="padding:28px;text-align:center;color:var(--muted);background:#f1f5fb"><i class="bi bi-geo" style="font-size:2rem"></i><br>ยังไม่ได้ระบุพิกัดที่ตั้ง</div>`}
         <ul class="info-list">
           ${addr ? `<li><i class="bi bi-geo-alt"></i><div><small>ที่ตั้ง</small>${esc(addr)}</div></li>` : ''}
