@@ -81,7 +81,8 @@ function role_short(string $module, ?string $role): string
 function module_logo(array $m, int $size = 22, string $class = ''): string
 {
     if (!empty($m['logo'])) {
-        return '<img src="' . h(module_url($m['key'], $m['logo'])) . '" alt="" class="mod-logo ' . h($class) . '" style="height:' . $size . 'px">';
+        // กรอบสี่เหลี่ยมจัตุรัสเท่ากันทุกระบบ (โลโก้ที่ไม่ใช่สี่เหลี่ยมจัตุรัส เช่น นกฮูก ย่อให้พอดีกรอบ)
+        return '<img src="' . h(module_url($m['key'], $m['logo'])) . '" alt="" class="mod-logo ' . h($class) . '" style="width:' . $size . 'px;height:' . $size . 'px">';
     }
     return '<i class="bi ' . h($m['icon']) . ' ' . h($class) . '" style="color:' . h($m['color']) . ';font-size:' . round($size * .85) . 'px"></i>';
 }
