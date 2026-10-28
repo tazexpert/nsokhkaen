@@ -83,7 +83,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
       <div class="dropdown">
         <button class="btn nav-icon-btn d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="บัญชีผู้ใช้">
           <i class="bi bi-person-circle"></i>
-          <span class="d-none d-md-block text-start lh-sm user-chip">
+          <span class="text-start lh-sm user-chip">
             <span class="d-block"><?= h($user['full_name']) ?></span>
             <small><?= $user['via_pin'] ? 'ยืนยันตัวตนด้วย PIN' : h($user['work_group'] ?: ($user['position'] ?: '')) ?></small>
           </span>

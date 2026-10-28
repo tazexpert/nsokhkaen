@@ -17,7 +17,8 @@ nsokhkaen/
 │   └── layout/           header/footer + เมนูด้านบนที่ใช้ร่วมกัน
 ├── modules/
 │   ├── inventory/        ระบบบริหารจัดการวัสดุและครุภัณฑ์ (ตาราง inv_*)
-│   └── digitalcc/        ระบบศูนย์ดิจิทัลชุมชน       (ตาราง dcc_*)
+│   ├── digitalcc/        ระบบศูนย์ดิจิทัลชุมชน       (ตาราง dcc_*)
+│   └── payslip/          ระบบสลิปเงินเดือนพนักงาน    (ตาราง pay_*)
 │       └── public/       เว็บไซต์สาธารณะ (ไม่ต้อง login)
 ├── assets/               CSS/JS/ฟอนต์ ที่ใช้ร่วมกัน
 ├── libs/                 phpqrcode, SimpleXLSX (ไม่ต้องใช้ Composer)
@@ -38,6 +39,7 @@ nsokhkaen/
 | `core_` | ระบบกลาง | `core_users`, `core_user_roles`, `core_work_groups`, `core_settings`, `core_audit_log` |
 | `inv_`  | วัสดุและครุภัณฑ์ | วัสดุ/ใบเบิก + `inv_equipment*`, `inv_loans`, `inv_loan_items` (ครุภัณฑ์และการยืม-คืน) |
 | `dcc_`  | ศูนย์ดิจิทัลชุมชน | อ้างอิงผู้ใช้ที่ `core_users.id` |
+| `pay_`  | สลิปเงินเดือน | `pay_employees` (รหัสพนักงาน ↔ `core_users.id`), `pay_slips`, `pay_settings` |
 
 ระบบใหม่ใช้ prefix ของตัวเอง (สั้น 3–4 ตัวอักษร) และ **ห้ามแก้ตารางของระบบอื่นโดยตรง**
 ยกเว้นอ่าน `core_users` เพื่อแสดงชื่อผู้ใช้
@@ -47,6 +49,7 @@ nsokhkaen/
 - ผู้ใช้ 1 คน = 1 บัญชีใน `core_users` (ชื่อผู้ใช้+รหัสผ่าน และ/หรือ PIN)
 - สิทธิ์แต่ละระบบอยู่ใน `core_user_roles (user_id, module_key, role)` — ไม่มีแถว = เข้าระบบนั้นไม่ได้
 - `core_users.is_superadmin = 1` = ผู้ดูแลระบบกลาง: จัดการผู้ใช้/สิทธิ์ได้ และถือ role สูงสุดของทุกระบบ
+  ยกเว้นระบบที่ตั้ง `'superadmin_access' => false` ใน module.php (ข้อมูลส่วนบุคคล เช่น สลิปเงินเดือน) — ต้องกำหนดสิทธิ์รายคน
 - role ของแต่ละระบบประกาศใน `module.php` เรียงจากต่ำ → สูง ใช้เปรียบเทียบระดับได้
 
 ฟังก์ชันที่ใช้ในโค้ด:

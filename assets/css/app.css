@@ -22,7 +22,9 @@ h1,h2,h3,h4,h5,.brand,.stat-num,.btn,.card-header,.nav-tabs{font-family:'Prompt'
 .app-nav .nav-link .mod-logo{background:#fff;padding:1px 2px}
 .nav-icon-btn{color:#e2e8f0;border:0;padding:.4rem .6rem;border-radius:10px;font-size:1.25rem;line-height:1}
 .nav-icon-btn:hover,.nav-icon-btn:focus,.nav-icon-btn.show{color:#fff;background:rgba(255,255,255,.1)}
-.user-chip{font-size:.88rem;max-width:200px}
+.user-chip{font-size:.88rem;max-width:200px;display:none}
+@media (min-width:1600px),(max-width:1199.98px) and (min-width:768px){.user-chip{display:block}}
+.app-nav .nav-link{white-space:nowrap}
 .user-chip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .user-chip small{color:#9fb3cc;font-size:.74rem;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .notif-badge{position:absolute;top:0;right:0;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#ef4444;color:#fff;font-size:.7rem;font-weight:600;line-height:18px;text-align:center;font-family:'Sarabun',sans-serif}

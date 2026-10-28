@@ -201,11 +201,13 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 | `20261028_core_workgroup_inv_equipment.sql` | กลุ่มงานผู้ใช้ การแจ้งเตือน ทะเบียนครุภัณฑ์และตารางการยืม |
 | `20261029_inv_loans_attachment.sql` | การยืมผ่าน e-office: แนบไฟล์ใบยืม + เลขที่หนังสือ (ตัดการอนุมัติในระบบ) |
 | `20261030_inv_equipment_assigned_user.sql` | ผู้ใช้งานประจำของครุภัณฑ์ (คอลัมน์ "ผู้ยืม/ผู้ใช้งาน") |
+| `20261031_payslip_init.sql` | ระบบสลิปเงินเดือนพนักงาน (ตาราง `pay_*`) |
 
 ```bash
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261028_core_workgroup_inv_equipment.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261029_inv_loans_attachment.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261030_inv_equipment_assigned_user.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261031_payslip_init.sql
 ```
 
 หลังอัปเดต:
@@ -213,6 +215,19 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 2. วัสดุและครุภัณฑ์ → ครุภัณฑ์ → **นำเข้า CSV** (ไฟล์รายงานครุภัณฑ์คอมพิวเตอร์ที่บันทึกเป็น CSV)
 3. ให้เว็บเซิร์ฟเวอร์เขียนโฟลเดอร์ `uploads/inventory/loans/` ได้ (ไฟล์ใบยืม — มี `.htaccess` ปิดการเปิดตรงจาก URL;
    ถ้าใช้ Nginx ให้ตั้ง `location /nsokhkaen/uploads/inventory/loans/ { deny all; }`)
+
+## ย้ายระบบสลิปเงินเดือน (Google Apps Script + Google Sheet)
+
+1. ผู้ดูแลระบบกลาง → ผู้ใช้งานและสิทธิ์: ให้สิทธิ์ระบบสลิปเงินเดือน
+   - สถิติจังหวัด (ผู้อนุมัติเดิม กลุ่ม 9) → **ผู้อนุมัติ** · ผู้ที่ดูแล Google Sheet → **ผู้จัดการสลิป**
+   - ผู้ดูแลระบบกลางไม่ได้สิทธิ์อัตโนมัติ (ข้อมูลส่วนบุคคล)
+2. เปิด Google Sheet → ไฟล์ → ดาวน์โหลด → Microsoft Excel (.xlsx)
+3. ผู้อนุมัติเข้า สลิปเงินเดือน → นำเข้าข้อมูล → เลือกไฟล์ → ติ๊ก **"ใช้สถานะจากคอลัมน์ อนุมัติ"** (สลิปเดิมที่อนุมัติแล้วจะไม่ต้องอนุมัติซ้ำ) → ยืนยัน
+4. สลิปเงินเดือน → รายชื่อพนักงาน: ตรวจว่าทุกเลขที่ผูกกับบัญชีผู้ใช้แล้ว (ระบบผูกให้อัตโนมัติเมื่อชื่อ-นามสกุลตรงกัน)
+   — พนักงานที่ยังไม่มีบัญชี ให้ผู้ดูแลระบบกลางสร้างบัญชีก่อน แล้วกลับมาเลือกผูก
+5. ตั้งค่าสลิป: ชื่อ/ตำแหน่งผู้ลงนาม และอัปโหลดรูปลายมือชื่อ (PNG พื้นโปร่งใส)
+6. แจ้งพนักงานให้เข้าใช้ด้วยบัญชีของระบบบริหารจัดการ — **รหัสผ่านเดิมของระบบสลิป (ชีต UserData) ไม่ได้ย้ายมา**
+7. เดือนถัดไป: ผู้จัดการสลิปนำเข้าไฟล์ของเดือนนั้น (หรือเพิ่มรายใบ) → ผู้อนุมัติกดอนุมัติ → พนักงานเห็นสลิปและได้รับแจ้งเตือน
 
 ## ปัญหาที่พบบ่อย
 

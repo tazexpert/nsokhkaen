@@ -74,7 +74,7 @@ function module_role(string $module, ?array $user = null): ?string
     if (!$user || !module_def($module)) {
         return null;
     }
-    if ($user['is_superadmin']) {
+    if ($user['is_superadmin'] && module_def($module)['superadmin_access']) {
         return top_role($module);
     }
     $role = $user['roles'][$module] ?? null;

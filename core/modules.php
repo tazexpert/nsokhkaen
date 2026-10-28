@@ -3,6 +3,8 @@
  * ทะเบียนระบบย่อย (modules)
  * แต่ละระบบอยู่ในโฟลเดอร์ modules/<key>/ และมีไฟล์ module.php คืนค่า array:
  *   key, name, short, icon, color, description, order
+ *   superadmin_access => false  (ไม่บังคับ) ผู้ดูแลระบบกลางไม่ได้สิทธิ์สูงสุดอัตโนมัติ ต้องกำหนดสิทธิ์รายคน
+ *                        (ใช้กับระบบที่มีข้อมูลส่วนบุคคล เช่น สลิปเงินเดือน)
  *   logo   => 'assets/img/logo.png'   (ไม่บังคับ) รูปโลโก้ระบบ สัมพัทธ์จากโฟลเดอร์ระบบ — ไม่มีจะใช้ icon แทน
  *   roles  => ['role' => 'คำอธิบาย', ...]   เรียงจากสิทธิ์ต่ำ → สูง (ตัวสุดท้าย = สูงสุด)
  *   menu   => [['id','label','href','icon','role'], ...]  href สัมพัทธ์จากโฟลเดอร์ระบบ
@@ -21,7 +23,8 @@ function modules(): array
                 continue;
             }
             $m += ['short' => $m['name'], 'icon' => 'bi-grid', 'color' => '#0f6cbd', 'description' => '',
-                   'order' => 100, 'menu' => [], 'links' => [], 'enabled' => true, 'logo' => null];
+                   'order' => 100, 'menu' => [], 'links' => [], 'enabled' => true, 'logo' => null,
+                   'superadmin_access' => true];
             if ($m['enabled']) {
                 $mods[$m['key']] = $m;
             }

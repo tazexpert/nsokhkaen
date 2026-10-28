@@ -168,10 +168,11 @@ require APP_ROOT . '/core/layout/header.php';
     <div class="card mb-3">
       <div class="card-header"><strong><i class="bi bi-shield-check"></i> สิทธิ์การใช้งานแต่ละระบบ</strong></div>
       <div class="card-body">
-        <p class="small text-muted" id="superNote" <?= $u['is_superadmin'] ? '' : 'hidden' ?>><i class="bi bi-star-fill text-warning"></i> ผู้ดูแลระบบกลางมีสิทธิ์สูงสุดในทุกระบบอยู่แล้ว ค่าด้านล่างจะมีผลเมื่อยกเลิกสถานะผู้ดูแลระบบกลาง</p>
+        <p class="small text-muted" id="superNote" <?= $u['is_superadmin'] ? '' : 'hidden' ?>><i class="bi bi-star-fill text-warning"></i> ผู้ดูแลระบบกลางมีสิทธิ์สูงสุดในทุกระบบอยู่แล้ว (ยกเว้นระบบที่มีป้าย <span class="badge text-bg-danger">ข้อมูลส่วนบุคคล</span> ต้องกำหนดสิทธิ์เอง)</p>
         <?php foreach ($mods as $m): ?>
           <div class="border rounded-3 p-3 mb-3">
-            <div class="fw-semibold mb-2"><?= module_logo($m, 22) ?> <?= h($m['name']) ?></div>
+            <div class="fw-semibold mb-2"><?= module_logo($m, 22) ?> <?= h($m['name']) ?>
+              <?php if (!$m['superadmin_access']): ?><span class="badge text-bg-danger">ข้อมูลส่วนบุคคล</span><?php endif; ?></div>
             <label class="d-block mb-1"><input type="radio" name="role[<?= h($m['key']) ?>]" value="" <?= empty($roles[$m['key']]) ? 'checked' : '' ?>> <span class="text-muted">ไม่มีสิทธิ์ใช้งาน</span></label>
             <?php foreach ($m['roles'] as $rk => $rl): ?>
               <label class="d-block mb-1"><input type="radio" name="role[<?= h($m['key']) ?>]" value="<?= h($rk) ?>" <?= ($roles[$m['key']] ?? '') === $rk ? 'checked' : '' ?>> <?= h($rl) ?></label>

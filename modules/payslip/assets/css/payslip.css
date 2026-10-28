@@ -1,0 +1,25 @@
+/* สลิปเงินเดือน */
+.payslip { position: relative; max-width: 640px; margin: 0 auto; background: #fff; border: 1px solid #e5e9f0; border-radius: 14px;
+  padding: 28px 36px 32px; font-size: 1.02rem; }
+.ps-no { text-align: right; }
+.ps-head { text-align: center; line-height: 1.7; margin-bottom: 14px; }
+.ps-title { font-weight: 600; font-size: 1.12rem; }
+.ps-table { width: 100%; }
+.ps-table th { padding-top: 6px; }
+.ps-table td { padding: 2px 0; }
+.ps-table td:first-child { padding-left: 14px; }
+.ps-table tr.fw-bold td:first-child, .ps-table tr.ps-net td:first-child { padding-left: 0; }
+.ps-table .amt { text-align: right; width: 130px; font-variant-numeric: tabular-nums; }
+.ps-table .unit { width: 44px; text-align: right; }
+.ps-table tr.ps-net td { font-weight: 700; padding-top: 12px; border-top: 1px solid #cbd5e1; }
+.ps-sign { text-align: center; margin-top: 36px; line-height: 1.7; }
+.sig-img { height: 54px; width: auto; }
+.sig-line { display: inline-block; width: 160px; border-bottom: 1px dotted #000; height: 30px; }
+.ps-draft { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-18deg); font-size: 3rem; font-weight: 700;
+  color: rgba(220, 38, 38, .18); border: 6px solid rgba(220, 38, 38, .18); padding: 4px 24px; border-radius: 12px; pointer-events: none; white-space: nowrap; }
+.pay-table td, .pay-table th { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pay-table td.num, .pay-table th.num { text-align: right; }
+@media print {
+  .payslip { border: 0; padding: 0; max-width: none; font-size: 15pt; }
+  body { background: #fff; }
+}

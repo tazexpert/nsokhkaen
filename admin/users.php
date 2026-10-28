@@ -45,7 +45,7 @@ if ($filterGroup > 0) {
 if ($filterModule === 'none') {
     $where[] = 'u.is_superadmin = 0 AND NOT EXISTS (SELECT 1 FROM core_user_roles r WHERE r.user_id = u.id)';
 } elseif ($filterModule !== '' && module_def($filterModule)) {
-    $where[] = '(u.is_superadmin = 1 OR EXISTS (SELECT 1 FROM core_user_roles r WHERE r.user_id = u.id AND r.module_key = ?))';
+    $where[] = '(' . (module_def($filterModule)['superadmin_access'] ? 'u.is_superadmin = 1 OR ' : '') . 'EXISTS (SELECT 1 FROM core_user_roles r WHERE r.user_id = u.id AND r.module_key = ?))';
     $params[] = $filterModule;
 }
 // เรียงตามชื่อผู้ใช้: ขึ้นต้นด้วยตัวเลขก่อน (เรียงแบบตัวเลข) แล้วตามด้วยตัวอักษร ผู้ที่ไม่มีชื่อผู้ใช้อยู่ท้ายสุด
@@ -105,7 +105,7 @@ require APP_ROOT . '/core/layout/header.php';
             <div class="small text-muted"><?= h($u['position']) ?></div></td>
           <td class="small"><?= $u['work_group'] ? h($u['work_group']) : '<span class="text-muted">-</span>' ?></td>
           <td class="text-center"><?= $u['has_pin'] ? '<i class="bi bi-check-circle-fill text-success"></i>' : '<span class="text-muted">-</span>' ?></td>
-          <?php foreach ($mods as $m): $r = $u['is_superadmin'] ? top_role($m['key']) : ($roles[$u['id']][$m['key']] ?? null); ?>
+          <?php foreach ($mods as $m): $r = $u['is_superadmin'] && $m['superadmin_access'] ? top_role($m['key']) : ($roles[$u['id']][$m['key']] ?? null); ?>
             <td class="small"><?= $r ? h(role_short($m['key'], $r)) : '<span class="text-muted">-</span>' ?></td>
           <?php endforeach; ?>
           <td class="text-end text-nowrap">
