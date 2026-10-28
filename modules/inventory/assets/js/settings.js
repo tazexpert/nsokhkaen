@@ -72,7 +72,7 @@ $(document).ready(() => {
     loadAppSettings();
 });
 
-/* ---------------- ใบยืมครุภัณฑ์ / การแจ้งเตือน ---------------- */
+/* ---------------- ใบยืมครุภัณฑ์ ---------------- */
 
 function loadLoanSettings() {
     $.get(SETTINGS_API, { action: 'get' }, function (res) {
@@ -89,3 +89,10 @@ function saveLoanSettings() {
 }
 
 $(document).ready(loadLoanSettings);
+
+// เลือกชื่อจากรายชื่อผู้ใช้งาน → ดึงตำแหน่งมาใส่ช่องตำแหน่ง (แก้ไขต่อได้)
+$(document).on('change', '.person-pick', function () {
+    const name = this.value.trim();
+    const opt = [...document.querySelectorAll('#userList option')].find(o => o.value === name);
+    if (opt) $(this.dataset.pos).val(opt.dataset.position || '');
+});

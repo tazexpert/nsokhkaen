@@ -113,8 +113,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ];
             if ($approveNow) {
                 $ls = loan_settings();
-                $data += ['status' => 'borrowed', 'lender_id' => $me['id'], 'lender_name' => $me['full_name'],
-                          'lender_position' => $me['position'], 'approver_name' => $ls['loan_approver_name'] ?: null,
+                [$lenderName, $lenderPos] = loan_lender($me);
+                $data += ['status' => 'borrowed', 'lender_id' => $me['id'], 'lender_name' => $lenderName,
+                          'lender_position' => $lenderPos, 'approver_name' => $ls['loan_approver_name'] ?: null,
                           'approver_position' => $ls['loan_approver_position'] ?: null, 'lent_at' => date('Y-m-d H:i:s')];
             }
             $cols = array_keys($data);
@@ -238,7 +239,7 @@ require __DIR__ . '/header.php';
     <button class="btn btn-primary btn-lg"><i class="bi bi-send"></i> <?= $id ? 'บันทึกการแก้ไข' : 'ส่งคำขอยืม' ?></button>
     <?php if ($isAdmin && $loan['status'] === 'pending'): ?>
       <div class="form-check ms-2"><input class="form-check-input" type="checkbox" name="approve_now" value="1" id="approveNow">
-        <label class="form-check-label" for="approveNow">อนุมัติและส่งมอบทันที (ผู้ให้ยืม: <?= h($me['full_name']) ?>)</label></div>
+        <label class="form-check-label" for="approveNow">อนุมัติและส่งมอบทันที (ผู้ให้ยืม: <?= h(loan_lender($me)[0]) ?>)</label></div>
     <?php endif; ?>
     <a href="<?= $id ? 'loan_view.php?id=' . $id : 'loans.php' ?>" class="btn btn-light btn-lg ms-auto">ยกเลิก</a>
   </div>

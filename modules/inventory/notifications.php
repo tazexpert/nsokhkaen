@@ -44,14 +44,13 @@ return function (array $user): array {
                       'text' => 'เลขที่ ' . $r['requisition_no'] . ' · ' . ($r['requester_name'] ?: $r['full_name']) . ' · ' . $r['n'] . ' รายการ',
                       'href' => $base . 'requisition_view.php?id=' . $r['id'], 'time' => $r['created_at']];
         }
-        // วัสดุจากการเบิกใน 30 วันล่าสุด ที่หมด/ใกล้หมด
-        $threshold = max(0, (int)(loan_settings()['low_stock_default'] ?? 2));
+        // วัสดุจากการเบิกใน 30 วันล่าสุด ที่หมด หรือเหลือไม่เกินจำนวนขั้นต่ำของวัสดุนั้น
         $st = $pdo->prepare("SELECT m.id, m.name, m.unit, m.stock_qty, m.min_stock, MAX(r.created_at) AS last_req
             FROM inv_materials m JOIN inv_requisition_items i ON i.material_id = m.id JOIN inv_requisitions r ON r.id = i.requisition_id
             WHERE r.created_at >= NOW() - INTERVAL 30 DAY
-              AND m.stock_qty <= CASE WHEN m.min_stock > 0 THEN m.min_stock ELSE ? END
+              AND m.stock_qty <= GREATEST(m.min_stock, 0)
             GROUP BY m.id ORDER BY m.stock_qty, last_req DESC LIMIT 15");
-        $st->execute([$threshold]);
+        $st->execute();
         foreach ($st as $m) {
             $empty = (int)$m['stock_qty'] <= 0;
             $out[] = ['title' => $empty ? 'วัสดุหมดสต๊อก' : 'วัสดุใกล้หมด', 'icon' => $empty ? 'bi-exclamation-octagon' : 'bi-exclamation-triangle',

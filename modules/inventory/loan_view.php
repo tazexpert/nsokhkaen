@@ -31,9 +31,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('มีครุภัณฑ์ในใบนี้ที่สภาพไม่ใช่ "ใช้งานตามปกติ" แล้ว กรุณาแก้ไขใบยืมก่อนอนุมัติ', 'danger');
         } else {
             $ls = loan_settings();
+            [$lenderName, $lenderPos] = loan_lender($me);
             $pdo->prepare("UPDATE inv_loans SET status = 'borrowed', lender_id = ?, lender_name = ?, lender_position = ?,
                 approver_name = ?, approver_position = ?, lent_at = NOW() WHERE id = ? AND status = 'pending'")
-                ->execute([$me['id'], $me['full_name'], $me['position'], $ls['loan_approver_name'] ?: null, $ls['loan_approver_position'] ?: null, $id]);
+                ->execute([$me['id'], $lenderName, $lenderPos, $ls['loan_approver_name'] ?: null, $ls['loan_approver_position'] ?: null, $id]);
             flash('อนุมัติและส่งมอบพัสดุเรียบร้อยแล้ว');
             $ok = true;
         }
@@ -52,10 +53,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$dt) {
             flash('กรุณาระบุวันที่รับคืน', 'danger');
         } else {
+            [$recvName, $recvPos] = loan_lender($me);
             $pdo->beginTransaction();
             $pdo->prepare("UPDATE inv_loans SET status = 'returned', returned_at = ?, receiver_id = ?, receiver_name = ?, receiver_position = ?, return_note = ?
                 WHERE id = ? AND status = 'borrowed'")
-                ->execute([$dt->format('Y-m-d') . ' ' . date('H:i:s'), $me['id'], $me['full_name'], $me['position'], post('return_note') ?: null, $id]);
+                ->execute([$dt->format('Y-m-d') . ' ' . date('H:i:s'), $me['id'], $recvName, $recvPos, post('return_note') ?: null, $id]);
             // สภาพครุภัณฑ์หลังรับคืน (เช่น ชำรุด → เสียรอซ่อม)
             $upd = $pdo->prepare('UPDATE inv_equipment SET status = ? WHERE id = ?');
             $ids = $pdo->prepare('SELECT equipment_id FROM inv_loan_items WHERE loan_id = ? AND equipment_id IS NOT NULL');
@@ -145,7 +147,7 @@ require __DIR__ . '/header.php';
           <form method="post" class="mb-3" data-confirm="อนุมัติและส่งมอบพัสดุตามใบยืมนี้?">
             <?= csrf_field() ?><input type="hidden" name="action" value="approve">
             <button class="btn btn-success w-100"><i class="bi bi-check2-circle"></i> อนุมัติและส่งมอบพัสดุ</button>
-            <div class="form-text">ผู้ให้ยืม: <?= h($me['full_name']) ?> · ผู้อนุมัติตามที่ตั้งค่าไว้</div>
+            <div class="form-text">ผู้ให้ยืม: <?= h(loan_lender($me)[0]) ?> · ผู้อนุมัติ: <?= h(loan_settings()['loan_approver_name'] ?: '(ยังไม่ได้ตั้งค่า)') ?></div>
           </form>
           <form method="post" data-confirm="ไม่อนุมัติใบยืมนี้?">
             <?= csrf_field() ?><input type="hidden" name="action" value="reject">
@@ -172,7 +174,7 @@ require __DIR__ . '/header.php';
           <label class="form-label mt-2">หมายเหตุการรับคืน</label>
           <input name="return_note" class="form-control mb-3" placeholder="เช่น ครบถ้วน สมบูรณ์">
           <button class="btn btn-primary w-100"><i class="bi bi-check2-all"></i> ได้รับพัสดุคืนครบถ้วน</button>
-          <div class="form-text">ผู้รับคืน: <?= h($me['full_name']) ?></div>
+          <div class="form-text">ผู้รับคืน: <?= h(loan_lender($me)[0]) ?></div>
         </div>
       </form>
     <?php endif; ?>

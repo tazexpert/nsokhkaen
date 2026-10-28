@@ -113,7 +113,7 @@ $font = BASE_URL . 'assets/fonts/';
   <div class="grow"><span class="lbl">ส่วนราชการ</span> <?= fill(ORG_NAME . '  โทรศัพท์ ' . thai_digits($ls['loan_org_phone']) . '  โทรสาร ' . thai_digits($ls['loan_org_fax']), '1cm', 'left') ?></div>
   <div class="grow"><span class="lbl">ที่</span> <?= fill('', '1cm') ?> <span class="lbl">วันที่</span> <span class="fill fixed" style="min-width:7cm"><?= h($td(substr($loan['created_at'], 0, 10))) ?></span></div>
   <div class="grow"><span class="lbl">เรื่อง</span> <?= fill('ขออนุมัติยืมพัสดุ', '1cm', 'left') ?></div>
-  <div class="grow" style="margin-top:6px">เรียน <?= fill($ls['loan_to'], '1cm', 'left') ?></div>
+  <div class="grow" style="margin-top:6px">เรียน <?= fill(LOAN_TO, '1cm', 'left') ?></div>
   <div class="line indent">ข้าพเจ้า <?= fill($loan['borrower_name'], '5cm') ?> ตำแหน่ง <?= fill($loan['borrower_position'], '5.6cm') ?></div>
   <div class="line">หน่วยงาน <?= fill($loan['borrower_org'], '6cm') ?> หมายเลขโทรศัพท์ <?= fill(thai_digits($loan['borrower_phone']), '4cm') ?></div>
   <div class="grow">มีความประสงค์จะขอยืมพัสดุ <?= fill('เพื่อ' . preg_replace('/^เพื่อ\s*/u', '', $loan['purpose']), '1cm', 'left') ?></div>
@@ -156,7 +156,7 @@ $font = BASE_URL . 'assets/fonts/';
     <div class="sign">
       <div>(ลงชื่อ) <?= fill('', '4.6cm') ?> ผู้ให้ยืม</div>
       <div class="who">( <?= fill($lent ? $loan['lender_name'] : '', '3.8cm') ?> )</div>
-      <div>ตำแหน่ง <?= fill($lent ? $loan['lender_position'] : '', '4.9cm') ?></div>
+      <div class="pos"><span>ตำแหน่ง</span><span class="pos-lines"><?= $lent && $loan['lender_position'] ? h($loan['lender_position']) : '&nbsp;' ?></span></div>
       <div>วันที่ <?= fill($lent ? $td(substr($loan['lent_at'], 0, 10)) : '', '5.3cm') ?></div>
     </div>
     <div class="sign">
@@ -180,7 +180,8 @@ $font = BASE_URL . 'assets/fonts/';
       <div class="sign">
         <div>(ลงชื่อ) <?= fill('', '5cm') ?> ผู้รับคืน</div>
         <div class="who">( <?= fill($returned ? $loan['receiver_name'] : ($lent ? $loan['lender_name'] : ''), '4.2cm') ?> )</div>
-        <div>ตำแหน่ง <?= fill($returned ? $loan['receiver_position'] : ($lent ? $loan['lender_position'] : ''), '5.3cm') ?></div>
+        <?php $rp = $returned ? $loan['receiver_position'] : ($lent ? $loan['lender_position'] : ''); ?>
+        <div class="pos"><span>ตำแหน่ง</span><span class="pos-lines"><?= $rp ? h($rp) : '&nbsp;' ?></span></div>
         <div>วันที่ <?= fill($returned ? $td(substr($loan['returned_at'], 0, 10)) : '', '5.6cm') ?></div>
       </div>
     </div>

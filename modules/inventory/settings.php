@@ -11,7 +11,7 @@ require_once __DIR__ . '/header.php';
         <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabSigners">ผู้ลงนามในใบเบิก</button>
     </li>
     <li class="nav-item">
-        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabLoan">ใบยืมครุภัณฑ์ / การแจ้งเตือน</button>
+        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabLoan">ใบยืมครุภัณฑ์</button>
     </li>
 </ul>
 
@@ -72,20 +72,27 @@ require_once __DIR__ . '/header.php';
 
     <!-- ใบยืมครุภัณฑ์ -->
     <div class="tab-pane fade" id="tabLoan">
-        <div class="card" style="max-width: 760px;">
+        <div class="card" style="max-width: 900px;">
             <div class="card-header">บันทึกข้อความขออนุมัติยืมพัสดุ (พิมพ์)</div>
             <div class="card-body row g-3">
                 <div class="col-md-6"><label class="form-label">โทรศัพท์ส่วนราชการ</label><input class="form-control loan-set" id="s_loan_org_phone"></div>
                 <div class="col-md-6"><label class="form-label">โทรสาร</label><input class="form-control loan-set" id="s_loan_org_fax"></div>
-                <div class="col-12"><label class="form-label">เรียน</label><input class="form-control loan-set" id="s_loan_to"></div>
-                <div class="col-md-6"><label class="form-label">ชื่อผู้อนุมัติ</label><input class="form-control loan-set" id="s_loan_approver_name" placeholder="เช่น นางเยาวภา มณีฉาย"></div>
-                <div class="col-md-6"><label class="form-label">ตำแหน่งผู้อนุมัติ <small class="text-muted">(ขึ้นบรรทัดใหม่ได้)</small></label>
-                    <textarea class="form-control loan-set" id="s_loan_approver_position" rows="3" placeholder="นักวิชาการสถิติชำนาญการพิเศษ รักษาราชการแทน&#10;สถิติจังหวัดขอนแก่น ปฏิบัติหน้าที่แทน&#10;ผู้ว่าราชการจังหวัดขอนแก่น"></textarea></div>
-                <div class="col-12 small text-muted">ผู้ให้ยืม/ผู้รับคืน = ผู้ดูแลระบบที่กดอนุมัติ/รับคืนในระบบ (ใช้ชื่อ-ตำแหน่งจาก "บัญชีของฉัน")</div>
-                <hr class="my-1">
-                <div class="col-md-8"><label class="form-label">แจ้งเตือน "วัสดุใกล้หมด" เมื่อคงเหลือไม่เกิน</label>
-                    <div class="input-group"><input type="number" min="0" class="form-control loan-set" id="s_low_stock_default"><span class="input-group-text">หน่วย</span></div>
-                    <div class="form-text">ใช้กับวัสดุที่ไม่ได้กำหนด "จำนวนขั้นต่ำ" ไว้ (ถ้ากำหนดไว้ จะใช้ค่าขั้นต่ำของวัสดุนั้น)</div></div>
+                <div class="col-12 small text-muted">เรียน: <strong><?= h(LOAN_TO) ?></strong> (คงที่)</div>
+                <?php foreach (['lender' => ['ผู้ให้ยืม', 'ใช้เป็น "ผู้รับคืน" ด้วย — ถ้าไม่ได้เลือก ระบบใช้ชื่อผู้ดูแลที่กดอนุมัติ/รับคืน'],
+                                'approver' => ['ผู้อนุมัติ', 'เช่น สถิติจังหวัด หรือผู้รักษาราชการแทน']] as $k => [$label, $hint]): ?>
+                  <div class="col-12"><hr class="my-1"></div>
+                  <div class="col-md-5"><label class="form-label fw-semibold"><?= $label ?></label>
+                    <input class="form-control loan-set person-pick" id="s_loan_<?= $k ?>_name" list="userList" data-pos="#s_loan_<?= $k ?>_position"
+                           placeholder="พิมพ์ค้นหาชื่อผู้ใช้งาน" autocomplete="off">
+                    <div class="form-text"><?= h($hint) ?></div></div>
+                  <div class="col-md-7"><label class="form-label">ตำแหน่ง<?= $label ?> <small class="text-muted">(ดึงจากผู้ใช้งาน แก้ไข/ขึ้นบรรทัดใหม่ได้)</small></label>
+                    <textarea class="form-control loan-set" id="s_loan_<?= $k ?>_position" rows="3"></textarea></div>
+                <?php endforeach; ?>
+                <datalist id="userList">
+                  <?php foreach (db()->query('SELECT full_name, position FROM core_users WHERE is_active = 1 ORDER BY full_name') as $u): ?>
+                    <option value="<?= h($u['full_name']) ?>" data-position="<?= h($u['position']) ?>"><?= h($u['position']) ?></option>
+                  <?php endforeach; ?>
+                </datalist>
                 <div id="loanSettingsResult" class="col-12"></div>
             </div>
             <div class="card-footer text-end"><button class="btn btn-primary" onclick="saveLoanSettings()">บันทึก</button></div>

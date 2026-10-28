@@ -19,14 +19,20 @@ const LOAN_STATUS = [
     'cancelled' => ['ยกเลิก', 'secondary'],
 ];
 
-/** ค่าตั้งค่าใบยืม (inv_settings) พร้อมค่าเริ่มต้น */
+/** ผู้รับบันทึกข้อความขออนุมัติยืมพัสดุ (คงที่) */
+const LOAN_TO = 'ผู้ว่าราชการจังหวัดขอนแก่น';
+
+/**
+ * ค่าตั้งค่าใบยืม (inv_settings) พร้อมค่าเริ่มต้น
+ *   ผู้ให้ยืม/ผู้อนุมัติ: เลือกจากผู้ใช้งานในหน้าตั้งค่า (ตำแหน่งแก้ไขได้) — ผู้ให้ยืมใช้เป็นผู้รับคืนด้วย
+ */
 const LOAN_SETTING_DEFAULTS = [
     'loan_org_phone'         => '0-4324-6639',
     'loan_org_fax'           => '0-4324-6183',
-    'loan_to'                => 'ผู้ว่าราชการจังหวัดขอนแก่น',
+    'loan_lender_name'       => '',
+    'loan_lender_position'   => '',
     'loan_approver_name'     => '',
     'loan_approver_position' => '',
-    'low_stock_default'      => '2',
 ];
 
 function loan_settings(): array
@@ -134,6 +140,15 @@ function equipment_type_id(PDO $pdo, string $name): ?int
     }
     $pdo->prepare('INSERT INTO inv_equipment_types (name, sort_order) SELECT ?, COALESCE(MAX(sort_order), 0) + 1 FROM inv_equipment_types')->execute([$name]);
     return (int)$pdo->lastInsertId();
+}
+
+/** ผู้ให้ยืม/ผู้รับคืน: ตามที่ตั้งค่าไว้ ถ้าไม่ได้ตั้ง ใช้ผู้ดูแลที่ทำรายการ [ชื่อ, ตำแหน่ง] */
+function loan_lender(array $me): array
+{
+    $ls = loan_settings();
+    return $ls['loan_lender_name'] !== ''
+        ? [$ls['loan_lender_name'], $ls['loan_lender_position'] ?: null]
+        : [$me['full_name'], $me['position']];
 }
 
 /** ใบยืมนี้ผู้ใช้ปัจจุบันดูได้หรือไม่ (ผู้ดูแล = ทุกใบ, เจ้าหน้าที่ = ที่ตนเป็นผู้ยืม/ผู้บันทึก) */
