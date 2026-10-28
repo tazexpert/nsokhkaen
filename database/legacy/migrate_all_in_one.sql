@@ -466,7 +466,19 @@ CREATE TABLE IF NOT EXISTS pay_slips (
   CONSTRAINT fk_pay_slips_created_by FOREIGN KEY (created_by) REFERENCES core_users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ค่าตั้งค่า: ผู้ลงนามในสลิป ลายเซ็น
+-- ผู้ลงนามในสลิป แยกตามช่วงเวลา: สลิปเดือนใดใช้ผู้ลงนามที่ "เริ่มตั้งแต่" ล่าสุดไม่เกินเดือนนั้น
+-- effective_ym = ปี พ.ศ. × 100 + เดือน เช่น 256911 = พฤศจิกายน 2569 · 0 = ใช้กับทุกเดือนก่อนหน้า (ผู้ลงนามคนแรก)
+CREATE TABLE IF NOT EXISTS pay_signers (
+  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  effective_ym    INT UNSIGNED NOT NULL UNIQUE,
+  name            VARCHAR(150) NOT NULL,
+  position        VARCHAR(300) NULL,
+  signature_path  VARCHAR(255) NULL,                   -- uploads/payslip/... (ปิดการเข้าถึงตรง)
+  created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ค่าตั้งค่าอื่นๆ ของระบบสลิป
 CREATE TABLE IF NOT EXISTS pay_settings (
   `key`       VARCHAR(50)  NOT NULL PRIMARY KEY,
   `value`     VARCHAR(500) NOT NULL,

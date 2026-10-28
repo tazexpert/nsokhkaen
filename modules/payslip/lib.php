@@ -16,11 +16,9 @@ const PAY_TOTALS = ['total_income' => 'รวมรายได้', 'total_dedu
 /** รายการที่แสดงเสมอแม้เป็น 0 (แบบสลิปเดิม) — ค่าครองชีพแสดงเฉพาะเมื่อมีค่า */
 const PAY_ALWAYS_SHOW = ['salary', 'arrears', 'tax', 'social_security', 'loan_welfare', 'loan_ghb', 'loan_slf', 'loan_islamic'];
 
-const PAY_SETTING_DEFAULTS = [
-    'signer_name'     => 'นายสมศักดิ์  แก้วสอน',
-    'signer_position' => 'สถิติจังหวัดขอนแก่น',
-    'signature_path'  => '',
-];
+const PAY_SETTING_DEFAULTS = [];
+/** ผู้ลงนามเมื่อยังไม่ได้ตั้งค่า */
+const PAY_DEFAULT_SIGNER = ['id' => 0, 'effective_ym' => 0, 'name' => 'นายสมศักดิ์  แก้วสอน', 'position' => 'สถิติจังหวัดขอนแก่น', 'signature_path' => null];
 const PAY_PRIVATE_DIR = 'payslip';     // uploads/payslip (ปิดการเข้าถึงตรง — เปิดผ่าน signature.php)
 
 function pay_can(string $role): bool
@@ -41,6 +39,29 @@ function pay_save_setting(string $key, string $value): void
 {
     db()->prepare('INSERT INTO pay_settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)')
         ->execute([$key, $value]);
+}
+
+/**
+ * ผู้ลงนามของสลิปเดือนนั้น: ผู้ที่ "เริ่มตั้งแต่" ล่าสุดไม่เกินเดือนของสลิป
+ * (สลิปเดือนเก่ายังแสดงผู้ลงนามเดิม แม้เปลี่ยนผู้ลงนามแล้ว)
+ */
+function pay_signer_for(int $year, int $month): array
+{
+    static $all = null;
+    $all ??= db()->query('SELECT * FROM pay_signers ORDER BY effective_ym DESC')->fetchAll();
+    $ym = $year * 100 + $month;
+    foreach ($all as $sg) {
+        if ((int)$sg['effective_ym'] <= $ym) {
+            return $sg;
+        }
+    }
+    return $all ? end($all) : PAY_DEFAULT_SIGNER;      // ก่อนผู้ลงนามคนแรก → ใช้คนแรก
+}
+
+/** ข้อความช่วงที่ผู้ลงนามมีผล */
+function pay_signer_from(int $ym): string
+{
+    return $ym === 0 ? 'ตั้งแต่เริ่มต้น' : 'ตั้งแต่ ' . pay_period(intdiv($ym, 100), $ym % 100);
 }
 
 /** รหัสพนักงานที่ผูกกับผู้ใช้ (null = ไม่ได้อยู่ในรายชื่อพนักงาน) */
@@ -162,7 +183,7 @@ function pay_private_dir(): string
 /** สลิป 1 ใบ (HTML) ตามรูปแบบ "ใบแสดงรายการหักเงินเดือน" เดิม */
 function pay_render_slip(array $s, string $code): string
 {
-    $set = pay_settings();
+    $sg = pay_signer_for((int)$s['year'], (int)$s['month']);
     $line = function (int $n, string $label, $value, bool $bold = false) {
         return '<tr' . ($bold ? ' class="fw-bold"' : '') . '><td>' . ($n ? $n . '. ' : '') . h($label) . '</td>'
             . '<td class="amt">' . pay_money($value) . '</td><td class="unit">บาท</td></tr>';
@@ -184,8 +205,8 @@ function pay_render_slip(array $s, string $code): string
     }
     $deduct = $rows . $line(0, 'รวมรายจ่าย', $s['total_deduct'], true);
     $approved = $s['status'] === 'approved';
-    $sig = $approved && $set['signature_path'] !== ''
-        ? '<img src="' . h(module_url(PAY_MODULE, 'signature.php')) . '" alt="ลายมือชื่อ" class="sig-img">'
+    $sig = $approved && !empty($sg['signature_path'])
+        ? '<img src="' . h(module_url(PAY_MODULE, 'signature.php?id=' . (int)$sg['id'] . '&v=' . substr(md5($sg['signature_path']), 0, 8))) . '" alt="ลายมือชื่อ" class="sig-img">'
         : '<span class="sig-line"></span>';
     return '<div class="payslip">'
         . '<div class="ps-no">เลขที่ ' . h($code) . '</div>'
@@ -196,7 +217,7 @@ function pay_render_slip(array $s, string $code): string
         . '<tr><th colspan="3" class="pt-3">รายการหัก</th></tr>' . $deduct
         . '<tr class="ps-net"><td>คงเหลือเงินรับสุทธิ</td><td class="amt">' . pay_money($s['net_pay']) . '</td><td class="unit">บาท</td></tr></table>'
         . '<div class="ps-sign"><div class="d-flex align-items-end justify-content-center gap-2"><span>ลงชื่อ</span>' . $sig . '</div>'
-        . '<div>(' . h($set['signer_name']) . ')</div><div>' . nl2br(h($set['signer_position'])) . '</div></div>'
+        . '<div>(' . h($sg['name']) . ')</div><div>' . nl2br(h((string)$sg['position'])) . '</div></div>'
         . (!$approved ? '<div class="ps-draft">ยังไม่อนุมัติ</div>' : '')
         . '</div>';
 }

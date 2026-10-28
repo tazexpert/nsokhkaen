@@ -1,8 +1,10 @@
 <?php
-/** รูปลายมือชื่อในสลิป (เก็บในโฟลเดอร์ที่ปิดการเข้าถึงตรง — ส่งให้เฉพาะผู้มีสิทธิ์ในระบบนี้) */
+/** รูปลายมือชื่อผู้ลงนาม (?id=) — เก็บในโฟลเดอร์ที่ปิดการเข้าถึงตรง ส่งให้เฉพาะผู้มีสิทธิ์ในระบบนี้ */
 require_once __DIR__ . '/bootstrap.php';
 require_module(PAY_MODULE);
-$rel = pay_settings()['signature_path'];
+$st = db()->prepare('SELECT signature_path FROM pay_signers WHERE id = ?');
+$st->execute([int_param('id')]);
+$rel = (string)$st->fetchColumn();
 $path = $rel !== '' && !str_contains($rel, '..') ? UPLOAD_DIR . '/' . $rel : '';
 if (!$path || !is_file($path)) {
     http_response_code(404);

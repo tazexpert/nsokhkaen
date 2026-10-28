@@ -202,12 +202,14 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 | `20261029_inv_loans_attachment.sql` | การยืมผ่าน e-office: แนบไฟล์ใบยืม + เลขที่หนังสือ (ตัดการอนุมัติในระบบ) |
 | `20261030_inv_equipment_assigned_user.sql` | ผู้ใช้งานประจำของครุภัณฑ์ (คอลัมน์ "ผู้ยืม/ผู้ใช้งาน") |
 | `20261031_payslip_init.sql` | ระบบสลิปเงินเดือนพนักงาน (ตาราง `pay_*`) |
+| `20261101_payslip_signers.sql` | ผู้ลงนามในสลิปแยกตามช่วงเวลา (ย้ายผู้ลงนามเดิมเป็นคนแรกให้อัตโนมัติ) |
 
 ```bash
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261028_core_workgroup_inv_equipment.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261029_inv_loans_attachment.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261030_inv_equipment_assigned_user.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261031_payslip_init.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261101_payslip_signers.sql
 ```
 
 หลังอัปเดต:
@@ -225,7 +227,8 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 3. ผู้อนุมัติเข้า สลิปเงินเดือน → นำเข้าข้อมูล → เลือกไฟล์ → ติ๊ก **"ใช้สถานะจากคอลัมน์ อนุมัติ"** (สลิปเดิมที่อนุมัติแล้วจะไม่ต้องอนุมัติซ้ำ) → ยืนยัน
 4. สลิปเงินเดือน → รายชื่อพนักงาน: ตรวจว่าทุกเลขที่ผูกกับบัญชีผู้ใช้แล้ว (ระบบผูกให้อัตโนมัติเมื่อชื่อ-นามสกุลตรงกัน)
    — พนักงานที่ยังไม่มีบัญชี ให้ผู้ดูแลระบบกลางสร้างบัญชีก่อน แล้วกลับมาเลือกผูก
-5. ตั้งค่าสลิป: ชื่อ/ตำแหน่งผู้ลงนาม และอัปโหลดรูปลายมือชื่อ (PNG พื้นโปร่งใส)
+5. ตั้งค่าสลิป: ผู้ลงนาม "ตั้งแต่เริ่มต้น" + รูปลายมือชื่อ (PNG พื้นโปร่งใส)
+   — เมื่อเปลี่ยนผู้ลงนาม ให้ "เพิ่มผู้ลงนาม" พร้อมเดือนที่เริ่มใช้ สลิปเดือนก่อนหน้ายังแสดงผู้ลงนามเดิม
 6. แจ้งพนักงานให้เข้าใช้ด้วยบัญชีของระบบบริหารจัดการ — **รหัสผ่านเดิมของระบบสลิป (ชีต UserData) ไม่ได้ย้ายมา**
 7. เดือนถัดไป: ผู้จัดการสลิปนำเข้าไฟล์ของเดือนนั้น (หรือเพิ่มรายใบ) → ผู้อนุมัติกดอนุมัติ → พนักงานเห็นสลิปและได้รับแจ้งเตือน
 
