@@ -69,8 +69,7 @@ require __DIR__ . '/header.php';
       </div>
       <div class="col-auto"><button class="btn btn-outline-secondary"><i class="bi bi-search"></i> ค้นหา</button></div>
       <?php if (dcc_can('editor')): ?>
-      <div class="col-auto ms-auto"><a href="geocode.php" class="btn btn-outline-primary"><i class="bi bi-geo-alt"></i> ค้นหาพิกัดอัตโนมัติ</a></div>
-      <div class="col-auto"><a href="center_form.php" class="btn btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มศูนย์ใหม่</a></div>
+      <div class="col-auto ms-auto"><a href="center_form.php" class="btn btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มศูนย์ใหม่</a></div>
       <?php endif; ?>
     </form>
   </div>

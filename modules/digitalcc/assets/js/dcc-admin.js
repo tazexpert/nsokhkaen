@@ -1,5 +1,5 @@
 // สคริปต์หลังบ้านเฉพาะระบบศูนย์ดิจิทัลชุมชน
-// หมุดโลโก้สำหรับแผนที่หลังบ้าน (ใช้ใน admin.js และ geocode.js)
+// หมุดโลโก้สำหรับแผนที่หลังบ้าน (ใช้ในหน้าแก้ไขศูนย์และแบบฟอร์มตรวจเยี่ยม)
 window.dccPin = function () {
   return L.divIcon({
     className: '', html: '<div class="pin"><img src="' + DCC_URL_JS + 'assets/img/logo.png" alt=""></div>',
