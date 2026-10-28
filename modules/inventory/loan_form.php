@@ -169,8 +169,6 @@ $users = $pdo->query('SELECT id, full_name, position, phone FROM core_users WHER
 $pageTitle = $id ? 'แก้ไขรายการยืม ' . $loan['loan_no'] : 'บันทึกการยืมครุภัณฑ์';
 require __DIR__ . '/header.php';
 ?>
-<div class="alert alert-info small"><i class="bi bi-info-circle"></i>
-  การขออนุมัติยืมทำผ่านระบบ <strong>e-office</strong> ตามเดิม — เมื่ออนุมัติแล้ว ให้แนบไฟล์ใบยืมและเลือกครุภัณฑ์ที่นี่ เพื่ออัปเดตสถานะเป็น "กำลังยืม"</div>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>
 <form method="post" enctype="multipart/form-data" class="row g-3">
   <?= csrf_field() ?>

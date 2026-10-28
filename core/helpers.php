@@ -278,3 +278,40 @@ function text_to_utf8(string $raw): string
     }
     return $out !== false && $out !== '' ? $out : mb_convert_encoding($raw, 'UTF-8', 'ISO-8859-1');
 }
+
+/** วันที่จากไฟล์ → Y-m-d (รองรับ 28/10/2569, 28/10/2026, 2026-10-28, 28 ต.ค. 2569, 28 ตุลาคม 2569) */
+function parse_date_flexible(string $v): ?string
+{
+    $v = trim($v);
+    if ($v === '') {
+        return null;
+    }
+    $y = $m = $d = 0;
+    if (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})/', $v, $x)) {
+        [, $y, $m, $d] = $x;
+    } elseif (preg_match('#^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$#', $v, $x)) {
+        [, $d, $m, $y] = $x;
+        if (strlen($y) === 2) {
+            $y = (int)$y + ((int)$y > 50 ? 2500 : 2000);         // 69 → 2569, 26 → 2026
+        }
+    } elseif (preg_match('/^(\d{1,2})\s*(\S+?)\.?\s*(\d{2,4})$/u', $v, $x)) {
+        $months = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+        $short = ['ม.ค', 'ก.พ', 'มี.ค', 'เม.ย', 'พ.ค', 'มิ.ย', 'ก.ค', 'ส.ค', 'ก.ย', 'ต.ค', 'พ.ย', 'ธ.ค'];
+        $name = rtrim($x[2], '.');
+        $i = array_search($name, $months, true);
+        $i = $i === false ? array_search($name, $short, true) : $i;
+        if ($i === false) {
+            return null;
+        }
+        [$d, $m, $y] = [$x[1], $i + 1, (int)$x[3] < 100 ? 2500 + (int)$x[3] : $x[3]];
+    } elseif (is_numeric($v) && (float)$v > 20000 && (float)$v < 80000) {      // เลขวันที่ของ Excel
+        return date('Y-m-d', (int)(((float)$v - 25569) * 86400));
+    } else {
+        return null;
+    }
+    $y = (int)$y;
+    if ($y > 2400) {
+        $y -= 543;                                          // พ.ศ. → ค.ศ.
+    }
+    return checkdate((int)$m, (int)$d, $y) ? sprintf('%04d-%02d-%02d', $y, $m, $d) : null;
+}

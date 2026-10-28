@@ -47,7 +47,10 @@ $st->execute($params);
 $loans = $st->fetchAll();
 
 $tabs = ['borrowed' => 'กำลังยืม', 'overdue' => 'เกินกำหนดคืน', 'returned' => 'คืนแล้ว', 'all' => 'ทั้งหมด'];
-$pageActions = $isAdmin ? '<a href="loan_form.php" class="btn btn-success"><i class="bi bi-plus-lg"></i> บันทึกการยืม (แนบใบยืม)</a>' : '';
+$noFile = $isAdmin ? (int)$pdo->query("SELECT COUNT(*) FROM inv_loans WHERE status = 'borrowed' AND (file_path IS NULL OR file_path = '')")->fetchColumn() : 0;
+$pageActions = $isAdmin ? ($noFile ? '<a href="loan_attach.php" class="btn btn-warning"><i class="bi bi-paperclip"></i> แนบใบยืมที่ยังขาด (' . $noFile . ')</a>' : '')
+    . '<a href="loan_import.php" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> นำเข้า CSV</a>'
+    . '<a href="loan_form.php" class="btn btn-success"><i class="bi bi-plus-lg"></i> บันทึกการยืม</a>' : '';
 require __DIR__ . '/header.php';
 ?>
 <ul class="nav nav-pills mb-3 flex-wrap gap-1">
@@ -78,7 +81,8 @@ require __DIR__ . '/header.php';
           <td><?= loan_status_badge($l['status']) ?><?= $od ? ' <span class="badge text-bg-danger">เกินกำหนด</span>' : '' ?></td>
           <td class="text-end text-nowrap">
             <a href="loan_view.php?id=<?= (int)$l['id'] ?>" class="btn btn-sm btn-light" title="ดู"><i class="bi bi-eye"></i></a>
-            <?php if ($l['file_path']): ?><a href="loan_file.php?id=<?= (int)$l['id'] ?>" target="_blank" class="btn btn-sm btn-light" title="เปิด/พิมพ์ใบยืม"><i class="bi bi-printer"></i></a><?php endif; ?>
+            <?php if ($l['file_path']): ?><a href="loan_file.php?id=<?= (int)$l['id'] ?>" target="_blank" class="btn btn-sm btn-light" title="เปิด/พิมพ์ใบยืม"><i class="bi bi-printer"></i></a>
+            <?php elseif ($isAdmin && $l['status'] === 'borrowed'): ?><a href="loan_attach.php?ids=<?= (int)$l['id'] ?>" class="btn btn-sm btn-outline-warning" title="แนบไฟล์ใบยืม"><i class="bi bi-paperclip"></i></a><?php endif; ?>
           </td>
         </tr>
       <?php endforeach; ?>

@@ -92,7 +92,7 @@ require __DIR__ . '/header.php';
           <dt class="col-sm-3">ไฟล์ใบยืม</dt><dd class="col-sm-9"><?php if ($loan['file_path']): ?>
             <a href="loan_file.php?id=<?= $id ?>" target="_blank"><i class="bi <?= $isPdf ? 'bi-file-earmark-pdf text-danger' : 'bi-file-earmark-image' ?>"></i> <?= h($loan['file_name']) ?></a>
             · <a href="loan_file.php?id=<?= $id ?>&download=1" class="small">ดาวน์โหลด</a>
-            <?php else: ?><span class="text-muted">ไม่มี</span><?php endif; ?></dd>
+            <?php else: ?><span class="text-muted">ไม่มี</span><?php if ($isAdmin): ?> · <a href="loan_attach.php?ids=<?= $id ?>"><i class="bi bi-paperclip"></i> แนบไฟล์ใบยืม</a><?php endif; ?><?php endif; ?></dd>
           <?php if ($loan['returned_at']): ?><dt class="col-sm-3">รับคืน</dt><dd class="col-sm-9"><?= h(thai_date_full($loan['returned_at'])) ?> โดย <?= h($loan['receiver_name']) ?><?= $loan['return_note'] ? '<div class="small text-muted">' . h($loan['return_note']) . '</div>' : '' ?></dd><?php endif; ?>
         </dl>
       </div>

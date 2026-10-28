@@ -47,43 +47,6 @@ function cal_header_field(string $h): ?string
     return null;
 }
 
-/** วันที่จากไฟล์ → Y-m-d (รองรับ 28/10/2569, 28/10/2026, 2026-10-28, 28 ต.ค. 2569, 28 ตุลาคม 2569) */
-function cal_parse_date(string $v): ?string
-{
-    $v = trim($v);
-    if ($v === '') {
-        return null;
-    }
-    $y = $m = $d = 0;
-    if (preg_match('/^(\d{4})-(\d{1,2})-(\d{1,2})/', $v, $x)) {
-        [, $y, $m, $d] = $x;
-    } elseif (preg_match('#^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$#', $v, $x)) {
-        [, $d, $m, $y] = $x;
-        if (strlen($y) === 2) {
-            $y = (int)$y + ((int)$y > 50 ? 2500 : 2000);         // 69 → 2569, 26 → 2026
-        }
-    } elseif (preg_match('/^(\d{1,2})\s*(\S+?)\.?\s*(\d{2,4})$/u', $v, $x)) {
-        $months = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
-        $short = ['ม.ค', 'ก.พ', 'มี.ค', 'เม.ย', 'พ.ค', 'มิ.ย', 'ก.ค', 'ส.ค', 'ก.ย', 'ต.ค', 'พ.ย', 'ธ.ค'];
-        $name = rtrim($x[2], '.');
-        $i = array_search($name, $months, true);
-        $i = $i === false ? array_search($name, $short, true) : $i;
-        if ($i === false) {
-            return null;
-        }
-        [$d, $m, $y] = [$x[1], $i + 1, (int)$x[3] < 100 ? 2500 + (int)$x[3] : $x[3]];
-    } elseif (is_numeric($v) && (float)$v > 20000 && (float)$v < 80000) {      // เลขวันที่ของ Excel
-        return date('Y-m-d', (int)(((float)$v - 25569) * 86400));
-    } else {
-        return null;
-    }
-    $y = (int)$y;
-    if ($y > 2400) {
-        $y -= 543;                                          // พ.ศ. → ค.ศ.
-    }
-    return checkdate((int)$m, (int)$d, $y) ? sprintf('%04d-%02d-%02d', $y, $m, $d) : null;
-}
-
 /** เวลา → H:i:s (รองรับ 9:00, 09.30, 0930, 9:00 น., ค่าจาก Excel 0.375) */
 function cal_parse_time(string $v): ?string
 {
@@ -190,8 +153,8 @@ function cal_parse_file(string $path, string $name): array
         }
         $row = ['line' => $line, 'title' => mb_substr($get('title'), 0, 255), 'location' => mb_substr($get('location'), 0, 255),
                 'link' => $get('link'), 'note' => $get('note'), 'people_text' => $get('people'), 'errors' => []];
-        $row['event_date'] = cal_parse_date($get('event_date'));
-        $row['end_date'] = $get('end_date') !== '' ? cal_parse_date($get('end_date')) : null;
+        $row['event_date'] = parse_date_flexible($get('event_date'));
+        $row['end_date'] = $get('end_date') !== '' ? parse_date_flexible($get('end_date')) : null;
         $row['start_time'] = cal_parse_time($get('start_time'));
         $row['end_time'] = cal_parse_time($get('end_time'));
         [$row['users'], $row['missing']] = cal_parse_people($row['people_text']);
