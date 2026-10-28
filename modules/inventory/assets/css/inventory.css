@@ -1,2 +1,7 @@
 /* สไตล์เฉพาะระบบวัสดุ (สไตล์หลักอยู่ที่ assets/css/app.css) */
 #reader { border-radius: 8px; overflow: hidden; }
+
+/* ครุภัณฑ์ */
+.eq-summary th, .eq-summary td:first-child, .eq-table td, .eq-table th { white-space: nowrap; }
+.eq-table td:last-child { white-space: normal; min-width: 160px; }
+@media print { .eq-table a { color: #000; text-decoration: none; } }

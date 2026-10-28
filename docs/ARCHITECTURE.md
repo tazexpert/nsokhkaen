@@ -13,9 +13,10 @@ nsokhkaen/
 │   ├── auth.php          login/logout, current_user(), สิทธิ์รายระบบ (require_module ฯลฯ)
 │   ├── modules.php       อ่านทะเบียนระบบจาก modules/*/module.php
 │   ├── helpers.php       h(), url(), CSRF, flash, อัปโหลดรูป, audit_log()
-│   └── layout/           header/footer + เมนูด้านข้างที่ใช้ร่วมกัน
+│   ├── notifications.php การแจ้งเตือน (รวมจาก modules/*/notifications.php)
+│   └── layout/           header/footer + เมนูด้านบนที่ใช้ร่วมกัน
 ├── modules/
-│   ├── inventory/        ระบบบริหารจัดการวัสดุ      (ตาราง inv_*)
+│   ├── inventory/        ระบบบริหารจัดการวัสดุและครุภัณฑ์ (ตาราง inv_*)
 │   └── digitalcc/        ระบบศูนย์ดิจิทัลชุมชน       (ตาราง dcc_*)
 │       └── public/       เว็บไซต์สาธารณะ (ไม่ต้อง login)
 ├── assets/               CSS/JS/ฟอนต์ ที่ใช้ร่วมกัน
@@ -34,8 +35,8 @@ nsokhkaen/
 
 | prefix | ระบบ | หมายเหตุ |
 |---|---|---|
-| `core_` | ระบบกลาง | `core_users`, `core_user_roles`, `core_settings`, `core_audit_log` |
-| `inv_`  | วัสดุ | อ้างอิงผู้ใช้ที่ `core_users.id` |
+| `core_` | ระบบกลาง | `core_users`, `core_user_roles`, `core_work_groups`, `core_settings`, `core_audit_log` |
+| `inv_`  | วัสดุและครุภัณฑ์ | วัสดุ/ใบเบิก + `inv_equipment*`, `inv_loans`, `inv_loan_items` (ครุภัณฑ์และการยืม-คืน) |
 | `dcc_`  | ศูนย์ดิจิทัลชุมชน | อ้างอิงผู้ใช้ที่ `core_users.id` |
 
 ระบบใหม่ใช้ prefix ของตัวเอง (สั้น 3–4 ตัวอักษร) และ **ห้ามแก้ตารางของระบบอื่นโดยตรง**
@@ -113,7 +114,23 @@ session เก็บเฉพาะ `uid` และโหลดสิทธิ�
 4. ไฟล์อัปโหลดใช้ `save_upload($file, 'room/xxx')` → เก็บที่ `uploads/room/xxx/`
 5. เข้า **ผู้ดูแลระบบกลาง → ผู้ใช้งานและสิทธิ์** ระบบใหม่จะมีช่องกำหนดสิทธิ์ให้อัตโนมัติ
 
-ไม่ต้องแก้โค้ดส่วนกลาง เมนูด้านข้าง หน้าหลัก และหน้าจัดการสิทธิ์จะแสดงระบบใหม่เองจาก `module.php`
+ไม่ต้องแก้โค้ดส่วนกลาง เมนูด้านบน หน้าหลัก และหน้าจัดการสิทธิ์จะแสดงระบบใหม่เองจาก `module.php`
+
+ตัวเลือกเพิ่มเติม:
+- **โลโก้ระบบ**: ใส่ `'logo' => 'assets/img/logo.png'` ใน module.php (สัมพัทธ์จากโฟลเดอร์ระบบ) — แสดงในเมนูและหน้าหลักแทนไอคอน
+- **การแจ้งเตือน**: สร้าง `modules/room/notifications.php`
+
+  ```php
+  <?php
+  return function (array $user): array {
+      // คืนรายการ: title, text, href, time (Y-m-d H:i:s), icon, color (success|warning|danger|primary|info)
+      return [['title' => 'มีการจองห้องใหม่', 'text' => 'ห้อง 1 · 10:00', 'href' => module_url('room', 'index.php'),
+               'time' => date('Y-m-d H:i:s'), 'icon' => 'bi-calendar2-week', 'color' => 'primary']];
+  };
+  ```
+  ระบบกลางเรียกเฉพาะเมื่อผู้ใช้มีสิทธิ์ในระบบนั้น และนับ "ยังไม่อ่าน" จากเวลาที่ใหม่กว่าการเปิดกระดิ่งครั้งล่าสุด
+- **หัวข้อ/ปุ่มของหน้า**: กำหนด `$pageTitle` และ `$pageActions` (HTML ปุ่ม) ก่อน require header
+  — ระวังอย่าใช้ชื่อตัวแปร `$active`, `$module`, `$user`, `$mods`, `$cur` เก็บข้อมูลของหน้า เพราะ header ใช้ชื่อเหล่านี้
 
 ## หมายเหตุเกี่ยวกับโค้ดระบบวัสดุ
 

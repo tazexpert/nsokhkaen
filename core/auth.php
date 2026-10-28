@@ -36,9 +36,10 @@ function current_user(bool $reload = false): ?array
     if (!$uid) {
         return null;
     }
-    $st = db()->prepare('SELECT id, username, full_name, position, email, phone, is_superadmin, is_active,
-                                (pin_hash IS NOT NULL) AS has_pin, (password_hash IS NOT NULL) AS has_password
-                         FROM core_users WHERE id = ?');
+    $st = db()->prepare('SELECT u.id, u.username, u.full_name, u.position, u.email, u.phone, u.is_superadmin, u.is_active,
+                                u.work_group_id, g.name AS work_group, u.notif_seen_at,
+                                (u.pin_hash IS NOT NULL) AS has_pin, (u.password_hash IS NOT NULL) AS has_password
+                         FROM core_users u LEFT JOIN core_work_groups g ON g.id = u.work_group_id WHERE u.id = ?');
     $st->execute([$uid]);
     $row = $st->fetch();
     if (!$row || !$row['is_active']) {
@@ -100,7 +101,8 @@ function login_user(int $userId, bool $viaPin = false): void
 {
     session_regenerate_id(true);
     $redirect = $_SESSION['redirect_after_login'] ?? null;
-    $_SESSION = ['uid' => $userId, 'via_pin' => $viaPin, 'redirect_after_login' => $redirect];
+    $_SESSION = ['uid' => $userId, 'via_pin' => $viaPin, 'redirect_after_login' => $redirect,
+                 'show_notifications' => !$viaPin];   // เปิดรายการแจ้งเตือนให้เห็นทันทีหลัง login
     db()->prepare('UPDATE core_users SET last_login_at = NOW() WHERE id = ?')->execute([$userId]);
     current_user(true);
     audit_log($viaPin ? 'login_pin' : 'login', '', 'core', $userId);

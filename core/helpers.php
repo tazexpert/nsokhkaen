@@ -136,6 +136,7 @@ function check_csrf(): void
 /* ---------- อัปโหลดรูปภาพ (เก็บใต้ uploads/) ---------- */
 
 const UPLOAD_MAX_BYTES = 10 * 1024 * 1024;
+const PASSWORD_MIN_LENGTH = 6;            // ความยาวรหัสผ่านขั้นต่ำ
 const IMAGE_MAX_SIDE = 1600;
 
 /** แปลง $_FILES['x'] แบบ multiple เป็น array ของไฟล์เดี่ยว */
@@ -242,4 +243,14 @@ function delete_upload(?string $rel): void
 function upload_url(?string $rel): string
 {
     return $rel ? url('uploads/' . ltrim($rel, '/')) : '';
+}
+
+/** กลุ่มงานทั้งหมด [id => name] เรียงตามลำดับ */
+function work_groups(): array
+{
+    static $groups = null;
+    if ($groups === null) {
+        $groups = db()->query('SELECT id, name FROM core_work_groups ORDER BY sort_order, id')->fetchAll(PDO::FETCH_KEY_PAIR);
+    }
+    return $groups;
 }

@@ -14,8 +14,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($fullName === '') {
             $errors[] = 'กรุณากรอกชื่อ-นามสกุล';
         } else {
-            $pdo->prepare('UPDATE core_users SET full_name = ?, position = ?, email = ?, phone = ? WHERE id = ?')
-                ->execute([$fullName, post('position') ?: null, post('email') ?: null, post('phone') ?: null, $user['id']]);
+            $wg = int_param('work_group_id');
+            $pdo->prepare('UPDATE core_users SET full_name = ?, position = ?, work_group_id = ?, email = ?, phone = ? WHERE id = ?')
+                ->execute([$fullName, post('position') ?: null, isset(work_groups()[$wg]) ? $wg : null,
+                           post('email') ?: null, post('phone') ?: null, $user['id']]);
             flash('บันทึกข้อมูลส่วนตัวเรียบร้อยแล้ว');
             redirect(url('account.php'));
         }
@@ -26,8 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $new = (string)($_POST['new_password'] ?? '');
         if (!$hash || !password_verify((string)($_POST['current_password'] ?? ''), $hash)) {
             $errors[] = 'รหัสผ่านปัจจุบันไม่ถูกต้อง';
-        } elseif (mb_strlen($new) < 8) {
-            $errors[] = 'รหัสผ่านใหม่ต้องมีอย่างน้อย 8 ตัวอักษร';
+        } elseif (mb_strlen($new) < PASSWORD_MIN_LENGTH) {
+            $errors[] = 'รหัสผ่านใหม่ต้องมีอย่างน้อย ' . PASSWORD_MIN_LENGTH . ' ตัวอักษร';
         } elseif ($new !== ($_POST['confirm_password'] ?? '')) {
             $errors[] = 'รหัสผ่านใหม่และยืนยันรหัสผ่านไม่ตรงกัน';
         } else {
@@ -79,6 +81,10 @@ require APP_ROOT . '/core/layout/header.php';
         <?= csrf_field() ?><input type="hidden" name="action" value="profile">
         <div class="col-12"><label class="form-label">ชื่อ-นามสกุล</label><input name="full_name" class="form-control" required value="<?= h($user['full_name']) ?>"></div>
         <div class="col-12"><label class="form-label">ตำแหน่ง <small class="text-muted">(พิมพ์ในเอกสาร เช่น ใบเบิกวัสดุ)</small></label><input name="position" class="form-control" value="<?= h($user['position']) ?>"></div>
+        <div class="col-12"><label class="form-label">กลุ่มงาน</label>
+          <select name="work_group_id" class="form-select"><option value="">— ไม่ระบุ —</option>
+            <?php foreach (work_groups() as $gid => $gname): ?><option value="<?= (int)$gid ?>" <?= (int)$user['work_group_id'] === (int)$gid ? 'selected' : '' ?>><?= h($gname) ?></option><?php endforeach; ?>
+          </select></div>
         <div class="col-md-6"><label class="form-label">อีเมล</label><input name="email" type="email" class="form-control" value="<?= h($user['email']) ?>"></div>
         <div class="col-md-6"><label class="form-label">โทรศัพท์</label><input name="phone" class="form-control" value="<?= h($user['phone']) ?>"></div>
         <div class="col-12 small text-muted">ชื่อผู้ใช้: <strong><?= h($user['username'] ?: '— (ใช้ PIN อย่างเดียว)') ?></strong></div>
@@ -91,7 +97,7 @@ require APP_ROOT . '/core/layout/header.php';
       <ul class="list-group list-group-flush">
         <?php if ($user['is_superadmin']): ?><li class="list-group-item"><i class="bi bi-star-fill text-warning"></i> ผู้ดูแลระบบกลาง (มีสิทธิ์สูงสุดทุกระบบ)</li><?php endif; ?>
         <?php foreach (accessible_modules($user) as $m): ?>
-          <li class="list-group-item d-flex"><span><i class="bi <?= h($m['icon']) ?>"></i> <?= h($m['name']) ?></span>
+          <li class="list-group-item d-flex"><span><?= module_logo($m, 18) ?> <?= h($m['name']) ?></span>
             <span class="ms-auto text-muted small"><?= h(role_short($m['key'], module_role($m['key'], $user))) ?></span></li>
         <?php endforeach; ?>
       </ul>
@@ -105,8 +111,8 @@ require APP_ROOT . '/core/layout/header.php';
       <div class="card-body">
         <?= csrf_field() ?><input type="hidden" name="action" value="password">
         <div class="mb-2"><label class="form-label">รหัสผ่านปัจจุบัน</label><input type="password" name="current_password" class="form-control" required autocomplete="current-password"></div>
-        <div class="mb-2"><label class="form-label">รหัสผ่านใหม่</label><input type="password" name="new_password" class="form-control" minlength="8" required autocomplete="new-password"></div>
-        <div class="mb-0"><label class="form-label">ยืนยันรหัสผ่านใหม่</label><input type="password" name="confirm_password" class="form-control" minlength="8" required autocomplete="new-password"></div>
+        <div class="mb-2"><label class="form-label">รหัสผ่านใหม่</label><input type="password" name="new_password" class="form-control" minlength="<?= PASSWORD_MIN_LENGTH ?>" required autocomplete="new-password"></div>
+        <div class="mb-0"><label class="form-label">ยืนยันรหัสผ่านใหม่</label><input type="password" name="confirm_password" class="form-control" minlength="<?= PASSWORD_MIN_LENGTH ?>" required autocomplete="new-password"></div>
       </div>
       <div class="card-footer"><button class="btn btn-primary">เปลี่ยนรหัสผ่าน</button></div>
     </form>

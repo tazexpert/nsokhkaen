@@ -35,7 +35,7 @@ $title = str_contains($target, '/modules/inventory/scan.php') ? 'สแกน QR
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>กรอก PIN - <?= h(APP_NAME) ?></title>
-    <link rel="icon" type="image/svg+xml" href="<?= h(url('assets/img/favicon.svg')) ?>">
+    <link rel="icon" type="image/png" href="<?= h(url('assets/img/favicon.png')) ?>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         :root {
@@ -152,6 +152,7 @@ $title = str_contains($target, '/modules/inventory/scan.php') ? 'สแกน QR
 </head>
 <body>
 <div class="pin-screen">
+    <img src="<?= h(url('assets/img/logo.png')) ?>" alt="" style="height:72px;width:auto;margin-bottom:10px">
     <div class="pin-title"><?= h($title) ?></div>
     <div class="pin-subtitle"><?= h(ORG_NAME) ?></div>
 

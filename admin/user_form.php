@@ -6,7 +6,7 @@ $pdo = db();
 $id = int_param('id');
 $mods = modules();
 
-$u = ['username' => '', 'full_name' => '', 'position' => '', 'email' => '', 'phone' => '',
+$u = ['username' => '', 'full_name' => '', 'position' => '', 'work_group_id' => null, 'email' => '', 'phone' => '',
       'is_superadmin' => 0, 'is_active' => 1, 'has_pin' => 0, 'has_password' => 0];
 $roles = [];
 if ($id) {
@@ -31,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $removePin = !empty($_POST['remove_pin']);
     $u = array_merge($u, [
         'username' => $username, 'full_name' => post('full_name'), 'position' => post('position'),
+        'work_group_id' => isset(work_groups()[int_param('work_group_id')]) ? int_param('work_group_id') : null,
         'email' => post('email'), 'phone' => post('phone'),
         'is_superadmin' => isset($_POST['is_superadmin']) ? 1 : 0, 'is_active' => isset($_POST['is_active']) ? 1 : 0,
     ]);
@@ -58,8 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($password !== '' && $username === '') {
         $errors[] = 'กรุณากรอกชื่อผู้ใช้คู่กับรหัสผ่าน';
     }
-    if ($password !== '' && mb_strlen($password) < 8) {
-        $errors[] = 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร';
+    if ($password !== '' && mb_strlen($password) < PASSWORD_MIN_LENGTH) {
+        $errors[] = 'รหัสผ่านต้องมีอย่างน้อย ' . PASSWORD_MIN_LENGTH . ' ตัวอักษร';
     }
     if ($pin !== '' && !preg_match('/^\d{6}$/', $pin)) {
         $errors[] = 'PIN ต้องเป็นตัวเลข 6 หลัก';
@@ -76,6 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->beginTransaction();
             $data = [
                 'username' => $username ?: null, 'full_name' => $u['full_name'], 'position' => $u['position'] ?: null,
+                'work_group_id' => $u['work_group_id'],
                 'email' => $u['email'] ?: null, 'phone' => $u['phone'] ?: null,
                 'is_superadmin' => $u['is_superadmin'], 'is_active' => $u['is_active'],
             ];
@@ -129,6 +131,10 @@ require APP_ROOT . '/core/layout/header.php';
         <div class="col-12"><label class="form-label">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
           <input name="full_name" class="form-control" required value="<?= h($u['full_name']) ?>"></div>
         <div class="col-12"><label class="form-label">ตำแหน่ง</label><input name="position" class="form-control" value="<?= h($u['position']) ?>"></div>
+        <div class="col-12"><label class="form-label">กลุ่มงาน</label>
+          <select name="work_group_id" class="form-select"><option value="">— ไม่ระบุ —</option>
+            <?php foreach (work_groups() as $gid => $gname): ?><option value="<?= (int)$gid ?>" <?= (int)$u['work_group_id'] === (int)$gid ? 'selected' : '' ?>><?= h($gname) ?></option><?php endforeach; ?>
+          </select></div>
         <div class="col-md-6"><label class="form-label">อีเมล</label><input name="email" type="email" class="form-control" value="<?= h($u['email']) ?>"></div>
         <div class="col-md-6"><label class="form-label">โทรศัพท์</label><input name="phone" class="form-control" value="<?= h($u['phone']) ?>"></div>
         <div class="col-12 d-flex flex-wrap gap-4">
@@ -146,7 +152,7 @@ require APP_ROOT . '/core/layout/header.php';
         <div class="col-md-6"><label class="form-label">ชื่อผู้ใช้ (Username)</label>
           <input name="username" class="form-control" value="<?= h($u['username']) ?>" autocomplete="off"></div>
         <div class="col-md-6"><label class="form-label">รหัสผ่าน<?= $u['has_password'] ? ' ใหม่' : '' ?></label>
-          <input name="password" type="password" class="form-control" minlength="8" placeholder="<?= $u['has_password'] ? 'เว้นว่างถ้าไม่เปลี่ยน' : 'อย่างน้อย 8 ตัวอักษร' ?>" autocomplete="new-password"></div>
+          <input name="password" type="password" class="form-control" minlength="<?= PASSWORD_MIN_LENGTH ?>" placeholder="<?= $u['has_password'] ? 'เว้นว่างถ้าไม่เปลี่ยน' : 'อย่างน้อย ' . PASSWORD_MIN_LENGTH . ' ตัวอักษร' ?>" autocomplete="new-password"></div>
         <div class="col-md-6"><label class="form-label">PIN 6 หลัก <?= $u['has_pin'] ? '<span class="badge text-bg-success">ตั้งแล้ว</span>' : '' ?></label>
           <input name="pin" type="password" inputmode="numeric" pattern="\d{6}" maxlength="6" class="form-control" placeholder="<?= $u['has_pin'] ? 'เว้นว่างถ้าไม่เปลี่ยน' : 'ไม่บังคับ' ?>" autocomplete="off"></div>
         <?php if ($u['has_pin']): ?>
@@ -165,7 +171,7 @@ require APP_ROOT . '/core/layout/header.php';
         <p class="small text-muted" id="superNote" <?= $u['is_superadmin'] ? '' : 'hidden' ?>><i class="bi bi-star-fill text-warning"></i> ผู้ดูแลระบบกลางมีสิทธิ์สูงสุดในทุกระบบอยู่แล้ว ค่าด้านล่างจะมีผลเมื่อยกเลิกสถานะผู้ดูแลระบบกลาง</p>
         <?php foreach ($mods as $m): ?>
           <div class="border rounded-3 p-3 mb-3">
-            <div class="fw-semibold mb-2"><i class="bi <?= h($m['icon']) ?>" style="color:<?= h($m['color']) ?>"></i> <?= h($m['name']) ?></div>
+            <div class="fw-semibold mb-2"><?= module_logo($m, 22) ?> <?= h($m['name']) ?></div>
             <label class="d-block mb-1"><input type="radio" name="role[<?= h($m['key']) ?>]" value="" <?= empty($roles[$m['key']]) ? 'checked' : '' ?>> <span class="text-muted">ไม่มีสิทธิ์ใช้งาน</span></label>
             <?php foreach ($m['roles'] as $rk => $rl): ?>
               <label class="d-block mb-1"><input type="radio" name="role[<?= h($m['key']) ?>]" value="<?= h($rk) ?>" <?= ($roles[$m['key']] ?? '') === $rk ? 'checked' : '' ?>> <?= h($rl) ?></label>

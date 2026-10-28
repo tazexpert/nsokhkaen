@@ -19,6 +19,7 @@ define('INV_URL', module_url(INV_MODULE));           // path ของโฟล�
 define('INV_DIR', __DIR__);
 
 require_once __DIR__ . '/functions.php';
+require_once __DIR__ . '/equipment_lib.php';
 
 function getDbConnection(): PDO
 {

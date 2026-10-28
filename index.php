@@ -17,7 +17,7 @@ require APP_ROOT . '/core/layout/header.php';
   <?php foreach ($mods as $m): ?>
     <div class="col-md-6 col-xl-4">
       <a class="mod-card" href="<?= h(module_url($m['key'], $m['entry'] ?? 'index.php')) ?>">
-        <span class="mod-icon" style="background:<?= h($m['color']) ?>"><i class="bi <?= h($m['icon']) ?>"></i></span>
+        <span class="mod-icon<?= $m['logo'] ? ' has-logo' : '' ?>" style="background:<?= h($m['color']) ?>"><?= $m['logo'] ? module_logo($m, 52) : '<i class="bi ' . h($m['icon']) . '"></i>' ?></span>
         <span class="min-w-0">
           <h3><?= h($m['name']) ?></h3>
           <span class="d-block small text-muted mb-2"><?= h($m['description']) ?></span>

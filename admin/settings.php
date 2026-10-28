@@ -54,7 +54,7 @@ require APP_ROOT . '/core/layout/header.php';
   <ul class="list-group list-group-flush">
     <?php foreach (modules() as $m): ?>
       <li class="list-group-item">
-        <div class="d-flex"><strong><i class="bi <?= h($m['icon']) ?>" style="color:<?= h($m['color']) ?>"></i> <?= h($m['name']) ?></strong>
+        <div class="d-flex"><strong><?= module_logo($m, 22) ?> <?= h($m['name']) ?></strong>
           <code class="ms-auto small">modules/<?= h($m['key']) ?>/</code></div>
         <div class="small text-muted">บทบาท: <?= h(implode(' · ', $m['roles'])) ?></div>
       </li>

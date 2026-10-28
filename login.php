@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>เข้าสู่ระบบ · <?= h(APP_NAME) ?></title>
-<link rel="icon" type="image/svg+xml" href="<?= h(url('assets/img/favicon.svg')) ?>">
+<link rel="icon" type="image/png" href="<?= h(url('assets/img/favicon.png')) ?>">
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&family=Sarabun:wght@400;500&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
@@ -59,9 +59,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="auth-page">
   <form method="post" class="auth-card">
     <div class="text-center mb-4">
-      <span class="brand-mark lg"><i class="bi bi-bar-chart-line-fill"></i></span>
-      <h1 class="h4 mt-3 mb-1">ระบบบริหารจัดการ</h1>
-      <p class="text-muted mb-0"><?= h(ORG_NAME) ?></p>
+      <img src="<?= h(url('assets/img/logo.png')) ?>" alt="" class="auth-logo">
+      <h1 class="h5 mt-3 mb-1">ระบบบริหารจัดการ</h1>
+      <p class="h6 fw-normal text-muted mb-0"><?= h(ORG_NAME) ?></p>
     </div>
     <?php if ($error): ?><div class="alert alert-danger py-2"><?= h($error) ?></div><?php endif; ?>
     <?= csrf_field() ?>

@@ -4,6 +4,9 @@ require_once __DIR__ . '/header.php';
 $pdo = getDbConnection();
 $materialCount = $pdo->query('SELECT COUNT(*) FROM inv_materials')->fetchColumn();
 $lowStockCount = $pdo->query('SELECT COUNT(*) FROM inv_materials WHERE stock_qty <= min_stock')->fetchColumn();
+$equipmentCount = $pdo->query('SELECT COUNT(*) FROM inv_equipment')->fetchColumn();
+$loanCounts = $pdo->query("SELECT SUM(status = 'borrowed') AS borrowed, SUM(status = 'pending') AS pending,
+    SUM(status = 'borrowed' AND due_date < CURDATE()) AS overdue FROM inv_loans")->fetch();
 
 // Admin sees the 5 most recent requisitions system-wide; staff only ever
 // see their own (matches the same restriction enforced in requisition_api.php).
@@ -33,11 +36,20 @@ function dashboardCard(string $colorClass, int $value, string $label, string $hr
 
 
 <div class="row g-3 mb-4">
-    <div class="col-md-4">
+    <div class="col-6 col-lg">
         <?php dashboardCard('text-bg-primary', (int) $materialCount, 'วัสดุสิ้นเปลืองทั้งหมด', INV_URL . 'materials.php') ?>
     </div>
-    <div class="col-md-4">
+    <div class="col-6 col-lg">
         <?php dashboardCard('text-bg-warning', (int) $lowStockCount, 'วัสดุใกล้หมดสต๊อก', INV_URL . 'materials.php?filter=low_stock') ?>
+    </div>
+    <div class="col-6 col-lg">
+        <?php dashboardCard('text-bg-dark', (int) $equipmentCount, 'ครุภัณฑ์ทั้งหมด', INV_URL . 'equipment.php') ?>
+    </div>
+    <div class="col-6 col-lg">
+        <?php dashboardCard('text-bg-info', (int) $loanCounts['borrowed'], 'ครุภัณฑ์ที่กำลังยืม', INV_URL . 'loans.php?tab=borrowed') ?>
+    </div>
+    <div class="col-6 col-lg">
+        <?php dashboardCard((int) $loanCounts['overdue'] ? 'text-bg-danger' : 'text-bg-light border', (int) $loanCounts['pending'], 'คำขอยืมรออนุมัติ' . ((int) $loanCounts['overdue'] ? ' · เกินกำหนดคืน ' . (int) $loanCounts['overdue'] : ''), INV_URL . 'loans.php?tab=pending') ?>
     </div>
 </div>
 

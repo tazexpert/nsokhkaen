@@ -3,6 +3,7 @@
  * ทะเบียนระบบย่อย (modules)
  * แต่ละระบบอยู่ในโฟลเดอร์ modules/<key>/ และมีไฟล์ module.php คืนค่า array:
  *   key, name, short, icon, color, description, order
+ *   logo   => 'assets/img/logo.png'   (ไม่บังคับ) รูปโลโก้ระบบ สัมพัทธ์จากโฟลเดอร์ระบบ — ไม่มีจะใช้ icon แทน
  *   roles  => ['role' => 'คำอธิบาย', ...]   เรียงจากสิทธิ์ต่ำ → สูง (ตัวสุดท้าย = สูงสุด)
  *   menu   => [['id','label','href','icon','role'], ...]  href สัมพัทธ์จากโฟลเดอร์ระบบ
  *   links  => [['label','href','icon'], ...]  ลิงก์เพิ่มเติม เช่น หน้าเว็บสาธารณะ
@@ -20,7 +21,7 @@ function modules(): array
                 continue;
             }
             $m += ['short' => $m['name'], 'icon' => 'bi-grid', 'color' => '#0f6cbd', 'description' => '',
-                   'order' => 100, 'menu' => [], 'links' => [], 'enabled' => true];
+                   'order' => 100, 'menu' => [], 'links' => [], 'enabled' => true, 'logo' => null];
             if ($m['enabled']) {
                 $mods[$m['key']] = $m;
             }
@@ -67,4 +68,16 @@ function role_label(string $module, ?string $role): string
 function role_short(string $module, ?string $role): string
 {
     return explode(' — ', role_label($module, $role))[0];
+}
+
+/**
+ * โลโก้ของระบบ (รูปภาพถ้ามี ไม่มีใช้ไอคอน Bootstrap) สำหรับเมนู/หน้าหลัก
+ * $size = ความสูงเป็น px
+ */
+function module_logo(array $m, int $size = 22, string $class = ''): string
+{
+    if (!empty($m['logo'])) {
+        return '<img src="' . h(module_url($m['key'], $m['logo'])) . '" alt="" class="mod-logo ' . h($class) . '" style="height:' . $size . 'px">';
+    }
+    return '<i class="bi ' . h($m['icon']) . ' ' . h($class) . '" style="color:' . h($m['color']) . ';font-size:' . round($size * .85) . 'px"></i>';
 }

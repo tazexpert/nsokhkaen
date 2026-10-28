@@ -71,3 +71,21 @@ $(document).ready(() => {
     loadStorageLocations();
     loadAppSettings();
 });
+
+/* ---------------- ใบยืมครุภัณฑ์ / การแจ้งเตือน ---------------- */
+
+function loadLoanSettings() {
+    $.get(SETTINGS_API, { action: 'get' }, function (res) {
+        $('.loan-set').each(function () { $(this).val(res.data[this.id.slice(2)] ?? ''); });
+    });
+}
+
+function saveLoanSettings() {
+    const payload = { action: 'update' };
+    $('.loan-set').each(function () { payload[this.id.slice(2)] = $(this).val(); });
+    $.post(SETTINGS_API, payload)
+        .done((res) => { $('#loanSettingsResult').html(`<div class="alert alert-success mb-0">${escHtml(res.message)}</div>`); loadLoanSettings(); })
+        .fail((xhr) => $('#loanSettingsResult').html(`<div class="alert alert-danger mb-0">${escHtml(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด')}</div>`));
+}
+
+$(document).ready(loadLoanSettings);

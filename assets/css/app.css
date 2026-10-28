@@ -3,37 +3,68 @@ body{font-family:'Sarabun',system-ui,sans-serif;background:#f3f6fa;color:var(--i
 h1,h2,h3,h4,h5,.brand,.stat-num,.btn,.card-header,.nav-tabs{font-family:'Prompt','Sarabun',sans-serif}
 .min-w-0{min-width:0}
 
-/* ---------- โครงหน้า ---------- */
-.app-wrap{display:flex;min-height:100vh}
-.sidebar{width:252px;flex-shrink:0;background:var(--side);color:#cbd5e1;padding:18px 12px;position:sticky;top:0;height:100vh;overflow-y:auto}
-.sidebar .brand{display:flex;gap:10px;align-items:center;color:#fff;text-decoration:none;margin-bottom:22px;padding:0 6px;line-height:1.2}
-.sidebar .brand small{display:block;font-size:.78rem;color:#94a3b8;font-weight:400}
-.brand-mark{display:inline-grid;place-items:center;width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;font-size:1.2rem;flex-shrink:0}
-.brand-mark.lg{width:64px;height:64px;border-radius:18px;font-size:1.9rem}
-.sidebar nav a,.sidebar summary{display:flex;gap:10px;align-items:center;padding:9px 12px;border-radius:10px;color:#cbd5e1;text-decoration:none;margin-bottom:2px;cursor:pointer}
-.sidebar nav a:hover,.sidebar summary:hover{background:rgba(255,255,255,.06);color:#fff}
-.sidebar nav a.active{background:var(--brand);color:#fff}
-.sidebar summary{list-style:none;font-family:'Prompt',sans-serif;font-weight:500;color:#e2e8f0}
-.sidebar summary::-webkit-details-marker{display:none}
-.sidebar summary>.bi:first-child{color:var(--mod-color);filter:brightness(1.6)}
-.sidebar summary .chev{margin-left:auto;font-size:.75rem;transition:transform .15s}
-.sidebar details[open] summary .chev{transform:rotate(180deg)}
-.sidebar nav a.sub{padding-left:22px;font-size:.95rem}
-.sidebar .nav-label{font-size:.75rem;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin:14px 12px 6px}
-.sidebar hr{border-color:rgba(255,255,255,.12)}
-.content{flex:1;min-width:0;display:flex;flex-direction:column}
-.topbar{display:flex;gap:12px;align-items:center;padding:12px 28px;background:#fff;border-bottom:1px solid #e5e9f0;position:sticky;top:0;z-index:500}
-.topbar-mod{font-size:.8rem;font-family:'Prompt',sans-serif;font-weight:500}
-.content-body{padding:24px 28px 40px;flex:1}
+/* ---------- โครงหน้า: เมนูด้านบน ---------- */
+.app-nav{background:var(--side);box-shadow:0 2px 10px rgba(11,31,58,.25);padding-top:6px;padding-bottom:6px;z-index:1030}
+.app-brand{display:flex;align-items:center;gap:10px;line-height:1.15;margin-right:18px;min-width:0;white-space:normal}
+.brand-logo{height:42px;width:auto;background:#fff;border-radius:10px;padding:3px 5px;flex-shrink:0}
+.brand-text{display:flex;flex-direction:column;min-width:0}
+.brand-text small{font-size:.74rem;color:#9fb3cc;font-weight:400}
+.brand-text strong{font-family:'Prompt',sans-serif;font-weight:500;font-size:1rem;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-nav .nav-link{font-family:'Prompt',sans-serif;color:#cbd5e1;border-radius:10px;padding:.5rem .8rem!important;display:flex;align-items:center;gap:4px}
+.app-nav .nav-link:hover,.app-nav .nav-link:focus{color:#fff;background:rgba(255,255,255,.07)}
+.app-nav .nav-link.active{color:#fff;background:rgba(255,255,255,.14)}
+.app-nav .dropdown-menu{border-radius:12px;border:1px solid #e5e9f0;padding:6px}
+.app-nav .dropdown-item{border-radius:8px;padding:.45rem .8rem}
+.app-nav .dropdown-item.active,.app-nav .dropdown-item:active{background:var(--brand);color:#fff}
+.app-nav .dropdown-item .bi{width:1.3em;display:inline-block}
+.app-nav .dropdown-header{font-family:'Prompt',sans-serif;font-size:.8rem}
+.mod-logo{width:auto;vertical-align:middle;border-radius:5px}
+.app-nav .nav-link .mod-logo{background:#fff;padding:1px 2px}
+.nav-icon-btn{color:#e2e8f0;border:0;padding:.4rem .6rem;border-radius:10px;font-size:1.25rem;line-height:1}
+.nav-icon-btn:hover,.nav-icon-btn:focus,.nav-icon-btn.show{color:#fff;background:rgba(255,255,255,.1)}
+.user-chip{font-size:.88rem;max-width:200px}
+.user-chip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-chip small{color:#9fb3cc;font-size:.74rem;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.notif-badge{position:absolute;top:0;right:0;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#ef4444;color:#fff;font-size:.7rem;font-weight:600;line-height:18px;text-align:center;font-family:'Sarabun',sans-serif}
+.notif-menu{width:380px;max-width:calc(100vw - 24px);padding:0!important;overflow:hidden}
+.notif-head{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #eef1f5;font-family:'Prompt',sans-serif}
+.notif-list{max-height:min(70vh,520px);overflow-y:auto}
+.notif-item{display:flex;gap:10px;padding:10px 14px;text-decoration:none;color:var(--ink);border-bottom:1px solid #f1f4f8;font-size:.93rem}
+.notif-item:hover{background:#f5f8fc;color:var(--ink)}
+.notif-item.is-new{background:#eef5ff}
+.notif-icon{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex-shrink:0}
+.notif-time{font-size:.75rem;color:#94a3b8}
+.mod-bar{background:#fff;border-bottom:1px solid #e5e9f0}
+.mod-bar .container-fluid{display:flex;align-items:center;gap:14px;min-height:48px}
+.mod-bar-name{display:flex;align-items:center;gap:6px;font-family:'Prompt',sans-serif;font-weight:500;color:var(--mod-color);white-space:nowrap}
+.mod-bar-links{display:flex;gap:2px;overflow-x:auto;scrollbar-width:thin;flex:1;min-width:0}
+.mod-bar-links a{display:flex;align-items:center;gap:5px;white-space:nowrap;padding:12px 12px;color:#475569;text-decoration:none;border-bottom:2px solid transparent;font-size:.95rem}
+.mod-bar-links a:hover{color:var(--brand)}
+.mod-bar-links a.active{color:var(--brand);border-bottom-color:var(--brand);font-weight:600}
+.content{min-height:calc(100vh - 60px);display:flex;flex-direction:column}
+.page-head{display:flex;gap:12px;align-items:center;padding:20px 28px 0}
+.content-body{padding:16px 28px 40px;flex:1}
 .app-footer{text-align:center;color:#94a3b8;font-size:.85rem;padding:14px}
-.sidebar-backdrop{display:none}
-@media (max-width:991.98px){
-  .sidebar{position:fixed;left:-270px;z-index:1050;transition:left .2s}
-  body.nav-open .sidebar{left:0;box-shadow:0 0 40px rgba(0,0,0,.4)}
-  body.nav-open .sidebar-backdrop{display:block;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1040}
-  .content-body{padding:16px}
-  .topbar{padding:10px 16px}
+@media (max-width:1199.98px){
+  .app-nav>.container-fluid{flex-wrap:wrap}
+  .app-brand{flex:1 1 0;margin-right:6px}
+  .app-nav .navbar-collapse{flex-basis:100%}
+  .app-nav .navbar-collapse{padding:8px 0 4px;max-height:calc(100vh - 70px);overflow-y:auto}
+  .app-nav .dropdown-menu{border:0;background:rgba(255,255,255,.05)}
+  .app-nav .navbar-collapse .dropdown-item{color:#cbd5e1}
+  .app-nav .navbar-collapse .dropdown-header{color:#94a3b8}
 }
+@media (max-width:575.98px){
+  .brand-logo{height:36px}
+  .brand-text strong{font-size:.86rem;white-space:normal}
+  .brand-text small{font-size:.7rem}
+  .nav-icon-btn{padding:.35rem .45rem}
+  .page-head{padding:14px 16px 0}
+  .content-body{padding:12px 16px 32px}
+}
+
+/* แบรนด์บนหน้า login / PIN */
+.auth-logo{height:96px;width:auto}
 
 /* ---------- องค์ประกอบทั่วไป ---------- */
 .card{border:1px solid #e5e9f0;border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
@@ -60,7 +91,9 @@ h1,h2,h3,h4,h5,.brand,.stat-num,.btn,.card-header,.nav-tabs{font-family:'Prompt'
 /* ---------- หน้าหลัก (เลือกระบบ) ---------- */
 .mod-card{display:flex;gap:16px;align-items:flex-start;background:#fff;border:1px solid #e5e9f0;border-radius:16px;padding:22px;text-decoration:none;color:inherit;height:100%;transition:transform .15s,box-shadow .15s}
 .mod-card:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(16,42,84,.1);color:inherit}
-.mod-card .mod-icon{width:56px;height:56px;border-radius:14px;display:grid;place-items:center;color:#fff;font-size:1.6rem;flex-shrink:0}
+.mod-card .mod-icon{width:64px;height:64px;border-radius:16px;display:grid;place-items:center;color:#fff;font-size:1.6rem;flex-shrink:0}
+.mod-card .mod-icon.has-logo{background:#fff!important;border:1px solid #e5e9f0;padding:6px}
+.mod-card .mod-icon.has-logo .mod-logo{max-width:100%;max-height:100%;height:auto!important}
 .mod-card h3{font-size:1.1rem;margin:0 0 4px}
 
 /* ---------- หน้า login / PIN ---------- */
@@ -69,7 +102,7 @@ h1,h2,h3,h4,h5,.brand,.stat-num,.btn,.card-header,.nav-tabs{font-family:'Prompt'
 
 /* ---------- พิมพ์: ซ่อนเมนู ---------- */
 @media print{
-  .sidebar,.topbar,.app-footer,.sidebar-backdrop,.no-print{display:none!important}
+  .app-nav,.mod-bar,.page-head,.app-footer,.no-print{display:none!important}
   .content-body{padding:0}
   body{background:#fff}
 }
