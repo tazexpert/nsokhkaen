@@ -112,6 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $users = cal_users();
 $active = 'add';
 $pageTitle = $id ? 'แก้ไขกิจกรรม' : 'เพิ่มกิจกรรม';
+$pageActions = $id ? '' : '<a href="import.php" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> นำเข้าหลายรายการจาก CSV</a>';
 $allDay = $e['start_time'] === null && $e['end_time'] === null;
 require __DIR__ . '/header.php';
 ?>

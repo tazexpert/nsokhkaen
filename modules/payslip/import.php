@@ -55,10 +55,7 @@ function pay_parse_file(string $path, string $name): array
         $idx = array_search('Payroll', $x->sheetNames(), true);
         $table = $x->rows($idx === false ? 0 : $idx);
     } elseif ($ext === 'csv') {
-        $raw = preg_replace('/^\xEF\xBB\xBF/', '', file_get_contents($path));
-        if (!mb_check_encoding($raw, 'UTF-8')) {
-            $raw = mb_convert_encoding($raw, 'UTF-8', 'Windows-874');
-        }
+        $raw = text_to_utf8(file_get_contents($path));     // ตัด BOM + แปลง Windows-874 (Excel ภาษาไทย)
         $fh = fopen('php://temp', 'r+');
         fwrite($fh, $raw);
         rewind($fh);

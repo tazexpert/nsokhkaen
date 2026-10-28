@@ -261,3 +261,20 @@ function thai_month_long(int $m): string
     return ['', 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม',
             'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'][$m] ?? '';
 }
+
+/**
+ * แปลงข้อความจากไฟล์ (CSV) เป็น UTF-8: ตัด BOM และแปลงจาก Windows-874/TIS-620 ถ้าไม่ใช่ UTF-8
+ * (Excel ภาษาไทยบันทึก CSV แบบ Windows-874 — mbstring ไม่รองรับ จึงใช้ iconv)
+ */
+function text_to_utf8(string $raw): string
+{
+    $raw = preg_replace('/^\xEF\xBB\xBF/', '', $raw);
+    if (mb_check_encoding($raw, 'UTF-8')) {
+        return $raw;
+    }
+    $out = function_exists('iconv') ? @iconv('CP874', 'UTF-8//IGNORE', $raw) : false;
+    if ($out === false || $out === '') {
+        $out = @iconv('TIS-620', 'UTF-8//IGNORE', $raw);
+    }
+    return $out !== false && $out !== '' ? $out : mb_convert_encoding($raw, 'UTF-8', 'ISO-8859-1');
+}

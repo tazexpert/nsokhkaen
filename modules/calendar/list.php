@@ -13,7 +13,8 @@ $events = cal_events_between($from, $to, $mine ? $me['id'] : null);
 
 $active = $mine ? 'mine' : 'list';
 $pageTitle = $mine ? 'งานของฉัน' : 'ตารางกิจกรรม';
-$pageActions = cal_can('editor') ? '<a href="event_form.php" class="btn btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มกิจกรรม</a>' : '';
+$pageActions = cal_can('editor') ? '<a href="import.php" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> นำเข้า CSV</a>'
+    . '<a href="event_form.php" class="btn btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มกิจกรรม</a>' : '';
 require __DIR__ . '/header.php';
 ?>
 <div class="card">

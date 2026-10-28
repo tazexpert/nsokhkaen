@@ -21,5 +21,6 @@ return [
         ['id' => 'list',  'label' => 'ตารางกิจกรรม',      'href' => 'list.php',           'icon' => 'bi-list-task',      'role' => 'viewer'],
         ['id' => 'mine',  'label' => 'งานของฉัน',         'href' => 'list.php?mine=1',    'icon' => 'bi-person-check',   'role' => 'viewer'],
         ['id' => 'add',   'label' => 'เพิ่มกิจกรรม',       'href' => 'event_form.php',     'icon' => 'bi-plus-circle',    'role' => 'editor'],
+        ['id' => 'import', 'label' => 'นำเข้า CSV',        'href' => 'import.php',         'icon' => 'bi-filetype-csv',   'role' => 'editor'],
     ],
 ];
