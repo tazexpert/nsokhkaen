@@ -185,7 +185,7 @@ function require_superadmin(): array
     return $u;
 }
 
-function forbidden(?string $module, string $minRole): never
+function forbidden(?string $module, string $minRole): void   // ไม่คืนค่า (จบการทำงานเสมอ) — ใช้ void เพื่อรองรับ PHP 8.0
 {
     http_response_code(403);
     $pageTitle = 'ไม่มีสิทธิ์เข้าถึง';

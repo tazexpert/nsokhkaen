@@ -13,7 +13,7 @@ $user = current_user();
 $pageTitle = $pageTitle ?? APP_NAME;
 $module = $module ?? null;
 $active = $active ?? '';
-$mods = $user ? accessible_modules($user) : [];
+$navMods = $user ? accessible_modules($user) : [];   // ชื่อเฉพาะ — กันชนกับตัวแปรของหน้าที่เรียก (เช่น $mods ในหน้าผู้ใช้งาน)
 $cur = $module ? module_def($module) : null;
 $notifs = $user ? user_notifications($user) : [];
 $unread = $user ? unread_notification_count($notifs, $user) : 0;
@@ -103,7 +103,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
     <div class="collapse navbar-collapse" id="mainNav">
       <ul class="navbar-nav me-auto">
         <li class="nav-item"><a class="nav-link<?= $navActive(!$module && $active === 'home') ?>" href="<?= h(url('index.php')) ?>"><i class="bi bi-house-door"></i> หน้าหลัก</a></li>
-        <?php foreach ($mods as $m): $isCur = $module === $m['key']; ?>
+        <?php foreach ($navMods as $m): $isCur = $module === $m['key']; ?>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle<?= $navActive($isCur) ?>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               <?= module_logo($m, 22, 'me-1') ?> <?= h($m['short']) ?></a>

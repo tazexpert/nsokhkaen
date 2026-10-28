@@ -46,7 +46,7 @@
    - ระบบวัสดุ: รัน migration ของระบบเดิมครบถึง `009_add_requisition_approval.sql`
      (ตรวจได้: ตาราง `requisitions` ต้องมีคอลัมน์ `approved_at`)
    - ระบบศูนย์ฯ (ถ้าใช้): รัน `database/migrate_visits.sql` ของระบบเดิมแล้ว
-2. PHP 8.1+ (`pdo_mysql`, `gd`, `zip`, `simplexml`), MySQL 5.7+ / MariaDB 10.3+
+2. PHP 8.0+ (`pdo_mysql`, `gd`, `zip`, `simplexml`), MySQL 5.7+ / MariaDB 10.3+
 3. ฐานข้อมูลเดิมและใหม่ต้องอยู่บน **เซิร์ฟเวอร์ MySQL เดียวกัน** (สคริปต์ใช้ `INSERT … SELECT` ข้ามฐานข้อมูล)
 
 ## ขั้นที่ 1 — สำรองข้อมูล (สำคัญที่สุด)

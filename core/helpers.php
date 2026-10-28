@@ -8,7 +8,7 @@ function h($s): string
     return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');
 }
 
-function redirect(string $url): never
+function redirect(string $url): void   // ไม่คืนค่า (จบการทำงานเสมอ) — ใช้ void เพื่อรองรับ PHP 8.0
 {
     header('Location: ' . $url);
     exit;
@@ -52,7 +52,7 @@ function thai_date(?string $date): string
     return (int)date('j', $ts) . ' ' . $m[(int)date('n', $ts)] . ' ' . ((int)date('Y', $ts) + 543);
 }
 
-function json_out($data, int $code = 200): never
+function json_out($data, int $code = 200): void   // ไม่คืนค่า (จบการทำงานเสมอ) — ใช้ void เพื่อรองรับ PHP 8.0
 {
     http_response_code($code);
     header('Content-Type: application/json; charset=utf-8');

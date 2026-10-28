@@ -10,7 +10,7 @@ require_once __DIR__ . '/../bootstrap.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-cache');
 
-function out($data, int $code = 200): never
+function out($data, int $code = 200): void   // ไม่คืนค่า (จบการทำงานเสมอ) — ใช้ void เพื่อรองรับ PHP 8.0
 {
     http_response_code($code);
     echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

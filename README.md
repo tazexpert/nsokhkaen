@@ -45,7 +45,7 @@
 
 ## ติดตั้งใหม่
 
-ต้องการ PHP 8.1+ (`pdo_mysql`, `gd`, `zip`, `simplexml`) และ MySQL 5.7+ / MariaDB 10.3+ — ไม่ต้องใช้ Composer
+ต้องการ PHP 8.0+ (`pdo_mysql`, `gd`, `zip`, `simplexml`) และ MySQL 5.7+ / MariaDB 10.3+ — ไม่ต้องใช้ Composer
 
 ```bash
 git clone https://github.com/tazexpert/nsokhkaen.git

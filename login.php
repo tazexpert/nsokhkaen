@@ -3,7 +3,7 @@
 require_once __DIR__ . '/core/bootstrap.php';
 
 /** หลัง login: ถ้าระบบใดกำหนดให้บทบาทนี้ต้องมี PIN แต่ยังไม่ได้ตั้ง → พาไปตั้ง PIN ก่อน */
-function after_login(array $u): never
+function after_login(array $u): void   // ไม่คืนค่า (จบการทำงานเสมอ) — ใช้ void เพื่อรองรับ PHP 8.0
 {
     if (!$u['has_pin']) {
         foreach (accessible_modules($u) as $m) {
