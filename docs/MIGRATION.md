@@ -200,10 +200,12 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 |---|---|
 | `20261028_core_workgroup_inv_equipment.sql` | กลุ่มงานผู้ใช้ การแจ้งเตือน ทะเบียนครุภัณฑ์และตารางการยืม |
 | `20261029_inv_loans_attachment.sql` | การยืมผ่าน e-office: แนบไฟล์ใบยืม + เลขที่หนังสือ (ตัดการอนุมัติในระบบ) |
+| `20261030_inv_equipment_assigned_user.sql` | ผู้ใช้งานประจำของครุภัณฑ์ (คอลัมน์ "ผู้ยืม/ผู้ใช้งาน") |
 
 ```bash
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261028_core_workgroup_inv_equipment.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261029_inv_loans_attachment.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261030_inv_equipment_assigned_user.sql
 ```
 
 หลังอัปเดต:

@@ -238,6 +238,7 @@ CREATE TABLE IF NOT EXISTS inv_equipment (
   fiscal_year       SMALLINT UNSIGNED NULL,            -- ปีงบประมาณที่ได้มา (พ.ศ.)
   status            ENUM('normal', 'repair', 'dispose') NOT NULL DEFAULT 'normal',  -- ใช้งานตามปกติ / เสียรอซ่อม / รอจำหน่าย
   storage_location  VARCHAR(255) NULL,
+  assigned_user_id  INT UNSIGNED NULL,                 -- ผู้ใช้งานประจำ (เช่น คอมพิวเตอร์ตั้งโต๊ะที่มีคนนั่งใช้ประจำ)
   image_path        VARCHAR(255) NULL,
   note              VARCHAR(500) NULL,                 -- หมายเหตุ
   created_by        INT UNSIGNED NULL,
@@ -245,7 +246,8 @@ CREATE TABLE IF NOT EXISTS inv_equipment (
   updated_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   KEY idx_inv_equipment_status (status),
   CONSTRAINT fk_inv_equipment_type FOREIGN KEY (type_id) REFERENCES inv_equipment_types(id) ON DELETE SET NULL,
-  CONSTRAINT fk_inv_equipment_created_by FOREIGN KEY (created_by) REFERENCES core_users(id) ON DELETE SET NULL
+  CONSTRAINT fk_inv_equipment_created_by FOREIGN KEY (created_by) REFERENCES core_users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_inv_equipment_assigned FOREIGN KEY (assigned_user_id) REFERENCES core_users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT IGNORE INTO inv_equipment_types (id, name, sort_order) VALUES

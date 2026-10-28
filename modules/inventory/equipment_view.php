@@ -6,7 +6,8 @@ $pdo = db();
 $id = int_param('id');
 $isAdmin = user_can(INV_MODULE, 'admin');
 
-$st = $pdo->prepare('SELECT e.*, t.name AS type_name, u.full_name AS created_by_name FROM inv_equipment e
+$st = $pdo->prepare('SELECT e.*, t.name AS type_name, u.full_name AS created_by_name, au.full_name AS assigned_name FROM inv_equipment e
+    LEFT JOIN core_users au ON au.id = e.assigned_user_id
     LEFT JOIN inv_equipment_types t ON t.id = e.type_id LEFT JOIN core_users u ON u.id = e.created_by WHERE e.id = ?');
 $st->execute([$id]);
 $e = $st->fetch();
@@ -45,6 +46,7 @@ require __DIR__ . '/header.php';
               — <?= h($loan['borrower_name']) ?><?= $loan['status'] === 'borrowed' ? ' (กำหนดคืน ' . h(thai_date($loan['due_date'])) . ')' : '' ?>
             <?php elseif ($e['status'] === 'normal'): ?><span class="badge text-bg-success">ว่าง ให้ยืมได้</span>
             <?php else: ?><span class="text-muted">ให้ยืมไม่ได้ (<?= h(EQ_STATUS[$e['status']][0]) ?>)</span><?php endif; ?></dd>
+          <dt class="col-sm-4">ผู้ใช้งานประจำ</dt><dd class="col-sm-8"><?= h($e['assigned_name'] ?: '-') ?></dd>
           <dt class="col-sm-4">สถานที่เก็บ</dt><dd class="col-sm-8"><?= h($e['storage_location'] ?: '-') ?></dd>
           <dt class="col-sm-4">หมายเหตุ</dt><dd class="col-sm-8"><?= h($e['note'] ?: '-') ?></dd>
           <dt class="col-sm-4 text-muted small">บันทึกโดย</dt><dd class="col-sm-8 text-muted small"><?= h($e['created_by_name'] ?: '-') ?> · แก้ไขล่าสุด <?= h(thai_date($e['updated_at'])) ?></dd>

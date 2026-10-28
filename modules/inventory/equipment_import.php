@@ -11,7 +11,8 @@ $pdo = db();
 
 // ---------- ส่งออก CSV (รูปแบบเดียวกับไฟล์นำเข้า แยกกลุ่มตามประเภท) ----------
 if (isset($_GET['export'])) {
-    $rows = $pdo->query('SELECT e.*, t.name AS type_name FROM inv_equipment e LEFT JOIN inv_equipment_types t ON t.id = e.type_id
+    $rows = $pdo->query('SELECT e.*, t.name AS type_name, au.full_name AS assigned_name FROM inv_equipment e
+        LEFT JOIN inv_equipment_types t ON t.id = e.type_id LEFT JOIN core_users au ON au.id = e.assigned_user_id
         ORDER BY t.sort_order IS NULL, t.sort_order, e.fiscal_year DESC, e.asset_no IS NULL, e.asset_no, e.id')->fetchAll();
     $loans = active_loans_by_equipment();
     header('Content-Type: text/csv; charset=utf-8');
@@ -26,12 +27,12 @@ if (isset($_GET['export'])) {
     }
     foreach ($groups as $type => $items) {
         fputcsv($out, [$type . ' (จำนวน ' . count($items) . ' เครื่อง)']);
-        fputcsv($out, ['ที่', 'เลขครุภัณฑ์', 'ประเภทครุภัณฑ์', 'ยี่ห้อ', 'รุ่น (Model)', 'ปีงบ', 'อายุ', 'หมายเหตุ', 'หมายเลขเครื่อง', 'สภาพการใช้งาน', 'ผู้ยืม']);
+        fputcsv($out, ['ที่', 'เลขครุภัณฑ์', 'ประเภทครุภัณฑ์', 'ยี่ห้อ', 'รุ่น (Model)', 'ปีงบ', 'อายุ', 'หมายเหตุ', 'หมายเลขเครื่อง', 'สภาพการใช้งาน', 'ผู้ยืม/ผู้ใช้งาน']);
         foreach ($items as $i => $r) {
             $l = $loans[(int)$r['id']] ?? null;
             fputcsv($out, [$i + 1, $r['asset_no'], $r['type_name'], $r['brand'], $r['model'], $r['fiscal_year'],
                 equipment_age($r['fiscal_year'] ? (int)$r['fiscal_year'] : null), $r['note'], $r['serial_number'],
-                EQ_STATUS[$r['status']][0], $l && $l['status'] === 'borrowed' ? $l['borrower_name'] : '']);
+                EQ_STATUS[$r['status']][0], $l ? $l['borrower_name'] . ' (ยืม)' : ($r['assigned_name'] ?? '')]);
         }
     }
     fclose($out);

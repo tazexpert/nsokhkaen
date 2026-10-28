@@ -1,5 +1,5 @@
 <?php
-/** ครุภัณฑ์: สรุปตามประเภท + รายการทั้งหมด พร้อมสภาพการใช้งานและผู้ยืม */
+/** ครุภัณฑ์: สรุปตามประเภท + รายการทั้งหมด พร้อมสภาพการใช้งาน และผู้ยืม/ผู้ใช้งานประจำ */
 require_once __DIR__ . '/bootstrap.php';
 require_module(INV_MODULE);
 $pdo = db();
@@ -56,8 +56,10 @@ $fLoan = $_GET['loan'] ?? '';
 $where = [];
 $params = [];
 if ($q !== '') {
-    $where[] = '(e.asset_no LIKE ? OR e.brand LIKE ? OR e.model LIKE ? OR e.serial_number LIKE ? OR e.note LIKE ?)';
-    array_push($params, ...array_fill(0, 5, "%$q%"));
+    $where[] = '(e.asset_no LIKE ? OR e.brand LIKE ? OR e.model LIKE ? OR e.serial_number LIKE ? OR e.note LIKE ?
+        OR e.assigned_user_id IN (SELECT id FROM core_users WHERE full_name LIKE ?)
+        OR e.id IN (SELECT li.equipment_id FROM inv_loan_items li JOIN inv_loans l ON l.id = li.loan_id WHERE l.status = \'borrowed\' AND l.borrower_name LIKE ?))';
+    array_push($params, ...array_fill(0, 7, "%$q%"));
 }
 if ($fType) {
     $where[] = 'e.type_id = ?';
@@ -67,7 +69,8 @@ if (isset(EQ_STATUS[$fStatus])) {
     $where[] = 'e.status = ?';
     $params[] = $fStatus;
 }
-$st = $pdo->prepare('SELECT e.*, t.name AS type_name FROM inv_equipment e LEFT JOIN inv_equipment_types t ON t.id = e.type_id'
+$st = $pdo->prepare('SELECT e.*, t.name AS type_name, au.full_name AS assigned_name FROM inv_equipment e
+    LEFT JOIN inv_equipment_types t ON t.id = e.type_id LEFT JOIN core_users au ON au.id = e.assigned_user_id'
     . ($where ? ' WHERE ' . implode(' AND ', $where) : '')
     . ' ORDER BY t.sort_order IS NULL, t.sort_order, e.fiscal_year DESC, e.asset_no IS NULL, e.asset_no, e.id');
 $st->execute($params);
@@ -131,7 +134,7 @@ require __DIR__ . '/header.php';
 <div class="card" id="list">
   <div class="card-header no-print">
     <form class="row g-2 align-items-center" action="equipment.php#list">
-      <div class="col-lg-3 col-md-6"><input name="q" class="form-control" placeholder="ค้นหาเลขครุภัณฑ์ / ยี่ห้อ / รุ่น / S/N" value="<?= h($q) ?>"></div>
+      <div class="col-lg-3 col-md-6"><input name="q" class="form-control" placeholder="ค้นหาเลขครุภัณฑ์ / ยี่ห้อ / รุ่น / ผู้ยืม/ผู้ใช้งาน" value="<?= h($q) ?>"></div>
       <div class="col-lg-3 col-md-6"><select name="type" class="form-select" onchange="this.form.submit()">
         <option value="">ทุกประเภท</option>
         <?php foreach ($types as $tid => $tname): ?><option value="<?= (int)$tid ?>" <?= $fType === (int)$tid ? 'selected' : '' ?>><?= h($tname) ?></option><?php endforeach; ?>
@@ -157,25 +160,27 @@ require __DIR__ . '/header.php';
         <thead><tr>
           <?php if ($isAdmin): ?><th class="no-print" style="width:32px"><input type="checkbox" class="form-check-input" id="checkAll"></th><?php endif; ?>
           <th class="text-center">ที่</th><th>เลขครุภัณฑ์</th><th>ประเภท</th><th>ยี่ห้อ</th><th>รุ่น (Model)</th>
-          <th class="text-center">ปีงบ</th><th class="text-center">อายุ</th><th>สภาพการใช้งาน</th><th>ผู้ยืม</th><th>หมายเหตุ</th>
+          <th class="text-center">ปีงบ</th><th class="text-center">อายุ</th><th>สภาพการใช้งาน</th><th>ผู้ยืม/ผู้ใช้งาน</th><th>หมายเหตุ</th>
         </tr></thead>
         <tbody>
         <?php foreach ($rows as $i => $e): $loan = $activeLoans[(int)$e["id"]] ?? null; $age = equipment_age($e['fiscal_year'] ? (int)$e['fiscal_year'] : null); ?>
           <tr>
             <?php if ($isAdmin): ?><td class="no-print"><input type="checkbox" class="form-check-input row-check" name="ids[]" value="<?= (int)$e['id'] ?>"></td><?php endif; ?>
             <td class="text-center text-muted"><?= $i + 1 ?></td>
-            <td><a href="equipment_view.php?id=<?= (int)$e['id'] ?>" class="text-decoration-none font-monospace small"><?= $e['asset_no'] ? h($e['asset_no']) : '<span class="text-muted fst-italic">(ยังไม่มีเลข)</span>' ?></a></td>
+            <td class="text-nowrap"><a href="equipment_view.php?id=<?= (int)$e['id'] ?>" class="text-decoration-none font-monospace small"><?= $e['asset_no'] ? h($e['asset_no']) : '<span class="text-muted fst-italic">(ยังไม่มีเลข)</span>' ?></a></td>
             <td class="small"><?= h($e['type_name'] ?? '-') ?></td>
             <td><?= h($e['brand']) ?></td>
             <td><a href="equipment_view.php?id=<?= (int)$e['id'] ?>" class="text-decoration-none text-reset"><?= h($e['model']) ?></a></td>
             <td class="text-center"><?= h($e['fiscal_year']) ?></td>
             <td class="text-center"><?= $age === null ? '-' : $age ?></td>
-            <td><?= eq_status_badge($e['status']) ?></td>
-            <td class="small"><?php if ($loan): ?>
+            <td class="text-nowrap"><?= eq_status_badge($e['status']) ?></td>
+            <td class="small eq-person"><?php if ($loan): ?>
               <a href="loan_view.php?id=<?= (int)$loan['loan_id'] ?>" class="text-decoration-none">
                 <i class="bi bi-person-fill text-primary"></i> <?= h($loan['borrower_name']) ?></a>
               <div class="text-muted">คืน <?= h(thai_date($loan['due_date'])) ?>
                 <?php if ($loan['due_date'] < date('Y-m-d')): ?><span class="badge text-bg-danger">เกินกำหนด</span><?php endif; ?></div>
+            <?php elseif ($e['assigned_name']): ?>
+              <i class="bi bi-person-workspace text-success"></i> <?= h($e['assigned_name']) ?><div class="text-muted">ผู้ใช้งานประจำ</div>
             <?php else: ?><span class="text-muted">-</span><?php endif; ?></td>
             <td class="small text-muted"><?= h($e['note']) ?></td>
           </tr>

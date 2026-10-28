@@ -6,7 +6,7 @@ $pdo = db();
 $id = int_param('id');
 
 $e = ['asset_no' => '', 'type_id' => null, 'brand' => '', 'model' => '', 'serial_number' => '', 'fiscal_year' => '',
-      'status' => 'normal', 'storage_location' => '', 'image_path' => null, 'note' => ''];
+      'status' => 'normal', 'storage_location' => '', 'assigned_user_id' => null, 'image_path' => null, 'note' => ''];
 if ($id) {
     $st = $pdo->prepare('SELECT * FROM inv_equipment WHERE id = ?');
     $st->execute([$id]);
@@ -38,6 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'brand' => post('brand'), 'model' => post('model'), 'serial_number' => post('serial_number'),
         'fiscal_year' => post('fiscal_year'), 'status' => post('status'),
         'storage_location' => post('storage_location'), 'note' => post('note'),
+        'assigned_user_id' => int_param('assigned_user_id') ?: null,
     ]);
     if ($typeName !== '') {
         $e['type_id'] = equipment_type_id($pdo, $typeName);
@@ -47,6 +48,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if ($e['model'] === '' && $e['brand'] === '') {
         $errors[] = 'กรุณากรอกยี่ห้อหรือรุ่น';
+    }
+    if ($e['assigned_user_id']) {
+        $chk = $pdo->prepare('SELECT 1 FROM core_users WHERE id = ?');
+        $chk->execute([$e['assigned_user_id']]);
+        if (!$chk->fetchColumn()) {
+            $e['assigned_user_id'] = null;
+        }
     }
     if (!isset(EQ_STATUS[$e['status']])) {
         $errors[] = 'สภาพการใช้งานไม่ถูกต้อง';
@@ -79,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'model' => $e['model'] ?: null, 'serial_number' => $e['serial_number'] ?: null,
             'fiscal_year' => $fy !== '' ? (int)$fy : null, 'status' => $e['status'],
             'storage_location' => $e['storage_location'] ?: null, 'note' => $e['note'] ?: null,
+            'assigned_user_id' => $e['assigned_user_id'],
         ];
         if ($newImage || post('remove_image')) {
             delete_upload($e['image_path']);
@@ -103,6 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $types = equipment_types();
+$users = $pdo->query('SELECT id, full_name FROM core_users WHERE is_active = 1 OR id = ' . (int)$e['assigned_user_id'] . ' ORDER BY full_name')->fetchAll(PDO::FETCH_KEY_PAIR);
 $locations = $pdo->query('SELECT name FROM inv_storage_locations ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
 $pageTitle = $id ? 'แก้ไขครุภัณฑ์' : 'เพิ่มครุภัณฑ์';
 require __DIR__ . '/header.php';
@@ -136,10 +146,16 @@ require __DIR__ . '/header.php';
               <label class="btn btn-outline-<?= $s[1] ?>" for="st_<?= $k ?>"><i class="bi <?= $s[2] ?>"></i> <?= h($s[0]) ?></label>
             <?php endforeach; ?>
           </div></div>
-        <div class="col-md-6"><label class="form-label">สถานที่เก็บ / ผู้ใช้งานประจำ</label>
+        <div class="col-md-6"><label class="form-label">ผู้ใช้งานประจำ</label>
+          <select name="assigned_user_id" class="form-select">
+            <option value="">— ไม่มี (ใช้ส่วนกลาง / ให้ยืม) —</option>
+            <?php foreach ($users as $uid => $uname): ?><option value="<?= (int)$uid ?>" <?= (int)$e['assigned_user_id'] === (int)$uid ? 'selected' : '' ?>><?= h($uname) ?></option><?php endforeach; ?>
+          </select>
+          <div class="form-text">เช่น คอมพิวเตอร์ตั้งโต๊ะที่มีคนนั่งใช้ประจำ — แสดงในคอลัมน์ "ผู้ยืม/ผู้ใช้งาน"</div></div>
+        <div class="col-md-6"><label class="form-label">สถานที่เก็บ / ตั้งอยู่ที่</label>
           <input name="storage_location" class="form-control" list="locList" value="<?= h($e['storage_location']) ?>">
           <datalist id="locList"><?php foreach ($locations as $l): ?><option value="<?= h($l) ?>"><?php endforeach; ?></datalist></div>
-        <div class="col-md-6"><label class="form-label">หมายเหตุ</label><input name="note" class="form-control" value="<?= h($e['note']) ?>"></div>
+        <div class="col-12"><label class="form-label">หมายเหตุ</label><input name="note" class="form-control" value="<?= h($e['note']) ?>"></div>
       </div>
     </div>
   </div>
