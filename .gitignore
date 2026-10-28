@@ -1,0 +1,10 @@
+/config.local.php
+/uploads/**/*
+!/uploads/.htaccess
+!/uploads/**/
+!/uploads/**/.gitkeep
+/libs/phpqrcode/cache/*
+!/libs/phpqrcode/cache/.gitkeep
+.env
+*.log
+.DS_Store

@@ -1,0 +1,75 @@
+:root{--brand:#0f5fc2;--brand-2:#14b8a6;--ink:#1f2937;--side:#0b1f3a}
+body{font-family:'Sarabun',system-ui,sans-serif;background:#f3f6fa;color:var(--ink)}
+h1,h2,h3,h4,h5,.brand,.stat-num,.btn,.card-header,.nav-tabs{font-family:'Prompt','Sarabun',sans-serif}
+.min-w-0{min-width:0}
+
+/* ---------- โครงหน้า ---------- */
+.app-wrap{display:flex;min-height:100vh}
+.sidebar{width:252px;flex-shrink:0;background:var(--side);color:#cbd5e1;padding:18px 12px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.sidebar .brand{display:flex;gap:10px;align-items:center;color:#fff;text-decoration:none;margin-bottom:22px;padding:0 6px;line-height:1.2}
+.sidebar .brand small{display:block;font-size:.78rem;color:#94a3b8;font-weight:400}
+.brand-mark{display:inline-grid;place-items:center;width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,var(--brand),var(--brand-2));color:#fff;font-size:1.2rem;flex-shrink:0}
+.brand-mark.lg{width:64px;height:64px;border-radius:18px;font-size:1.9rem}
+.sidebar nav a,.sidebar summary{display:flex;gap:10px;align-items:center;padding:9px 12px;border-radius:10px;color:#cbd5e1;text-decoration:none;margin-bottom:2px;cursor:pointer}
+.sidebar nav a:hover,.sidebar summary:hover{background:rgba(255,255,255,.06);color:#fff}
+.sidebar nav a.active{background:var(--brand);color:#fff}
+.sidebar summary{list-style:none;font-family:'Prompt',sans-serif;font-weight:500;color:#e2e8f0}
+.sidebar summary::-webkit-details-marker{display:none}
+.sidebar summary>.bi:first-child{color:var(--mod-color);filter:brightness(1.6)}
+.sidebar summary .chev{margin-left:auto;font-size:.75rem;transition:transform .15s}
+.sidebar details[open] summary .chev{transform:rotate(180deg)}
+.sidebar nav a.sub{padding-left:22px;font-size:.95rem}
+.sidebar .nav-label{font-size:.75rem;color:#64748b;text-transform:uppercase;letter-spacing:.05em;margin:14px 12px 6px}
+.sidebar hr{border-color:rgba(255,255,255,.12)}
+.content{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{display:flex;gap:12px;align-items:center;padding:12px 28px;background:#fff;border-bottom:1px solid #e5e9f0;position:sticky;top:0;z-index:500}
+.topbar-mod{font-size:.8rem;font-family:'Prompt',sans-serif;font-weight:500}
+.content-body{padding:24px 28px 40px;flex:1}
+.app-footer{text-align:center;color:#94a3b8;font-size:.85rem;padding:14px}
+.sidebar-backdrop{display:none}
+@media (max-width:991.98px){
+  .sidebar{position:fixed;left:-270px;z-index:1050;transition:left .2s}
+  body.nav-open .sidebar{left:0;box-shadow:0 0 40px rgba(0,0,0,.4)}
+  body.nav-open .sidebar-backdrop{display:block;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:1040}
+  .content-body{padding:16px}
+  .topbar{padding:10px 16px}
+}
+
+/* ---------- องค์ประกอบทั่วไป ---------- */
+.card{border:1px solid #e5e9f0;border-radius:14px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
+.card-header{background:#fff;border-bottom:1px solid #eef1f5;padding:14px 18px;border-radius:14px 14px 0 0!important}
+.card-footer{background:#fafbfd}
+.table thead{background-color:#eef1f6}
+.stat-card{display:flex;gap:14px;align-items:center;background:#fff;border:1px solid #e5e9f0;border-radius:14px;padding:18px}
+.stat-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:12px;font-size:1.35rem;flex-shrink:0}
+.stat-num{font-size:1.6rem;font-weight:600;line-height:1.1}
+.stat-label{color:#64748b;font-size:.9rem}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.bar-label{width:110px;font-size:.92rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar-track{flex:1;height:10px;background:#eef2f7;border-radius:6px;overflow:hidden}
+.bar-fill{display:block;height:100%;background:linear-gradient(90deg,var(--brand),var(--brand-2));border-radius:6px}
+.bar-val{width:28px;text-align:right;font-weight:600}
+.thumb{width:56px;height:42px;object-fit:cover;border-radius:8px;display:inline-grid;place-items:center}
+.thumb-empty{background:#eef2f7;color:#94a3b8}
+.preview-grid{display:flex;flex-wrap:wrap;gap:8px}
+.preview-grid img{width:96px;height:72px;object-fit:cover;border-radius:8px;border:2px solid #dbeafe}
+.sticky-actions{position:sticky;bottom:0;background:linear-gradient(transparent,#f3f6fa 30%);padding:18px 0 8px;display:flex;gap:8px;z-index:400}
+.dashboard-clickable{transition:transform .15s ease,box-shadow .15s ease;cursor:pointer}
+.dashboard-clickable:hover{transform:translateY(-2px);box-shadow:0 4px 10px rgba(0,0,0,.15)}
+
+/* ---------- หน้าหลัก (เลือกระบบ) ---------- */
+.mod-card{display:flex;gap:16px;align-items:flex-start;background:#fff;border:1px solid #e5e9f0;border-radius:16px;padding:22px;text-decoration:none;color:inherit;height:100%;transition:transform .15s,box-shadow .15s}
+.mod-card:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(16,42,84,.1);color:inherit}
+.mod-card .mod-icon{width:56px;height:56px;border-radius:14px;display:grid;place-items:center;color:#fff;font-size:1.6rem;flex-shrink:0}
+.mod-card h3{font-size:1.1rem;margin:0 0 4px}
+
+/* ---------- หน้า login / PIN ---------- */
+.auth-page{min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at 20% 20%,#14b8a633,transparent 40%),radial-gradient(circle at 80% 80%,#0f5fc233,transparent 40%),#0b1f3a;padding:16px}
+.auth-card{background:#fff;border-radius:20px;padding:34px;width:100%;max-width:400px;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+
+/* ---------- พิมพ์: ซ่อนเมนู ---------- */
+@media print{
+  .sidebar,.topbar,.app-footer,.sidebar-backdrop,.no-print{display:none!important}
+  .content-body{padding:0}
+  body{background:#fff}
+}

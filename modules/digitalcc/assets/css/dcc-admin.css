@@ -1,0 +1,48 @@
+/* สไตล์หลังบ้านเฉพาะระบบศูนย์ดิจิทัลชุมชน (สไตล์หลักอยู่ที่ assets/css/app.css) */
+.picker-map{height:320px;border-radius:12px;border:1px solid #e5e9f0}
+.cover-preview{max-height:220px;width:100%;object-fit:cover}
+.gallery-admin{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
+.gallery-item{background:#f8fafc;border:1px solid #e5e9f0;border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:6px}
+.gallery-item img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:8px}
+.gallery-item .del{font-size:.85rem;color:#dc2626;cursor:pointer}
+.staff-admin{display:flex;gap:12px;align-items:center;border:1px solid #e5e9f0;border-radius:12px;padding:12px;background:#fafbfd}
+.staff-admin img,.staff-admin .avatar-empty{width:64px;height:64px;border-radius:50%;object-fit:cover}
+.avatar-empty{display:inline-grid;place-items:center;background:#e2e8f0;color:#94a3b8;font-size:1.8rem}
+.staff-photo-lg{width:160px;height:160px;border-radius:50%;object-fit:cover;display:inline-grid;place-items:center;font-size:4rem}
+/* แบบฟอร์มตรวจเยี่ยม */
+.visit-form .card-header{background:#f4f8fd}
+.visit-form .q{font-size:1rem;font-weight:600;margin:6px 0 8px;color:#0b1f3a}
+.choice{display:inline-flex;align-items:center;gap:8px;padding:6px 12px 6px 4px;margin:2px 6px 2px 0;border-radius:10px;cursor:pointer;min-height:40px}
+.choice:hover{background:#f1f5fb}
+.choice input{width:20px;height:20px;flex-shrink:0;accent-color:var(--brand)}
+.choice-row{display:flex;flex-wrap:wrap;align-items:center}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:2px 16px}
+.device-grid{display:flex;flex-direction:column;gap:4px}
+.device-row{display:grid;grid-template-columns:260px 1fr;align-items:center;border-bottom:1px dashed #e5e9f0;padding:2px 0}
+.dev-name{font-weight:500}
+@media (max-width:767.98px){
+  .two-col{grid-template-columns:1fr}
+  .device-row{grid-template-columns:1fr}
+  .visit-form .card-body{padding:14px}
+}
+
+/* หมุดแผนที่: หยดน้ำสีขาว ขอบเขียว มีโลโก้ (ปลายหมุด = มุมล่างที่หมุน 45°) */
+.pin{width:40px;height:40px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:#fff;border:3px solid #00a561;box-shadow:0 4px 12px rgba(0,0,0,.35);display:grid;place-items:center;transition:transform .15s}
+.leaflet-container .pin img{transform:rotate(45deg);width:28px;height:auto;pointer-events:none}
+.pin.big{width:56px;height:56px;border-width:4px}
+.leaflet-container .pin.big img{width:40px}
+.leaflet-marker-icon:hover .pin{transform:rotate(-45deg) scale(1.12)}
+.visit-centers{max-height:70vh;overflow-y:auto}
+.min-w-0{min-width:0}
+/* จำนวนศูนย์ตามอำเภอ (คลิกเพื่อดูรายชื่อ) */
+.district-list{max-height:520px;overflow-y:auto;margin-right:-8px;padding-right:8px}
+.district summary{list-style:none;cursor:pointer;border-radius:8px;padding:4px 6px;margin:0 -6px 4px}
+.district summary::-webkit-details-marker{display:none}
+.district summary:hover{background:#f1f5fb}
+.district .chev{font-size:.75rem;color:#94a3b8;transition:transform .15s}
+.district[open] .chev{transform:rotate(90deg)}
+.district[open] summary{background:#eef4fc}
+.district-centers{border-left:3px solid #dbe6f5;margin:0 0 10px 8px;padding:4px 0 6px 12px}
+.dc-item{display:flex;flex-wrap:wrap;align-items:center;column-gap:8px;padding:4px 0;border-bottom:1px dashed #e5e9f0}
+.dc-name{font-weight:500;text-decoration:none}
+.dc-tags{margin-left:auto;display:flex;gap:6px;align-items:center}

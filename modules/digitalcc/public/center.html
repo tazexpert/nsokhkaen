@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>รายละเอียดศูนย์ดิจิทัลชุมชน · จังหวัดขอนแก่น</title>
+<link rel="icon" type="image/png" href="../assets/img/favicon.png">
+<link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" rel="stylesheet">
+<link href="../assets/css/site.css" rel="stylesheet">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container">
+    <a class="logo" href="index.html"><img class="logo-mark" src="../assets/img/logo.png" alt="โลโก้ศูนย์ดิจิทัลชุมชน">
+      <span>ศูนย์ดิจิทัลชุมชน<small>จังหวัดขอนแก่น</small></span></a>
+    <div class="nav-links">
+      <a href="index.html#activities">กิจกรรม</a>
+      <a href="index.html#centers" class="keep">ศูนย์ทั้งหมด</a>
+      <a href="index.html#map-section">แผนที่</a>
+    </div>
+  </div>
+</nav>
+
+<div id="app"><div class="loading"><div class="spinner"></div>กำลังโหลดข้อมูล…</div></div>
+
+<footer>
+  <div class="container">
+    <a class="logo" href="index.html"><img class="logo-mark" src="../assets/img/logo.png" alt="โลโก้ศูนย์ดิจิทัลชุมชน">
+      <span>ศูนย์ดิจิทัลชุมชน<small>จังหวัดขอนแก่น</small></span></a>
+    <div style="margin-left:auto">ข้อมูลแผนที่ © OpenStreetMap contributors · <a href="../../../login.php">สำหรับเจ้าหน้าที่</a></div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="../assets/js/site.js"></script>
+<script>
+(async function () {
+  const app = document.getElementById('app');
+  const id = parseInt(new URLSearchParams(location.search).get('id'), 10);
+  const fail = msg => {
+    app.innerHTML = `<div class="container"><div class="alert"><i class="bi bi-exclamation-triangle"></i> ${esc(msg)}</div>
+      <a class="btn btn-light" href="index.html"><i class="bi bi-arrow-left"></i> กลับหน้ารวมศูนย์</a></div>`;
+  };
+  if (!id) return fail('ไม่ได้ระบุศูนย์ที่ต้องการดู');
+
+  let c;
+  try { c = (await api('?id=' + id)).center; } catch (e) { return fail(e.message); }
+
+  document.title = `${c.name} · ศูนย์ดิจิทัลชุมชน จังหวัดขอนแก่น`;
+  const hasLoc = c.lat !== null && c.lng !== null;
+  const addr = [c.house_no && 'เลขที่ ' + c.house_no, c.moo && 'หมู่ ' + c.moo, c.village, c.address, c.subdistrict && 'ต.' + c.subdistrict, c.district && 'อ.' + c.district,
+                c.province && 'จ.' + c.province, c.postcode].filter(Boolean).join(' ');
+  const gmaps = hasLoc ? `https://www.google.com/maps/search/?api=1&query=${c.lat},${c.lng}` : '';
+  const directions = hasLoc ? `https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lng}` : '';
+  const totalPeople = c.activities.reduce((s, a) => s + a.participants, 0);
+  const safeUrl = u => /^https?:\/\//i.test(u) ? u : (u ? 'https://' + u : '');
+
+  const groups = { center: c.images };
+  c.activities.forEach(a => { groups['a' + a.id] = a.images; });
+
+  const tabs = [
+    ['about', 'ข้อมูลศูนย์', true],
+    ['gallery', 'ภาพศูนย์', c.images.length],
+    ['staff', 'ผู้ดูแลศูนย์', c.staff.length],
+    ['activities', 'กิจกรรม', true],
+  ].filter(t => t[2]);
+
+  app.innerHTML = `
+  <header class="d-hero ${c.cover_image ? '' : 'no-img'}">
+    <div class="bg" ${c.cover_image ? `style="background-image:url('${esc(encodeURI(c.cover_image))}')"` : ''}></div>
+    <div class="container">
+      <a class="crumb" href="index.html#centers"><i class="bi bi-arrow-left"></i> ศูนย์ดิจิทัลชุมชนทั้งหมด</a>
+      <h1>${esc(c.name)}</h1>
+      <div class="loc"><i class="bi bi-geo-alt-fill"></i> ${esc([c.subdistrict && 'ต.' + c.subdistrict, c.district && 'อ.' + c.district, 'จ.' + (c.province || 'ขอนแก่น')].filter(Boolean).join(' '))}</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px">
+        ${c.code ? `<span class="chip"><i class="bi bi-hash"></i> ${esc(c.code)}</span>` : ''}
+        ${c.center_type ? `<span class="chip"><i class="bi bi-bookmark"></i> ${esc(c.center_type)}</span>` : ''}
+        <span class="chip"><i class="bi bi-calendar-check"></i> ${fmt(c.activities.length)} กิจกรรม</span>
+        ${totalPeople ? `<span class="chip"><i class="bi bi-people"></i> ผู้เข้าร่วม ${fmt(totalPeople)} คน</span>` : ''}
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs"><div class="container">
+    ${tabs.map((t, i) => `<a href="#${t[0]}" class="${i === 0 ? 'active' : ''}">${t[1]}</a>`).join('')}
+  </div></nav>
+
+  <div class="container layout">
+    <div>
+      <div class="panel" id="about">
+        <h2><i class="bi bi-info-circle"></i> เกี่ยวกับศูนย์</h2>
+        <div class="desc">${c.description ? esc(c.description) : '<span style="color:var(--muted)">ยังไม่มีรายละเอียด</span>'}</div>
+        ${c.services.length ? `<h3 style="font-size:1rem;margin-top:20px">บริการและอุปกรณ์</h3>
+          <div class="services">${c.services.map(s => `<span class="chip teal"><i class="bi bi-check2-circle"></i> ${esc(s)}</span>`).join('')}</div>` : ''}
+      </div>
+
+      ${c.images.length ? `<div class="panel" id="gallery">
+        <h2><i class="bi bi-images"></i> ภาพศูนย์ดิจิทัลชุมชน <span class="count">${c.images.length} ภาพ</span></h2>
+        ${galleryHTML(c.images, 'center', 9, true)}
+      </div>` : ''}
+
+      ${c.staff.length ? `<div class="panel" id="staff">
+        <h2><i class="bi bi-person-badge"></i> ผู้ดูแลศูนย์</h2>
+        <div class="staff">${c.staff.map(s => `<div class="person">
+          ${s.photo ? `<img class="ph" src="${esc(s.photo)}" alt="${esc(s.name)}" loading="lazy">` : '<div class="ph"><i class="bi bi-person"></i></div>'}
+          <div><h3>${esc(s.name)}</h3>${s.position ? `<div class="pos">${esc(s.position)}</div>` : ''}
+            <div class="c">
+              ${s.phone ? `<a href="tel:${esc(s.phone.replace(/[^\d+]/g, ''))}"><i class="bi bi-telephone"></i> ${esc(s.phone)}</a>` : ''}
+              ${s.email ? `<a href="mailto:${esc(s.email)}"><i class="bi bi-envelope"></i> ${esc(s.email)}</a>` : ''}
+              ${s.line_id ? `<span><i class="bi bi-line"></i> ${esc(s.line_id)}</span>` : ''}
+            </div>
+            ${s.bio ? `<p class="bio">${esc(s.bio)}</p>` : ''}
+          </div></div>`).join('')}</div>
+      </div>` : ''}
+
+      <div class="panel" id="activities">
+        <h2><i class="bi bi-calendar-event"></i> กิจกรรมที่จัดร่วมกับศูนย์ <span class="count">${c.activities.length} กิจกรรม</span></h2>
+        ${c.activities.length ? `<div class="timeline">${c.activities.map(a => `
+          <article class="t-item" id="act-${a.id}">
+            <div class="when">${a.activity_date ? thaiDate(a.activity_date, true) : 'ไม่ระบุวันที่'}</div>
+            <h3>${esc(a.title)}</h3>
+            <div class="tags">
+              ${a.organizer ? `<span class="chip"><i class="bi bi-building"></i> ${esc(a.organizer)}</span>` : ''}
+              ${a.participants ? `<span class="chip amber"><i class="bi bi-people"></i> ${fmt(a.participants)} คน</span>` : ''}
+              ${a.images.length ? `<span class="chip teal"><i class="bi bi-image"></i> ${a.images.length} ภาพ</span>` : ''}
+            </div>
+            ${a.description ? `<p>${esc(a.description)}</p>` : ''}
+            ${galleryHTML(a.images, 'a' + a.id, 5, false)}
+          </article>`).join('')}</div>` : '<p style="color:var(--muted);margin:0">ยังไม่มีกิจกรรม</p>'}
+      </div>
+    </div>
+
+    <aside class="side">
+      <div class="panel">
+        ${hasLoc ? '<div id="centerMap"></div>' : `<div style="padding:28px;text-align:center;color:var(--muted);background:#f1f5fb"><i class="bi bi-geo" style="font-size:2rem"></i><br>ยังไม่ได้ระบุพิกัดที่ตั้ง</div>`}
+        <ul class="info-list">
+          ${addr ? `<li><i class="bi bi-geo-alt"></i><div><small>ที่ตั้ง</small>${esc(addr)}</div></li>` : ''}
+          ${c.open_hours ? `<li><i class="bi bi-clock"></i><div><small>เวลาให้บริการ</small>${esc(c.open_hours)}</div></li>` : ''}
+          ${c.phone ? `<li><i class="bi bi-telephone"></i><div><small>โทรศัพท์</small><a href="tel:${esc(c.phone.replace(/[^\d+]/g, ''))}">${esc(c.phone)}</a></div></li>` : ''}
+          ${c.email ? `<li><i class="bi bi-envelope"></i><div><small>อีเมล</small><a href="mailto:${esc(c.email)}">${esc(c.email)}</a></div></li>` : ''}
+          ${c.facebook ? `<li><i class="bi bi-facebook"></i><div><small>Facebook</small><a href="${esc(safeUrl(c.facebook))}" target="_blank" rel="noopener">${esc(c.facebook.replace(/^https?:\/\/(www\.)?/, ''))}</a></div></li>` : ''}
+          ${hasLoc ? `<li><i class="bi bi-pin-map"></i><div><small>พิกัด</small>${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}</div></li>` : ''}
+        </ul>
+        ${hasLoc ? `<div class="side-actions">
+          <a class="btn btn-primary" href="${directions}" target="_blank" rel="noopener"><i class="bi bi-sign-turn-right"></i> นำทาง</a>
+          <a class="btn btn-light" href="${gmaps}" target="_blank" rel="noopener"><i class="bi bi-google"></i> Google Maps</a>
+        </div>` : ''}
+      </div>
+    </aside>
+  </div>`;
+
+  bindGalleries(app, groups);
+
+  if (hasLoc) {
+    const m = L.map('centerMap', { scrollWheelZoom: false }).setView([c.lat, c.lng], 15);
+    baseLayers(m);
+    L.marker([c.lat, c.lng], { icon: pinIcon(true) }).addTo(m)
+      .bindPopup(`<div class="popup"><div class="p"><h4>${esc(c.name)}</h4><div class="m" style="margin:0">${esc(addr)}</div></div></div>`);
+  }
+
+  // ไฮไลต์แท็บตามตำแหน่งที่เลื่อน
+  const links = [...document.querySelectorAll('.tabs a')];
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (en.isIntersecting) links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + en.target.id));
+    });
+  }, { rootMargin: '-45% 0px -50% 0px' });
+  tabs.forEach(t => { const el = document.getElementById(t[0]); if (el) obs.observe(el); });
+
+  // เลื่อนไปยังกิจกรรมที่ลิงก์มา (เช่น #act-3)
+  if (location.hash) {
+    const target = document.getElementById(location.hash.slice(1));
+    if (target) setTimeout(() => target.scrollIntoView({ block: 'start' }), 100);
+  }
+})();
+</script>
+</body>
+</html>

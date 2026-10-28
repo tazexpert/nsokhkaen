@@ -1,0 +1,82 @@
+<?php
+/** เข้าสู่ระบบด้วยชื่อผู้ใช้ + รหัสผ่าน (ใช้ได้กับทุกระบบ) */
+require_once __DIR__ . '/core/bootstrap.php';
+
+/** หลัง login: ถ้าระบบใดกำหนดให้บทบาทนี้ต้องมี PIN แต่ยังไม่ได้ตั้ง → พาไปตั้ง PIN ก่อน */
+function after_login(array $u): never
+{
+    if (!$u['has_pin']) {
+        foreach (accessible_modules($u) as $m) {
+            if (in_array(module_role($m['key'], $u), $m['prompt_pin_roles'] ?? [], true)) {
+                redirect(url('account.php?setup_pin=1'));
+            }
+        }
+    }
+    redirect(take_login_target(url('index.php')));
+}
+
+if ($u = current_user()) {
+    after_login($u);
+}
+
+$error = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    check_csrf();
+    $username = post('username');
+    $password = (string)($_POST['password'] ?? '');
+    throttle_failed_logins();
+    if ($username === '' || $password === '') {
+        $error = 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน';
+    } else {
+        $st = db()->prepare('SELECT id, password_hash FROM core_users WHERE username = ? AND is_active = 1');
+        $st->execute([$username]);
+        $row = $st->fetch();
+        if ($row && $row['password_hash'] && password_verify($password, $row['password_hash'])) {
+            if (password_needs_rehash($row['password_hash'], PASSWORD_DEFAULT)) {
+                db()->prepare('UPDATE core_users SET password_hash = ? WHERE id = ?')
+                    ->execute([password_hash($password, PASSWORD_DEFAULT), $row['id']]);
+            }
+            login_user((int)$row['id']);
+            after_login(current_user());
+        }
+        $_SESSION['login_fails'] = ($_SESSION['login_fails'] ?? 0) + 1;
+        audit_log('login_failed', 'username: ' . $username, 'core', null);
+        $error = 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
+    }
+}
+?><!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>เข้าสู่ระบบ · <?= h(APP_NAME) ?></title>
+<link rel="icon" type="image/svg+xml" href="<?= h(url('assets/img/favicon.svg')) ?>">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&family=Sarabun:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="<?= h(asset_v('assets/css/app.css')) ?>" rel="stylesheet">
+</head>
+<body class="auth-page">
+  <form method="post" class="auth-card">
+    <div class="text-center mb-4">
+      <span class="brand-mark lg"><i class="bi bi-bar-chart-line-fill"></i></span>
+      <h1 class="h4 mt-3 mb-1">ระบบบริหารจัดการ</h1>
+      <p class="text-muted mb-0"><?= h(ORG_NAME) ?></p>
+    </div>
+    <?php if ($error): ?><div class="alert alert-danger py-2"><?= h($error) ?></div><?php endif; ?>
+    <?= csrf_field() ?>
+    <div class="mb-3">
+      <label class="form-label">ชื่อผู้ใช้</label>
+      <input name="username" class="form-control form-control-lg" required autofocus autocomplete="username" value="<?= h(post('username')) ?>">
+    </div>
+    <div class="mb-4">
+      <label class="form-label">รหัสผ่าน</label>
+      <input name="password" type="password" class="form-control form-control-lg" required autocomplete="current-password">
+    </div>
+    <button class="btn btn-primary btn-lg w-100">เข้าสู่ระบบ</button>
+    <div class="text-center mt-3 small">
+      <a href="<?= h(url('pin.php')) ?>"><i class="bi bi-grid-3x3-gap"></i> เข้าใช้ด้วย PIN 6 หลัก</a>
+    </div>
+  </form>
+</body>
+</html>

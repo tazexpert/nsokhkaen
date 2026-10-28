@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ศูนย์ดิจิทัลชุมชน จังหวัดขอนแก่น</title>
+<meta name="description" content="ข้อมูลที่ตั้ง ผู้ดูแล และกิจกรรมของศูนย์ดิจิทัลชุมชนทุกแห่งในจังหวัดขอนแก่น">
+<link rel="icon" type="image/png" href="../assets/img/favicon.png">
+<link rel="apple-touch-icon" href="../assets/img/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.min.css" rel="stylesheet">
+<link href="../assets/css/site.css" rel="stylesheet">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="container">
+    <a class="logo" href="index.html"><img class="logo-mark" src="../assets/img/logo.png" alt="โลโก้ศูนย์ดิจิทัลชุมชน">
+      <span>ศูนย์ดิจิทัลชุมชน<small>จังหวัดขอนแก่น</small></span></a>
+    <div class="nav-links">
+      <a href="#activities">กิจกรรม</a>
+      <a href="#centers">ศูนย์ทั้งหมด</a>
+      <a href="#map-section">แผนที่</a>
+      <a href="../../../login.php" class="keep" title="สำหรับเจ้าหน้าที่"><i class="bi bi-lock"></i></a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="container hero-inner">
+    <div class="hero-text">
+      <h1>ศูนย์ดิจิทัลชุมชน <span>จังหวัดขอนแก่น</span></h1>
+      <p class="lead">ค้นหาศูนย์ใกล้บ้าน ที่ตั้ง ผู้ดูแล และกิจกรรมของศูนย์ทั้ง 26 อำเภอ</p>
+    </div>
+    <form class="search-bar" id="searchForm" role="search">
+      <label class="sr-only" for="q">ค้นหา</label>
+      <input id="q" type="search" placeholder="ค้นหาชื่อศูนย์ รหัส ตำบล หรือผู้ดูแล…" autocomplete="off">
+      <label class="sr-only" for="district">อำเภอ</label>
+      <select id="district"><option value="">ทุกอำเภอ</option></select>
+      <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i><span>ค้นหา</span></button>
+    </form>
+  </div>
+</header>
+
+<main class="container">
+  <div class="stats" id="stats">
+    <div class="stat"><i class="bi bi-building"></i><div><b data-k="centers">–</b><span>ศูนย์ดิจิทัลชุมชน</span></div></div>
+    <div class="stat"><i class="bi bi-map"></i><div><b data-k="districts">–</b><span>อำเภอที่มีศูนย์ฯ</span></div></div>
+    <div class="stat"><i class="bi bi-calendar-check"></i><div><b data-k="activities">–</b><span>กิจกรรมที่จัด</span></div></div>
+  </div>
+
+  <div id="errorBox"></div>
+
+  <section id="activities">
+    <div class="section-head">
+      <div><div class="kicker">ACTIVITIES</div><h2>กิจกรรมล่าสุด</h2><p>กิจกรรมที่จัดทำร่วมกับศูนย์ดิจิทัลชุมชน</p></div>
+    </div>
+    <div class="act-grid" id="actGrid">
+      <div class="loading" style="grid-column:1/-1"><div class="spinner"></div>กำลังโหลดกิจกรรม…</div>
+    </div>
+  </section>
+
+  <section id="centers">
+    <div class="section-head">
+      <div><div class="kicker">CENTERS</div><h2>ศูนย์ดิจิทัลชุมชนทั้งหมด</h2><p id="resultText">กำลังโหลด…</p></div>
+      <div class="right filters" id="typeFilters"></div>
+    </div>
+    <div class="grid" id="centerGrid">
+      <div class="loading" style="grid-column:1/-1"><div class="spinner"></div>กำลังโหลดข้อมูล…</div>
+    </div>
+    <div class="more" id="moreWrap" hidden><button class="btn btn-light" id="moreBtn">แสดงเพิ่มเติม <i class="bi bi-chevron-down"></i></button></div>
+  </section>
+
+  <section id="map-section">
+    <div class="section-head">
+      <div><div class="kicker">MAP</div><h2>แผนที่ศูนย์ดิจิทัลชุมชน</h2>
+        <p>คลิกหมุดเพื่อดูข้อมูลศูนย์ · <span id="mapCount"></span></p></div>
+    </div>
+    <div class="map-wrap"><div id="map"></div></div>
+  </section>
+</main>
+
+<footer>
+  <div class="container">
+    <a class="logo" href="index.html"><img class="logo-mark" src="../assets/img/logo.png" alt="โลโก้ศูนย์ดิจิทัลชุมชน">
+      <span>ศูนย์ดิจิทัลชุมชน<small>จังหวัดขอนแก่น</small></span></a>
+    <div style="margin-left:auto">ข้อมูลแผนที่ © OpenStreetMap contributors · <a href="../../../login.php">สำหรับเจ้าหน้าที่</a></div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js"></script>
+<script src="../assets/js/site.js"></script>
+<script>
+(async function () {
+  const PAGE = 12;
+  const $ = id => document.getElementById(id);
+  const state = { all: [], q: '', district: '', type: '', shown: PAGE };
+
+  // ค่าเริ่มต้นจาก URL เช่น digital.html?district=ชุมแพ
+  const usp = new URLSearchParams(location.search);
+  state.q = usp.get('q') || '';
+  state.district = usp.get('district') || '';
+  $('q').value = state.q;
+
+  // ----- แผนที่ -----
+  const map = L.map('map', { scrollWheelZoom: false }).setView([16.43, 102.6], 9);
+  baseLayers(map);
+  map.on('focus', () => map.scrollWheelZoom.enable());
+  map.on('blur', () => map.scrollWheelZoom.disable());
+  const cluster = L.markerClusterGroup({ showCoverageOnHover: false, maxClusterRadius: 45 });
+  map.addLayer(cluster);
+
+  function popupHTML(c) {
+    return `<div class="popup">${c.image ? `<img src="${esc(c.image)}" alt="">` : ''}
+      <div class="p"><h4>${esc(c.name)}</h4>
+      <div class="m"><i class="bi bi-geo-alt"></i> ${c.subdistrict ? 'ต.' + esc(c.subdistrict) + ' ' : ''}อ.${esc(c.district)}</div>
+      <a class="btn btn-primary" href="center.html?id=${c.id}">ดูรายละเอียด <i class="bi bi-arrow-right"></i></a></div></div>`;
+  }
+
+  // ----- การ์ดศูนย์ -----
+  function cardHTML(c, i) {
+    return `<a class="card reveal" style="animation-delay:${(i % PAGE) * 40}ms" href="center.html?id=${c.id}">
+      <div class="media">${c.image ? `<img src="${esc(c.image)}" alt="" loading="lazy">` : '<div class="ph"><i class="bi bi-building"></i></div>'}
+        <span class="chip">อ.${esc(c.district || '-')}</span></div>
+      <div class="body">
+        <h3>${esc(c.name)}</h3>
+        <div class="meta">
+          ${c.subdistrict ? `<span><i class="bi bi-geo-alt"></i> ต.${esc(c.subdistrict)}</span>` : ''}
+          ${c.staff_name ? `<span><i class="bi bi-person"></i> ${esc(c.staff_name)}</span>` : ''}
+          ${c.phone ? `<span><i class="bi bi-telephone"></i> ${esc(c.phone)}</span>` : ''}
+        </div>
+        <div class="foot"><span><i class="bi bi-calendar-event"></i> ${fmt(c.activity_count)} กิจกรรม</span>
+          <span class="go">ดูรายละเอียด →</span></div>
+      </div></a>`;
+  }
+
+  function filtered() {
+    const q = state.q.trim().toLowerCase();
+    return state.all.filter(c =>
+      (!state.district || c.district === state.district) &&
+      (!state.type || c.center_type === state.type) &&
+      (!q || [c.code, c.name, c.subdistrict, c.district, c.staff_name, c.center_type].join(' ').toLowerCase().includes(q)));
+  }
+
+  function render(fitMap) {
+    const list = filtered();
+    $('resultText').textContent = list.length === state.all.length
+      ? `ทั้งหมด ${fmt(list.length)} ศูนย์`
+      : `พบ ${fmt(list.length)} จาก ${fmt(state.all.length)} ศูนย์`;
+    $('centerGrid').innerHTML = list.length
+      ? list.slice(0, state.shown).map(cardHTML).join('')
+      : '<div class="empty" style="grid-column:1/-1"><i class="bi bi-search" style="font-size:2rem"></i><p>ไม่พบศูนย์ที่ตรงกับการค้นหา</p></div>';
+    $('moreWrap').hidden = list.length <= state.shown;
+
+    cluster.clearLayers();
+    const pts = list.filter(c => c.lat !== null && c.lng !== null);
+    pts.forEach(c => cluster.addLayer(L.marker([c.lat, c.lng], { icon: pinIcon(), title: c.name }).bindPopup(popupHTML(c))));
+    $('mapCount').textContent = `แสดง ${fmt(pts.length)} หมุด`;
+    if (fitMap && pts.length) map.fitBounds(L.latLngBounds(pts.map(c => [c.lat, c.lng])), { padding: [40, 40], maxZoom: 14 });
+  }
+
+  function syncUrl() {
+    const p = new URLSearchParams();
+    if (state.q) p.set('q', state.q);
+    if (state.district) p.set('district', state.district);
+    history.replaceState(null, '', location.pathname + (p.toString() ? '?' + p : '') + location.hash);
+  }
+
+  $('searchForm').addEventListener('submit', e => {
+    e.preventDefault();
+    state.q = $('q').value; state.shown = PAGE;
+    render(true); syncUrl();
+    document.getElementById('centers').scrollIntoView();
+  });
+  let t;
+  $('q').addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { state.q = $('q').value; state.shown = PAGE; render(false); syncUrl(); }, 250); });
+  $('district').addEventListener('change', () => { state.district = $('district').value; state.shown = PAGE; render(true); syncUrl(); });
+  $('moreBtn').addEventListener('click', () => { state.shown += PAGE; render(false); });
+
+  function countUp(el, n) {
+    const dur = 900, t0 = performance.now();
+    (function step(t) {
+      const p = Math.min(1, (t - t0) / dur);
+      el.textContent = fmt(Math.round(n * (1 - Math.pow(1 - p, 3))));
+      if (p < 1) requestAnimationFrame(step);
+    })(t0);
+  }
+
+  try {
+    const data = await api();
+    state.all = data.centers;
+    // ตัวเลือกอำเภอ: แสดงเฉพาะอำเภอที่มีศูนย์ พร้อมจำนวน
+    const counts = {};
+    data.centers.forEach(c => { if (c.district) counts[c.district] = (counts[c.district] || 0) + 1; });
+    $('district').innerHTML = '<option value="">ทุกอำเภอ</option>' + data.district_list
+      .filter(d => counts[d]).concat(Object.keys(counts).filter(d => !data.district_list.includes(d)))
+      .map(d => `<option value="${esc(d)}">${esc(d)} (${counts[d]})</option>`).join('');
+    $('district').value = state.district;
+
+    // ปุ่มกรองตามประเภท
+    const types = [...new Set(data.centers.map(c => c.center_type).filter(Boolean))];
+    if (types.length > 1) {
+      $('typeFilters').innerHTML = ['', ...types].map(tp => `<button type="button" data-t="${esc(tp)}" class="${tp === '' ? 'active' : ''}">${tp ? esc(tp) : 'ทุกประเภท'}</button>`).join('');
+      $('typeFilters').addEventListener('click', e => {
+        const b = e.target.closest('button'); if (!b) return;
+        $('typeFilters').querySelectorAll('button').forEach(x => x.classList.toggle('active', x === b));
+        state.type = b.dataset.t; state.shown = PAGE; render(true);
+      });
+    }
+    document.querySelectorAll('#stats b[data-k]').forEach(b => countUp(b, data.stats[b.dataset.k]));
+    render(true);
+  } catch (err) {
+    $('centerGrid').innerHTML = '';
+    $('resultText').textContent = '';
+    $('errorBox').innerHTML = `<div class="alert"><i class="bi bi-exclamation-triangle"></i> ${esc(err.message)}</div>`;
+  }
+
+  // ----- กิจกรรมล่าสุด -----
+  try {
+    const { activities } = await api('?action=activities&limit=8');
+    $('actGrid').innerHTML = activities.length ? activities.map((a, i) => {
+      const d = parseDate(a.activity_date);
+      return `<a class="card act-card reveal" style="animation-delay:${i * 50}ms" href="center.html?id=${a.center_id}#act-${a.id}">
+        <div class="media">${a.image ? `<img src="${esc(a.image)}" alt="" loading="lazy">` : '<div class="ph"><i class="bi bi-calendar-event"></i></div>'}
+          ${d ? `<span class="date-badge"><b>${d.d}</b><small>${TH_MONTHS[d.m - 1]} ${String(d.y + 543).slice(2)}</small></span>` : ''}</div>
+        <div class="body"><h3>${esc(a.title)}</h3>
+          <div class="meta"><span><i class="bi bi-building"></i> ${esc(a.center_name)}</span>
+          ${a.participants ? `<span><i class="bi bi-people"></i> ผู้เข้าร่วม ${fmt(a.participants)} คน</span>` : ''}</div></div></a>`;
+    }).join('') : '<div class="empty" style="grid-column:1/-1">ยังไม่มีกิจกรรม</div>';
+  } catch (err) {
+    $('actGrid').innerHTML = '';
+  }
+})();
+</script>
+</body>
+</html>
