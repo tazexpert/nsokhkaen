@@ -110,7 +110,7 @@ $font = BASE_URL . 'assets/fonts/';
     <img src="<?= h(INV_URL . 'assets/img/garuda.png') ?>" class="garuda" alt="">
     <h1>บันทึกข้อความ</h1>
   </div>
-  <div class="grow"><span class="lbl">ส่วนราชการ</span> <?= fill(ORG_NAME . '  โทรศัพท์ ' . thai_digits($ls['loan_org_phone']) . '  โทรสาร ' . thai_digits($ls['loan_org_fax']), '1cm', 'left') ?></div>
+  <div class="grow"><span class="lbl">ส่วนราชการ</span> <?= fill(ORG_NAME . '  โทรศัพท์ ' . thai_digits(LOAN_ORG_PHONE) . '  โทรสาร ' . thai_digits(LOAN_ORG_FAX), '1cm', 'left') ?></div>
   <div class="grow"><span class="lbl">ที่</span> <?= fill('', '1cm') ?> <span class="lbl">วันที่</span> <span class="fill fixed" style="min-width:7cm"><?= h($td(substr($loan['created_at'], 0, 10))) ?></span></div>
   <div class="grow"><span class="lbl">เรื่อง</span> <?= fill('ขออนุมัติยืมพัสดุ', '1cm', 'left') ?></div>
   <div class="grow" style="margin-top:6px">เรียน <?= fill(LOAN_TO, '1cm', 'left') ?></div>

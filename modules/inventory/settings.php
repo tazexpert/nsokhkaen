@@ -75,9 +75,8 @@ require_once __DIR__ . '/header.php';
         <div class="card" style="max-width: 900px;">
             <div class="card-header">บันทึกข้อความขออนุมัติยืมพัสดุ (พิมพ์)</div>
             <div class="card-body row g-3">
-                <div class="col-md-6"><label class="form-label">โทรศัพท์ส่วนราชการ</label><input class="form-control loan-set" id="s_loan_org_phone"></div>
-                <div class="col-md-6"><label class="form-label">โทรสาร</label><input class="form-control loan-set" id="s_loan_org_fax"></div>
-                <div class="col-12 small text-muted">เรียน: <strong><?= h(LOAN_TO) ?></strong> (คงที่)</div>
+                <div class="col-12 small text-muted">ส่วนราชการ: <strong><?= h(ORG_NAME) ?> โทรศัพท์ <?= h(LOAN_ORG_PHONE) ?> โทรสาร <?= h(LOAN_ORG_FAX) ?></strong>
+                    · เรียน: <strong><?= h(LOAN_TO) ?></strong> (คงที่)</div>
                 <?php foreach (['lender' => ['ผู้ให้ยืม', 'ใช้เป็น "ผู้รับคืน" ด้วย — ถ้าไม่ได้เลือก ระบบใช้ชื่อผู้ดูแลที่กดอนุมัติ/รับคืน'],
                                 'approver' => ['ผู้อนุมัติ', 'เช่น สถิติจังหวัด หรือผู้รักษาราชการแทน']] as $k => [$label, $hint]): ?>
                   <div class="col-12"><hr class="my-1"></div>

@@ -6,7 +6,7 @@ requireAdminApi();
 $pdo = getDbConnection();
 $action = $_REQUEST['action'] ?? '';
 const INV_SETTING_KEYS = ['issuer_name', 'issuer_position', 'approver_name', 'approver_position',
-    'loan_org_phone', 'loan_org_fax', 'loan_lender_name', 'loan_lender_position', 'loan_approver_name', 'loan_approver_position'];
+    'loan_lender_name', 'loan_lender_position', 'loan_approver_name', 'loan_approver_position'];
 
 switch ($action) {
     case 'get':
