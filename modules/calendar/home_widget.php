@@ -7,10 +7,11 @@ require_once __DIR__ . '/lib.php';
 $calDays = (int)($_GET['cal_days'] ?? 30);      // ค่าเริ่มต้น 30 วัน / ทุกคน
 $calDays = in_array($calDays, [1, 7, 14, 30], true) ? $calDays : 30;
 $calMine = !empty($_GET['cal_mine']);
+$calDuty = !empty($_GET['cal_duty']);            // ค่าเริ่มต้นไม่แสดงเวรสำนักงาน
 $calFrom = date('Y-m-d');
 $calTo = date('Y-m-d', strtotime('+' . ($calDays - 1) . ' days'));
-$calEvents = cal_events_between($calFrom, $calTo, $calMine ? $user['id'] : null);
-$calQs = fn(array $p) => '?' . http_build_query(array_filter($p + ['cal_days' => $calDays, 'cal_mine' => $calMine ? 1 : null])) . '#calendar';
+$calEvents = cal_events_between($calFrom, $calTo, $calMine ? $user['id'] : null, $calDuty);
+$calQs = fn(array $p) => '?' . http_build_query(array_filter($p + ['cal_days' => $calDays, 'cal_mine' => $calMine ? 1 : null, 'cal_duty' => $calDuty ? 1 : null])) . '#calendar';
 ?>
 <link href="<?= h(asset_v('modules/calendar/assets/css/calendar.css')) ?>" rel="stylesheet">
 <div class="card mb-4 cal-home" id="calendar">
@@ -22,9 +23,11 @@ $calQs = fn(array $p) => '?' . http_build_query(array_filter($p + ['cal_days' =>
       <?php endforeach; ?>
     </div>
     <div class="btn-group btn-group-sm">
-      <a href="<?= h('?' . http_build_query(['cal_days' => $calDays]) . '#calendar') ?>" class="btn btn-outline-secondary<?= $calMine ? '' : ' active' ?>">ทุกคน</a>
+      <a href="<?= h($calQs(['cal_mine' => 0])) ?>" class="btn btn-outline-secondary<?= $calMine ? '' : ' active' ?>">ทุกคน</a>
       <a href="<?= h($calQs(['cal_mine' => 1])) ?>" class="btn btn-outline-secondary<?= $calMine ? ' active' : '' ?>">งานของฉัน</a>
     </div>
+    <a href="<?= h($calQs(['cal_duty' => $calDuty ? 0 : 1])) ?>" class="btn btn-sm <?= $calDuty ? 'btn-success' : 'btn-outline-success' ?>" title="<?= $calDuty ? 'ซ่อน' : 'แสดง' ?>เวรสำนักงาน">
+      <i class="bi <?= $calDuty ? 'bi-check-square' : 'bi-square' ?>"></i> เวรสำนักงาน</a>
     <div class="ms-auto d-flex gap-2">
       <a href="<?= h(module_url('calendar', 'index.php')) ?>" class="btn btn-sm btn-light"><i class="bi bi-calendar3"></i> ปฏิทินรายเดือน</a>
       <?php if (user_can('calendar', 'editor', $user)): ?><a href="<?= h(module_url('calendar', 'event_form.php')) ?>" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มกิจกรรม</a><?php endif; ?>
@@ -32,4 +35,4 @@ $calQs = fn(array $p) => '?' . http_build_query(array_filter($p + ['cal_days' =>
   </div>
   <?= cal_render_table($calEvents, $calFrom, $user['id']) ?>
 </div>
-<?php unset($calDays, $calMine, $calFrom, $calTo, $calEvents, $calQs); ?>
+<?php unset($calDays, $calMine, $calDuty, $calFrom, $calTo, $calEvents, $calQs); ?>

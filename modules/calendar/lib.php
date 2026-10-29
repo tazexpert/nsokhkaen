@@ -56,11 +56,11 @@ function cal_users(): array
     return $users;
 }
 
-/** กิจกรรมที่คาบเกี่ยวช่วงวันที่ ($userId = เฉพาะที่ผู้ใช้นั้นรับผิดชอบ) */
-function cal_events_between(string $from, string $to, ?int $userId = null): array
+/** กิจกรรมที่คาบเกี่ยวช่วงวันที่ ($userId = เฉพาะที่ผู้ใช้นั้นรับผิดชอบ · $withDuty = false ไม่รวมเวรสำนักงาน) */
+function cal_events_between(string $from, string $to, ?int $userId = null, bool $withDuty = true): array
 {
     $sql = 'SELECT e.*, u.full_name AS created_by_name FROM cal_events e LEFT JOIN core_users u ON u.id = e.created_by
-            WHERE e.event_date <= ? AND COALESCE(e.end_date, e.event_date) >= ?';
+            WHERE e.event_date <= ? AND COALESCE(e.end_date, e.event_date) >= ?' . ($withDuty ? '' : " AND e.kind <> 'duty'");
     $params = [$to, $from];
     if ($userId) {
         $sql .= ' AND EXISTS (SELECT 1 FROM cal_event_users eu WHERE eu.event_id = e.id AND eu.user_id = ?)';
