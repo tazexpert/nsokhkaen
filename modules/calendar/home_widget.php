@@ -12,6 +12,7 @@ $calTo = date('Y-m-d', strtotime('+' . ($calDays - 1) . ' days'));
 $calEvents = cal_events_between($calFrom, $calTo, $calMine ? $user['id'] : null);
 $calQs = fn(array $p) => '?' . http_build_query(array_filter($p + ['cal_days' => $calDays, 'cal_mine' => $calMine ? 1 : null])) . '#calendar';
 ?>
+<link href="<?= h(asset_v('modules/calendar/assets/css/calendar.css')) ?>" rel="stylesheet">
 <div class="card mb-4 cal-home" id="calendar">
   <div class="card-header d-flex flex-wrap align-items-center gap-2">
     <strong class="me-2"><?= module_logo(module_def('calendar'), 22) ?> ตารางการปฏิบัติงาน</strong>

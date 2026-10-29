@@ -85,6 +85,19 @@ function cal_assignees(array $eventIds): array
     return $out;
 }
 
+/** ผู้อำนวยการ / สถิติจังหวัด → แสดงตำแหน่งต่อท้ายชื่อในตาราง */
+function cal_show_position(?string $position): bool
+{
+    return (bool)preg_match('/^(ผู้อำนวยการ|สถิติจังหวัด)/u', trim((string)$position));
+}
+
+/** ชื่อผู้รับผิดชอบ (ข้อความล้วน) เช่น "นางเยาวภา มณีฉาย (ผู้อำนวยการกลุ่ม...)" */
+function cal_person_text(array $u): string
+{
+    $name = preg_replace('/\s+/u', ' ', trim($u['full_name']));
+    return $name . (cal_show_position($u['position'] ?? '') ? ' (' . trim($u['position']) . ')' : '');
+}
+
 /** สรุปผู้รับผิดชอบ: "เจ้าหน้าที่สำนักงานสถิติจังหวัดขอนแก่นทุกคน" / "ข้าราชการ" / "พนักงาน" หรือรายชื่อ */
 function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
 {
@@ -104,10 +117,12 @@ function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
         }
     }
     usort($ids, fn($a, $b) => ($b === $meId) <=> ($a === $meId));      // ตัวเองขึ้นก่อน
-    $chips = array_map(fn($id) => '<span class="cal-person' . ($id === $meId ? ' me' : '') . '">' . h($users[$id]['full_name']) . '</span>',
+    $chips = array_map(fn($id) => cal_show_position($users[$id]['position'])
+        ? '<span class="cal-person pos' . ($id === $meId ? ' me' : '') . '">' . h(preg_replace('/\s+/u', ' ', trim($users[$id]['full_name']))) . ' <small>' . h(trim($users[$id]['position'])) . '</small></span>'
+        : '<span class="cal-person' . ($id === $meId ? ' me' : '') . '">' . h($users[$id]['full_name']) . '</span>',
         array_slice($ids, 0, $max));
     $more = count($ids) - $max;
-    return implode(' ', $chips) . ($more > 0 ? ' <span class="small text-muted" title="' . h(implode(', ', array_map(fn($id) => $users[$id]['full_name'], array_slice($ids, $max)))) . '">+' . $more . ' คน</span>' : '');
+    return implode(' ', $chips) . ($more > 0 ? ' <span class="small text-muted" title="' . h(implode(', ', array_map(fn($id) => cal_person_text($users[$id]), array_slice($ids, $max)))) . '">+' . $more . ' คน</span>' : '');
 }
 
 /** เวลาแบบไทย "09.00" จากเวลาในฐานข้อมูล "09:00:00" */

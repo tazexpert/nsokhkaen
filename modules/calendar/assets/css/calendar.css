@@ -39,3 +39,6 @@
 .flatpickr-current-month .numInputWrapper { display: none; }
 .flatpickr-current-month .be-year { font-weight: 600; margin-left: .35em; }
 .flatpickr-current-month .flatpickr-monthDropdown-months { font-weight: 600; }
+/* ผู้อำนวยการ / สถิติจังหวัด: ชื่อ + ตำแหน่ง */
+.cal-person.pos { white-space: normal; background: #e0e7ff; }
+.cal-person.pos small { color: #475569; }
