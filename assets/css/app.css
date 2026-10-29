@@ -251,3 +251,31 @@ h1,h2,h3,h4,h5,.brand,.stat-num,.btn,.card-header,.nav-tabs{font-family:'Prompt'
 .home-tool::after{content:"";position:absolute;right:-30px;bottom:-50px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.14);pointer-events:none}
 .home-tool-title{font-family:'Prompt',sans-serif;font-weight:500;margin-bottom:10px}
 .home-tool .btn{--bs-btn-color:#fff;--bs-btn-border-color:rgba(255,255,255,.7);--bs-btn-hover-color:#37474f;--bs-btn-hover-bg:#fff;--bs-btn-hover-border-color:#fff;--bs-btn-active-color:#37474f;--bs-btn-active-bg:#fff;position:relative;z-index:1}
+
+/* ---------- หน้าหลัก v3: แยกโทนสี เมนู(ฟ้า) / ต้อนรับ(ขาว + กล่องสี) / ตาราง(เขียว) ---------- */
+.home-hero{background:#fff;color:var(--ink);box-shadow:var(--card-shadow);border-radius:10px;justify-content:flex-start;align-items:center;gap:18px 22px}
+.home-hero-avatar{width:64px;height:64px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;font-size:2rem;color:#fff;background:var(--g-blue);box-shadow:0 6px 14px rgba(64,153,255,.35)}
+.home-hero-date{color:#78909c;opacity:1}
+.home-hero-date .bi{color:#4099ff}
+.home-hero-title{color:#263238}
+.home-hero-sub{color:#78909c;opacity:1}
+.home-stat{border:0;color:#fff;backdrop-filter:none;min-width:170px;padding:12px 18px;position:relative;overflow:hidden}
+.home-stat::after{content:"";position:absolute;right:-18px;top:-18px;width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.18)}
+.home-stat.tone-orange{background:var(--g-orange);box-shadow:0 4px 12px rgba(255,182,77,.4)}
+.home-stat.tone-red{background:var(--g-red);box-shadow:0 4px 12px rgba(255,83,112,.35)}
+.home-stat.tone-purple{background:linear-gradient(45deg,#7c3aed,#a78bfa);box-shadow:0 4px 12px rgba(124,58,237,.3)}
+.home-stat span{opacity:.95}
+/* หัวการ์ดตารางการปฏิบัติงาน: เขียวไล่เฉด */
+.cal-home>.card-header{background:linear-gradient(45deg,#1fc9a6,#59e0c5)}
+.cal-home>.card-header .btn-outline-primary,.cal-home>.card-header .btn-outline-secondary{--bs-btn-hover-color:#13866f;--bs-btn-active-color:#13866f}
+.cal-home>.card-header .btn-outline-success{--bs-btn-hover-color:#13866f}
+.cal-home>.card-header .btn-success{color:#13866f}
+.cal-home>.card-header .btn-light:hover{color:#13866f}
+.cal-home>.card-header .btn-primary{color:#13866f}
+.cal-home>.card-header .btn-primary:hover{background:#e6fbf6;color:#0f6f5c}
+.cal-home .cal-table tr.cal-day th{background:#f0fbf8;color:#13866f}
+@media (max-width:575.98px){
+  .home-hero-avatar{width:48px;height:48px;font-size:1.5rem}
+  .home-hero-stats{width:100%;gap:10px}
+  .home-stat{min-width:0;flex:1 1 calc(50% - 10px);padding:10px 12px}
+}

@@ -25,14 +25,15 @@ $hidePageHead = true;
 require APP_ROOT . '/core/layout/header.php';
 ?>
 <section class="home-hero mb-4">
-  <div class="min-w-0">
+  <div class="home-hero-avatar"><i class="bi bi-person-fill"></i></div>
+  <div class="min-w-0 me-auto">
     <div class="home-hero-date"><i class="bi bi-calendar3"></i> <?= h(cal_home_date()) ?></div>
     <h2 class="home-hero-title">สวัสดี <?= h(preg_replace('/\s+/u', ' ', $user['full_name'])) ?></h2>
     <div class="home-hero-sub"><?= h(ORG_NAME) ?></div>
   </div>
   <div class="home-hero-stats">
-    <?php foreach ($homeStats as [$icon, $n, $label]): ?>
-      <div class="home-stat"><i class="bi <?= $icon ?>"></i><div><strong><?= (int)$n ?></strong><span><?= h($label) ?></span></div></div>
+    <?php foreach ($homeStats as $i => [$icon, $n, $label]): ?>
+      <div class="home-stat tone-<?= ['orange', 'red', 'purple'][$i % 3] ?>"><i class="bi <?= $icon ?>"></i><div><strong><?= (int)$n ?></strong><span><?= h($label) ?></span></div></div>
     <?php endforeach; ?>
   </div>
 </section>
