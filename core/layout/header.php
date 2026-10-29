@@ -85,14 +85,14 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
       <!-- บัญชีผู้ใช้ -->
       <div class="dropdown">
         <button class="btn nav-icon-btn d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="บัญชีผู้ใช้">
-          <i class="bi bi-person-circle"></i>
+          <?= user_avatar($user, 32, 'nav-avatar') ?>
           <span class="text-start lh-sm user-chip">
             <span class="d-block"><?= h($user['full_name']) ?></span>
             <small><?= $user['via_pin'] ? 'ยืนยันตัวตนด้วย PIN' : h($user['work_group'] ?: ($user['position'] ?: '')) ?></small>
           </span>
         </button>
         <ul class="dropdown-menu dropdown-menu-end shadow">
-          <li class="dropdown-header"><?= h($user['full_name']) ?><?php if ($user['username']): ?><br><small class="font-monospace"><?= h($user['username']) ?></small><?php endif; ?></li>
+          <li class="dropdown-header d-flex align-items-center gap-2"><?= user_avatar($user, 40) ?><span><?= h($user['full_name']) ?><?php if ($user['username']): ?><br><small class="font-monospace"><?= h($user['username']) ?></small><?php endif; ?></span></li>
           <li><a class="dropdown-item<?= $navActive(!$module && $active === 'account') ?>" href="<?= h(url('account.php')) ?>"><i class="bi bi-person-gear"></i> บัญชีของฉัน</a></li>
           <li><a class="dropdown-item" href="<?= h(url('index.php#arrange')) ?>"><i class="bi bi-arrows-move"></i> จัดเรียงเมนูระบบ</a></li>
           <li><hr class="dropdown-divider"></li>

@@ -279,3 +279,12 @@ h1,h2,h3,h4,h5,.brand,.stat-num,.btn,.card-header,.nav-tabs{font-family:'Prompt'
   .home-hero-stats{width:100%;gap:10px}
   .home-stat{min-width:0;flex:1 1 calc(50% - 10px);padding:10px 12px}
 }
+
+/* ---------- รูปโปรไฟล์ ---------- */
+.avatar{display:inline-grid;place-items:center;border-radius:50%;object-fit:cover;flex-shrink:0;background:#fff}
+.avatar-empty{background:var(--g-blue);color:#fff}
+.nav-avatar{border:2px solid rgba(255,255,255,.85);font-size:1rem}
+.app-nav .nav-icon-btn .avatar-empty.nav-avatar{background:rgba(255,255,255,.25)}
+.home-hero-avatar{width:auto;height:auto;background:none!important;box-shadow:none;border-radius:50%;text-decoration:none}
+.home-hero-avatar .avatar{box-shadow:0 6px 14px rgba(64,153,255,.35);border:3px solid #fff}
+.home-hero-avatar:hover .avatar{transform:scale(1.04);transition:transform .15s}

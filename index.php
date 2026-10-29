@@ -12,29 +12,16 @@ function cal_home_date(): string
     $w = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'][(int)date('w')];
     return 'วัน' . $w . 'ที่ ' . (int)date('j') . ' ' . thai_month_long((int)date('n')) . ' ' . ((int)date('Y') + 543);
 }
-// ตัวเลขสรุปบนแถบต้อนรับ (จากระบบปฏิทิน ถ้ามีสิทธิ์)
-$homeStats = [];
-if (array_filter($mods, fn($m) => $m['key'] === 'calendar')) {
-    require_once APP_ROOT . '/modules/calendar/lib.php';
-    $homeStats[] = ['bi-calendar-event', count(cal_events_between(date('Y-m-d'), date('Y-m-d'), null, false)), 'กิจกรรมวันนี้'];
-    $homeStats[] = ['bi-person-check', count(cal_events_between(date('Y-m-d'), date('Y-m-d', strtotime('+6 days')), (int)$user['id'])), 'งานของฉัน 7 วันข้างหน้า'];
-}
-$homeStats[] = ['bi-grid', count($mods), 'ระบบที่ใช้งานได้'];
 $widgets = array_filter(array_map(fn($m) => APP_ROOT . '/modules/' . $m['key'] . '/home_widget.php', $mods), 'is_file');
 $hidePageHead = true;
 require APP_ROOT . '/core/layout/header.php';
 ?>
 <section class="home-hero mb-4">
-  <div class="home-hero-avatar"><i class="bi bi-person-fill"></i></div>
+  <a href="<?= h(url('account.php')) ?>" class="home-hero-avatar" title="บัญชีของฉัน — เปลี่ยนรูปโปรไฟล์"><?= user_avatar($user, 64) ?></a>
   <div class="min-w-0 me-auto">
     <div class="home-hero-date"><i class="bi bi-calendar3"></i> <?= h(cal_home_date()) ?></div>
     <h2 class="home-hero-title">สวัสดี <?= h(preg_replace('/\s+/u', ' ', $user['full_name'])) ?></h2>
     <div class="home-hero-sub"><?= h(ORG_NAME) ?></div>
-  </div>
-  <div class="home-hero-stats">
-    <?php foreach ($homeStats as $i => [$icon, $n, $label]): ?>
-      <div class="home-stat tone-<?= ['orange', 'red', 'purple'][$i % 3] ?>"><i class="bi <?= $icon ?>"></i><div><strong><?= (int)$n ?></strong><span><?= h($label) ?></span></div></div>
-    <?php endforeach; ?>
   </div>
 </section>
 

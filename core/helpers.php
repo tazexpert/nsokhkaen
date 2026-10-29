@@ -239,6 +239,55 @@ function delete_upload(?string $rel): void
     }
 }
 
+/**
+ * บันทึกรูปโปรไฟล์: ตัดเป็นสี่เหลี่ยมจัตุรัส (กึ่งกลาง) ขนาด 400px — คืน path สัมพัทธ์จาก uploads/
+ * โยน RuntimeException ถ้าไฟล์ไม่ถูกต้อง
+ */
+function save_avatar(array $file): ?string
+{
+    $rel = save_upload($file, 'avatars');
+    if (!$rel || !function_exists('imagecreatetruecolor')) {
+        return $rel;
+    }
+    $path = UPLOAD_DIR . '/' . $rel;
+    $info = @getimagesize($path);
+    $img = match ($info[2] ?? 0) {
+        IMAGETYPE_JPEG => @imagecreatefromjpeg($path),
+        IMAGETYPE_PNG  => @imagecreatefrompng($path),
+        IMAGETYPE_WEBP => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($path) : false,
+        default        => false,                       // GIF: ใช้ตามเดิม
+    };
+    if (!$img) {
+        return $rel;
+    }
+    [$w, $h] = $info;
+    $side = min($w, $h);
+    $size = min(400, $side);
+    $out = imagecreatetruecolor($size, $size);
+    imagefill($out, 0, 0, imagecolorallocate($out, 255, 255, 255));
+    imagecopyresampled($out, $img, 0, 0, intdiv($w - $side, 2), intdiv($h - $side, 2), $size, $size, $side, $side);
+    $jpg = preg_replace('/\.\w+$/', '.jpg', $rel);
+    if (imagejpeg($out, UPLOAD_DIR . '/' . $jpg, 88)) {
+        if ($jpg !== $rel) {
+            @unlink($path);
+        }
+        $rel = $jpg;
+    }
+    imagedestroy($img);
+    imagedestroy($out);
+    return $rel;
+}
+
+/** รูปโปรไฟล์ผู้ใช้ (วงกลม) — ไม่มีรูป = ไอคอนผู้ใช้ */
+function user_avatar(array $u, int $size = 32, string $class = ''): string
+{
+    $style = 'width:' . $size . 'px;height:' . $size . 'px';
+    if (!empty($u['photo'])) {
+        return '<img src="' . h(upload_url($u['photo'])) . '" alt="" class="avatar ' . h($class) . '" style="' . $style . '">';
+    }
+    return '<span class="avatar avatar-empty ' . h($class) . '" style="' . $style . ';font-size:' . round($size * .55) . 'px"><i class="bi bi-person-fill"></i></span>';
+}
+
 /** URL ของไฟล์ใต้ uploads/ */
 function upload_url(?string $rel): string
 {

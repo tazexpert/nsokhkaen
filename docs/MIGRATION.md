@@ -206,6 +206,7 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 | `20261102_calendar_userprefs.sql` | ระบบปฏิทินการปฏิบัติงาน (`cal_*`) + ลำดับระบบที่ผู้ใช้จัดเอง (`core_user_prefs`) |
 | `20261103_payslip_comments.sql` | สลิปเงินเดือน: ผู้อนุมัติแจ้งแก้ไขให้ผู้จัดการสลิป (`pay_slip_comments`) |
 | `20261104_calendar_duty.sql` | ปฏิทิน: เวรสำนักงาน (`cal_events.kind`) |
+| `20261105_core_user_photo.sql` | รูปโปรไฟล์ผู้ใช้ (`core_users.photo`) |
 
 ```bash
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261028_core_workgroup_inv_equipment.sql
@@ -216,6 +217,7 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261102_calendar_userprefs.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261103_payslip_comments.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261104_calendar_duty.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261105_core_user_photo.sql
 ```
 
 หลังอัปเดต:

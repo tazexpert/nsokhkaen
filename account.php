@@ -1,5 +1,5 @@
 <?php
-/** บัญชีของฉัน: แก้ไขข้อมูลส่วนตัว เปลี่ยนรหัสผ่าน ตั้ง/ลบ PIN (ทุกคนแก้ได้เฉพาะบัญชีตัวเอง) */
+/** บัญชีของฉัน: รูปโปรไฟล์ แก้ไขข้อมูลส่วนตัว เปลี่ยนรหัสผ่าน ตั้ง/ลบ PIN (ทุกคนแก้ได้เฉพาะบัญชีตัวเอง) */
 require_once __DIR__ . '/core/bootstrap.php';
 $user = require_login();
 $pdo = db();
@@ -9,7 +9,28 @@ $errors = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
     $action = post('action');
-    if ($action === 'profile') {
+    if ($action === 'photo') {
+        try {
+            $rel = save_avatar($_FILES['photo'] ?? []);
+            if (!$rel) {
+                $errors[] = 'กรุณาเลือกรูปภาพ';
+            } else {
+                $old = $user['photo'] ?? null;
+                $pdo->prepare('UPDATE core_users SET photo = ? WHERE id = ?')->execute([$rel, $user['id']]);
+                delete_upload($old);
+                audit_log('change_photo');
+                flash('เปลี่ยนรูปโปรไฟล์เรียบร้อยแล้ว');
+                redirect(url('account.php'));
+            }
+        } catch (RuntimeException $e) {
+            $errors[] = $e->getMessage();
+        }
+    } elseif ($action === 'remove_photo') {
+        $pdo->prepare('UPDATE core_users SET photo = NULL WHERE id = ?')->execute([$user['id']]);
+        delete_upload($user['photo'] ?? null);
+        flash('ลบรูปโปรไฟล์แล้ว');
+        redirect(url('account.php'));
+    } elseif ($action === 'profile') {
         $fullName = post('full_name');
         if ($fullName === '') {
             $errors[] = 'กรุณากรอกชื่อ-นามสกุล';
@@ -75,6 +96,40 @@ require APP_ROOT . '/core/layout/header.php';
 
 <div class="row g-3">
   <div class="col-lg-6">
+    <div class="card mb-3">
+      <div class="card-header"><strong><i class="bi bi-person-bounding-box"></i> รูปโปรไฟล์</strong></div>
+      <div class="card-body d-flex flex-wrap align-items-center gap-4">
+        <div class="text-center">
+          <div id="photoPreview"><?= user_avatar($user, 128, 'shadow-sm') ?></div>
+          <?php if ($user['photo']): ?><a href="<?= h(upload_url($user['photo'])) ?>" target="_blank" class="small d-inline-block mt-2"><i class="bi bi-zoom-in"></i> ดูรูปเต็ม</a><?php endif; ?>
+        </div>
+        <div class="flex-grow-1" style="min-width:220px">
+          <form method="post" enctype="multipart/form-data" id="photoForm">
+            <?= csrf_field() ?><input type="hidden" name="action" value="photo">
+            <label class="form-label"><?= $user['photo'] ? 'เปลี่ยนรูป' : 'เพิ่มรูป' ?></label>
+            <input type="file" name="photo" id="photoInput" accept="image/jpeg,image/png,image/webp,image/gif" class="form-control mb-2" required>
+            <div class="form-text mb-2">JPG / PNG / WEBP ไม่เกิน <?= (int)(UPLOAD_MAX_BYTES / 1048576) ?> MB — ระบบตัดเป็นรูปสี่เหลี่ยมจัตุรัสให้อัตโนมัติ (แสดงที่เมนูด้านบนและหน้าหลัก)</div>
+            <button class="btn btn-primary" id="photoSave" disabled><i class="bi bi-upload"></i> บันทึกรูป</button>
+          </form>
+          <?php if ($user['photo']): ?>
+            <form method="post" class="mt-2" data-confirm="ลบรูปโปรไฟล์?"><?= csrf_field() ?><input type="hidden" name="action" value="remove_photo">
+              <button class="btn btn-link text-danger btn-sm p-0"><i class="bi bi-trash"></i> ลบรูป</button></form>
+          <?php endif; ?>
+        </div>
+      </div>
+    </div>
+    <script>
+    document.getElementById('photoInput').addEventListener('change', e => {
+      const f = e.target.files[0], save = document.getElementById('photoSave');
+      save.disabled = !f;
+      if (!f || !f.type.startsWith('image/')) return;
+      const img = document.createElement('img');
+      img.className = 'avatar shadow-sm'; img.style.cssText = 'width:128px;height:128px';
+      img.src = URL.createObjectURL(f);
+      const box = document.getElementById('photoPreview'); box.innerHTML = ''; box.appendChild(img);
+    });
+    </script>
+
     <form method="post" class="card mb-3">
       <div class="card-header"><strong><i class="bi bi-person"></i> ข้อมูลส่วนตัว</strong></div>
       <div class="card-body row g-3">
