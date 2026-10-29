@@ -113,7 +113,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
               <?= module_logo($__m, 22, 'me-1') ?> <?= h($__m['short']) ?></a>
             <ul class="dropdown-menu shadow">
               <li class="dropdown-header"><?= h($__m['name']) ?></li>
-              <?php foreach ($__m['menu'] as $__item): if (!user_can($__m['key'], $__item['role'] ?? '', $user)) continue; ?>
+              <?php foreach ($__m['menu'] as $__item): if (!menu_item_visible($__m['key'], $__item, $user)) continue; ?>
                 <li><a class="dropdown-item<?= $navActive($__isCur && $active === $__item['id']) ?>" href="<?= h(module_url($__m['key'], $__item['href'])) ?>"
                    <?= !empty($__item['target']) ? 'target="' . h($__item['target']) . '"' : '' ?>><i class="bi <?= h($__item['icon']) ?>"></i> <?= h($__item['label']) ?></a></li>
               <?php endforeach; ?>
@@ -127,7 +127,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
             <ul class="dropdown-menu shadow more-menu">
               <?php foreach ($navMore as $__m): $__isCur = $module === $__m['key']; ?>
                 <li class="dropdown-header d-flex align-items-center gap-1"><?= module_logo($__m, 18) ?> <?= h($__m['name']) ?></li>
-                <?php foreach ($__m['menu'] as $__item): if (!user_can($__m['key'], $__item['role'] ?? '', $user)) continue; ?>
+                <?php foreach ($__m['menu'] as $__item): if (!menu_item_visible($__m['key'], $__item, $user)) continue; ?>
                   <li><a class="dropdown-item<?= $navActive($__isCur && $active === $__item['id']) ?>" href="<?= h(module_url($__m['key'], $__item['href'])) ?>"
                      <?= !empty($__item['target']) ? 'target="' . h($__item['target']) . '"' : '' ?>><i class="bi <?= h($__item['icon']) ?>"></i> <?= h($__item['label']) ?></a></li>
                 <?php endforeach; ?>
@@ -158,7 +158,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
   <div class="container-fluid">
     <span class="mod-bar-name" style="--mod-color:<?= h($cur['color']) ?>"><?= module_logo($cur, 24) ?> <span class="d-none d-sm-inline"><?= h($cur['short']) ?></span></span>
     <nav class="mod-bar-links">
-      <?php foreach ($cur['menu'] as $__item): if (!user_can($cur['key'], $__item['role'] ?? '', $user)) continue; ?>
+      <?php foreach ($cur['menu'] as $__item): if (!menu_item_visible($cur['key'], $__item, $user)) continue; ?>
         <a href="<?= h(module_url($cur['key'], $__item['href'])) ?>" class="<?= $active === $__item['id'] ? 'active' : '' ?>"
            <?= !empty($__item['target']) ? 'target="' . h($__item['target']) . '"' : '' ?>><i class="bi <?= h($__item['icon']) ?>"></i> <?= h($__item['label']) ?></a>
       <?php endforeach; ?>

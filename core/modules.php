@@ -9,6 +9,7 @@
  *   logo   => 'assets/img/logo.png'   (ไม่บังคับ) รูปโลโก้ระบบ สัมพัทธ์จากโฟลเดอร์ระบบ — ไม่มีจะใช้ icon แทน
  *   roles  => ['role' => 'คำอธิบาย', ...]   เรียงจากสิทธิ์ต่ำ → สูง (ตัวสุดท้าย = สูงสุด)
  *   menu   => [['id','label','href','icon','role'], ...]  href สัมพัทธ์จากโฟลเดอร์ระบบ
+ *             'visible' => fn(array $user): bool  (ไม่บังคับ) เงื่อนไขเพิ่มเติมนอกจาก role เช่น ซ่อน "สลิปของฉัน" ถ้าไม่ใช่พนักงาน
  *   links  => [['label','href','icon'], ...]  ลิงก์เพิ่มเติม เช่น หน้าเว็บสาธารณะ
  * เพิ่มระบบใหม่ = สร้างโฟลเดอร์ + module.php แล้วกำหนดสิทธิ์ผู้ใช้ที่เมนูผู้ใช้งาน
  */
@@ -85,4 +86,14 @@ function module_logo(array $m, int $size = 22, string $class = ''): string
         return '<img src="' . h(module_url($m['key'], $m['logo'])) . '" alt="" class="mod-logo ' . h($class) . '" style="width:' . $size . 'px;height:' . $size . 'px">';
     }
     return '<i class="bi ' . h($m['icon']) . ' ' . h($class) . '" style="color:' . h($m['color']) . ';font-size:' . round($size * .85) . 'px"></i>';
+}
+
+/** แสดงเมนูนี้กับผู้ใช้หรือไม่: มี role ถึง และผ่านเงื่อนไข visible (ถ้ามี) */
+function menu_item_visible(string $module, array $item, ?array $user = null): bool
+{
+    $user ??= current_user();
+    if (!$user || !user_can($module, $item['role'] ?? '', $user)) {
+        return false;
+    }
+    return !isset($item['visible']) || !is_callable($item['visible']) || (bool)($item['visible'])($user);
 }
