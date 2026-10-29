@@ -22,11 +22,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'delete' && !$canManage) {
         forbidden(PAY_MODULE, 'manager');
     }
+    // สลิปที่มีแจ้งแก้ไขค้างอยู่ ยังอนุมัติไม่ได้ (รอผู้จัดการสลิปแก้ไข/ปิดเรื่อง)
+    $noOpen = "NOT EXISTS (SELECT 1 FROM pay_slip_comments c WHERE c.slip_id = pay_slips.id AND c.status = 'open')";
+    $blockedMsg = fn(int $b) => $b ? " · ข้าม $b รายการที่มีแจ้งแก้ไขค้างอยู่" : '';
     if ($action === 'approve' && $ids) {
         $n = $pdo->exec("UPDATE pay_slips SET status = 'approved', approved_by = {$me['id']}, approved_at = NOW()
-            WHERE status = 'pending' AND id IN ($in)");
+            WHERE status = 'pending' AND id IN ($in) AND $noOpen");
+        $b = (int)$pdo->query("SELECT COUNT(DISTINCT slip_id) FROM pay_slip_comments WHERE status = 'open' AND slip_id IN ($in)")->fetchColumn();
         audit_log('payslip_approve', $n . ' รายการ', PAY_MODULE);
-        flash("อนุมัติสลิปแล้ว $n รายการ — พนักงานดูสลิปได้แล้ว");
+        flash("อนุมัติสลิปแล้ว $n รายการ — พนักงานดูสลิปได้แล้ว" . $blockedMsg($b), $b ? 'warning' : 'success');
     } elseif ($action === 'approve_all') {
         $where = "status = 'pending'";
         $params = [];
@@ -34,10 +38,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $where .= ' AND year = ? AND month = ?';
             $params = [int_param('year'), int_param('month')];
         }
-        $st = $pdo->prepare("UPDATE pay_slips SET status = 'approved', approved_by = ?, approved_at = NOW() WHERE $where");
+        $st = $pdo->prepare("UPDATE pay_slips SET status = 'approved', approved_by = ?, approved_at = NOW() WHERE $where AND $noOpen");
         $st->execute([$me['id'], ...$params]);
+        $bst = $pdo->prepare("SELECT COUNT(*) FROM pay_slips WHERE $where");
+        $bst->execute($params);
+        $b = (int)$bst->fetchColumn();
         audit_log('payslip_approve_all', $st->rowCount() . ' รายการ ' . implode('/', $params), PAY_MODULE);
-        flash('อนุมัติสลิปทั้งหมด ' . $st->rowCount() . ' รายการ');
+        flash('อนุมัติสลิปทั้งหมด ' . $st->rowCount() . ' รายการ' . $blockedMsg($b), $b ? 'warning' : 'success');
     } elseif ($action === 'unapprove' && $ids) {
         $n = $pdo->exec("UPDATE pay_slips SET status = 'pending', approved_by = NULL, approved_at = NULL WHERE id IN ($in)");
         audit_log('payslip_unapprove', $n . ' รายการ', PAY_MODULE);
@@ -76,16 +83,21 @@ if ($month) {
 if (in_array($status, ['pending', 'approved'], true)) {
     $where[] = 's.status = ?';
     $params[] = $status;
+} elseif ($status === 'comments') {
+    $where[] = "EXISTS (SELECT 1 FROM pay_slip_comments c WHERE c.slip_id = s.id AND c.status = 'open')";
 }
 if ($q !== '') {
     $where[] = '(s.full_name LIKE ? OR e.code LIKE ?)';
     array_push($params, "%$q%", "%$q%");
 }
-$st = $pdo->prepare('SELECT s.*, e.code FROM pay_slips s JOIN pay_employees e ON e.id = s.employee_id'
+$st = $pdo->prepare('SELECT s.*, e.code,
+    (SELECT COUNT(*) FROM pay_slip_comments c WHERE c.slip_id = s.id AND c.status = \'open\') AS open_comments FROM pay_slips s JOIN pay_employees e ON e.id = s.employee_id'
     . ($where ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY s.year DESC, s.month DESC, e.code');
 $st->execute($params);
 $slips = $st->fetchAll();
-$pendingTotal = (int)$pdo->query("SELECT COUNT(*) FROM pay_slips WHERE status = 'pending'")->fetchColumn();
+$pendingTotal = (int)$pdo->query("SELECT COUNT(*) FROM pay_slips s WHERE s.status = 'pending'
+    AND NOT EXISTS (SELECT 1 FROM pay_slip_comments c WHERE c.slip_id = s.id AND c.status = 'open')")->fetchColumn();   // อนุมัติได้
+$openTotal = (int)$pdo->query("SELECT COUNT(DISTINCT slip_id) FROM pay_slip_comments WHERE status = 'open'")->fetchColumn();
 $cols = PAY_INCOME + ['total_income' => 'รวมรายได้'] + PAY_DEDUCT + ['total_deduct' => 'รวมรายจ่าย', 'net_pay' => 'คงเหลือ'];
 $sum = array_fill_keys(array_keys($cols), 0.0);
 foreach ($slips as $s) {
@@ -115,6 +127,7 @@ require __DIR__ . '/header.php';
         <option value="">ทุกสถานะ</option>
         <option value="pending" <?= $status === 'pending' ? 'selected' : '' ?>>รออนุมัติ</option>
         <option value="approved" <?= $status === 'approved' ? 'selected' : '' ?>>อนุมัติแล้ว</option>
+        <option value="comments" <?= $status === 'comments' ? 'selected' : '' ?>>มีแจ้งแก้ไขค้าง<?= $openTotal ? " ($openTotal)" : '' ?></option>
       </select></div>
       <?php else: ?><input type="hidden" name="status" value="pending"><?php endif; ?>
       <div class="col-md-3"><input name="q" class="form-control" placeholder="ค้นหาชื่อ / เลขที่" value="<?= h($q) ?>"></div>
@@ -122,7 +135,7 @@ require __DIR__ . '/header.php';
       <?php if ($canApprove && $pendingTotal): ?>
         <div class="col-auto ms-auto">
           <button form="approveAllForm" class="btn btn-success"><i class="bi bi-check2-all"></i>
-            อนุมัติทั้งหมด<?= $year && $month ? 'ของเดือนนี้' : '' ?> (<?= $year && $month ? (int)array_sum(array_map(fn($s) => $s['status'] === 'pending', $slips)) : $pendingTotal ?>)</button>
+            อนุมัติทั้งหมด<?= $year && $month ? 'ของเดือนนี้' : '' ?> (<?= $year && $month ? (int)array_sum(array_map(fn($s) => $s['status'] === 'pending' && !$s['open_comments'], $slips)) : $pendingTotal ?>)</button>
         </div>
       <?php endif; ?>
     </form>
@@ -152,10 +165,12 @@ require __DIR__ . '/header.php';
             <td><?= h($s['full_name']) ?></td>
             <?php if (!$month): ?><td class="small"><?= h(pay_period((int)$s['year'], (int)$s['month'])) ?></td><?php endif; ?>
             <?php foreach ($cols as $k => $_): ?><td class="num<?= $k === 'net_pay' ? ' fw-semibold' : '' ?>"><?= pay_money($s[$k]) ?></td><?php endforeach; ?>
-            <td><?= $s['status'] === 'approved' ? '<span class="badge text-bg-success">อนุมัติแล้ว</span>' : '<span class="badge text-bg-warning">รออนุมัติ</span>' ?></td>
+            <td class="text-nowrap"><?= $s['status'] === 'approved' ? '<span class="badge text-bg-success">อนุมัติแล้ว</span>' : '<span class="badge text-bg-warning">รออนุมัติ</span>' ?>
+              <?php if ($s['open_comments']): ?><a href="slip_view.php?id=<?= (int)$s['id'] ?>#comments" class="badge text-bg-danger text-decoration-none" title="ผู้อนุมัติแจ้งแก้ไข รอผู้จัดการสลิป"><i class="bi bi-chat-square-text"></i> แจ้งแก้ไข</a><?php endif; ?></td>
             <td class="text-nowrap">
               <a href="slip_view.php?id=<?= (int)$s['id'] ?>" class="btn btn-sm btn-light" title="ดูสลิป"><i class="bi bi-search"></i></a>
-              <?php if ($canManage): ?><a href="slip_form.php?id=<?= (int)$s['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a><?php endif; ?>
+              <?php if ($canManage): ?><a href="slip_form.php?id=<?= (int)$s['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a>
+              <?php else: ?><a href="slip_form.php?id=<?= (int)$s['id'] ?>" class="btn btn-sm btn-light text-warning-emphasis" title="แจ้งแก้ไข (ส่งให้ผู้จัดการสลิปตรวจสอบ)"><i class="bi bi-chat-square-text"></i></a><?php endif; ?>
             </td>
           </tr>
         <?php endforeach; ?>

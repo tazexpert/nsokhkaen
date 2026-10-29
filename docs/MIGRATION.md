@@ -204,6 +204,7 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 | `20261031_payslip_init.sql` | ระบบสลิปเงินเดือนพนักงาน (ตาราง `pay_*`) |
 | `20261101_payslip_signers.sql` | ผู้ลงนามในสลิปแยกตามช่วงเวลา (ย้ายผู้ลงนามเดิมเป็นคนแรกให้อัตโนมัติ) |
 | `20261102_calendar_userprefs.sql` | ระบบปฏิทินการปฏิบัติงาน (`cal_*`) + ลำดับระบบที่ผู้ใช้จัดเอง (`core_user_prefs`) |
+| `20261103_payslip_comments.sql` | สลิปเงินเดือน: ผู้อนุมัติแจ้งแก้ไขให้ผู้จัดการสลิป (`pay_slip_comments`) |
 
 ```bash
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261028_core_workgroup_inv_equipment.sql
@@ -212,6 +213,7 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261031_payslip_init.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261101_payslip_signers.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261102_calendar_userprefs.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261103_payslip_comments.sql
 ```
 
 หลังอัปเดต:

@@ -18,7 +18,8 @@
 .ps-draft { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-18deg); font-size: 3rem; font-weight: 700;
   color: rgba(220, 38, 38, .18); border: 6px solid rgba(220, 38, 38, .18); padding: 4px 24px; border-radius: 12px; pointer-events: none; white-space: nowrap; }
 .pay-table td, .pay-table th { white-space: nowrap; font-variant-numeric: tabular-nums; }
-.pay-table td.num, .pay-table th.num { text-align: right; }
+.pay-table td.num, .pay-table th.num, .pay-diff .num { text-align: right; }
+.pay-diff { max-width: 420px; }
 /* พิมพ์: ขนาด/ตำแหน่งเท่าสลิปเดิม (ตัวอักษรเล็ก กว้างประมาณครึ่งหน้า A4 จัดกึ่งกลาง) */
 @page { size: A4; margin: 12mm; }
 @media print {

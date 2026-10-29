@@ -476,6 +476,26 @@ CREATE TABLE IF NOT EXISTS pay_slips (
   CONSTRAINT fk_pay_slips_created_by FOREIGN KEY (created_by) REFERENCES core_users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ข้อเสนอแก้ไขสลิปจากผู้อนุมัติ (ไม่แก้สลิปโดยตรง) → แจ้งเตือนผู้จัดการสลิปให้ตรวจสอบและแก้ไข
+--   changes = JSON {คอลัมน์: [ค่าเดิม, ค่าที่เสนอ]} · status: open = รอผู้จัดการสลิป, resolved = แก้ไข/ตอบแล้ว
+CREATE TABLE IF NOT EXISTS pay_slip_comments (
+  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  slip_id         INT UNSIGNED NOT NULL,
+  user_id         INT UNSIGNED NULL,                   -- ผู้อนุมัติที่แจ้ง
+  message         TEXT         NULL,
+  changes         TEXT         NULL,
+  status          ENUM('open', 'resolved') NOT NULL DEFAULT 'open',
+  resolved_by     INT UNSIGNED NULL,
+  resolved_at     DATETIME     NULL,
+  resolve_note    VARCHAR(500) NULL,
+  created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_pay_comments_slip (slip_id, status),
+  KEY idx_pay_comments_status (status),
+  CONSTRAINT fk_pay_comments_slip FOREIGN KEY (slip_id) REFERENCES pay_slips(id) ON DELETE CASCADE,
+  CONSTRAINT fk_pay_comments_user FOREIGN KEY (user_id) REFERENCES core_users(id) ON DELETE SET NULL,
+  CONSTRAINT fk_pay_comments_resolved_by FOREIGN KEY (resolved_by) REFERENCES core_users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ผู้ลงนามในสลิป แยกตามช่วงเวลา: สลิปเดือนใดใช้ผู้ลงนามที่ "เริ่มตั้งแต่" ล่าสุดไม่เกินเดือนนั้น
 -- effective_ym = ปี พ.ศ. × 100 + เดือน เช่น 256911 = พฤศจิกายน 2569 · 0 = ใช้กับทุกเดือนก่อนหน้า (ผู้ลงนามคนแรก)
 CREATE TABLE IF NOT EXISTS pay_signers (

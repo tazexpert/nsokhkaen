@@ -243,3 +243,61 @@ function pay_render_slip(array $s, string $code): string
         . (!$approved ? '<div class="ps-draft">ยังไม่อนุมัติ</div>' : '')
         . '</div>';
 }
+
+/* ---------- แจ้งแก้ไขสลิป (ผู้อนุมัติ → ผู้จัดการสลิป) ---------- */
+
+/** ชื่อช่องตัวเลขทั้งหมดในสลิป */
+function pay_field_labels(): array
+{
+    return PAY_INCOME + PAY_DEDUCT + PAY_TOTALS;
+}
+
+/** ค่าตัวเลข 2 ค่าเท่ากันหรือไม่ (ไม่มีค่า = 0 เพราะสลิปแสดงเป็น "-" เหมือนกัน) */
+function pay_same_amount($a, $b): bool
+{
+    return abs((float)$a - (float)$b) < 0.005;
+}
+
+/** ข้อเสนอแก้ไขของสลิป (ใหม่ → เก่า) พร้อมชื่อผู้แจ้ง/ผู้ปิดเรื่อง */
+function pay_slip_comments(int $slipId, bool $openOnly = false): array
+{
+    $st = db()->prepare('SELECT c.*, u.full_name AS user_name, r.full_name AS resolver_name FROM pay_slip_comments c
+        LEFT JOIN core_users u ON u.id = c.user_id LEFT JOIN core_users r ON r.id = c.resolved_by
+        WHERE c.slip_id = ?' . ($openOnly ? " AND c.status = 'open'" : '') . ' ORDER BY c.id DESC');
+    $st->execute([$slipId]);
+    $rows = $st->fetchAll();
+    foreach ($rows as &$r) {
+        $r['changes'] = json_decode((string)$r['changes'], true) ?: [];
+    }
+    return $rows;
+}
+
+/** ปิดเรื่องแจ้งแก้ไขที่ยังเปิดอยู่ของสลิป */
+function pay_resolve_comments(int $slipId, int $userId, string $note = '', ?int $commentId = null): int
+{
+    $st = db()->prepare("UPDATE pay_slip_comments SET status = 'resolved', resolved_by = ?, resolved_at = NOW(), resolve_note = ?
+        WHERE slip_id = ? AND status = 'open'" . ($commentId ? ' AND id = ' . (int)$commentId : ''));
+    $st->execute([$userId, mb_substr($note, 0, 500) ?: null, $slipId]);
+    return $st->rowCount();
+}
+
+/** ตารางค่าที่เสนอแก้ไข: รายการ | ค่าเดิม | ค่าที่เสนอ */
+function pay_changes_table(array $changes): string
+{
+    if (!$changes) {
+        return '';
+    }
+    $labels = pay_field_labels();
+    $h = '<table class="table table-sm table-bordered mb-2 small pay-diff"><thead class="table-light"><tr><th>รายการ</th><th class="num">ค่าเดิม</th><th class="num">ค่าที่เสนอ</th></tr></thead><tbody>';
+    foreach ($changes as $k => [$old, $new]) {
+        $h .= '<tr><td>' . h($labels[$k] ?? $k) . '</td><td class="num text-muted text-decoration-line-through">' . pay_money($old)
+            . '</td><td class="num fw-semibold text-primary">' . pay_money($new) . '</td></tr>';
+    }
+    return $h . '</tbody></table>';
+}
+
+/** วันที่ + เวลา เช่น "29 ต.ค. 2569 14:05" */
+function pay_when(?string $dt): string
+{
+    return $dt ? thai_date($dt) . ' ' . substr($dt, 11, 5) : '-';
+}
