@@ -47,66 +47,6 @@ function cal_header_field(string $h): ?string
     return null;
 }
 
-/** เวลา → H:i:s (รองรับ 9:00, 09.30, 0930, 9:00 น., ค่าจาก Excel 0.375) */
-function cal_parse_time(string $v): ?string
-{
-    $v = trim(preg_replace('/\s*น\.?$/u', '', trim($v)));
-    if ($v === '' || $v === '-') {
-        return null;
-    }
-    if (preg_match('/^\d{4}-\d{2}-\d{2} (\d{2}):(\d{2})/', $v, $x) || preg_match('/^(\d{1,2})[:.](\d{2})(?::\d{2})?$/', $v, $x)
-        || preg_match('/^(\d{2})(\d{2})$/', $v, $x)) {
-        [$h, $i] = [(int)$x[1], (int)$x[2]];
-    } elseif (is_numeric($v) && (float)$v >= 0 && (float)$v < 1) {             // เวลาแบบ Excel (เศษของวัน)
-        $min = (int)round((float)$v * 1440);
-        [$h, $i] = [intdiv($min, 60), $min % 60];
-    } elseif (preg_match('/^\d{1,2}$/', $v)) {
-        [$h, $i] = [(int)$v, 0];
-    } else {
-        return 'ERR';
-    }
-    return $h <= 23 && $i <= 59 ? sprintf('%02d:%02d:00', $h, $i) : 'ERR';
-}
-
-/** ผู้รับผิดชอบจากข้อความ → [user ids, ชื่อที่หาไม่พบ] */
-function cal_parse_people(string $v): array
-{
-    $users = cal_users();
-    $byName = [];
-    foreach ($users as $u) {
-        $n = preg_replace('/\s+/u', '', $u['full_name']);
-        $byName[$n][] = (int)$u['id'];
-        $byName[preg_replace('/^(นางสาว|นาง|นาย|ว่าที่ร้อยตรี|ว่าที่ ร.ต.|ดร\.)/u', '', $n)][] = (int)$u['id'];   // ไม่ใส่คำนำหน้าก็ได้
-    }
-    $byUsername = [];
-    foreach (db()->query('SELECT id, username FROM core_users WHERE is_active = 1 AND username IS NOT NULL') as $r) {
-        $byUsername[mb_strtolower($r['username'])] = (int)$r['id'];
-    }
-    $ids = [];
-    $missing = [];
-    foreach (preg_split('/[,;\n|]+/u', $v) as $part) {
-        $p = trim($part);
-        if ($p === '') {
-            continue;
-        }
-        $k = preg_replace('/\s+/u', '', $p);
-        if (in_array($k, ['ทุกคน', 'ทั้งหมด', 'ทั้งสำนักงาน'], true)) {
-            $ids = array_merge($ids, array_keys($users));
-        } elseif (in_array($k, ['ข้าราชการ', 'ข้าราชการทุกคน'], true)) {
-            $ids = array_merge($ids, array_keys(array_filter($users, fn($u) => $u['type'] === 'gov')));
-        } elseif (in_array($k, ['พนักงาน', 'พนักงานทุกคน'], true)) {
-            $ids = array_merge($ids, array_keys(array_filter($users, fn($u) => $u['type'] === 'emp')));
-        } elseif (isset($byName[$k]) && count(array_unique($byName[$k])) === 1) {
-            $ids[] = $byName[$k][0];
-        } elseif (isset($byUsername[mb_strtolower($p)])) {
-            $ids[] = $byUsername[mb_strtolower($p)];
-        } else {
-            $missing[] = $p . (isset($byName[$k]) ? ' (ชื่อซ้ำหลายบัญชี — ใช้ชื่อผู้ใช้แทน)' : '');
-        }
-    }
-    return [array_values(array_unique(array_map('intval', $ids))), $missing];
-}
-
 /** อ่านไฟล์ → [rows, errors] */
 function cal_parse_file(string $path, string $name): array
 {
@@ -172,7 +112,7 @@ function cal_parse_file(string $path, string $name): array
         if ($row['end_date'] === $row['event_date']) {
             $row['end_date'] = null;
         }
-        if ($row['start_time'] === 'ERR' || $row['end_time'] === 'ERR') {
+        if ($row['start_time'] === false || $row['end_time'] === false) {
             $row['errors'][] = 'รูปแบบเวลาไม่ถูกต้อง (ใช้ 09:00)';
         }
         if ($row['link'] !== '' && !cal_safe_link($row['link'])) {
@@ -293,7 +233,7 @@ $users = cal_users();
           <tr class="<?= $bad ? 'table-danger' : ($r['duplicate'] ? 'table-secondary' : '') ?>">
             <td class="text-muted small"><?= (int)$r['line'] ?></td>
             <td class="small text-nowrap"><?= $r['event_date'] ? h(cal_range_text($r)) : '-' ?></td>
-            <td class="small text-nowrap"><?= in_array('ERR', [$r['start_time'], $r['end_time']], true) ? '-' : h(cal_time_text($r)) ?></td>
+            <td class="small text-nowrap"><?= in_array(false, [$r['start_time'], $r['end_time']], true) ? '-' : h(cal_time_text($r)) ?></td>
             <td><?= h($r['title']) ?></td>
             <td class="small"><?= h($r['location']) ?></td>
             <td class="small cal-people"><?= cal_assignee_html($r['users'], $me['id'], 4) ?>

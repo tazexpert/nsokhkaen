@@ -16,7 +16,7 @@ return function (array $user): array {
     $st->execute([$user['id'], $today, $tomorrow]);
     foreach ($st as $e) {
         $href = $base . 'event_view.php?id=' . $e['id'];
-        $when = cal_range_text($e) . ' · ' . cal_time_text($e) . ($e['location'] ? ' · ' . $e['location'] : '');
+        $when = cal_is_duty($e) ? cal_range_text($e) : cal_range_text($e) . ' · ' . cal_time_text($e) . ($e['location'] ? ' · ' . $e['location'] : '');
         $soon = $e['event_date'] <= $tomorrow;
         if ($soon) {
             $isToday = $e['event_date'] <= $today;

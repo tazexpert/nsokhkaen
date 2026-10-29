@@ -23,8 +23,8 @@ require __DIR__ . '/header.php';
     <?php if (in_array($me['id'], $ids, true)): ?><div class="alert alert-warning py-2"><i class="bi bi-person-check"></i> คุณเป็นผู้รับผิดชอบกิจกรรมนี้</div><?php endif; ?>
     <dl class="row mb-0">
       <dt class="col-sm-3">วันที่</dt><dd class="col-sm-9"><?= h(cal_range_text($e)) ?></dd>
-      <dt class="col-sm-3">เวลา</dt><dd class="col-sm-9"><?= h(cal_time_text($e)) ?></dd>
-      <dt class="col-sm-3">สถานที่</dt><dd class="col-sm-9"><?= h($e['location'] ?: '-') ?></dd>
+      <?php if (!cal_is_duty($e)): ?><dt class="col-sm-3">เวลา</dt><dd class="col-sm-9"><?= h(cal_time_text($e)) ?></dd><?php endif; ?>
+      <?php if (!cal_is_duty($e)): ?><dt class="col-sm-3">สถานที่</dt><dd class="col-sm-9"><?= h($e['location'] ?: '-') ?></dd><?php endif; ?>
       <dt class="col-sm-3">ลิงก์ประกอบ</dt><dd class="col-sm-9"><?= $link ? '<a href="' . h($link) . '" target="_blank" rel="noopener" class="text-break">' . h($link) . '</a>' : '-' ?></dd>
       <dt class="col-sm-3">หมายเหตุ</dt><dd class="col-sm-9"><?= $e['note'] ? nl2br(h($e['note'])) : '-' ?></dd>
       <dt class="col-sm-3 text-muted small">บันทึกโดย</dt><dd class="col-sm-9 text-muted small"><?= h($e['created_by_name'] ?: '-') ?> · <?= h(thai_date($e['created_at'])) ?></dd>

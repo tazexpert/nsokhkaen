@@ -522,6 +522,7 @@ CREATE TABLE IF NOT EXISTS pay_settings (
 -- กิจกรรม/ภารกิจ
 CREATE TABLE IF NOT EXISTS cal_events (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  kind        ENUM('event', 'duty') NOT NULL DEFAULT 'event',   -- event = กิจกรรม, duty = เวรสำนักงาน (นำเข้ารายเดือน)
   event_date  DATE         NOT NULL,                 -- วันที่
   end_date    DATE         NULL,                     -- ถึงวันที่ (กิจกรรมหลายวัน — ไม่บังคับ)
   start_time  TIME         NULL,                     -- เวลาเริ่ม (ว่าง = ทั้งวัน)
@@ -534,6 +535,7 @@ CREATE TABLE IF NOT EXISTS cal_events (
   created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   KEY idx_cal_events_date (event_date),
+  KEY idx_cal_events_kind (kind, event_date),
   CONSTRAINT fk_cal_events_created_by FOREIGN KEY (created_by) REFERENCES core_users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

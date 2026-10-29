@@ -115,7 +115,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $users = cal_users();
 $active = 'add';
 $pageTitle = $id ? 'แก้ไขกิจกรรม' : 'เพิ่มกิจกรรม';
-$pageActions = $id ? '' : '<a href="import.php" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> นำเข้าหลายรายการจาก CSV</a>';
+$pageActions = $id ? '' : '<a href="import.php" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> นำเข้าหลายรายการจาก CSV</a>'
+    . '<a href="duty_import.php" class="btn btn-outline-secondary"><i class="bi bi-shield-check"></i> นำเข้าเวรสำนักงาน</a>';
 $allDay = $e['start_time'] === null && $e['end_time'] === null;
 $headExtra = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">';
 require __DIR__ . '/header.php';

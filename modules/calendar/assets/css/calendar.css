@@ -42,3 +42,11 @@
 /* ผู้อำนวยการ / สถิติจังหวัด: ชื่อ + ตำแหน่ง */
 .cal-person.pos { white-space: normal; background: #e0e7ff; }
 .cal-person.pos small { color: #475569; }
+/* เวรสำนักงาน: สีแถว/ป้ายต่างจากกิจกรรม */
+.cal-table tr.cal-duty td { background: #ecfdf5; }
+.cal-table tr.cal-duty td:first-child { box-shadow: inset 4px 0 0 #10b981; }
+.cal-table tr.cal-duty a { color: #047857; }
+.cal-table tr.cal-duty.cal-mine td { background: #d1fae5; }
+.cal-ev.duty { background: #d1fae5; color: #065f46; }
+.cal-ev.duty:hover { background: #a7f3d0; color: #064e3b; }
+.cal-ev.duty.mine { background: #6ee7b7; color: #064e3b; }

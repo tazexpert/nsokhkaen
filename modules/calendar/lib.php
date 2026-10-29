@@ -131,17 +131,29 @@ function cal_time_thai(?string $t): string
     return $t ? str_replace(':', '.', substr($t, 0, 5)) : '';
 }
 
-/** แปลงเวลาที่กรอก (แบบไทย "9.00", "09.00 น." หรือ "09:00") เป็นเวลาในฐานข้อมูล "09:00:00" · ว่าง = null · ผิดรูปแบบ = false */
+/**
+ * แปลงเวลาที่กรอก/นำเข้า เป็นเวลาในฐานข้อมูล "09:00:00"
+ *   รองรับ แบบไทย "9.00" / "09.00 น.", "09:00", "0930", "9", ค่าเวลาจาก Excel (0.375)
+ *   ว่าง หรือ "-" = null · ผิดรูปแบบ = false
+ */
 function cal_parse_time(?string $v)
 {
-    $v = trim(str_replace(['น.', 'น'], '', (string)$v));
-    if ($v === '') {
+    $v = trim(preg_replace('/\s*น\.?$/u', '', trim((string)$v)));
+    if ($v === '' || $v === '-') {
         return null;
     }
-    if (!preg_match('/^(\d{1,2})[.:](\d{2})(?:[.:]\d{2})?$/', $v, $m) || (int)$m[1] > 23 || (int)$m[2] > 59) {
+    if (preg_match('/^\d{4}-\d{2}-\d{2} (\d{2}):(\d{2})/', $v, $x) || preg_match('/^(\d{1,2})[:.](\d{2})(?:[:.]\d{2})?$/', $v, $x)
+        || preg_match('/^(\d{2})(\d{2})$/', $v, $x)) {
+        [$h, $i] = [(int)$x[1], (int)$x[2]];
+    } elseif (is_numeric($v) && (float)$v >= 0 && (float)$v < 1) {             // เวลาแบบ Excel (เศษของวัน)
+        $min = (int)round((float)$v * 1440);
+        [$h, $i] = [intdiv($min, 60), $min % 60];
+    } elseif (preg_match('/^\d{1,2}$/', $v)) {
+        [$h, $i] = [(int)$v, 0];
+    } else {
         return false;
     }
-    return sprintf('%02d:%02d:00', $m[1], $m[2]);
+    return $h <= 23 && $i <= 59 ? sprintf('%02d:%02d:00', $h, $i) : false;
 }
 
 /** เวลา เช่น "09.00–12.00 น." หรือ "ทั้งวัน" */
@@ -206,9 +218,10 @@ function cal_render_table(array $events, string $from, int $meId, bool $showActi
             $mine = in_array($meId, $ids, true);
             $link = cal_safe_link($e['link']);
             $multi = $e['end_date'] && $e['end_date'] !== $e['event_date'];
-            $html .= '<tr class="' . ($mine ? 'cal-mine' : '') . '">'
-                . '<td class="text-nowrap">' . h(cal_time_text($e)) . ($multi ? '<div class="small text-muted">' . h(cal_range_text($e)) . '</div>' : '') . '</td>'
-                . '<td><a href="' . h($base . 'event_view.php?id=' . (int)$e['id']) . '" class="fw-semibold text-decoration-none">' . h($e['title']) . '</a>'
+            $duty = cal_is_duty($e);
+            $html .= '<tr class="' . trim(($duty ? 'cal-duty ' : '') . ($mine ? 'cal-mine' : '')) . '">'
+                . '<td class="text-nowrap">' . ($duty ? '<span class="text-muted">-</span>' : h(cal_time_text($e))) . ($multi ? '<div class="small text-muted">' . h(cal_range_text($e)) . '</div>' : '') . '</td>'
+                . '<td><a href="' . h($base . 'event_view.php?id=' . (int)$e['id']) . '" class="fw-semibold text-decoration-none">' . ($duty ? '<i class="bi bi-shield-check"></i> ' : '') . h($e['title']) . '</a>'
                 . ($mine ? ' <span class="badge text-bg-warning">งานของคุณ</span>' : '') . '</td>'
                 . '<td>' . ($e['location'] ? '<i class="bi bi-geo-alt text-muted"></i> ' . h($e['location']) : '<span class="text-muted">-</span>') . '</td>'
                 . '<td class="cal-people">' . cal_assignee_html($ids, $meId) . '</td>'
@@ -219,4 +232,51 @@ function cal_render_table(array $events, string $from, int $meId, bool $showActi
         }
     }
     return $html . '</tbody></table></div>';
+}
+
+/** ผู้รับผิดชอบจากข้อความ → [user ids, ชื่อที่หาไม่พบ] */
+function cal_parse_people(string $v): array
+{
+    $users = cal_users();
+    $byName = [];
+    foreach ($users as $u) {
+        $n = preg_replace('/\s+/u', '', $u['full_name']);
+        $byName[$n][] = (int)$u['id'];
+        $byName[preg_replace('/^(นางสาว|นาง|นาย|ว่าที่ร้อยตรี|ว่าที่ ร.ต.|ดร\.)/u', '', $n)][] = (int)$u['id'];   // ไม่ใส่คำนำหน้าก็ได้
+    }
+    $byUsername = [];
+    foreach (db()->query('SELECT id, username FROM core_users WHERE is_active = 1 AND username IS NOT NULL') as $r) {
+        $byUsername[mb_strtolower($r['username'])] = (int)$r['id'];
+    }
+    $ids = [];
+    $missing = [];
+    foreach (preg_split('/[,;\n|]+/u', $v) as $part) {
+        $p = trim($part);
+        if ($p === '') {
+            continue;
+        }
+        $k = preg_replace('/\s+/u', '', $p);
+        if (in_array($k, ['ทุกคน', 'ทั้งหมด', 'ทั้งสำนักงาน'], true)) {
+            $ids = array_merge($ids, array_keys($users));
+        } elseif (in_array($k, ['ข้าราชการ', 'ข้าราชการทุกคน'], true)) {
+            $ids = array_merge($ids, array_keys(array_filter($users, fn($u) => $u['type'] === 'gov')));
+        } elseif (in_array($k, ['พนักงาน', 'พนักงานทุกคน'], true)) {
+            $ids = array_merge($ids, array_keys(array_filter($users, fn($u) => $u['type'] === 'emp')));
+        } elseif (isset($byName[$k]) && count(array_unique($byName[$k])) === 1) {
+            $ids[] = $byName[$k][0];
+        } elseif (isset($byUsername[mb_strtolower($p)])) {
+            $ids[] = $byUsername[mb_strtolower($p)];
+        } else {
+            $missing[] = $p . (isset($byName[$k]) ? ' (ชื่อซ้ำหลายบัญชี — ใช้ชื่อผู้ใช้แทน)' : '');
+        }
+    }
+    return [array_values(array_unique(array_map('intval', $ids))), $missing];
+}
+
+/* ---------- เวรสำนักงาน ---------- */
+const CAL_DUTY_TITLE = 'เวรสำนักงาน';
+
+function cal_is_duty(array $e): bool
+{
+    return ($e['kind'] ?? 'event') === 'duty';
 }
