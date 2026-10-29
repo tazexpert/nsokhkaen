@@ -12,27 +12,40 @@ function cal_home_date(): string
     $w = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'][(int)date('w')];
     return 'วัน' . $w . 'ที่ ' . (int)date('j') . ' ' . thai_month_long((int)date('n')) . ' ' . ((int)date('Y') + 543);
 }
+// ตัวเลขสรุปบนแถบต้อนรับ (จากระบบปฏิทิน ถ้ามีสิทธิ์)
+$homeStats = [];
+if (array_filter($mods, fn($m) => $m['key'] === 'calendar')) {
+    require_once APP_ROOT . '/modules/calendar/lib.php';
+    $homeStats[] = ['bi-calendar-event', count(cal_events_between(date('Y-m-d'), date('Y-m-d'), null, false)), 'กิจกรรมวันนี้'];
+    $homeStats[] = ['bi-person-check', count(cal_events_between(date('Y-m-d'), date('Y-m-d', strtotime('+6 days')), (int)$user['id'])), 'งานของฉัน 7 วันข้างหน้า'];
+}
+$homeStats[] = ['bi-grid', count($mods), 'ระบบที่ใช้งานได้'];
+$widgets = array_filter(array_map(fn($m) => APP_ROOT . '/modules/' . $m['key'] . '/home_widget.php', $mods), 'is_file');
+$hidePageHead = true;
 require APP_ROOT . '/core/layout/header.php';
 ?>
-<div class="d-flex flex-wrap align-items-end gap-2 mb-3">
-  <div>
-    <h2 class="h4 mb-1">สวัสดี <?= h($user['full_name']) ?></h2>
-    <p class="text-muted mb-0"><?= h(cal_home_date()) ?></p>
+<section class="home-hero mb-4">
+  <div class="min-w-0">
+    <div class="home-hero-date"><i class="bi bi-calendar3"></i> <?= h(cal_home_date()) ?></div>
+    <h2 class="home-hero-title">สวัสดี <?= h(preg_replace('/\s+/u', ' ', $user['full_name'])) ?></h2>
+    <div class="home-hero-sub"><?= h(ORG_NAME) ?></div>
   </div>
-</div>
+  <div class="home-hero-stats">
+    <?php foreach ($homeStats as [$icon, $n, $label]): ?>
+      <div class="home-stat"><i class="bi <?= $icon ?>"></i><div><strong><?= (int)$n ?></strong><span><?= h($label) ?></span></div></div>
+    <?php endforeach; ?>
+  </div>
+</section>
 
 <?php
-// ส่วนที่ระบบย่อยแสดงบนหน้าหลัก (modules/<key>/home_widget.php) เช่น ตารางการปฏิบัติงาน
-foreach ($mods as $m) {
-    $widget = APP_ROOT . '/modules/' . $m['key'] . '/home_widget.php';
-    if (is_file($widget)) {
-        include $widget;
-    }
+// ส่วนที่ระบบย่อยแสดงบนหน้าหลัก (modules/<key>/home_widget.php) เช่น ตารางการปฏิบัติงาน — แต่ละส่วนมีหัวข้อในการ์ดของตัวเอง
+foreach ($widgets as $widget) {
+    include $widget;
 }
 ?>
 
-<div class="d-flex align-items-center mb-2">
-  <h3 class="h5 mb-0">เลือกระบบที่ต้องการใช้งาน</h3>
+<div class="d-flex align-items-center mb-3 mt-2">
+  <div class="home-section-title tone-green mb-0"><i class="bi bi-grid-3x3-gap"></i> ระบบงาน <small>เลือกระบบที่ต้องการใช้งาน</small></div>
   <?php if (count($mods) > 1): ?>
     <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" id="arrangeBtn"><i class="bi bi-arrows-move"></i> จัดเรียงระบบ</button>
     <div class="ms-auto d-none gap-2" id="arrangeBar">
@@ -48,12 +61,15 @@ foreach ($mods as $m) {
 <div class="row g-3 mb-4" id="modGrid">
   <?php foreach ($mods as $m): ?>
     <div class="col-md-6 col-xl-4 mod-item" data-key="<?= h($m['key']) ?>">
-      <a class="mod-card" href="<?= h(module_url($m['key'], $m['entry'] ?? 'index.php')) ?>">
+      <a class="mod-card" style="--mc:<?= h($m['color']) ?>" href="<?= h(module_url($m['key'], $m['entry'] ?? 'index.php')) ?>">
         <span class="mod-icon<?= $m['logo'] ? ' has-logo' : '' ?>" style="background:<?= h($m['color']) ?>"><?= $m['logo'] ? module_logo($m, 52) : '<i class="bi ' . h($m['icon']) . '"></i>' ?></span>
         <span class="min-w-0">
           <h3><?= h($m['name']) ?></h3>
           <span class="d-block small text-muted mb-2"><?= h($m['description']) ?></span>
-          <span class="badge text-bg-light border"><i class="bi bi-person-badge"></i> <?= h(role_short($m['key'], module_role($m['key'], $user))) ?></span>
+          <span class="d-flex align-items-center gap-2 flex-wrap">
+            <span class="mod-role"><i class="bi bi-person-badge"></i> <?= h(role_short($m['key'], module_role($m['key'], $user))) ?></span>
+            <span class="mod-go ms-auto">เข้าใช้งาน <i class="bi bi-arrow-right"></i></span>
+          </span>
         </span>
       </a>
       <div class="mod-move">
@@ -120,22 +136,31 @@ foreach (modules() as $m) {
         $links[] = $l + ['module' => $m['key']];
     }
 }
+if ($links || $user['is_superadmin']): ?>
+<div class="home-section-title tone-orange"><i class="bi bi-link-45deg"></i> ลิงก์และเครื่องมือ</div>
+<div class="row g-3 mb-2">
+<?php endif;
 if ($links): ?>
-  <h3 class="h6 text-muted">ลิงก์ที่เกี่ยวข้อง</h3>
-  <div class="d-flex flex-wrap gap-2 mb-4">
+  <div class="col-lg"><div class="card h-100"><div class="card-body">
+  <div class="small text-muted mb-2">ลิงก์ที่เกี่ยวข้อง</div>
+  <div class="d-flex flex-wrap gap-2">
     <?php foreach ($links as $l): ?>
       <a href="<?= h(module_url($l['module'], $l['href'])) ?>" target="_blank" class="btn btn-outline-secondary btn-sm">
         <i class="bi <?= h($l['icon'] ?? 'bi-box-arrow-up-right') ?>"></i> <?= h($l['label']) ?></a>
     <?php endforeach; ?>
   </div>
+  </div></div></div>
 <?php endif; ?>
 
 <?php if ($user['is_superadmin']): ?>
-  <h3 class="h6 text-muted">ผู้ดูแลระบบกลาง</h3>
+  <div class="col-lg"><div class="card h-100"><div class="card-body">
+  <div class="small text-muted mb-2">ผู้ดูแลระบบกลาง</div>
   <div class="d-flex flex-wrap gap-2">
     <a href="<?= h(url('admin/users.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-people"></i> ผู้ใช้งานและสิทธิ์</a>
     <a href="<?= h(url('admin/settings.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-sliders"></i> ตั้งค่าระบบ</a>
     <a href="<?= h(url('admin/audit.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-journal-text"></i> บันทึกการใช้งาน</a>
   </div>
+  </div></div></div>
 <?php endif; ?>
+<?php if ($links || $user['is_superadmin']): ?></div><?php endif; ?>
 <?php require APP_ROOT . '/core/layout/footer.php'; ?>

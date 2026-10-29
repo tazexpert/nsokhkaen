@@ -168,6 +168,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
 <?php endif; ?>
 
 <main class="content">
+  <?php if (empty($hidePageHead)): ?>
   <header class="page-head">
     <div class="min-w-0">
       <h1 class="h4 mb-0 text-truncate"><?= h($pageTitle) ?></h1>
@@ -175,6 +176,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
     </div>
     <?php if (!empty($pageActions)): ?><div class="ms-auto d-flex gap-2 flex-wrap"><?= $pageActions ?></div><?php endif; ?>
   </header>
+  <?php endif; ?>
   <div class="content-body">
   <?php foreach (take_flash() as $__f): ?>
     <div class="alert alert-<?= h($__f['type']) ?> alert-dismissible fade show"><?= h($__f['msg']) ?>
