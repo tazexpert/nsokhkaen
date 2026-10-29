@@ -4,7 +4,7 @@
  * พนักงานจะดูสลิปได้เมื่อผูกบัญชีแล้วเท่านั้น (ผูกแล้วระบบให้สิทธิ์ "พนักงาน" ในระบบนี้ให้อัตโนมัติ)
  */
 require_once __DIR__ . '/bootstrap.php';
-require_module(PAY_MODULE, 'manager');
+pay_require('manager');
 $pdo = db();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

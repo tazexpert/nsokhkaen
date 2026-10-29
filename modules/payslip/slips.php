@@ -1,7 +1,7 @@
 <?php
 /** จัดการสลิป (ผู้จัดการสลิป) + อนุมัติ (ผู้อนุมัติ): รายการสลิปรายเดือน */
 require_once __DIR__ . '/bootstrap.php';
-$me = require_module(PAY_MODULE, 'manager');
+$me = pay_require('approver');
 $pdo = db();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -9,9 +9,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = post('action');
     $ids = array_values(array_filter(array_map('intval', (array)($_POST['ids'] ?? []))));
     $in = $ids ? implode(',', $ids) : '0';
-    if (in_array($action, ['approve', 'approve_all', 'unapprove'], true) && !pay_can('approver')) {
-        forbidden(PAY_MODULE, 'approver');
-    }
     if ($action === 'approve' && $ids) {
         $n = $pdo->exec("UPDATE pay_slips SET status = 'approved', approved_by = {$me['id']}, approved_at = NOW()
             WHERE status = 'pending' AND id IN ($in)");
@@ -88,7 +85,7 @@ $backQs = http_build_query(array_filter(['status' => $status, 'year' => $year ?:
 
 $active = $status === 'pending' ? 'pending' : 'slips';
 $pageTitle = $status === 'pending' ? 'สลิปรออนุมัติ' : 'จัดการสลิปเงินเดือน';
-$pageActions = '<a href="import.php" class="btn btn-outline-success"><i class="bi bi-file-earmark-excel"></i> นำเข้าข้อมูล</a>'
+$pageActions = (pay_is('manager') ? '<a href="import.php" class="btn btn-outline-success"><i class="bi bi-file-earmark-excel"></i> นำเข้าข้อมูล</a>' : '')
     . '<a href="slip_form.php" class="btn btn-outline-primary"><i class="bi bi-plus-lg"></i> เพิ่มสลิป</a>';
 require __DIR__ . '/header.php';
 ?>
@@ -107,7 +104,7 @@ require __DIR__ . '/header.php';
       </select></div>
       <div class="col-md-3"><input name="q" class="form-control" placeholder="ค้นหาชื่อ / เลขที่" value="<?= h($q) ?>"></div>
       <div class="col-auto"><button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button></div>
-      <?php if (pay_can('approver') && $pendingTotal): ?>
+      <?php if (pay_is('approver') && $pendingTotal): ?>
         <div class="col-auto ms-auto">
           <button form="approveAllForm" class="btn btn-success"><i class="bi bi-check2-all"></i>
             อนุมัติทั้งหมด<?= $year && $month ? 'ของเดือนนี้' : '' ?> (<?= $year && $month ? (int)array_sum(array_map(fn($s) => $s['status'] === 'pending', $slips)) : $pendingTotal ?>)</button>
@@ -157,7 +154,7 @@ require __DIR__ . '/header.php';
     </div>
     <div class="card-footer d-flex flex-wrap gap-2 align-items-center">
       <span class="small">เลือก <strong id="checkedCount">0</strong> รายการ →</span>
-      <?php if (pay_can('approver')): ?>
+      <?php if (pay_is('approver')): ?>
         <button name="action" value="approve" class="btn btn-sm btn-success"><i class="bi bi-check2"></i> อนุมัติ</button>
         <button name="action" value="unapprove" class="btn btn-sm btn-outline-secondary" onclick="return confirm('ยกเลิกการอนุมัติรายการที่เลือก?')">ยกเลิกอนุมัติ</button>
       <?php endif; ?>

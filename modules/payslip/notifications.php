@@ -8,7 +8,7 @@ return function (array $user): array {
     $pdo = db();
     $base = module_url('payslip');
     $out = [];
-    if (user_can('payslip', 'approver', $user)) {
+    if (in_array(module_role('payslip', $user), ['approver', 'admin'], true)) {
         foreach ($pdo->query("SELECT year, month, COUNT(*) n, MAX(updated_at) t FROM pay_slips WHERE status = 'pending'
             GROUP BY year, month ORDER BY year DESC, month DESC LIMIT 6") as $p) {
             $out[] = ['title' => 'สลิปเงินเดือนรออนุมัติ', 'icon' => 'bi-receipt-cutoff', 'color' => 'warning',

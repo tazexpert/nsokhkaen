@@ -26,6 +26,28 @@ function pay_can(string $role): bool
     return user_can(PAY_MODULE, $role);
 }
 
+/**
+ * สิทธิ์แยกหน้าที่: ผู้ใช้มี role ใด role หนึ่งใน $roles หรือเป็นผู้ดูแลระบบสลิป (admin)
+ *   รออนุมัติ / จัดการสลิป  = approver, admin
+ *   นำเข้าข้อมูล / รายชื่อพนักงาน = manager, admin
+ *   ตั้งค่าสลิป              = admin
+ */
+function pay_is(string ...$roles): bool
+{
+    $r = module_role(PAY_MODULE);
+    return $r === 'admin' || in_array($r, $roles, true);
+}
+
+/** หน้าที่ต้องมีสิทธิ์ตามหน้าที่ — ไม่มีสิทธิ์ = 403 */
+function pay_require(string ...$roles): array
+{
+    $me = require_module(PAY_MODULE);
+    if (!pay_is(...$roles)) {
+        forbidden(PAY_MODULE, $roles[0] ?? 'admin');
+    }
+    return $me;
+}
+
 function pay_settings(): array
 {
     $s = PAY_SETTING_DEFAULTS;
@@ -75,7 +97,7 @@ function pay_employee_of(int $userId): ?array
 /** ผู้ใช้ปัจจุบันดูสลิปนี้ได้หรือไม่: ผู้จัดการ/ผู้อนุมัติ = ทุกใบ, พนักงาน = ของตนเองที่อนุมัติแล้ว */
 function pay_can_view(array $slip): bool
 {
-    if (pay_can('manager')) {
+    if (pay_is('approver')) {           // ผู้อนุมัติ/ผู้ดูแล ดูได้ทุกใบ
         return true;
     }
     $me = current_user();

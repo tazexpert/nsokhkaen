@@ -7,7 +7,7 @@
  */
 require_once __DIR__ . '/bootstrap.php';
 require_once APP_ROOT . '/libs/simplexlsx/SimpleXLSX.php';
-$me = require_module(PAY_MODULE, 'manager');
+$me = pay_require('manager');
 $pdo = db();
 $sessKey = 'pay_import';
 
@@ -138,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (post('action') === 'import' && !empty($_SESSION[$sessKey])) {
         $data = $_SESSION[$sessKey];
         $update = post('on_duplicate') === 'update';
-        $useFileApproval = !empty($_POST['use_file_approval']) && pay_can('approver') && $data['has_approval'];
+        $useFileApproval = !empty($_POST['use_file_approval']) && pay_is('admin') && $data['has_approval'];
         $stats = ['insert' => 0, 'update' => 0, 'skip' => 0, 'employees' => 0];
         $amount = array_keys(PAY_INCOME + PAY_DEDUCT + PAY_TOTALS);
         try {
@@ -186,7 +186,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash("นำเข้าเรียบร้อย: เพิ่ม {$stats['insert']} · ปรับปรุง {$stats['update']} · ข้าม {$stats['skip']} รายการ"
             . ($stats['employees'] ? " · พนักงานใหม่ {$stats['employees']} คน" : '') . ($linked ? " · ผูกบัญชีผู้ใช้อัตโนมัติ $linked คน" : '')
             . ($useFileApproval ? '' : ' — สลิปใหม่/ที่ปรับปรุงอยู่ในสถานะ "รออนุมัติ"'));
-        redirect('slips.php' . ($useFileApproval ? '' : '?status=pending'));
+        // ผู้จัดการสลิปไม่เห็นหน้าจัดการสลิป → กลับหน้านำเข้า (ผู้อนุมัติได้รับแจ้งเตือนสลิปรออนุมัติ)
+        redirect(pay_is('approver') ? 'slips.php' . ($useFileApproval ? '' : '?status=pending') : 'import.php');
     }
 }
 
@@ -267,9 +268,9 @@ require __DIR__ . '/header.php';
         <div class="form-check"><input class="form-check-input" type="radio" name="on_duplicate" value="update" id="dupU" checked><label class="form-check-label" for="dupU">ปรับปรุงตามไฟล์ (กลับเป็นรออนุมัติ)</label></div>
         <div class="form-check mb-3"><input class="form-check-input" type="radio" name="on_duplicate" value="skip" id="dupS"><label class="form-check-label" for="dupS">ข้าม (คงข้อมูลเดิม)</label></div>
         <?php if ($d['has_approval']): ?>
-          <div class="form-check"><input class="form-check-input" type="checkbox" name="use_file_approval" value="1" id="useAp" <?= pay_can('approver') ? '' : 'disabled' ?>>
+          <div class="form-check"><input class="form-check-input" type="checkbox" name="use_file_approval" value="1" id="useAp" <?= pay_is('admin') ? '' : 'disabled' ?>>
             <label class="form-check-label" for="useAp">ใช้สถานะจากคอลัมน์ "อนุมัติ" ในไฟล์ (1 = อนุมัติแล้ว, <?= $approvedInFile ?> รายการ)
-              <span class="d-block small text-muted">สำหรับย้ายข้อมูลเดิมที่อนุมัติไปแล้ว<?= pay_can('approver') ? '' : ' — เฉพาะผู้อนุมัติ' ?></span></label></div>
+              <span class="d-block small text-muted">สำหรับย้ายข้อมูลเดิมที่อนุมัติไปแล้ว<?= pay_is('admin') ? '' : ' — เฉพาะผู้ดูแลระบบสลิป' ?></span></label></div>
         <?php endif; ?>
       </div>
     </div></div>
