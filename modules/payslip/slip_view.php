@@ -1,5 +1,5 @@
 <?php
-/** ดูสลิป 1 ใบ (ผู้จัดการ/ผู้อนุมัติ ดูได้ทุกใบ รวมที่ยังไม่อนุมัติ) */
+/** ดูสลิป 1 ใบ (ผู้จัดการสลิป/ผู้อนุมัติ ดูได้ทุกใบ รวมที่ยังไม่อนุมัติ — แก้ไขได้เฉพาะผู้จัดการสลิป อนุมัติได้เฉพาะผู้อนุมัติ) */
 require_once __DIR__ . '/bootstrap.php';
 require_module(PAY_MODULE);
 $st = db()->prepare('SELECT s.*, e.code, u.full_name AS approver FROM pay_slips s JOIN pay_employees e ON e.id = s.employee_id
@@ -9,15 +9,16 @@ $slip = $st->fetch();
 if (!$slip || !pay_can_view($slip)) {
     forbidden(PAY_MODULE, 'approver');
 }
-$active = pay_is('approver') ? 'slips' : 'my';
+$staff = pay_is('approver', 'manager');
+$active = pay_is('manager') ? 'slips' : ($staff ? 'pending' : 'my');
 $pageTitle = 'สลิปเงินเดือน ' . $slip['code'] . ' · ' . pay_period((int)$slip['year'], (int)$slip['month']);
-$back = 'slips.php?' . http_build_query(['year' => $slip['year'], 'month' => $slip['month']]);
-$pageActions = (pay_is('approver') ? '<a href="' . h($back) . '" class="btn btn-light"><i class="bi bi-arrow-left"></i> กลับ</a>'
-        . '<a href="slip_form.php?id=' . (int)$slip['id'] . '" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> แก้ไข</a>' : '')
+$back = pay_is('manager') ? 'slips.php?' . http_build_query(['year' => $slip['year'], 'month' => $slip['month']]) : 'slips.php?status=pending';
+$pageActions = ($staff ? '<a href="' . h($back) . '" class="btn btn-light"><i class="bi bi-arrow-left"></i> กลับ</a>' : '')
+    . (pay_is('manager') ? '<a href="slip_form.php?id=' . (int)$slip['id'] . '" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> แก้ไข</a>' : '')
     . '<button class="btn btn-primary" onclick="window.print()"><i class="bi bi-printer"></i> พิมพ์</button>';
 require __DIR__ . '/header.php';
 ?>
-<?php if (pay_is('approver')): ?>
+<?php if ($staff): ?>
   <div class="text-center mb-3 no-print">
     <?php if ($slip['status'] === 'approved'): ?>
       <span class="badge text-bg-success"><i class="bi bi-check2-circle"></i> อนุมัติแล้ว</span>

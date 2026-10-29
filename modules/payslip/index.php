@@ -19,11 +19,11 @@ if ($emp) {
         }
     }
 }
-if (!$emp && pay_is('approver')) {          // ไม่ใช่พนักงาน → ไปหน้าที่ตามหน้าที่
-    redirect('slips.php?status=pending');
+if (!$emp && pay_is('manager')) {           // ไม่ใช่พนักงาน → ไปหน้าที่ตามหน้าที่
+    redirect('slips.php');
 }
-if (!$emp && pay_is('manager')) {
-    redirect('import.php');
+if (!$emp && pay_is('approver')) {
+    redirect('slips.php?status=pending');
 }
 
 $active = 'my';

@@ -1,7 +1,14 @@
 <?php
-/** จัดการสลิป (ผู้จัดการสลิป) + อนุมัติ (ผู้อนุมัติ): รายการสลิปรายเดือน */
+/**
+ * รายการสลิปรายเดือน
+ *   ผู้จัดการสลิป = จัดการสลิป (ดูทั้งหมด เพิ่ม/แก้ไข/ลบ)
+ *   ผู้อนุมัติ    = เฉพาะสลิปรออนุมัติ (ดู/อนุมัติ)
+ *   ผู้ดูแลระบบสลิป = ทุกอย่าง
+ */
 require_once __DIR__ . '/bootstrap.php';
-$me = pay_require('approver');
+$me = pay_require('approver', 'manager');
+$canManage = pay_is('manager');
+$canApprove = pay_is('approver');
 $pdo = db();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -9,6 +16,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = post('action');
     $ids = array_values(array_filter(array_map('intval', (array)($_POST['ids'] ?? []))));
     $in = $ids ? implode(',', $ids) : '0';
+    if (in_array($action, ['approve', 'approve_all', 'unapprove'], true) && !$canApprove) {
+        forbidden(PAY_MODULE, 'approver');
+    }
+    if ($action === 'delete' && !$canManage) {
+        forbidden(PAY_MODULE, 'manager');
+    }
     if ($action === 'approve' && $ids) {
         $n = $pdo->exec("UPDATE pay_slips SET status = 'approved', approved_by = {$me['id']}, approved_at = NOW()
             WHERE status = 'pending' AND id IN ($in)");
@@ -42,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $periods = $pdo->query('SELECT year, month, COUNT(*) n, SUM(status = \'pending\') pending FROM pay_slips
     GROUP BY year, month ORDER BY year DESC, month DESC')->fetchAll();
-$status = $_GET['status'] ?? '';
+$status = $canManage ? ($_GET['status'] ?? '') : 'pending';     // ผู้อนุมัติเห็นเฉพาะรออนุมัติ
 $year = int_param('year');
 $month = int_param('month');
 $q = trim($_GET['q'] ?? '');
@@ -85,8 +98,8 @@ $backQs = http_build_query(array_filter(['status' => $status, 'year' => $year ?:
 
 $active = $status === 'pending' ? 'pending' : 'slips';
 $pageTitle = $status === 'pending' ? 'สลิปรออนุมัติ' : 'จัดการสลิปเงินเดือน';
-$pageActions = (pay_is('manager') ? '<a href="import.php" class="btn btn-outline-success"><i class="bi bi-file-earmark-excel"></i> นำเข้าข้อมูล</a>' : '')
-    . '<a href="slip_form.php" class="btn btn-outline-primary"><i class="bi bi-plus-lg"></i> เพิ่มสลิป</a>';
+$pageActions = $canManage ? '<a href="import.php" class="btn btn-outline-success"><i class="bi bi-file-earmark-excel"></i> นำเข้าข้อมูล</a>'
+    . '<a href="slip_form.php" class="btn btn-outline-primary"><i class="bi bi-plus-lg"></i> เพิ่มสลิป</a>' : '';
 require __DIR__ . '/header.php';
 ?>
 <div class="card mb-3">
@@ -97,14 +110,16 @@ require __DIR__ . '/header.php';
         <?php foreach ($periods as $p): ?><option value="<?= (int)$p['year'] ?>-<?= (int)$p['month'] ?>" <?= $year === (int)$p['year'] && $month === (int)$p['month'] ? 'selected' : '' ?>>
           <?= h(pay_period((int)$p['year'], (int)$p['month'])) ?> (<?= (int)$p['n'] ?><?= $p['pending'] ? ' · รอ ' . (int)$p['pending'] : '' ?>)</option><?php endforeach; ?>
       </select><input type="hidden" name="year" value="<?= $year ?: '' ?>"><input type="hidden" name="month" value="<?= $month ?: '' ?>"></div>
+      <?php if ($canManage): ?>
       <div class="col-md-2"><select name="status" class="form-select" onchange="this.form.submit()">
         <option value="">ทุกสถานะ</option>
         <option value="pending" <?= $status === 'pending' ? 'selected' : '' ?>>รออนุมัติ</option>
         <option value="approved" <?= $status === 'approved' ? 'selected' : '' ?>>อนุมัติแล้ว</option>
       </select></div>
+      <?php else: ?><input type="hidden" name="status" value="pending"><?php endif; ?>
       <div class="col-md-3"><input name="q" class="form-control" placeholder="ค้นหาชื่อ / เลขที่" value="<?= h($q) ?>"></div>
       <div class="col-auto"><button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button></div>
-      <?php if (pay_is('approver') && $pendingTotal): ?>
+      <?php if ($canApprove && $pendingTotal): ?>
         <div class="col-auto ms-auto">
           <button form="approveAllForm" class="btn btn-success"><i class="bi bi-check2-all"></i>
             อนุมัติทั้งหมด<?= $year && $month ? 'ของเดือนนี้' : '' ?> (<?= $year && $month ? (int)array_sum(array_map(fn($s) => $s['status'] === 'pending', $slips)) : $pendingTotal ?>)</button>
@@ -140,11 +155,11 @@ require __DIR__ . '/header.php';
             <td><?= $s['status'] === 'approved' ? '<span class="badge text-bg-success">อนุมัติแล้ว</span>' : '<span class="badge text-bg-warning">รออนุมัติ</span>' ?></td>
             <td class="text-nowrap">
               <a href="slip_view.php?id=<?= (int)$s['id'] ?>" class="btn btn-sm btn-light" title="ดูสลิป"><i class="bi bi-search"></i></a>
-              <a href="slip_form.php?id=<?= (int)$s['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a>
+              <?php if ($canManage): ?><a href="slip_form.php?id=<?= (int)$s['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a><?php endif; ?>
             </td>
           </tr>
         <?php endforeach; ?>
-        <?php if (!$slips): ?><tr><td colspan="<?= count($cols) + 6 ?>" class="text-center text-muted py-5">ไม่มีข้อมูล<?= $periods ? '' : ' — เริ่มจากเมนู "นำเข้าข้อมูล"' ?></td></tr><?php endif; ?>
+        <?php if (!$slips): ?><tr><td colspan="<?= count($cols) + 6 ?>" class="text-center text-muted py-5"><?= $canManage ? 'ไม่มีข้อมูล' . ($periods ? '' : ' — เริ่มจากเมนู "นำเข้าข้อมูล"') : 'ไม่มีสลิปรออนุมัติ' ?></td></tr><?php endif; ?>
         </tbody>
         <?php if (count($slips) > 1): ?>
           <tfoot class="table-light fw-semibold"><tr><td></td><td colspan="<?= $month ? 2 : 3 ?>">รวม <?= count($slips) ?> รายการ</td>
@@ -154,11 +169,13 @@ require __DIR__ . '/header.php';
     </div>
     <div class="card-footer d-flex flex-wrap gap-2 align-items-center">
       <span class="small">เลือก <strong id="checkedCount">0</strong> รายการ →</span>
-      <?php if (pay_is('approver')): ?>
+      <?php if ($canApprove): ?>
         <button name="action" value="approve" class="btn btn-sm btn-success"><i class="bi bi-check2"></i> อนุมัติ</button>
         <button name="action" value="unapprove" class="btn btn-sm btn-outline-secondary" onclick="return confirm('ยกเลิกการอนุมัติรายการที่เลือก?')">ยกเลิกอนุมัติ</button>
       <?php endif; ?>
-      <button name="action" value="delete" class="btn btn-sm btn-outline-danger ms-auto" onclick="return confirm('ลบสลิปที่เลือก?')"><i class="bi bi-trash"></i> ลบ</button>
+      <?php if ($canManage): ?>
+        <button name="action" value="delete" class="btn btn-sm btn-outline-danger ms-auto" onclick="return confirm('ลบสลิปที่เลือก?')"><i class="bi bi-trash"></i> ลบ</button>
+      <?php endif; ?>
     </div>
   </div>
 </form>

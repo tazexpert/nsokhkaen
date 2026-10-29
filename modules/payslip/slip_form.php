@@ -1,7 +1,7 @@
 <?php
 /** เพิ่ม/แก้ไขสลิป 1 ใบ (ผู้จัดการสลิป) — แก้สลิปที่อนุมัติแล้ว จะกลับเป็น "รออนุมัติ" */
 require_once __DIR__ . '/bootstrap.php';
-$me = pay_require('approver');
+$me = pay_require('manager');
 $pdo = db();
 $id = int_param('id');
 $amountKeys = array_keys(PAY_INCOME + PAY_DEDUCT + PAY_TOTALS);

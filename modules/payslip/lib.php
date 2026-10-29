@@ -1,7 +1,7 @@
 <?php
 /**
  * ระบบสลิปเงินเดือนพนักงาน: ค่าคงที่และฟังก์ชันที่ใช้ร่วมกัน
- *   สิทธิ์ (ต่ำ → สูง): employee (ดูสลิปของตนเอง) < manager (นำเข้า/แก้ไข) < approver (อนุมัติ)
+ *   สิทธิ์แยกหน้าที่: employee (ดูสลิปของตนเอง) · manager (นำเข้า/จัดการสลิป) · approver (อนุมัติ) · admin (ทุกอย่าง)
  *   พนักงานเห็นเฉพาะสลิปที่ "อนุมัติแล้ว" ของรหัสพนักงานที่ผูกกับบัญชีตนเอง (pay_employees.user_id)
  */
 
@@ -28,8 +28,8 @@ function pay_can(string $role): bool
 
 /**
  * สิทธิ์แยกหน้าที่: ผู้ใช้มี role ใด role หนึ่งใน $roles หรือเป็นผู้ดูแลระบบสลิป (admin)
- *   รออนุมัติ / จัดการสลิป  = approver, admin
- *   นำเข้าข้อมูล / รายชื่อพนักงาน = manager, admin
+ *   รออนุมัติ (ดู/อนุมัติ)   = approver, admin
+ *   จัดการสลิป / นำเข้าข้อมูล / รายชื่อพนักงาน = manager, admin
  *   ตั้งค่าสลิป              = admin
  */
 function pay_is(string ...$roles): bool
@@ -97,7 +97,7 @@ function pay_employee_of(int $userId): ?array
 /** ผู้ใช้ปัจจุบันดูสลิปนี้ได้หรือไม่: ผู้จัดการ/ผู้อนุมัติ = ทุกใบ, พนักงาน = ของตนเองที่อนุมัติแล้ว */
 function pay_can_view(array $slip): bool
 {
-    if (pay_is('approver')) {           // ผู้อนุมัติ/ผู้ดูแล ดูได้ทุกใบ
+    if (pay_is('approver', 'manager')) {    // ผู้อนุมัติ/ผู้จัดการสลิป/ผู้ดูแล ดูได้ทุกใบ
         return true;
     }
     $me = current_user();

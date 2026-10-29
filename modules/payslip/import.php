@@ -187,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             . ($stats['employees'] ? " · พนักงานใหม่ {$stats['employees']} คน" : '') . ($linked ? " · ผูกบัญชีผู้ใช้อัตโนมัติ $linked คน" : '')
             . ($useFileApproval ? '' : ' — สลิปใหม่/ที่ปรับปรุงอยู่ในสถานะ "รออนุมัติ"'));
         // ผู้จัดการสลิปไม่เห็นหน้าจัดการสลิป → กลับหน้านำเข้า (ผู้อนุมัติได้รับแจ้งเตือนสลิปรออนุมัติ)
-        redirect(pay_is('approver') ? 'slips.php' . ($useFileApproval ? '' : '?status=pending') : 'import.php');
+        redirect('slips.php' . ($useFileApproval ? '' : '?status=pending'));
     }
 }
 
