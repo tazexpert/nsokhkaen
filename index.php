@@ -141,8 +141,8 @@ if ($links || $user['is_superadmin']): ?>
 <div class="row g-3 mb-2">
 <?php endif;
 if ($links): ?>
-  <div class="col-lg"><div class="card h-100"><div class="card-body">
-  <div class="small text-muted mb-2">ลิงก์ที่เกี่ยวข้อง</div>
+  <div class="col-lg"><div class="card h-100 home-tool tone-orange"><div class="card-body">
+  <div class="home-tool-title"><i class="bi bi-globe2"></i> ลิงก์ที่เกี่ยวข้อง</div>
   <div class="d-flex flex-wrap gap-2">
     <?php foreach ($links as $l): ?>
       <a href="<?= h(module_url($l['module'], $l['href'])) ?>" target="_blank" class="btn btn-outline-secondary btn-sm">
@@ -153,8 +153,8 @@ if ($links): ?>
 <?php endif; ?>
 
 <?php if ($user['is_superadmin']): ?>
-  <div class="col-lg"><div class="card h-100"><div class="card-body">
-  <div class="small text-muted mb-2">ผู้ดูแลระบบกลาง</div>
+  <div class="col-lg"><div class="card h-100 home-tool tone-red"><div class="card-body">
+  <div class="home-tool-title"><i class="bi bi-shield-lock"></i> ผู้ดูแลระบบกลาง</div>
   <div class="d-flex flex-wrap gap-2">
     <a href="<?= h(url('admin/users.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-people"></i> ผู้ใช้งานและสิทธิ์</a>
     <a href="<?= h(url('admin/settings.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-sliders"></i> ตั้งค่าระบบ</a>

@@ -220,3 +220,34 @@ h1,h2,h3,h4,h5,.brand,.stat-num,.btn,.card-header,.nav-tabs{font-family:'Prompt'
 }
 .home-section-title{white-space:nowrap}
 #arrangeBtn{white-space:nowrap}
+
+/* ---------- หน้าหลัก: ไล่เฉดสีเต็มกล่อง ---------- */
+.mod-card{border-top:0;color:#fff;background:linear-gradient(45deg,var(--mc,#4099ff),color-mix(in srgb,var(--mc,#4099ff) 55%,#fff));
+  box-shadow:0 6px 18px color-mix(in srgb,var(--mc,#4099ff) 30%,transparent)}
+.mod-card:hover{color:#fff;box-shadow:0 12px 28px color-mix(in srgb,var(--mc,#4099ff) 40%,transparent)}
+.mod-card::after{content:"";position:absolute;right:-40px;top:-40px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.12);pointer-events:none}
+.mod-card h3{color:#fff}
+.mod-card .text-muted{color:rgba(255,255,255,.88)!important}
+.mod-card .mod-icon.has-logo{background:#fff!important;border:0;box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.mod-card .mod-role{background:rgba(255,255,255,.22);color:#fff}
+.mod-card .mod-go{color:#fff}
+#modGrid.arranging .mod-card{outline-color:#fff}
+/* การ์ดตารางการปฏิบัติงาน: หัวการ์ดไล่เฉดฟ้า */
+.cal-home{border-top:0!important;overflow:hidden}
+.cal-home>.card-header{background:linear-gradient(45deg,#4099ff,#73b4ff);border-bottom:0;color:#fff}
+.cal-home>.card-header strong{color:#fff}
+.cal-home>.card-header .mod-logo{background:#fff;border-radius:5px;padding:1px}
+.cal-home>.card-header .btn-outline-primary,.cal-home>.card-header .btn-outline-secondary{--bs-btn-color:#fff;--bs-btn-border-color:rgba(255,255,255,.55);--bs-btn-hover-color:#4099ff;--bs-btn-hover-bg:#fff;--bs-btn-hover-border-color:#fff;--bs-btn-active-color:#2f7fe0;--bs-btn-active-bg:#fff;--bs-btn-active-border-color:#fff}
+.cal-home>.card-header .btn-outline-success{--bs-btn-color:#fff;--bs-btn-border-color:rgba(255,255,255,.55);--bs-btn-hover-color:#13866f;--bs-btn-hover-bg:#fff;--bs-btn-hover-border-color:#fff}
+.cal-home>.card-header .btn-success{background:#fff;color:#13866f;border:0}
+.cal-home>.card-header .btn-light{background:rgba(255,255,255,.2);border:0;color:#fff}
+.cal-home>.card-header .btn-light:hover{background:#fff;color:#4099ff}
+.cal-home>.card-header .btn-primary{background:#fff;color:#4099ff;border:0}
+.cal-home>.card-header .btn-primary:hover{background:#eaf3ff;color:#2f7fe0}
+/* ลิงก์และเครื่องมือ: การ์ดไล่เฉด ปุ่มขาว */
+.home-tool{color:#fff;position:relative;overflow:hidden}
+.home-tool.tone-orange{background:var(--g-orange);box-shadow:0 6px 18px rgba(255,182,77,.35)}
+.home-tool.tone-red{background:var(--g-red);box-shadow:0 6px 18px rgba(255,83,112,.3)}
+.home-tool::after{content:"";position:absolute;right:-30px;bottom:-50px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.14);pointer-events:none}
+.home-tool-title{font-family:'Prompt',sans-serif;font-weight:500;margin-bottom:10px}
+.home-tool .btn{--bs-btn-color:#fff;--bs-btn-border-color:rgba(255,255,255,.7);--bs-btn-hover-color:#37474f;--bs-btn-hover-bg:#fff;--bs-btn-hover-border-color:#fff;--bs-btn-active-color:#37474f;--bs-btn-active-bg:#fff;position:relative;z-index:1}
