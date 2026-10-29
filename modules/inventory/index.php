@@ -43,7 +43,7 @@ function dashboardCard(string $colorClass, int $value, string $label, string $hr
         <?php dashboardCard('text-bg-warning', (int) $lowStockCount, 'วัสดุใกล้หมดสต๊อก', INV_URL . 'materials.php?filter=low_stock') ?>
     </div>
     <div class="col-6 col-lg">
-        <?php dashboardCard('text-bg-dark', (int) $equipmentCount, 'ครุภัณฑ์ทั้งหมด', INV_URL . 'equipment.php') ?>
+        <?php dashboardCard('text-bg-success', (int) $equipmentCount, 'ครุภัณฑ์ทั้งหมด', INV_URL . 'equipment.php') ?>
     </div>
     <div class="col-6 col-lg">
         <?php dashboardCard('text-bg-info', (int) $loanCounts['borrowed'], 'ครุภัณฑ์ที่กำลังยืม', INV_URL . 'loans.php?tab=borrowed') ?>

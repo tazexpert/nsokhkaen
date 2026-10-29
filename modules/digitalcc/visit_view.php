@@ -48,8 +48,8 @@ $typeSel = visit_type_option((string)$s['center_type']);
   :root{--line:#333}
   *{box-sizing:border-box}
   body{margin:0;background:#e9edf2;font-family:'Sarabun',sans-serif;font-size:15px;color:#111;line-height:1.75}
-  .toolbar{position:sticky;top:0;display:flex;gap:8px;flex-wrap:wrap;padding:10px 16px;background:#0b1f3a}
-  .toolbar a,.toolbar button{display:inline-flex;gap:6px;align-items:center;padding:8px 14px;border-radius:8px;border:0;background:#fff;color:#0b1f3a;text-decoration:none;font:inherit;cursor:pointer}
+  .toolbar{position:sticky;top:0;display:flex;gap:8px;flex-wrap:wrap;padding:10px 16px;background:linear-gradient(to right,#4099ff,#73b4ff)}
+  .toolbar a,.toolbar button{display:inline-flex;gap:6px;align-items:center;padding:8px 14px;border-radius:8px;border:0;background:#fff;color:#1a66c2;text-decoration:none;font:inherit;cursor:pointer}
   .toolbar .primary{background:#0f6cbd;color:#fff}
   .page{background:#fff;max-width:210mm;margin:16px auto;padding:14mm 16mm;box-shadow:0 4px 20px rgba(0,0,0,.12)}
   h1{font-size:19px;text-align:center;margin:0}
