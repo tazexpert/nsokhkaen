@@ -53,7 +53,7 @@ require __DIR__ . '/header.php';
         <div class="cal-dnum"><?php if (cal_can('editor')): ?><a href="event_form.php?date=<?= $d ?>" class="cal-add" title="เพิ่มกิจกรรมวันนี้"><i class="bi bi-plus"></i></a><?php endif; ?><?= (int)substr($d, 8, 2) ?></div>
         <?php foreach ($byDay[$d] ?? [] as $e): $isMine = in_array($me['id'], $assignees[(int)$e['id']] ?? [], true); ?>
           <a href="event_view.php?id=<?= (int)$e['id'] ?>" class="cal-ev<?= $isMine ? ' mine' : '' ?>" title="<?= h(cal_time_text($e) . ' ' . $e['title'] . ($e['location'] ? ' @ ' . $e['location'] : '')) ?>">
-            <?php if ($e['start_time'] && $d === $e['event_date']): ?><span class="t"><?= substr($e['start_time'], 0, 5) ?></span><?php endif; ?><?= h($e['title']) ?></a>
+            <?php if ($e['start_time'] && $d === $e['event_date']): ?><span class="t"><?= cal_time_thai($e['start_time']) ?></span><?php endif; ?><?= h($e['title']) ?></a>
         <?php endforeach; ?>
       </div>
     <?php endfor; ?>

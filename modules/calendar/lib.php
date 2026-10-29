@@ -39,13 +39,16 @@ function cal_staff_type(?string $position): ?string
 
 const CAL_STAFF_LABEL = ['gov' => 'ข้าราชการ', 'emp' => 'พนักงาน', '' => 'อื่นๆ'];
 
-/** ผู้ใช้ที่เลือกเป็นผู้รับผิดชอบได้ [id => [id, full_name, position, type]] */
+/**
+ * ผู้ใช้ที่เลือกเป็นผู้รับผิดชอบได้ [id => [id, full_name, position, type]]
+ * เฉพาะเจ้าหน้าที่ (รหัสเข้าใช้งานเป็นตัวเลข) — บัญชีที่ไม่ใช่ตัวเลขเป็นผู้ดูแลจากภายนอก
+ */
 function cal_users(): array
 {
     static $users = null;
     if ($users === null) {
         $users = [];
-        foreach (db()->query('SELECT id, full_name, position FROM core_users WHERE is_active = 1 ORDER BY full_name') as $u) {
+        foreach (db()->query('SELECT id, full_name, position FROM core_users WHERE is_active = 1 AND username REGEXP \'^[0-9]+$\' ORDER BY full_name') as $u) {
             $u['type'] = cal_staff_type($u['position']);
             $users[(int)$u['id']] = $u;
         }
@@ -82,7 +85,7 @@ function cal_assignees(array $eventIds): array
     return $out;
 }
 
-/** สรุปผู้รับผิดชอบ: "ทุกคน" / "ข้าราชการทุกคน" / "พนักงานทุกคน" หรือรายชื่อ */
+/** สรุปผู้รับผิดชอบ: "เจ้าหน้าที่สำนักงานสถิติจังหวัดขอนแก่นทุกคน" / "ข้าราชการ" / "พนักงาน" หรือรายชื่อ */
 function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
 {
     $users = cal_users();
@@ -92,11 +95,11 @@ function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
     }
     sort($ids);
     $group = fn(?string $t) => array_keys(array_filter($users, fn($u) => $t === '*' || $u['type'] === $t));
-    foreach (['*' => 'ทุกคน', 'gov' => 'ข้าราชการทุกคน', 'emp' => 'พนักงานทุกคน'] as $t => $label) {
+    foreach (['*' => 'เจ้าหน้าที่สำนักงานสถิติจังหวัดขอนแก่นทุกคน', 'gov' => 'ข้าราชการ', 'emp' => 'พนักงาน'] as $t => $label) {
         $g = $group($t);
         sort($g);
         if ($g && $ids === $g) {
-            return '<span class="badge text-bg-primary">' . $label . ' (' . count($g) . ')</span>'
+            return '<span class="badge text-bg-primary text-wrap text-start" title="' . count($g) . ' คน">' . $label . '</span>'
                 . (in_array($meId, $ids, true) ? ' <span class="badge text-bg-warning">รวมคุณ</span>' : '');
         }
     }
@@ -107,11 +110,30 @@ function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
     return implode(' ', $chips) . ($more > 0 ? ' <span class="small text-muted" title="' . h(implode(', ', array_map(fn($id) => $users[$id]['full_name'], array_slice($ids, $max)))) . '">+' . $more . ' คน</span>' : '');
 }
 
-/** เวลา เช่น "09:00–12:00 น." หรือ "ทั้งวัน" */
+/** เวลาแบบไทย "09.00" จากเวลาในฐานข้อมูล "09:00:00" */
+function cal_time_thai(?string $t): string
+{
+    return $t ? str_replace(':', '.', substr($t, 0, 5)) : '';
+}
+
+/** แปลงเวลาที่กรอก (แบบไทย "9.00", "09.00 น." หรือ "09:00") เป็นเวลาในฐานข้อมูล "09:00:00" · ว่าง = null · ผิดรูปแบบ = false */
+function cal_parse_time(?string $v)
+{
+    $v = trim(str_replace(['น.', 'น'], '', (string)$v));
+    if ($v === '') {
+        return null;
+    }
+    if (!preg_match('/^(\d{1,2})[.:](\d{2})(?:[.:]\d{2})?$/', $v, $m) || (int)$m[1] > 23 || (int)$m[2] > 59) {
+        return false;
+    }
+    return sprintf('%02d:%02d:00', $m[1], $m[2]);
+}
+
+/** เวลา เช่น "09.00–12.00 น." หรือ "ทั้งวัน" */
 function cal_time_text(array $e): string
 {
-    $s = $e['start_time'] ? substr($e['start_time'], 0, 5) : '';
-    $t = $e['end_time'] ? substr($e['end_time'], 0, 5) : '';
+    $s = cal_time_thai($e['start_time']);
+    $t = cal_time_thai($e['end_time']);
     if ($s === '' && $t === '') {
         return 'ทั้งวัน';
     }

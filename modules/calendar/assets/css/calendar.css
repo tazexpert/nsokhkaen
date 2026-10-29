@@ -34,3 +34,8 @@
 .cal-userpick .opt { display: flex; gap: 10px; align-items: center; padding: 5px 10px; border-bottom: 1px solid #f1f4f8; cursor: pointer; margin: 0; }
 .cal-userpick .opt.on { background: #e7f1ff; }
 .cal-userpick .opt[hidden] { display: none; }
+
+/* flatpickr: แสดงปี พ.ศ. แทนช่องปี ค.ศ. */
+.flatpickr-current-month .numInputWrapper { display: none; }
+.flatpickr-current-month .be-year { font-weight: 600; margin-left: .35em; }
+.flatpickr-current-month .flatpickr-monthDropdown-months { font-weight: 600; }

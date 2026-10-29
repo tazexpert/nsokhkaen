@@ -4,8 +4,8 @@
  * ตัวแปรจากหน้าหลัก: $user
  */
 require_once __DIR__ . '/lib.php';
-$calDays = (int)($_GET['cal_days'] ?? 7);
-$calDays = in_array($calDays, [1, 7, 14, 30], true) ? $calDays : 7;
+$calDays = (int)($_GET['cal_days'] ?? 30);      // ค่าเริ่มต้น 30 วัน / ทุกคน
+$calDays = in_array($calDays, [1, 7, 14, 30], true) ? $calDays : 30;
 $calMine = !empty($_GET['cal_mine']);
 $calFrom = date('Y-m-d');
 $calTo = date('Y-m-d', strtotime('+' . ($calDays - 1) . ' days'));

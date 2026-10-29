@@ -53,9 +53,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($e['end_date'] === $e['event_date']) {
         $e['end_date'] = null;
     }
-    foreach (['start_time', 'end_time'] as $k) {
-        if ($e[$k] !== null && !preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $e[$k])) {
-            $errors[] = 'รูปแบบเวลาไม่ถูกต้อง';
+    foreach (['start_time', 'end_time'] as $k) {          // เวลาไทย "09.00" → เวลาในฐานข้อมูล "09:00:00"
+        $t = cal_parse_time($e[$k]);
+        if ($t === false) {
+            $errors[] = 'รูปแบบเวลาไม่ถูกต้อง (เช่น 09.00)';
+        } else {
+            $e[$k] = $t;
         }
     }
     if ($e['start_time'] && $e['end_time'] && !$e['end_date'] && $e['end_time'] < $e['start_time']) {
@@ -114,6 +117,7 @@ $active = 'add';
 $pageTitle = $id ? 'แก้ไขกิจกรรม' : 'เพิ่มกิจกรรม';
 $pageActions = $id ? '' : '<a href="import.php" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> นำเข้าหลายรายการจาก CSV</a>';
 $allDay = $e['start_time'] === null && $e['end_time'] === null;
+$headExtra = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">';
 require __DIR__ . '/header.php';
 ?>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>
@@ -125,15 +129,16 @@ require __DIR__ . '/header.php';
         <div class="col-12"><label class="form-label">กิจกรรม <span class="text-danger">*</span></label>
           <input name="title" class="form-control" required maxlength="255" value="<?= h($e['title']) ?>" placeholder="เช่น ประชุมประจำเดือน / ลงพื้นที่สำรวจ"></div>
         <div class="col-sm-6"><label class="form-label">วันที่ <span class="text-danger">*</span></label>
-          <input type="date" name="event_date" class="form-control" required value="<?= h($e['event_date']) ?>"></div>
+          <input type="text" name="event_date" class="form-control thai-date" required value="<?= h($e['event_date']) ?>" placeholder="เลือกวันที่"></div>
         <div class="col-sm-6"><label class="form-label">ถึงวันที่ <small class="text-muted">(ถ้าหลายวัน)</small></label>
-          <input type="date" name="end_date" class="form-control" value="<?= h($e['end_date']) ?>"></div>
+          <div class="input-group"><input type="text" name="end_date" class="form-control thai-date" value="<?= h($e['end_date']) ?>" placeholder="-">
+            <button type="button" class="btn btn-outline-secondary" data-clear-date="end_date" title="ล้าง"><i class="bi bi-x-lg"></i></button></div></div>
         <div class="col-12">
           <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="all_day" value="1" id="allDay" <?= $allDay ? 'checked' : '' ?>>
             <label class="form-check-label" for="allDay">ทั้งวัน (ไม่ระบุเวลา)</label></div>
           <div class="row g-2" id="timeRow">
-            <div class="col-6"><label class="form-label">เวลาเริ่ม</label><input type="time" name="start_time" class="form-control" value="<?= h(substr((string)$e['start_time'], 0, 5)) ?>"></div>
-            <div class="col-6"><label class="form-label">เวลาสิ้นสุด</label><input type="time" name="end_time" class="form-control" value="<?= h(substr((string)$e['end_time'], 0, 5)) ?>"></div>
+            <div class="col-6"><label class="form-label">เวลาเริ่ม</label><div class="input-group"><input type="text" name="start_time" class="form-control thai-time" inputmode="decimal" value="<?= h(cal_time_thai($e['start_time'])) ?>" placeholder="เช่น 09.00"><span class="input-group-text">น.</span></div></div>
+            <div class="col-6"><label class="form-label">เวลาสิ้นสุด</label><div class="input-group"><input type="text" name="end_time" class="form-control thai-time" inputmode="decimal" value="<?= h(cal_time_thai($e['end_time'])) ?>" placeholder="เช่น 16.30"><span class="input-group-text">น.</span></div></div>
           </div></div>
         <div class="col-12"><label class="form-label">สถานที่</label><input name="location" class="form-control" maxlength="255" value="<?= h($e['location']) ?>"></div>
         <div class="col-12"><label class="form-label">ลิงก์ประกอบ</label><input name="link" type="url" class="form-control" maxlength="500" value="<?= h($e['link']) ?>" placeholder="https://..."></div>
@@ -177,6 +182,9 @@ require __DIR__ . '/header.php';
   <form method="post" class="mt-3" data-confirm="ลบกิจกรรม &quot;<?= h($e['title']) ?>&quot;?"><?= csrf_field() ?><input type="hidden" name="action" value="delete">
     <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> ลบกิจกรรมนี้</button></form>
 <?php endif; ?>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/th.js"></script>
+<script src="<?= h(asset_v('modules/calendar/assets/js/thai-picker.js')) ?>"></script>
 <script>
 (() => {
   const boxes = () => [...document.querySelectorAll('#userPick input[type=checkbox]')];
