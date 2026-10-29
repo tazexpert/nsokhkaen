@@ -125,6 +125,13 @@ function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
     return implode(' ', $chips) . ($more > 0 ? ' <span class="small text-muted" title="' . h(implode(', ', array_map(fn($id) => cal_person_text($users[$id]), array_slice($ids, $max)))) . '">+' . $more . ' คน</span>' : '');
 }
 
+/** กิจกรรมจบแล้ววันนี้ (เลยเวลาสิ้นสุดของวันสุดท้าย) — ยังแสดงในตารางจนถึงสิ้นวัน */
+function cal_is_done(array $e): bool
+{
+    $last = $e['end_date'] ?: $e['event_date'];
+    return $last === date('Y-m-d') && $e['end_time'] && substr($e['end_time'], 0, 5) <= date('H:i');
+}
+
 /** เวลาแบบไทย "09.00" จากเวลาในฐานข้อมูล "09:00:00" */
 function cal_time_thai(?string $t): string
 {
@@ -219,10 +226,12 @@ function cal_render_table(array $events, string $from, int $meId, bool $showActi
             $link = cal_safe_link($e['link']);
             $multi = $e['end_date'] && $e['end_date'] !== $e['event_date'];
             $duty = cal_is_duty($e);
-            $html .= '<tr class="' . trim(($duty ? 'cal-duty ' : '') . ($mine ? 'cal-mine' : '')) . '">'
+            $done = cal_is_done($e);
+            $html .= '<tr class="' . trim(($duty ? 'cal-duty ' : '') . ($mine ? 'cal-mine ' : '') . ($done ? 'cal-done' : '')) . '">'
                 . '<td class="text-nowrap">' . ($duty ? '<span class="text-muted">-</span>' : h(cal_time_text($e))) . ($multi ? '<div class="small text-muted">' . h(cal_range_text($e)) . '</div>' : '') . '</td>'
                 . '<td><a href="' . h($base . 'event_view.php?id=' . (int)$e['id']) . '" class="fw-semibold text-decoration-none">' . ($duty ? '<i class="bi bi-shield-check"></i> ' : '') . h($e['title']) . '</a>'
-                . ($mine ? ' <span class="badge text-bg-warning">งานของคุณ</span>' : '') . '</td>'
+                . ($mine ? ' <span class="badge text-bg-warning">งานของคุณ</span>' : '')
+                . ($done ? ' <span class="badge text-bg-secondary"><i class="bi bi-check2"></i> จบแล้ว</span>' : '') . '</td>'
                 . '<td>' . ($e['location'] ? '<i class="bi bi-geo-alt text-muted"></i> ' . h($e['location']) : '<span class="text-muted">-</span>') . '</td>'
                 . '<td class="cal-people">' . cal_assignee_html($ids, $meId) . '</td>'
                 . '<td class="small">' . ($link ? '<a href="' . h($link) . '" target="_blank" rel="noopener"><i class="bi bi-link-45deg"></i> เปิดลิงก์</a>' : '')

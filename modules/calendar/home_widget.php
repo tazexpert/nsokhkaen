@@ -4,7 +4,7 @@
  * ตัวแปรจากหน้าหลัก: $user
  */
 require_once __DIR__ . '/lib.php';
-// ช่วงเวลา: วันนี้ / รายสัปดาห์ (จันทร์–อาทิตย์ของสัปดาห์นี้) / รายเดือน (เดือนนี้) / เดือนหน้า — ค่าเริ่มต้น รายเดือน / ทุกคน
+// ช่วงเวลา: วันนี้ / รายสัปดาห์ (ถึงวันอาทิตย์นี้) / รายเดือน (ถึงสิ้นเดือนนี้) / เดือนหน้า — ค่าเริ่มต้น รายเดือน / ทุกคน
 $calRanges = ['today' => 'วันนี้', 'week' => 'รายสัปดาห์', 'month' => 'รายเดือน', 'next' => 'เดือนหน้า'];
 $calRange = $_GET['cal_range'] ?? 'month';
 $calRange = isset($calRanges[$calRange]) ? $calRange : 'month';
@@ -16,8 +16,11 @@ $calDuty = !empty($_GET['cal_duty']);            // ค่าเริ่มต�
     'next'  => [date('Y-m-01', strtotime('first day of next month')), date('Y-m-t', strtotime('first day of next month'))],
     default => [date('Y-m-01'), date('Y-m-t')],
 };
+// รายการของวันที่ผ่านไปแล้วไม่แสดง (รายการของวันนี้ยังอยู่แม้จบแล้ว จะหายไปในวันถัดไป)
+$calFrom = max($calFrom, date('Y-m-d'));
 $calLabel = in_array($calRange, ['month', 'next'], true)
-    ? thai_month_long((int)substr($calFrom, 5, 2)) . ' ' . ((int)substr($calFrom, 0, 4) + 543)
+    ? thai_month_long((int)substr($calTo, 5, 2)) . ' ' . ((int)substr($calTo, 0, 4) + 543)
+        . ($calFrom !== date('Y-m-01', strtotime($calTo)) ? ' (ตั้งแต่ ' . thai_date($calFrom) . ')' : '')
     : ($calFrom === $calTo ? cal_date_text($calFrom) : thai_date($calFrom) . ' – ' . thai_date($calTo));
 $calEvents = cal_events_between($calFrom, $calTo, $calMine ? $user['id'] : null, $calDuty);
 $calQs = fn(array $p) => '?' . http_build_query(array_filter($p + ['cal_range' => $calRange === 'month' ? null : $calRange, 'cal_mine' => $calMine ? 1 : null, 'cal_duty' => $calDuty ? 1 : null])) . '#calendar';

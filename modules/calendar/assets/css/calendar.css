@@ -50,3 +50,6 @@
 .cal-ev.duty { background: #d1fae5; color: #065f46; }
 .cal-ev.duty:hover { background: #a7f3d0; color: #064e3b; }
 .cal-ev.duty.mine { background: #6ee7b7; color: #064e3b; }
+/* กิจกรรมวันนี้ที่จบแล้ว: ยังแสดงจนสิ้นวัน แต่จางลง */
+.cal-table tr.cal-done td { opacity: .6; }
+.cal-table tr.cal-done td:last-child { opacity: 1; }
