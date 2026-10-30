@@ -105,7 +105,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
     </div>
     <?php else: /* ผู้เยี่ยมชม: ปุ่มเข้าสู่ระบบ */ ?>
     <div class="d-flex align-items-center gap-1 order-xl-last ms-auto">
-      <a href="<?= h(url('login.php')) ?>" class="btn btn-light btn-login"><i class="bi bi-box-arrow-in-right"></i> <span class="d-none d-sm-inline">เข้าสู่ระบบ</span></a>
+      <a href="<?= h(url('login.php')) ?>" class="btn btn-light btn-login" data-login-modal><i class="bi bi-box-arrow-in-right"></i> <span class="d-none d-sm-inline">เข้าสู่ระบบ</span></a>
       <button class="navbar-toggler ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="เมนู">
         <span class="navbar-toggler-icon"></span>
       </button>
@@ -172,6 +172,72 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
     </nav>
   </div>
 </div>
+<?php endif; ?>
+
+<?php if (!$user): /* popup เข้าสู่ระบบ (ผู้เยี่ยมชม) — ปุ่ม/ลิงก์ที่มี data-login-modal จะเปิด popup นี้ */ ?>
+<div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width:420px">
+    <form class="modal-content login-modal" method="post" action="<?= h(url('login.php')) ?>" id="loginForm" novalidate>
+      <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="ปิด"></button>
+      <div class="modal-body p-4 pt-5">
+        <div class="text-center mb-4">
+          <img src="<?= h(url('assets/img/logo.png')) ?>" alt="" class="auth-logo" style="height:80px">
+          <h2 class="h5 mt-3 mb-1" id="loginModalTitle">เข้าสู่ระบบ</h2>
+          <p class="text-muted small mb-0">ระบบบริหารจัดการ <?= h(ORG_NAME) ?></p>
+        </div>
+        <?php if (!empty($_GET['login']) && !empty($_SESSION['redirect_after_login'])): ?>
+          <div class="alert alert-info py-2 small"><i class="bi bi-info-circle"></i> กรุณาเข้าสู่ระบบเพื่อใช้งานหน้าที่ต้องการ</div>
+        <?php endif; ?>
+        <div class="alert alert-danger py-2 small d-none" id="loginError"></div>
+        <?= csrf_field() ?>
+        <input type="hidden" name="ajax" value="1"><input type="hidden" name="return" id="loginReturn">
+        <div class="mb-3">
+          <label class="form-label" for="loginUser">ชื่อผู้ใช้</label>
+          <input name="username" id="loginUser" class="form-control form-control-lg" required autocomplete="username">
+        </div>
+        <div class="mb-4">
+          <label class="form-label" for="loginPass">รหัสผ่าน</label>
+          <input name="password" id="loginPass" type="password" class="form-control form-control-lg" required autocomplete="current-password">
+        </div>
+        <button class="btn btn-primary btn-lg w-100" id="loginSubmit"><span class="spinner-border spinner-border-sm d-none me-1"></span>เข้าสู่ระบบ</button>
+        <div class="text-center mt-3 small"><a href="<?= h(url('pin.php')) ?>"><i class="bi bi-grid-3x3-gap"></i> เข้าใช้ด้วย PIN 6 หลัก</a></div>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const el = document.getElementById('loginModal'), form = document.getElementById('loginForm');
+  const err = document.getElementById('loginError'), btn = document.getElementById('loginSubmit');
+  const modal = bootstrap.Modal.getOrCreateInstance(el);
+  document.getElementById('loginReturn').value = location.pathname + location.search;
+  document.addEventListener('click', e => {
+    const a = e.target.closest('[data-login-modal]');
+    if (!a || e.ctrlKey || e.metaKey) return;
+    e.preventDefault(); modal.show();
+  });
+  el.addEventListener('shown.bs.modal', () => document.getElementById('loginUser').focus());
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    if (!form.username.value.trim() || !form.password.value) { err.textContent = 'กรุณากรอกชื่อผู้ใช้และรหัสผ่าน'; err.classList.remove('d-none'); return; }
+    btn.disabled = true; btn.querySelector('.spinner-border').classList.remove('d-none'); err.classList.add('d-none');
+    fetch(form.action, { method: 'POST', body: new FormData(form), credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok) { location.href = d.redirect; return; }
+        err.textContent = d.error || 'เข้าสู่ระบบไม่สำเร็จ'; err.classList.remove('d-none');
+        form.password.value = ''; form.password.focus();
+      })
+      .catch(() => { err.textContent = 'เชื่อมต่อไม่สำเร็จ กรุณาโหลดหน้าใหม่แล้วลองอีกครั้ง'; err.classList.remove('d-none'); })
+      .finally(() => { btn.disabled = false; btn.querySelector('.spinner-border').classList.add('d-none'); });
+  });
+  if (new URLSearchParams(location.search).has('login')) {     // มาจากหน้า login / หน้าที่ต้อง login
+    history.replaceState(null, '', location.pathname + location.search.replace(/([?&])login=1(&|$)/, '$1').replace(/[?&]$/, ''));
+    document.getElementById('loginReturn').value = location.pathname + location.search;
+    modal.show();
+  }
+});
+</script>
 <?php endif; ?>
 
 <main class="content">

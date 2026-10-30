@@ -1,22 +1,33 @@
 <?php
-/** เข้าสู่ระบบด้วยชื่อผู้ใช้ + รหัสผ่าน (ใช้ได้กับทุกระบบ) */
+/**
+ * เข้าสู่ระบบด้วยชื่อผู้ใช้ + รหัสผ่าน (ใช้ได้กับทุกระบบ)
+ *   ปกติใช้ผ่าน popup (modal) ในแถบเมนู: ส่งแบบ AJAX (ajax=1) คืน JSON {ok, redirect | error}
+ *   เปิดหน้านี้ตรง ๆ (GET) → ไปหน้าหลักและเปิด popup ให้อัตโนมัติ · หน้าเต็มเดิมใช้เมื่อส่งฟอร์มแบบไม่มี JavaScript
+ */
 require_once __DIR__ . '/core/bootstrap.php';
+$ajax = !empty($_POST['ajax']);
 
-/** หลัง login: ถ้าระบบใดกำหนดให้บทบาทนี้ต้องมี PIN แต่ยังไม่ได้ตั้ง → พาไปตั้ง PIN ก่อน */
-function after_login(array $u): void   // ไม่คืนค่า (จบการทำงานเสมอ) — ใช้ void เพื่อรองรับ PHP 8.0
+/** หน้าที่ไปหลัง login: ตั้ง PIN ก่อน (ถ้าบทบาทกำหนด) → หน้าที่ตั้งใจจะเข้า → หน้าที่กด login (return) → หน้าหลัก */
+function login_target(array $u): string
 {
     if (!$u['has_pin']) {
         foreach (accessible_modules($u) as $m) {
             if (in_array(module_role($m['key'], $u), $m['prompt_pin_roles'] ?? [], true)) {
-                redirect(url('account.php?setup_pin=1'));
+                return url('account.php?setup_pin=1');
             }
         }
     }
-    redirect(take_login_target(url('index.php')));
+    $return = (string)($_POST['return'] ?? '');
+    $fallback = (str_starts_with($return, BASE_URL) && !str_starts_with($return, '//') && !preg_match('#/(login|logout|pin)\.php#', $return))
+        ? preg_replace('/([?&])login=1(&|$)/', '$1', $return) : url('index.php');
+    return take_login_target(rtrim($fallback, '?&'));
 }
 
 if ($u = current_user()) {
-    after_login($u);
+    $ajax ? json_out(['ok' => true, 'redirect' => login_target($u)]) : redirect(login_target($u));
+}
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    redirect(url('index.php?login=1'));            // หน้า login = popup บนหน้าหลัก
 }
 
 $error = '';
@@ -37,11 +48,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ->execute([password_hash($password, PASSWORD_DEFAULT), $row['id']]);
             }
             login_user((int)$row['id']);
-            after_login(current_user());
+            $to = login_target(current_user());
+            $ajax ? json_out(['ok' => true, 'redirect' => $to]) : redirect($to);
         }
         $_SESSION['login_fails'] = ($_SESSION['login_fails'] ?? 0) + 1;
         audit_log('login_failed', 'username: ' . $username, 'core', null);
         $error = 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง';
+    }
+    if ($ajax) {
+        json_out(['ok' => false, 'error' => $error]);
     }
 }
 ?><!doctype html>

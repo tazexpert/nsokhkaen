@@ -32,7 +32,7 @@ require APP_ROOT . '/core/layout/header.php';
     <div class="home-hero-sub"><?= h(ORG_NAME) ?></div>
   </div>
   <?php if ($isGuest): ?>
-    <a href="<?= h(url('login.php')) ?>" class="btn btn-primary ms-auto"><i class="bi bi-box-arrow-in-right"></i> เข้าสู่ระบบเพื่อใช้งานระบบงาน</a>
+    <a href="<?= h(url('login.php')) ?>" class="btn btn-primary ms-auto" data-login-modal><i class="bi bi-box-arrow-in-right"></i> เข้าสู่ระบบเพื่อใช้งานระบบงาน</a>
   <?php endif; ?>
 </section>
 
