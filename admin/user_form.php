@@ -6,7 +6,7 @@ $pdo = db();
 $id = int_param('id');
 $mods = modules();
 
-$u = ['username' => '', 'full_name' => '', 'position' => '', 'work_group_id' => null, 'email' => '', 'phone' => '',
+$u = ['username' => '', 'full_name' => '', 'position' => '', 'work_group_id' => null, 'email' => '', 'phone' => '', 'nickname' => '',
       'is_superadmin' => 0, 'is_active' => 1, 'has_pin' => 0, 'has_password' => 0];
 $roles = [];
 if ($id) {
@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $u = array_merge($u, [
         'username' => $username, 'full_name' => post('full_name'), 'position' => post('position'),
         'work_group_id' => isset(work_groups()[int_param('work_group_id')]) ? int_param('work_group_id') : null,
-        'email' => post('email'), 'phone' => post('phone'),
+        'email' => post('email'), 'phone' => post('phone'), 'nickname' => post('nickname'),
         'is_superadmin' => isset($_POST['is_superadmin']) ? 1 : 0, 'is_active' => isset($_POST['is_active']) ? 1 : 0,
     ]);
     $roles = [];
@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $data = [
                 'username' => $username ?: null, 'full_name' => $u['full_name'], 'position' => $u['position'] ?: null,
                 'work_group_id' => $u['work_group_id'],
-                'email' => $u['email'] ?: null, 'phone' => $u['phone'] ?: null,
+                'email' => $u['email'] ?: null, 'phone' => $u['phone'] ?: null, 'nickname' => mb_substr($u['nickname'], 0, 50) ?: null,
                 'is_superadmin' => $u['is_superadmin'], 'is_active' => $u['is_active'],
             ];
             if ($username === '') {
@@ -130,7 +130,8 @@ require APP_ROOT . '/core/layout/header.php';
       <div class="card-body row g-3">
         <div class="col-12"><label class="form-label">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
           <input name="full_name" class="form-control" required value="<?= h($u['full_name']) ?>"></div>
-        <div class="col-12"><label class="form-label">ตำแหน่ง</label><input name="position" class="form-control" value="<?= h($u['position']) ?>"></div>
+        <div class="col-md-8"><label class="form-label">ตำแหน่ง</label><input name="position" class="form-control" value="<?= h($u['position']) ?>"></div>
+        <div class="col-md-4"><label class="form-label">ชื่อเล่น</label><input name="nickname" class="form-control" maxlength="50" value="<?= h($u['nickname'] ?? '') ?>"></div>
         <div class="col-12"><label class="form-label">กลุ่มงาน</label>
           <select name="work_group_id" class="form-select"><option value="">— ไม่ระบุ —</option>
             <?php foreach (work_groups() as $gid => $gname): ?><option value="<?= (int)$gid ?>" <?= (int)$u['work_group_id'] === (int)$gid ? 'selected' : '' ?>><?= h($gname) ?></option><?php endforeach; ?>

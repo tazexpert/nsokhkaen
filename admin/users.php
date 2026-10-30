@@ -33,8 +33,8 @@ $filterGroup = int_param('group');
 $where = [];
 $params = [];
 if ($q !== '') {
-    $where[] = '(u.username LIKE ? OR u.full_name LIKE ? OR u.position LIKE ?)';
-    array_push($params, "%$q%", "%$q%", "%$q%");
+    $where[] = '(u.username LIKE ? OR u.full_name LIKE ? OR u.position LIKE ? OR u.nickname LIKE ?)';
+    array_push($params, "%$q%", "%$q%", "%$q%", "%$q%");
 }
 if ($filterGroup > 0) {
     $where[] = 'u.work_group_id = ?';
@@ -64,6 +64,7 @@ $mods = modules();
 
 $pageTitle = 'ผู้ใช้งานและสิทธิ์';
 $active = 'users';
+$pageActions = '<a href="' . h(url('admin/staff.php')) . '" class="btn btn-outline-primary"><i class="bi bi-person-lines-fill"></i> บุคลากรทั้งหมด</a>';
 require APP_ROOT . '/core/layout/header.php';
 ?>
 <div class="card">

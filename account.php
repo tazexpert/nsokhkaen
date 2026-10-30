@@ -36,9 +36,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = 'กรุณากรอกชื่อ-นามสกุล';
         } else {
             $wg = int_param('work_group_id');
-            $pdo->prepare('UPDATE core_users SET full_name = ?, position = ?, work_group_id = ?, email = ?, phone = ? WHERE id = ?')
+            $pdo->prepare('UPDATE core_users SET full_name = ?, position = ?, work_group_id = ?, email = ?, phone = ?, nickname = ? WHERE id = ?')
                 ->execute([$fullName, post('position') ?: null, isset(work_groups()[$wg]) ? $wg : null,
-                           post('email') ?: null, post('phone') ?: null, $user['id']]);
+                           post('email') ?: null, post('phone') ?: null, mb_substr(post('nickname'), 0, 50) ?: null, $user['id']]);
             flash('บันทึกข้อมูลส่วนตัวเรียบร้อยแล้ว');
             redirect(url('account.php'));
         }
@@ -135,7 +135,8 @@ require APP_ROOT . '/core/layout/header.php';
       <div class="card-body row g-3">
         <?= csrf_field() ?><input type="hidden" name="action" value="profile">
         <div class="col-12"><label class="form-label">ชื่อ-นามสกุล</label><input name="full_name" class="form-control" required value="<?= h($user['full_name']) ?>"></div>
-        <div class="col-12"><label class="form-label">ตำแหน่ง <small class="text-muted">(พิมพ์ในเอกสาร เช่น ใบเบิกวัสดุ)</small></label><input name="position" class="form-control" value="<?= h($user['position']) ?>"></div>
+        <div class="col-md-8"><label class="form-label">ตำแหน่ง <small class="text-muted">(พิมพ์ในเอกสาร เช่น ใบเบิกวัสดุ)</small></label><input name="position" class="form-control" value="<?= h($user['position']) ?>"></div>
+        <div class="col-md-4"><label class="form-label">ชื่อเล่น</label><input name="nickname" class="form-control" maxlength="50" value="<?= h($user['nickname'] ?? '') ?>"></div>
         <div class="col-12"><label class="form-label">กลุ่มงาน</label>
           <select name="work_group_id" class="form-select"><option value="">— ไม่ระบุ —</option>
             <?php foreach (work_groups() as $gid => $gname): ?><option value="<?= (int)$gid ?>" <?= (int)$user['work_group_id'] === (int)$gid ? 'selected' : '' ?>><?= h($gname) ?></option><?php endforeach; ?>

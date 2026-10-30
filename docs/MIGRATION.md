@@ -250,6 +250,7 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 | `20261104_calendar_duty.sql` | ปฏิทิน: เวรสำนักงาน (`cal_events.kind`) |
 | `20261105_core_user_photo.sql` | รูปโปรไฟล์ผู้ใช้ (`core_users.photo`) |
 | `20261106_calendar_visibility.sql` | ปฏิทิน: กิจกรรมสาธารณะ / ส่วนตัว (`cal_events.visibility`) |
+| `20261107_core_user_nickname.sql` | ผู้ใช้งาน: ชื่อเล่น (`core_users.nickname`) |
 
 > ระบบเบิกวัสดุเดิมยังเปิดใช้อยู่? ก่อนเปิดใช้ระบบใหม่ให้ "ดึงข้อมูลรอบสุดท้าย" ตามหัวข้อด้านบน (`--resync-inventory`)
 
@@ -264,6 +265,7 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261104_calendar_duty.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261105_core_user_photo.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261106_calendar_visibility.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261107_core_user_nickname.sql
 ```
 
 หลังอัปเดต:

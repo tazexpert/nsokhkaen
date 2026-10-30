@@ -36,7 +36,7 @@ function current_user(bool $reload = false): ?array
     if (!$uid) {
         return null;
     }
-    $st = db()->prepare('SELECT u.id, u.username, u.full_name, u.position, u.email, u.phone, u.photo, u.is_superadmin, u.is_active,
+    $st = db()->prepare('SELECT u.id, u.username, u.full_name, u.position, u.email, u.phone, u.nickname, u.photo, u.is_superadmin, u.is_active,
                                 u.work_group_id, g.name AS work_group, u.notif_seen_at,
                                 (u.pin_hash IS NOT NULL) AS has_pin, (u.password_hash IS NOT NULL) AS has_password
                          FROM core_users u LEFT JOIN core_work_groups g ON g.id = u.work_group_id WHERE u.id = ?');

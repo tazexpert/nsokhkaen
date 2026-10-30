@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS core_users (
   position       VARCHAR(150) NULL,
   email          VARCHAR(150) NULL,
   phone          VARCHAR(50)  NULL,
+  nickname       VARCHAR(50)  NULL,                   -- ชื่อเล่น
   photo          VARCHAR(255) NULL,                   -- รูปโปรไฟล์ (uploads/avatars/...)
   pin_hash       VARCHAR(255) NULL,
   is_superadmin  TINYINT(1)   NOT NULL DEFAULT 0,   -- ผู้ดูแลระบบกลาง: จัดการผู้ใช้/สิทธิ์ และมีสิทธิ์สูงสุดทุกระบบ
