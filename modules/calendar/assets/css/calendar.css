@@ -137,3 +137,14 @@
   .whiteboard .wb-marker.black{display:none}
   .whiteboard .wb-marker.blue{right:120px}.whiteboard .wb-marker.red{right:20px}
 }
+/* ระยะห่างซ้าย-ขวาบนกระดาน ไม่ให้ชิดขอบ */
+.whiteboard .card-header{padding-left:28px;padding-right:28px}
+.whiteboard .wb-surface>.small.text-muted{padding-left:28px!important;padding-right:28px!important}
+.whiteboard .cal-table>:not(caption)>*>*{padding-left:.9rem;padding-right:.9rem}
+.whiteboard .cal-table tr>:first-child{padding-left:28px}
+.whiteboard .cal-table tr>:last-child{padding-right:28px}
+@media (max-width:575.98px){
+  .whiteboard .card-header,.whiteboard .wb-surface>.small.text-muted{padding-left:16px!important;padding-right:16px!important}
+  .whiteboard .cal-table tr>:first-child{padding-left:16px}
+  .whiteboard .cal-table tr>:last-child{padding-right:16px}
+}
