@@ -278,3 +278,5 @@ h1,h2,h3,h4,h5,.brand,.stat-num,.btn,.card-header,.nav-tabs{font-family:'Prompt'
 .js-reveal [data-reveal] .bar-fill{transform:scaleX(0);transform-origin:left center}
 .js-reveal .revealed-group .bar-fill{transform:none;transition:transform .9s cubic-bezier(.2,.8,.2,1) .45s}
 @media (prefers-reduced-motion:reduce){.js-reveal [data-reveal] .bar-fill{transform:none;transition:none}}
+/* ผู้ใช้งานและสิทธิ์: คอลัมน์ระบบกว้างเท่ากัน ข้อความสิทธิ์ยาวขึ้นบรรทัดใหม่ */
+.mod-col{width:104px;min-width:104px;max-width:104px;white-space:normal!important;overflow-wrap:break-word;line-height:1.25}

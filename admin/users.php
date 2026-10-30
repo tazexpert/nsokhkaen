@@ -92,7 +92,7 @@ require APP_ROOT . '/core/layout/header.php';
     <table class="table table-hover align-middle mb-0">
       <thead><tr>
         <th>ชื่อผู้ใช้ <i class="bi bi-sort-alpha-down"></i></th><th>ชื่อ-นามสกุล</th><th>กลุ่มงาน</th><th class="text-center">PIN</th>
-        <?php foreach ($mods as $m): /* หัวคอลัมน์ระบบ: แสดงเฉพาะโลโก้ (ชื่อระบบใน tooltip) */ ?><th class="text-center" title="<?= h($m['name']) ?>" data-bs-toggle="tooltip"><?= module_logo($m, 26) ?><span class="visually-hidden"><?= h($m['short']) ?></span></th><?php endforeach; ?>
+        <?php foreach ($mods as $m): /* หัวคอลัมน์ระบบ: แสดงเฉพาะโลโก้ (ชื่อระบบใน tooltip) */ ?><th class="text-center mod-col" title="<?= h($m['name']) ?>" data-bs-toggle="tooltip"><?= module_logo($m, 26) ?><span class="visually-hidden"><?= h($m['short']) ?></span></th><?php endforeach; ?>
         <th class="text-end"></th>
       </tr></thead>
       <tbody>
@@ -106,7 +106,7 @@ require APP_ROOT . '/core/layout/header.php';
           <td class="small"><?= $u['work_group'] ? h($u['work_group']) : '<span class="text-muted">-</span>' ?></td>
           <td class="text-center"><?= $u['has_pin'] ? '<i class="bi bi-check-circle-fill text-success"></i>' : '<span class="text-muted">-</span>' ?></td>
           <?php foreach ($mods as $m): $r = $u['is_superadmin'] && $m['superadmin_access'] ? top_role($m['key']) : ($roles[$u['id']][$m['key']] ?? null); ?>
-            <td class="small text-center"><?= $r ? h(role_short($m['key'], $r)) : ($m['default_role'] ? '<span class="text-muted">' . h(role_short($m['key'], $m['default_role'])) . ' (ทุกคน)</span>' : '<span class="text-muted">-</span>') ?></td>
+            <td class="small text-center mod-col"><?= $r ? h(role_short($m['key'], $r)) : ($m['default_role'] ? '<span class="text-muted">' . h(role_short($m['key'], $m['default_role'])) . ' <span class="text-nowrap">(ทุกคน)</span></span>' : '<span class="text-muted">-</span>') ?></td>
           <?php endforeach; ?>
           <td class="text-end text-nowrap">
             <a href="<?= h(url('admin/user_form.php?id=' . (int)$u['id'])) ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a>
