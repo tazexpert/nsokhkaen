@@ -50,7 +50,9 @@ require APP_ROOT . '/core/layout/header.php';
 </div>
 <style>
   @media print {
-    .staff-table { font-size: 12pt; }
+    .staff-table { font-size: 10pt; }                 /* พิมพ์: เล็กลง 2 ขนาด (เดิม 12pt) */
+    .staff-table > :not(caption) > * > * { padding-top: .25rem; padding-bottom: .25rem; }
+    h2.d-print-block { font-size: 12pt; }
     .staff-table a { color: inherit; }
     .card { box-shadow: none !important; border: 0; }
   }
