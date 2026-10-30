@@ -79,3 +79,8 @@ document.querySelectorAll('input[type=file][data-preview]').forEach(input => {
   }), { threshold: 0.12 });
   groups.forEach(g => io.observe(g));
 })();
+
+// tooltip ของ Bootstrap: องค์ประกอบที่มี data-bs-toggle="tooltip" (เช่น โลโก้ระบบในหัวตารางผู้ใช้งาน)
+if (typeof bootstrap !== 'undefined') {
+  document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
+}
