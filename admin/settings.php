@@ -2,12 +2,11 @@
 /**
  * ตั้งค่าระบบกลาง (ผู้ดูแลระบบกลาง)
  * - ล้างบันทึกการใช้งาน (core_audit_log): ใช้ตอนติดตั้งจริงหลังพัฒนา/ทดสอบเสร็จ — ทั้งหมด หรือเก็บไว้เฉพาะช่วงล่าสุด
- *   ต้องพิมพ์คำยืนยัน + รหัสผ่านของตนเอง · ดาวน์โหลด CSV เก็บไว้ก่อนได้ (?export=audit)
+ *   ยืนยันด้วย PIN ของตนเอง (ผู้ดูแลที่ยังไม่มี PIN ต้องตั้งที่บัญชีของฉันก่อน) · ดาวน์โหลด CSV เก็บไว้ก่อนได้ (?export=audit)
  */
 require_once __DIR__ . '/../core/bootstrap.php';
 require_superadmin();
 
-const AUDIT_RESET_WORD = 'ล้างบันทึก';
 $resetKeep = ['0' => 'ล้างทั้งหมด (เริ่มนับใหม่)', '30' => 'เก็บไว้ 30 วันล่าสุด', '90' => 'เก็บไว้ 90 วันล่าสุด', '365' => 'เก็บไว้ 1 ปีล่าสุด'];
 
 // ดาวน์โหลดบันทึกการใช้งานทั้งหมดเป็น CSV (เปิดด้วย Excel ได้ภาษาไทย)
@@ -35,17 +34,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'reset_audit') {
     check_csrf();
     $keep = post('keep', '0');
     $me = current_user();
-    $st = db()->prepare('SELECT password_hash FROM core_users WHERE id = ?');
+    $st = db()->prepare('SELECT pin_hash FROM core_users WHERE id = ?');
     $st->execute([$me['id']]);
     $hash = (string)$st->fetchColumn();
     if (!isset($resetKeep[$keep])) {
         $resetErrors[] = 'กรุณาเลือกขอบเขตการล้าง';
     }
-    if (trim(post('confirm_word')) !== AUDIT_RESET_WORD) {
-        $resetErrors[] = 'กรุณาพิมพ์คำว่า "' . AUDIT_RESET_WORD . '" ให้ถูกต้อง';
-    }
-    if ($hash === '' || !password_verify(post('password'), $hash)) {
-        $resetErrors[] = 'รหัสผ่านไม่ถูกต้อง';
+    $lock = $_SESSION['audit_reset_lock'] ?? ['n' => 0, 'until' => 0];   // ใส่ PIN ผิด 5 ครั้ง → พัก 15 นาที
+    if ($lock['until'] > time()) {
+        $resetErrors[] = 'ใส่ PIN ผิดหลายครั้ง กรุณารอ ' . ceil(($lock['until'] - time()) / 60) . ' นาทีแล้วลองใหม่';
+    } elseif ($hash === '') {
+        $resetErrors[] = 'บัญชีของคุณยังไม่ได้ตั้ง PIN — กรุณาตั้ง PIN ที่ "บัญชีของฉัน" ก่อน';
+    } elseif (!preg_match('/^\d{6}$/', post('pin')) || !password_verify(post('pin'), $hash)) {
+        $lock['n']++;
+        if ($lock['n'] >= 5) {
+            $lock = ['n' => 0, 'until' => time() + 900];
+        }
+        $_SESSION['audit_reset_lock'] = $lock;
+        $resetErrors[] = 'PIN ไม่ถูกต้อง';
+    } else {
+        unset($_SESSION['audit_reset_lock']);
     }
     if (!$resetErrors) {
         $pdo = db();
@@ -85,6 +93,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'reset_audit') {
     }
 }
 
+$st = db()->prepare('SELECT pin_hash IS NOT NULL AND pin_hash <> \'\' FROM core_users WHERE id = ?');
+$st->execute([current_user()['id']]);
+$hasPin = (bool)$st->fetchColumn();
 $auditInfo = db()->query('SELECT COUNT(*) n, MIN(created_at) first_at FROM core_audit_log')->fetch();
 
 $pageTitle = 'ตั้งค่าระบบ';
@@ -174,15 +185,18 @@ $dirs = array_map('basename', glob(APP_ROOT . '/modules/*', GLOB_ONLYDIR) ?: [])
         </div>
       </div>
       <div class="col-md-6">
-        <label class="form-label" for="resetWord">พิมพ์คำว่า <code><?= h(AUDIT_RESET_WORD) ?></code> เพื่อยืนยัน</label>
-        <input name="confirm_word" id="resetWord" class="form-control" autocomplete="off" required>
-        <label class="form-label mt-2" for="resetPass">รหัสผ่านของคุณ</label>
-        <input name="password" id="resetPass" type="password" class="form-control" autocomplete="current-password" required>
+        <label class="form-label" for="resetPin">PIN ของคุณ (6 หลัก) เพื่อยืนยัน</label>
+        <?php if ($hasPin): ?>
+          <input name="pin" id="resetPin" type="password" class="form-control font-monospace" inputmode="numeric" pattern="\d{6}" maxlength="6"
+                 autocomplete="off" required placeholder="ใส่ PIN 6 หลัก">
+        <?php else: ?>
+          <div class="alert alert-warning py-2 small mb-0">ยังไม่ได้ตั้ง PIN — <a href="<?= h(url('account.php?setup_pin=1')) ?>">ตั้ง PIN ที่บัญชีของฉัน</a> ก่อนจึงจะล้างบันทึกได้</div>
+        <?php endif; ?>
       </div>
     </div>
     <div class="small text-muted mt-3"><i class="bi bi-info-circle"></i> ล้างเฉพาะบันทึกการใช้งาน — ไม่กระทบผู้ใช้ สิทธิ์ และข้อมูลของระบบงานต่าง ๆ · ระบบจะบันทึกไว้ 1 รายการว่ามีการล้างโดยใคร เมื่อไร</div>
   </div>
-  <div class="card-footer"><button class="btn btn-danger"><i class="bi bi-trash3"></i> ล้างบันทึกการใช้งาน</button></div>
+  <div class="card-footer"><button class="btn btn-danger"<?= $hasPin ? '' : ' disabled' ?>><i class="bi bi-trash3"></i> ล้างบันทึกการใช้งาน</button></div>
 </form>
 <script>
   // ตัวเลือก "ล้างเวลาเข้าระบบล่าสุด" ใช้ได้เฉพาะการล้างทั้งหมด
