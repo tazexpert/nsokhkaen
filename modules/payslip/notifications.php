@@ -16,7 +16,7 @@ return function (array $user): array {
             $out[] = ['title' => 'สลิปเงินเดือนรออนุมัติ', 'icon' => 'bi-receipt-cutoff', 'color' => 'warning',
                       'text' => pay_period((int)$p['year'], (int)$p['month']) . ' · ' . $p['n'] . ' รายการ',
                       'href' => $base . 'slips.php?' . http_build_query(['status' => 'pending', 'year' => $p['year'], 'month' => $p['month']]),
-                      'time' => $p['t']];
+                      'time' => $p['t'], 'sticky' => true];
         }
     }
     $role = module_role('payslip', $user);
@@ -29,7 +29,7 @@ return function (array $user): array {
                       'text' => $c['code'] . ' ' . $c['full_name'] . ' · ' . pay_period((int)$c['year'], (int)$c['month'])
                           . ($n ? " · เสนอแก้ $n รายการ" : '') . ($c['message'] ? ' — ' . mb_strimwidth($c['message'], 0, 60, '…') : '')
                           . ($c['by_name'] ? ' (' . $c['by_name'] . ')' : ''),
-                      'href' => $base . 'slip_view.php?id=' . $c['slip_id'] . '#comments', 'time' => $c['created_at']];
+                      'href' => $base . 'slip_view.php?id=' . $c['slip_id'] . '#comments', 'time' => $c['created_at'], 'sticky' => true];
         }
     }
     if (in_array($role, ['approver', 'admin'], true)) {

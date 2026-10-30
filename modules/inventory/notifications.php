@@ -20,7 +20,7 @@ return function (array $user): array {
         foreach ($st as $l) {
             $out[] = ['title' => 'เกินกำหนดคืนครุภัณฑ์', 'icon' => 'bi-alarm', 'color' => 'danger',
                       'text' => $l['loan_no'] . ' · ' . $l['borrower_name'] . ' · กำหนดคืน ' . thai_date($l['due_date']),
-                      'href' => $base . 'loan_view.php?id=' . $l['id'], 'time' => date('Y-m-d 08:00:00', strtotime($l['due_date'] . ' +1 day'))];
+                      'href' => $base . 'loan_view.php?id=' . $l['id'], 'time' => date('Y-m-d 08:00:00', strtotime($l['due_date'] . ' +1 day')), 'sticky' => true];
         }
         // บันทึกการยืมใน 7 วันล่าสุด
         foreach ($pdo->query("SELECT l.*, ($itemCount) AS n FROM inv_loans l WHERE l.status = 'borrowed' AND l.created_at >= NOW() - INTERVAL 7 DAY ORDER BY l.created_at DESC LIMIT 10") as $l) {
@@ -36,7 +36,7 @@ return function (array $user): array {
             $out[] = ['title' => $pending ? 'ใบเบิกวัสดุ รออนุมัติ' : 'มีการเบิกวัสดุ', 'icon' => 'bi-receipt',
                       'color' => $pending ? 'warning' : 'info',
                       'text' => 'เลขที่ ' . $r['requisition_no'] . ' · ' . ($r['requester_name'] ?: $r['full_name']) . ' · ' . $r['n'] . ' รายการ',
-                      'href' => $base . 'requisition_view.php?id=' . $r['id'], 'time' => $r['created_at']];
+                      'href' => $base . 'requisition_view.php?id=' . $r['id'], 'time' => $r['created_at'], 'sticky' => $pending];
         }
         // วัสดุจากการเบิกใน 30 วันล่าสุด ที่หมด หรือเหลือไม่เกินจำนวนขั้นต่ำของวัสดุนั้น
         $st = $pdo->prepare("SELECT m.id, m.name, m.unit, m.stock_qty, m.min_stock, MAX(r.created_at) AS last_req
@@ -50,7 +50,7 @@ return function (array $user): array {
             $out[] = ['title' => $empty ? 'วัสดุหมดสต๊อก' : 'วัสดุใกล้หมด', 'icon' => $empty ? 'bi-exclamation-octagon' : 'bi-exclamation-triangle',
                       'color' => $empty ? 'danger' : 'warning',
                       'text' => $m['name'] . ' · คงเหลือ ' . (int)$m['stock_qty'] . ' ' . $m['unit'],
-                      'href' => $base . 'materials.php?filter=low_stock', 'time' => $m['last_req']];
+                      'href' => $base . 'materials.php?filter=low_stock', 'time' => $m['last_req'], 'sticky' => true];
         }
         return $out;
     }
@@ -66,11 +66,11 @@ return function (array $user): array {
         if ($l['due_date'] < $today) {
             $out[] = ['title' => 'เกินกำหนดคืนครุภัณฑ์', 'icon' => 'bi-alarm', 'color' => 'danger',
                       'text' => $l['loan_no'] . ' · กำหนดคืน ' . thai_date($l['due_date']) . ' กรุณาส่งคืน', 'href' => $href,
-                      'time' => date('Y-m-d 08:00:00', strtotime($l['due_date'] . ' +1 day'))];
+                      'time' => date('Y-m-d 08:00:00', strtotime($l['due_date'] . ' +1 day')), 'sticky' => true];
         } elseif ($l['due_date'] <= $soon) {
             $out[] = ['title' => 'ใกล้ถึงกำหนดคืนครุภัณฑ์', 'icon' => 'bi-calendar-event', 'color' => 'warning',
                       'text' => $l['loan_no'] . ' · กำหนดคืน ' . thai_date($l['due_date']), 'href' => $href,
-                      'time' => date('Y-m-d 08:00:00', strtotime($l['due_date'] . ' -2 days'))];
+                      'time' => date('Y-m-d 08:00:00', strtotime($l['due_date'] . ' -2 days')), 'sticky' => true];
         }
         if (strtotime($l['created_at']) >= strtotime('-14 days')) {
             $out[] = ['title' => 'บันทึกการยืมครุภัณฑ์ในชื่อของคุณ', 'icon' => 'bi-box-arrow-up-right', 'color' => 'primary',

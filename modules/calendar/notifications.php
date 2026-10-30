@@ -22,7 +22,7 @@ return function (array $user): array {
             $isToday = $e['event_date'] <= $today;
             $out[] = ['title' => ($isToday ? 'กิจกรรมวันนี้: ' : 'กิจกรรมพรุ่งนี้: ') . $e['title'], 'icon' => 'bi-alarm',
                       'color' => $isToday ? 'danger' : 'warning', 'text' => $when, 'href' => $href,
-                      'time' => max($e['assigned_at'], date('Y-m-d 06:00:00'))];
+                      'time' => max($e['assigned_at'], date('Y-m-d 06:00:00')), 'sticky' => true];
         } elseif (strtotime($e['assigned_at']) >= strtotime('-14 days')) {
             $out[] = ['title' => 'ได้รับมอบหมาย: ' . $e['title'], 'icon' => 'bi-calendar-check', 'color' => 'primary',
                       'text' => $when, 'href' => $href, 'time' => $e['assigned_at']];
