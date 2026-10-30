@@ -118,10 +118,16 @@ foreach ($widgets as $widget) {
 </script>
 
 <?php
-$links = [];
+// ลิงก์ที่เกี่ยวข้อง: เว็บภายนอก (เรียงตามนี้) ตามด้วยลิงก์ของแต่ละระบบ (เช่น เว็บไซต์ศูนย์ดิจิทัลชุมชน)
+$links = [
+    ['label' => 'สำนักงานสถิติจังหวัดขอนแก่น', 'url' => 'https://khonkaen.nso.go.th/', 'icon' => 'bi-building'],
+    ['label' => 'ระบบสารบรรณสำนักงานสถิติจังหวัดขอนแก่น', 'url' => 'https://nso.eoffice.go.th/', 'icon' => 'bi-envelope-paper'],
+    ['label' => 'ระบบสารบรรณจังหวัดขอนแก่น', 'url' => 'https://khonkaen.eoffice.go.th/', 'icon' => 'bi-envelope-paper'],
+    ['label' => 'Drive Province (ขอนแก่น)', 'url' => 'https://driveprovince.nso.go.th/', 'icon' => 'bi-cloud'],
+];
 foreach (modules() as $m) {
     foreach ($m['links'] as $l) {
-        $links[] = $l + ['module' => $m['key']];
+        $links[] = $l + ['url' => module_url($m['key'], $l['href'])];
     }
 }
 if ($links || $user['is_superadmin']): ?>
@@ -133,7 +139,7 @@ if ($links): ?>
   <div class="home-tool-title"><i class="bi bi-globe2"></i> ลิงก์ที่เกี่ยวข้อง</div>
   <div class="d-flex flex-wrap gap-2">
     <?php foreach ($links as $l): ?>
-      <a href="<?= h(module_url($l['module'], $l['href'])) ?>" target="_blank" class="btn btn-outline-secondary btn-sm">
+      <a href="<?= h($l['url']) ?>" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm">
         <i class="bi <?= h($l['icon'] ?? 'bi-box-arrow-up-right') ?>"></i> <?= h($l['label']) ?></a>
     <?php endforeach; ?>
   </div>

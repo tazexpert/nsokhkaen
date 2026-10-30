@@ -22,6 +22,6 @@ return [
         ['id' => 'site',       'label' => 'ดูหน้าเว็บไซต์',      'href' => 'public/',        'icon' => 'bi-box-arrow-up-right', 'role' => 'inspector', 'target' => '_blank'],
     ],
     'links' => [
-        ['label' => 'เว็บไซต์ศูนย์ดิจิทัลชุมชน (สาธารณะ)', 'href' => 'public/', 'icon' => 'bi-globe'],
+        ['label' => 'เว็บไซต์ศูนย์ดิจิทัลชุมชน', 'href' => 'public/', 'icon' => 'bi-globe'],
     ],
 ];
