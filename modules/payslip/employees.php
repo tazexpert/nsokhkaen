@@ -60,7 +60,7 @@ $emps = $pdo->query('SELECT e.*, u.full_name AS user_name, u.username, u.is_acti
         (SELECT COUNT(*) FROM pay_slips s WHERE s.employee_id = e.id) AS slip_count,
         (SELECT CONCAT(MAX(year * 100 + month)) FROM pay_slips s WHERE s.employee_id = e.id) AS last_period
     FROM pay_employees e LEFT JOIN core_users u ON u.id = e.user_id ORDER BY e.is_active DESC, e.code')->fetchAll();
-$users = $pdo->query('SELECT id, full_name, username FROM core_users WHERE is_active = 1 ORDER BY full_name')->fetchAll();
+$users = array_values(sort_staff($pdo->query('SELECT id, full_name, username, position FROM core_users WHERE is_active = 1')->fetchAll()));   // เรียงตามลำดับตำแหน่ง
 $unlinked = count(array_filter($emps, fn($e) => !$e['user_id'] && $e['is_active']));
 
 $active = 'employees';

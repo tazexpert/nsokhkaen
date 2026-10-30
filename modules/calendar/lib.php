@@ -21,23 +21,22 @@ function cal_can_edit(array $e): bool
 }
 
 /**
- * ประเภทบุคลากรจากตำแหน่ง: 'gov' = ข้าราชการ, 'emp' = พนักงาน, null = จ้างเหมาบริการ (ตำแหน่งอื่น)
- *   พนักงาน: พนักงานสถิติ, ผู้ช่วยพนักงานสถิติ
- *   ข้าราชการ: สถิติจังหวัด, นักวิชาการ…, ผู้อำนวยการ…, เจ้าพนักงาน…
+ * กลุ่มผู้รับผิดชอบจากตำแหน่ง (ดู staff_category() ใน core/helpers.php):
+ *   gov = ข้าราชการ (สถิติจังหวัด / ผู้อำนวยการ / นักวิชาการ… / เจ้าพนักงาน…) · emp = พนักงาน (พนักงานสถิติ / ผู้ช่วยพนักงานสถิติ)
+ *   contract = จ้างเหมาบริการ · driver = พนักงานขับรถ (ไม่นับรวมใน "ทุกคน")
  */
-function cal_staff_type(?string $position): ?string
+function cal_staff_type(?string $position): string
 {
-    $p = trim((string)$position);
-    if (preg_match('/^(ผู้ช่วย)?พนักงานสถิติ/u', $p)) {
-        return 'emp';
-    }
-    if (preg_match('/สถิติจังหวัด|^นักวิชาการ|^ผู้อำนวยการ|^เจ้าพนักงาน/u', $p)) {
-        return 'gov';
-    }
-    return null;
+    return match (staff_category($position)) {
+        'chief', 'dir1', 'dir2', 'dir3', 'dir', 'gov' => 'gov',
+        'emp', 'asst' => 'emp',
+        'driver'      => 'driver',
+        default       => 'contract',
+    };
 }
 
-const CAL_STAFF_LABEL = ['gov' => 'ข้าราชการ', 'emp' => 'พนักงาน', '' => 'จ้างเหมาบริการ'];
+const CAL_STAFF_LABEL = ['gov' => 'ข้าราชการ', 'emp' => 'พนักงาน', 'contract' => 'จ้างเหมาบริการ', 'driver' => 'พนักงานขับรถ'];
+const CAL_ALL_LABEL = 'เจ้าหน้าที่สำนักงานสถิติจังหวัดขอนแก่นทุกคน';
 
 /**
  * ผู้ใช้ที่เลือกเป็นผู้รับผิดชอบได้ [id => [id, full_name, position, type]]
@@ -48,10 +47,11 @@ function cal_users(): array
     static $users = null;
     if ($users === null) {
         $users = [];
-        foreach (db()->query('SELECT id, full_name, position FROM core_users WHERE is_active = 1 AND username REGEXP \'^[0-9]+$\' ORDER BY full_name') as $u) {
+        foreach (db()->query('SELECT id, username, full_name, position FROM core_users WHERE is_active = 1 AND username REGEXP \'^[0-9]+$\'') as $u) {
             $u['type'] = cal_staff_type($u['position']);
             $users[(int)$u['id']] = $u;
         }
+        $users = sort_staff($users);              // เรียงตามลำดับตำแหน่ง แล้วตามชื่อผู้ใช้
     }
     return $users;
 }
@@ -127,6 +127,16 @@ function cal_person_text(array $u): string
     return $name . (cal_show_position($u['position'] ?? '') ? ' (' . trim($u['position']) . ')' : '');
 }
 
+/** ผู้ใช้ในกลุ่ม: '*' = ทุกคน (ไม่รวมพนักงานขับรถ) · '*+driver' = ทุกคนรวมพนักงานขับรถ · หรือ gov / emp / contract / driver */
+function cal_group_ids(string $t): array
+{
+    return array_keys(array_filter(cal_users(), fn($u) => match ($t) {
+        '*'        => $u['type'] !== 'driver',
+        '*+driver' => true,
+        default    => $u['type'] === $t,
+    }));
+}
+
 /** สรุปผู้รับผิดชอบ: "เจ้าหน้าที่สำนักงานสถิติจังหวัดขอนแก่นทุกคน" / "ข้าราชการ" / "พนักงาน" หรือรายชื่อ */
 function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
 {
@@ -135,17 +145,21 @@ function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
     if (!$ids) {
         return '<span class="text-muted">-</span>';
     }
-    sort($ids);
-    $group = fn(?string $t) => array_keys(array_filter($users, fn($u) => $t === '*' || $u['type'] === $t));
-    foreach (['*' => 'เจ้าหน้าที่สำนักงานสถิติจังหวัดขอนแก่นทุกคน', 'gov' => 'ข้าราชการ', 'emp' => 'พนักงาน'] as $t => $label) {
-        $g = $group($t);
+    $sorted = $ids;
+    sort($sorted);
+    $hasDriver = (bool)cal_group_ids('driver');
+    $groups = ($hasDriver ? ['*+driver' => CAL_ALL_LABEL . ' + พนักงานขับรถ'] : [])
+        + ['*' => CAL_ALL_LABEL, 'gov' => 'ข้าราชการ', 'emp' => 'พนักงาน', 'contract' => 'จ้างเหมาบริการ', 'driver' => 'พนักงานขับรถ'];
+    foreach ($groups as $t => $label) {
+        $g = cal_group_ids($t);
         sort($g);
-        if ($g && $ids === $g) {
+        if ($g && $sorted === $g) {
             return '<span class="badge text-bg-primary text-wrap text-start" title="' . count($g) . ' คน">' . $label . '</span>'
                 . (in_array($meId, $ids, true) ? ' <span class="badge text-bg-warning">รวมคุณ</span>' : '');
         }
     }
-    usort($ids, fn($a, $b) => ($b === $meId) <=> ($a === $meId));      // ตัวเองขึ้นก่อน
+    $order = array_flip(array_keys($users));                            // เรียงตามลำดับตำแหน่ง (เหมือนหน้าบุคลากร)
+    usort($ids, fn($a, $b) => $order[$a] <=> $order[$b]);
     $chips = array_map(fn($id) => cal_show_position($users[$id]['position'])
         ? '<span class="cal-person pos' . ($id === $meId ? ' me' : '') . '">' . h(preg_replace('/\s+/u', ' ', trim($users[$id]['full_name']))) . ' <small>' . h(trim($users[$id]['position'])) . '</small></span>'
         : '<span class="cal-person' . ($id === $meId ? ' me' : '') . '">' . h($users[$id]['full_name']) . '</span>',
@@ -295,12 +309,16 @@ function cal_parse_people(string $v): array
             continue;
         }
         $k = preg_replace('/\s+/u', '', $p);
-        if (in_array($k, ['ทุกคน', 'ทั้งหมด', 'ทั้งสำนักงาน'], true)) {
-            $ids = array_merge($ids, array_keys($users));
+        if (in_array($k, ['ทุกคน', 'ทั้งหมด', 'ทั้งสำนักงาน'], true)) {          // ทุกคน = ไม่รวมพนักงานขับรถ
+            $ids = array_merge($ids, cal_group_ids('*'));
         } elseif (in_array($k, ['ข้าราชการ', 'ข้าราชการทุกคน'], true)) {
-            $ids = array_merge($ids, array_keys(array_filter($users, fn($u) => $u['type'] === 'gov')));
+            $ids = array_merge($ids, cal_group_ids('gov'));
         } elseif (in_array($k, ['พนักงาน', 'พนักงานทุกคน'], true)) {
-            $ids = array_merge($ids, array_keys(array_filter($users, fn($u) => $u['type'] === 'emp')));
+            $ids = array_merge($ids, cal_group_ids('emp'));
+        } elseif (in_array($k, ['จ้างเหมาบริการ', 'จ้างเหมา'], true)) {
+            $ids = array_merge($ids, cal_group_ids('contract'));
+        } elseif (in_array($k, ['พนักงานขับรถ', 'คนขับรถ'], true)) {
+            $ids = array_merge($ids, cal_group_ids('driver'));
         } elseif (isset($byName[$k]) && count(array_unique($byName[$k])) === 1) {
             $ids[] = $byName[$k][0];
         } elseif (isset($byUsername[mb_strtolower($p)])) {

@@ -96,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $signers = $pdo->query('SELECT * FROM pay_signers ORDER BY effective_ym DESC')->fetchAll();
-$users = $pdo->query('SELECT full_name, position FROM core_users WHERE is_active = 1 ORDER BY full_name')->fetchAll();
+$users = array_values(sort_staff($pdo->query('SELECT username, full_name, position FROM core_users WHERE is_active = 1')->fetchAll()));   // เรียงตามลำดับตำแหน่ง
 $by = (int)date('Y') + 543;
 $bm = (int)date('n');
 [$ny, $nm] = $bm === 12 ? [$by + 1, 1] : [$by, $bm + 1];

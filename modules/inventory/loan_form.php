@@ -164,7 +164,7 @@ foreach ($pdo->query("SELECT e.id, e.asset_no, e.brand, e.model, e.serial_number
     $choices[] = ['id' => $eid, 'asset_no' => $e['asset_no'] ?? '', 'type' => $e['type_name'] ?? '',
                   'label' => trim($e['brand'] . ' ' . $e['model']), 'serial' => $e['serial_number'] ?? '', 'fy' => $e['fiscal_year']];
 }
-$users = $pdo->query('SELECT id, full_name, position, phone FROM core_users WHERE is_active = 1 OR id = ' . (int)$loan['borrower_id'] . ' ORDER BY full_name')->fetchAll();
+$users = array_values(sort_staff($pdo->query('SELECT id, username, full_name, position, phone FROM core_users WHERE is_active = 1 OR id = ' . (int)$loan['borrower_id'])->fetchAll()));   // เรียงตามลำดับตำแหน่ง
 
 $pageTitle = $id ? 'แก้ไขรายการยืม ' . $loan['loan_no'] : 'บันทึกการยืมครุภัณฑ์';
 require __DIR__ . '/header.php';

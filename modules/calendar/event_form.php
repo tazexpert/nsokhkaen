@@ -163,14 +163,16 @@ require __DIR__ . '/header.php';
         <span class="badge text-bg-primary ms-2" id="selCount">0</span></div>
       <div class="card-body">
         <div class="d-flex flex-wrap gap-1 mb-2">
-          <button type="button" class="btn btn-sm btn-outline-primary" data-add="*"><i class="bi bi-people-fill"></i> เพิ่มทั้งหมด</button>
+          <button type="button" class="btn btn-sm btn-outline-primary" data-add="*" title="ไม่รวมพนักงานขับรถ"><i class="bi bi-people-fill"></i> เพิ่มทั้งหมด</button>
           <button type="button" class="btn btn-sm btn-outline-primary" data-add="gov"><i class="bi bi-person-badge"></i> เพิ่มข้าราชการ</button>
           <button type="button" class="btn btn-sm btn-outline-primary" data-add="emp"><i class="bi bi-person-vcard"></i> เพิ่มพนักงาน</button>
+          <?php if (cal_group_ids('contract')): ?><button type="button" class="btn btn-sm btn-outline-primary" data-add="contract"><i class="bi bi-person-workspace"></i> เพิ่มจ้างเหมาบริการ</button><?php endif; ?>
+          <?php if (cal_group_ids('driver')): ?><button type="button" class="btn btn-sm btn-outline-primary" data-add="driver"><i class="bi bi-car-front"></i> เพิ่มพนักงานขับรถ</button><?php endif; ?>
           <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" data-clear><i class="bi bi-x-lg"></i> ล้าง</button>
         </div>
         <input type="search" class="form-control form-control-sm mb-2" id="userSearch" placeholder="ค้นหาชื่อ / ตำแหน่ง">
         <div class="cal-userpick border rounded" id="userPick">
-          <?php foreach (['gov', 'emp', ''] as $t): $list = array_filter($users, fn($u) => (string)$u['type'] === $t); if (!$list) continue; ?>
+          <?php foreach (array_keys(CAL_STAFF_LABEL) as $t): $list = array_filter($users, fn($u) => $u['type'] === $t); if (!$list) continue; ?>
             <div class="grp"><?= CAL_STAFF_LABEL[$t] ?> <span class="text-muted fw-normal">(<?= count($list) ?>)</span></div>
             <?php foreach ($list as $u): ?>
               <label class="opt" data-type="<?= h((string)$u['type']) ?>" data-text="<?= h(mb_strtolower($u['full_name'] . ' ' . $u['position'])) ?>">
@@ -180,7 +182,7 @@ require __DIR__ . '/header.php';
             <?php endforeach; ?>
           <?php endforeach; ?>
         </div>
-        <div class="form-text">ข้าราชการ = สถิติจังหวัด / นักวิชาการ… / ผู้อำนวยการ… / เจ้าพนักงาน… · พนักงาน = พนักงานสถิติ / ผู้ช่วยพนักงานสถิติ (แยกตามตำแหน่งในบัญชีผู้ใช้)</div>
+        <div class="form-text">ข้าราชการ = สถิติจังหวัด / ผู้อำนวยการ… / นักวิชาการ… / เจ้าพนักงาน… · พนักงาน = พนักงานสถิติ / ผู้ช่วยพนักงานสถิติ · พนักงานขับรถ ไม่นับรวมใน "เพิ่มทั้งหมด" (แยกตามตำแหน่งในบัญชีผู้ใช้)</div>
       </div>
     </div>
   </div>
@@ -205,7 +207,7 @@ require __DIR__ . '/header.php';
   };
   document.querySelectorAll('[data-add]').forEach(btn => btn.addEventListener('click', () => {
     const t = btn.dataset.add;
-    document.querySelectorAll('#userPick .opt').forEach(o => { if (t === '*' || o.dataset.type === t) o.querySelector('input').checked = true; });
+    document.querySelectorAll('#userPick .opt').forEach(o => { if ((t === '*' && o.dataset.type !== 'driver') || o.dataset.type === t) o.querySelector('input').checked = true; });
     count();
   }));
   document.querySelector('[data-clear]').addEventListener('click', () => { boxes().forEach(b => b.checked = false); count(); });

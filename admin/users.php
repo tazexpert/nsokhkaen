@@ -48,14 +48,13 @@ if ($filterModule === 'none') {
     $where[] = '(' . (module_def($filterModule)['superadmin_access'] ? 'u.is_superadmin = 1 OR ' : '') . 'EXISTS (SELECT 1 FROM core_user_roles r WHERE r.user_id = u.id AND r.module_key = ?))';
     $params[] = $filterModule;
 }
-// เรียงตามชื่อผู้ใช้: ขึ้นต้นด้วยตัวเลขก่อน (เรียงแบบตัวเลข) แล้วตามด้วยตัวอักษร ผู้ที่ไม่มีชื่อผู้ใช้อยู่ท้ายสุด
+// เรียงตามลำดับตำแหน่ง (สถิติจังหวัด → ผู้อำนวยการกลุ่ม → ข้าราชการ → พนักงาน → ผู้ช่วย → จ้างเหมา → พนักงานขับรถ) แล้วตามชื่อผู้ใช้
+// บัญชีที่ชื่อผู้ใช้ไม่ใช่ตัวเลข (ผู้ดูแลจากภายนอก) อยู่ท้ายสุด — ดู staff_sort_key()
 $st = $pdo->prepare('SELECT u.*, (u.pin_hash IS NOT NULL) AS has_pin, g.name AS work_group
     FROM core_users u LEFT JOIN core_work_groups g ON g.id = u.work_group_id'
-    . ($where ? ' WHERE ' . implode(' AND ', $where) : '')
-    . " ORDER BY u.username IS NULL, u.username REGEXP '^[0-9]' DESC,
-               CASE WHEN u.username REGEXP '^[0-9]+$' THEN CAST(u.username AS UNSIGNED) END, u.username, u.full_name");
+    . ($where ? ' WHERE ' . implode(' AND ', $where) : ''));
 $st->execute($params);
-$users = $st->fetchAll();
+$users = array_values(sort_staff($st->fetchAll()));
 $roles = [];
 foreach ($pdo->query('SELECT user_id, module_key, role FROM core_user_roles') as $r) {
     $roles[$r['user_id']][$r['module_key']] = $r['role'];

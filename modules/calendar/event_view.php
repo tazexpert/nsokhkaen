@@ -18,7 +18,8 @@ if (!$e) {
     redirect('index.php');
 }
 $users = cal_users();
-$ids = array_values(array_filter(cal_assignees([(int)$e['id']])[(int)$e['id']] ?? [], fn($id) => isset($users[$id])));   // เฉพาะเจ้าหน้าที่
+$assignedIds = cal_assignees([(int)$e['id']])[(int)$e['id']] ?? [];
+$ids = array_values(array_filter(array_keys($users), fn($id) => in_array($id, $assignedIds, true)));   // เฉพาะเจ้าหน้าที่ เรียงตามลำดับตำแหน่ง
 $link = cal_safe_link($e['link']);
 $active = 'month';
 $pageTitle = $e['title'];

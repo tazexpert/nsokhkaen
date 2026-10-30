@@ -364,3 +364,50 @@ function parse_date_flexible(string $v): ?string
     }
     return checkdate((int)$m, (int)$d, $y) ? sprintf('%04d-%02d-%02d', $y, $m, $d) : null;
 }
+
+/* ---------- ลำดับบุคลากร (ใช้ทุกหน้าที่แสดงรายชื่อบุคลากร) ---------- */
+
+/**
+ * ประเภทบุคลากรจากตำแหน่ง:
+ *   chief = สถิติจังหวัด · dir1/dir2/dir3 = ผู้อำนวยการกลุ่ม (วิชาการฯ / ปฏิบัติการฯ / ขับเคลื่อนงานด้านดิจิทัล) · dir = ผู้อำนวยการอื่น
+ *   gov = ข้าราชการอื่น (นักวิชาการ… / เจ้าพนักงาน…) · emp = พนักงานสถิติ · asst = ผู้ช่วยพนักงานสถิติ
+ *   driver = พนักงานขับรถ · contract = จ้างเหมาบริการ (ตำแหน่งอื่นทั้งหมด)
+ */
+function staff_category(?string $position): string
+{
+    $p = preg_replace('/\s+/u', '', (string)$position);
+    return match (true) {
+        str_contains($p, 'พนักงานขับรถ')                         => 'driver',
+        (bool)preg_match('/^สถิติจังหวัด/u', $p)                 => 'chief',
+        str_contains($p, 'ผู้อำนวยการกลุ่มวิชาการสถิติและวางแผน')    => 'dir1',
+        str_contains($p, 'ผู้อำนวยการกลุ่มปฏิบัติการสถิติและดิจิทัล')   => 'dir2',
+        str_contains($p, 'ผู้อำนวยการกลุ่มขับเคลื่อนงานด้านดิจิทัล')   => 'dir3',
+        (bool)preg_match('/^ผู้อำนวยการ/u', $p)                  => 'dir',
+        (bool)preg_match('/^ผู้ช่วยพนักงานสถิติ/u', $p)              => 'asst',
+        (bool)preg_match('/^พนักงานสถิติ/u', $p)                  => 'emp',
+        (bool)preg_match('/^(นักวิชาการ|เจ้าพนักงาน)/u', $p)        => 'gov',
+        default                                                => 'contract',
+    };
+}
+
+/**
+ * ลำดับการแสดงบุคลากร: 1 สถิติจังหวัด · 2–4 ผู้อำนวยการกลุ่ม (วิชาการฯ, ปฏิบัติการฯ, ขับเคลื่อนฯ) · 5 ข้าราชการ
+ * · 6 พนักงานสถิติ · 7 ผู้ช่วยพนักงานสถิติ · 8 จ้างเหมาบริการ · 9 พนักงานขับรถ — ภายในกลุ่มเรียงตามชื่อผู้ใช้ (ตัวเลข)
+ * บัญชีที่ชื่อผู้ใช้ไม่ใช่ตัวเลข (ผู้ดูแลจากภายนอก) อยู่ท้ายสุด
+ */
+function staff_sort_key(array $u): array
+{
+    static $rank = ['chief' => 1, 'dir1' => 2, 'dir2' => 3, 'dir3' => 4, 'dir' => 4.5, 'gov' => 5,
+                    'emp' => 6, 'asst' => 7, 'contract' => 8, 'driver' => 9];
+    $username = (string)($u['username'] ?? '');
+    $numeric = preg_match('/^\d+$/', $username) === 1;
+    return [$numeric ? 0 : 1, $rank[staff_category($u['position'] ?? '')], $numeric ? (int)$username : PHP_INT_MAX,
+            $username, (string)($u['full_name'] ?? '')];
+}
+
+/** เรียงรายชื่อบุคลากรตามลำดับตำแหน่ง (คงคีย์เดิมของ array) */
+function sort_staff(array $users): array
+{
+    uasort($users, fn($a, $b) => staff_sort_key($a) <=> staff_sort_key($b));
+    return $users;
+}

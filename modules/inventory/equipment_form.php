@@ -112,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $types = equipment_types();
-$users = $pdo->query('SELECT id, full_name FROM core_users WHERE is_active = 1 OR id = ' . (int)$e['assigned_user_id'] . ' ORDER BY full_name')->fetchAll(PDO::FETCH_KEY_PAIR);
+$users = array_column(sort_staff($pdo->query('SELECT id, username, full_name, position FROM core_users WHERE is_active = 1 OR id = ' . (int)$e['assigned_user_id'])->fetchAll()), 'full_name', 'id');   // [id => ชื่อ] เรียงตามลำดับตำแหน่ง
 $locations = $pdo->query('SELECT name FROM inv_storage_locations ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
 $pageTitle = $id ? 'แก้ไขครุภัณฑ์' : 'เพิ่มครุภัณฑ์';
 require __DIR__ . '/header.php';

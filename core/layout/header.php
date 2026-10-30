@@ -95,6 +95,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
         <ul class="dropdown-menu dropdown-menu-end shadow">
           <li class="dropdown-header d-flex align-items-center gap-2"><?= user_avatar($user, 40) ?><span><?= h($user['full_name']) ?><?php if ($user['username']): ?><br><small class="font-monospace"><?= h($user['username']) ?></small><?php endif; ?></span></li>
           <li><a class="dropdown-item<?= $navActive(!$module && $active === 'account') ?>" href="<?= h(url('account.php')) ?>"><i class="bi bi-person-gear"></i> บัญชีของฉัน</a></li>
+          <li><a class="dropdown-item<?= $navActive(!$module && $active === 'staff') ?>" href="<?= h(url('staff.php')) ?>"><i class="bi bi-people"></i> บุคลากรสถิติขอนแก่น</a></li>
           <li><a class="dropdown-item" href="<?= h(url('index.php#arrange')) ?>"><i class="bi bi-arrows-move"></i> จัดเรียงเมนูระบบ</a></li>
           <li><hr class="dropdown-divider"></li>
           <li><a class="dropdown-item text-danger" href="<?= h(url('logout.php')) ?>"><i class="bi bi-box-arrow-right"></i> <?= $user['via_pin'] ? 'เปลี่ยนผู้ใช้' : 'ออกจากระบบ' ?></a></li>
@@ -118,9 +119,6 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
     <div class="collapse navbar-collapse" id="mainNav">
       <ul class="navbar-nav me-auto">
         <li class="nav-item"><a class="nav-link<?= $navActive(!$module && $active === 'home') ?>" href="<?= h(url('index.php')) ?>"><i class="bi bi-house-door"></i> หน้าหลัก</a></li>
-        <?php if ($user): /* สมุดรายชื่อบุคลากร — ทุกคนที่ login */ ?>
-          <li class="nav-item"><a class="nav-link<?= $navActive(!$module && $active === 'staff') ?>" href="<?= h(url('staff.php')) ?>" title="บุคลากรสถิติขอนแก่น"><i class="bi bi-people"></i> บุคลากร</a></li>
-        <?php endif; ?>
         <?php foreach ($navMain as $__m): $__isCur = $module === $__m['key']; ?>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle<?= $navActive($__isCur) ?>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">

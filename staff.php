@@ -1,7 +1,7 @@
 <?php
 /**
- * บุคลากรสถิติขอนแก่น (ทุกคนที่ login เห็นได้ — เมนูบนแถบด้านบน): ชื่อ-สกุล ชื่อเล่น ตำแหน่ง เบอร์โทรศัพท์
- * เฉพาะเจ้าหน้าที่ (ชื่อผู้ใช้เป็นตัวเลข) ที่เปิดใช้งาน · เรียงตามชื่อผู้ใช้ แต่ไม่แสดงชื่อผู้ใช้ · ค้นหา / พิมพ์ได้
+ * บุคลากรสถิติขอนแก่น (ทุกคนที่ login เห็นได้ — เมนูบัญชีผู้ใช้ ใต้ "บัญชีของฉัน"): ชื่อ-สกุล ชื่อเล่น ตำแหน่ง เบอร์โทรศัพท์
+ * เฉพาะเจ้าหน้าที่ (ชื่อผู้ใช้เป็นตัวเลข) ที่เปิดใช้งาน · เรียงตามตำแหน่ง (staff_sort_key) แล้วตามชื่อผู้ใช้ · ค้นหา / พิมพ์ได้
  */
 require_once __DIR__ . '/core/bootstrap.php';
 require_login();
@@ -12,11 +12,9 @@ if ($q !== '') {
     $where[] = '(u.full_name LIKE ? OR u.position LIKE ? OR u.phone LIKE ? OR u.nickname LIKE ?)';
     array_push($params, ...array_fill(0, 4, "%$q%"));
 }
-$st = db()->prepare('SELECT u.full_name, u.position, u.phone, u.nickname FROM core_users u WHERE ' . implode(' AND ', $where)
-    . " ORDER BY u.username IS NULL, u.username REGEXP '^[0-9]' DESC,
-               CASE WHEN u.username REGEXP '^[0-9]+$' THEN CAST(u.username AS UNSIGNED) END, u.username, u.full_name");
+$st = db()->prepare('SELECT u.username, u.full_name, u.position, u.phone, u.nickname FROM core_users u WHERE ' . implode(' AND ', $where));
 $st->execute($params);
-$staff = $st->fetchAll();
+$staff = array_values(sort_staff($st->fetchAll()));     // เรียงตามลำดับตำแหน่ง แล้วตามชื่อผู้ใช้ (ไม่แสดงชื่อผู้ใช้)
 
 $pageTitle = 'บุคลากรสถิติขอนแก่น';
 $active = 'staff';
