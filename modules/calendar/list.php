@@ -10,7 +10,8 @@ if ($to < $from) {
 }
 $guest = !empty($me['is_guest']);            // ผู้เยี่ยมชม: ดูได้อย่างเดียว ไม่มี "งานของฉัน"
 $mine = !$guest && !empty($_GET['mine']);
-$events = cal_events_between($from, $to, $mine ? $me['id'] : null);
+$duty = !empty($_GET['duty']);              // ค่าเริ่มต้นไม่แสดงเวรสำนักงาน (เลือกแสดงได้)
+$events = cal_events_between($from, $to, $mine ? $me['id'] : null, $duty);
 
 $active = $mine ? 'mine' : 'list';
 $pageTitle = $mine ? 'งานของฉัน' : 'ตารางกิจกรรม';
@@ -26,6 +27,8 @@ require __DIR__ . '/header.php';
       <div class="col-auto"><input type="date" name="to" class="form-control form-control-sm" value="<?= h($to) ?>"></div>
       <div class="col-auto<?= $guest ? ' d-none' : '' ?>"><div class="form-check"><input class="form-check-input" type="checkbox" name="mine" value="1" id="mine" <?= $mine ? 'checked' : '' ?>>
         <label class="form-check-label" for="mine">เฉพาะงานของฉัน</label></div></div>
+      <div class="col-auto"><div class="form-check"><input class="form-check-input" type="checkbox" name="duty" value="1" id="duty" <?= $duty ? 'checked' : '' ?> onchange="this.form.submit()">
+        <label class="form-check-label" for="duty">แสดงเวรสำนักงาน</label></div></div>
       <div class="col-auto"><button class="btn btn-sm btn-outline-secondary"><i class="bi bi-search"></i> แสดง</button></div>
       <div class="col-auto ms-auto"><button type="button" class="btn btn-sm btn-light" onclick="window.print()"><i class="bi bi-printer"></i> พิมพ์</button></div>
     </form>
