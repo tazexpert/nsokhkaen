@@ -1,13 +1,70 @@
 <?php
-/** ตั้งค่าระบบกลาง (ผู้ดูแลระบบกลาง) */
+/**
+ * ตั้งค่าระบบกลาง (ผู้ดูแลระบบกลาง)
+ * - ล้างบันทึกการใช้งาน (core_audit_log): ใช้ตอนติดตั้งจริงหลังพัฒนา/ทดสอบเสร็จ — ทั้งหมด หรือเก็บไว้เฉพาะช่วงล่าสุด
+ *   ต้องพิมพ์คำยืนยัน + รหัสผ่านของตนเอง · ดาวน์โหลด CSV เก็บไว้ก่อนได้ (?export=audit)
+ */
 require_once __DIR__ . '/../core/bootstrap.php';
 require_superadmin();
 
+const AUDIT_RESET_WORD = 'ล้างบันทึก';
+$resetKeep = ['0' => 'ล้างทั้งหมด (เริ่มนับใหม่)', '30' => 'เก็บไว้ 30 วันล่าสุด', '90' => 'เก็บไว้ 90 วันล่าสุด', '365' => 'เก็บไว้ 1 ปีล่าสุด'];
+
+// ดาวน์โหลดบันทึกการใช้งานทั้งหมดเป็น CSV (เปิดด้วย Excel ได้ภาษาไทย)
+if (($_GET['export'] ?? '') === 'audit') {
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="audit_log_' . date('Ymd_His') . '.csv"');
+    $out = fopen('php://output', 'w');
+    fwrite($out, "\xEF\xBB\xBF");
+    fputcsv($out, ['id', 'เวลา', 'ชื่อผู้ใช้', 'ชื่อ-สกุล', 'ระบบ', 'การกระทำ', 'รายละเอียด', 'IP']);
+    $st = db()->query('SELECT a.id, a.created_at, u.username, u.full_name, a.module_key, a.action, a.detail, a.ip
+                       FROM core_audit_log a LEFT JOIN core_users u ON u.id = a.user_id ORDER BY a.id');
+    while ($r = $st->fetch(PDO::FETCH_NUM)) {
+        fputcsv($out, $r);
+    }
+    fclose($out);
+    exit;
+}
+
 $errors = [];
+$resetErrors = [];
 $appName = APP_NAME;
 $orgName = ORG_NAME;
 $appUrl = APP_URL;
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'reset_audit') {
+    check_csrf();
+    $keep = post('keep', '0');
+    $me = current_user();
+    $st = db()->prepare('SELECT password_hash FROM core_users WHERE id = ?');
+    $st->execute([$me['id']]);
+    $hash = (string)$st->fetchColumn();
+    if (!isset($resetKeep[$keep])) {
+        $resetErrors[] = 'กรุณาเลือกขอบเขตการล้าง';
+    }
+    if (trim(post('confirm_word')) !== AUDIT_RESET_WORD) {
+        $resetErrors[] = 'กรุณาพิมพ์คำว่า "' . AUDIT_RESET_WORD . '" ให้ถูกต้อง';
+    }
+    if ($hash === '' || !password_verify(post('password'), $hash)) {
+        $resetErrors[] = 'รหัสผ่านไม่ถูกต้อง';
+    }
+    if (!$resetErrors) {
+        $pdo = db();
+        if ($keep === '0') {
+            $n = (int)$pdo->query('SELECT COUNT(*) FROM core_audit_log')->fetchColumn();
+            $pdo->exec('TRUNCATE TABLE core_audit_log');                  // ล้างทั้งหมด + เลขลำดับเริ่มใหม่
+            if (post('reset_last_login')) {
+                $pdo->exec('UPDATE core_users SET last_login_at = NULL');   // สถิติ "เข้าระบบล่าสุด" เริ่มใหม่
+            }
+        } else {
+            $st = $pdo->prepare('DELETE FROM core_audit_log WHERE created_at < ?');
+            $st->execute([date('Y-m-d 00:00:00', strtotime('-' . ((int)$keep - 1) . ' days'))]);
+            $n = $st->rowCount();
+        }
+        audit_log('audit_reset', $resetKeep[$keep] . ' — ลบ ' . number_format($n) . ' รายการ');
+        flash('ล้างบันทึกการใช้งานแล้ว ' . number_format($n) . ' รายการ');
+        redirect(url('admin/settings.php'));
+    }
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
     $appName = post('app_name');
     $orgName = post('org_name');
@@ -27,6 +84,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect(url('admin/settings.php'));
     }
 }
+
+$auditInfo = db()->query('SELECT COUNT(*) n, MIN(created_at) first_at FROM core_audit_log')->fetch();
 
 $pageTitle = 'ตั้งค่าระบบ';
 $active = 'settings';
@@ -94,6 +153,46 @@ require APP_ROOT . '/core/layout/header.php';
 $opc = function_exists('opcache_get_status') ? @opcache_get_status(false) : false;
 $dirs = array_map('basename', glob(APP_ROOT . '/modules/*', GLOB_ONLYDIR) ?: []);
 ?>
+<form method="post" class="card mt-3 border-danger" style="max-width:760px" id="resetAuditForm"
+      onsubmit="return confirm('ยืนยันล้างบันทึกการใช้งาน? ข้อมูลที่ลบแล้วกู้คืนไม่ได้')">
+  <?= csrf_field() ?><input type="hidden" name="action" value="reset_audit">
+  <div class="card-header text-danger"><strong><i class="bi bi-trash3"></i> ล้างบันทึกการใช้งาน (reset log)</strong></div>
+  <div class="card-body">
+    <?php if ($resetErrors): ?><div class="alert alert-danger py-2"><?= implode('<br>', array_map('h', $resetErrors)) ?></div><?php endif; ?>
+    <p class="small text-muted mb-3">ใช้ตอนเริ่มใช้งานจริงหลังพัฒนา/ทดสอบเสร็จ เพื่อลบบันทึกการทดสอบออก ให้สถิติการเข้าใช้งานเริ่มนับใหม่
+      — ปัจจุบันมี <b><?= number_format((int)$auditInfo['n']) ?></b> รายการ<?= $auditInfo['first_at'] ? ' ตั้งแต่ ' . h(thai_date($auditInfo['first_at'])) : '' ?>
+      · <a href="<?= h(url('admin/settings.php?export=audit')) ?>"><i class="bi bi-download"></i> ดาวน์โหลดเก็บไว้ก่อน (CSV)</a></p>
+    <div class="row g-3">
+      <div class="col-md-6">
+        <label class="form-label" for="resetKeep">ขอบเขต</label>
+        <select name="keep" id="resetKeep" class="form-select">
+          <?php foreach ($resetKeep as $k => $label): ?><option value="<?= $k ?>"<?= post('keep', '0') === (string)$k ? ' selected' : '' ?>><?= h($label) ?></option><?php endforeach; ?>
+        </select>
+        <div class="form-check mt-2" id="resetLastLoginWrap">
+          <input class="form-check-input" type="checkbox" name="reset_last_login" value="1" id="resetLastLogin" checked>
+          <label class="form-check-label small" for="resetLastLogin">ล้าง "เวลาเข้าระบบล่าสุด" ของผู้ใช้ทุกคนด้วย</label>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <label class="form-label" for="resetWord">พิมพ์คำว่า <code><?= h(AUDIT_RESET_WORD) ?></code> เพื่อยืนยัน</label>
+        <input name="confirm_word" id="resetWord" class="form-control" autocomplete="off" required>
+        <label class="form-label mt-2" for="resetPass">รหัสผ่านของคุณ</label>
+        <input name="password" id="resetPass" type="password" class="form-control" autocomplete="current-password" required>
+      </div>
+    </div>
+    <div class="small text-muted mt-3"><i class="bi bi-info-circle"></i> ล้างเฉพาะบันทึกการใช้งาน — ไม่กระทบผู้ใช้ สิทธิ์ และข้อมูลของระบบงานต่าง ๆ · ระบบจะบันทึกไว้ 1 รายการว่ามีการล้างโดยใคร เมื่อไร</div>
+  </div>
+  <div class="card-footer"><button class="btn btn-danger"><i class="bi bi-trash3"></i> ล้างบันทึกการใช้งาน</button></div>
+</form>
+<script>
+  // ตัวเลือก "ล้างเวลาเข้าระบบล่าสุด" ใช้ได้เฉพาะการล้างทั้งหมด
+  (() => {
+    const sel = document.getElementById('resetKeep'), wrap = document.getElementById('resetLastLoginWrap');
+    const sync = () => wrap.classList.toggle('d-none', sel.value !== '0');
+    sel.addEventListener('change', sync); sync();
+  })();
+</script>
+
 <details class="card mt-3" style="max-width:760px">
   <summary class="card-header"><strong><i class="bi bi-wrench"></i> ข้อมูลตรวจสอบการติดตั้ง</strong></summary>
   <div class="card-body small">
