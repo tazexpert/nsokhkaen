@@ -105,7 +105,9 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
     </div>
     <?php else: /* ผู้เยี่ยมชม: ปุ่มเข้าสู่ระบบ */ ?>
     <div class="d-flex align-items-center gap-1 order-xl-last ms-auto">
+      <?php if (!(!$module && $active === 'home')): /* หน้าหลักมีปุ่มเข้าสู่ระบบในส่วนทักทายแล้ว */ ?>
       <a href="<?= h(url('login.php')) ?>" class="btn btn-light btn-login" data-login-modal><i class="bi bi-box-arrow-in-right"></i> <span class="d-none d-sm-inline">เข้าสู่ระบบ</span></a>
+      <?php endif; ?>
       <button class="navbar-toggler ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="เมนู">
         <span class="navbar-toggler-icon"></span>
       </button>
