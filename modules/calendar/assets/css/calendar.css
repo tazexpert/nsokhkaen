@@ -147,3 +147,5 @@
   .whiteboard .cal-table tr>:first-child{padding-left:16px}
   .whiteboard .cal-table tr>:last-child{padding-right:16px}
 }
+/* หัวตาราง (เวลา · กิจกรรม · สถานที่ · ผู้รับผิดชอบ · ลิงก์/หมายเหตุ): เส้นครอบบน-ล่าง */
+.whiteboard .cal-table thead th{border-top:3px solid var(--wb-ink)!important;border-bottom:3px solid var(--wb-ink)!important}
