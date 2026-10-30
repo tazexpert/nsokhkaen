@@ -95,6 +95,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
         <ul class="dropdown-menu dropdown-menu-end shadow">
           <li class="dropdown-header d-flex align-items-center gap-2"><?= user_avatar($user, 40) ?><span><?= h($user['full_name']) ?><?php if ($user['username']): ?><br><small class="font-monospace"><?= h($user['username']) ?></small><?php endif; ?></span></li>
           <li><a class="dropdown-item<?= $navActive(!$module && $active === 'account') ?>" href="<?= h(url('account.php')) ?>"><i class="bi bi-person-gear"></i> บัญชีของฉัน</a></li>
+          <li><a class="dropdown-item<?= $navActive(!$module && $active === 'notebook') ?>" href="<?= h(url('notebook.php')) ?>"><i class="bi bi-journal-bookmark"></i> สมุดบันทึก</a></li>
           <li><a class="dropdown-item<?= $navActive(!$module && $active === 'staff') ?>" href="<?= h(url('staff.php')) ?>"><i class="bi bi-people"></i> บุคลากรสถิติขอนแก่น</a></li>
           <li><a class="dropdown-item" href="<?= h(url('index.php#arrange')) ?>"><i class="bi bi-arrows-move"></i> จัดเรียงเมนูระบบ</a></li>
           <li><hr class="dropdown-divider"></li>

@@ -90,6 +90,16 @@ CREATE TABLE IF NOT EXISTS core_settings (
   updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- สมุดบันทึกส่วนตัวของแต่ละคน (เห็นเฉพาะเจ้าของ) — content เข้ารหัส AES-256-GCM (core/notebook.php) · แถวล่าสุดของผู้ใช้ = เนื้อหาปัจจุบัน แถวก่อนหน้า = ประวัติ
+CREATE TABLE IF NOT EXISTS core_notebook_revisions (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id     INT UNSIGNED NOT NULL,
+  content     MEDIUMTEXT   NOT NULL,
+  created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_core_notebook_user (user_id, id),
+  CONSTRAINT fk_core_notebook_user FOREIGN KEY (user_id) REFERENCES core_users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- บันทึกการใช้งาน (เข้าสู่ระบบ การจัดการผู้ใช้/สิทธิ์ ฯลฯ)
 CREATE TABLE IF NOT EXISTS core_audit_log (
   id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
