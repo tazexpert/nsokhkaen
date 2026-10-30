@@ -289,3 +289,37 @@ function cal_is_duty(array $e): bool
 {
     return ($e['kind'] ?? 'event') === 'duty';
 }
+
+/**
+ * popup รายละเอียดกิจกรรม: คลิกลิงก์ event_view.php ในตาราง/ปฏิทิน → เปิด modal (โหลด event_view.php?modal=1)
+ * ถ้าโหลดไม่ได้ จะเปิดหน้ารายละเอียดตามปกติ — เรียกครั้งเดียวต่อหน้า
+ */
+function cal_modal_script(): string
+{
+    static $done = false;
+    if ($done) {
+        return '';
+    }
+    $done = true;
+    return <<<'HTML'
+<div class="modal fade" id="calEventModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content" id="calEventModalContent"></div></div></div>
+<script>
+(() => {
+  const box = document.getElementById('calEventModalContent');
+  const loading = '<div class="modal-body text-center py-5 text-muted"><div class="spinner-border text-primary mb-2"></div><div>กำลังโหลด…</div></div>';
+  document.addEventListener('click', ev => {
+    const a = ev.target.closest('.cal-table a[href*="event_view.php"], .cal-grid a[href*="event_view.php"]');
+    if (!a || ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button !== 0 || typeof bootstrap === 'undefined') return;
+    ev.preventDefault();
+    box.innerHTML = loading;
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('calEventModal')).show();
+    const url = new URL(a.href, location.href); url.searchParams.set('modal', '1');
+    fetch(url, { credentials: 'same-origin' })
+      .then(r => { if (!r.ok && r.status !== 404) throw 0; return r.text(); })
+      .then(html => { if (!/modal-(body|header)/.test(html)) throw 0; box.innerHTML = html; })
+      .catch(() => { location.href = a.href; });
+  });
+})();
+</script>
+HTML;
+}

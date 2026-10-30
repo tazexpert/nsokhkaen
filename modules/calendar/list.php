@@ -32,4 +32,5 @@ require __DIR__ . '/header.php';
   <div class="px-3 pt-2 small text-muted"><?= h(cal_date_text($from)) ?> – <?= h(cal_date_text($to)) ?> · <?= count($events) ?> กิจกรรม</div>
   <?= cal_render_table($events, $from, $me['id']) ?>
 </div>
+<?= cal_modal_script() ?>
 <?php require __DIR__ . '/footer.php'; ?>

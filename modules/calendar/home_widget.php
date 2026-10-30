@@ -52,4 +52,5 @@ $calQs = fn(array $p) => '?' . http_build_query(array_filter($p + ['cal_range' =
  </div>
  <div class="wb-tray" aria-hidden="true"><span class="wb-marker blue"></span><span class="wb-marker red"></span><span class="wb-marker black"></span><span class="wb-eraser"></span></div>
 </div>
+<?= cal_modal_script() ?>
 <?php unset($calRanges, $calRange, $calLabel, $calMine, $calDuty, $calFrom, $calTo, $calEvents, $calQs); ?>

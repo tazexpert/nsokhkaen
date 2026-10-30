@@ -60,4 +60,5 @@ require __DIR__ . '/header.php';
   </div>
   <div class="card-footer small text-muted"><span class="cal-ev mine d-inline-block px-2">งานของคุณ</span> <span class="cal-ev d-inline-block px-2">งานของผู้อื่น</span> <span class="cal-ev duty d-inline-block px-2">เวรสำนักงาน</span> · คลิกกิจกรรมเพื่อดูรายละเอียด</div>
 </div>
+<?= cal_modal_script() ?>
 <?php require __DIR__ . '/footer.php'; ?>
