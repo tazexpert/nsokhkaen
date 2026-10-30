@@ -251,8 +251,8 @@ $dirs = array_map('basename', glob(APP_ROOT . '/modules/*', GLOB_ONLYDIR) ?: [])
     <span class="ms-auto">เวอร์ชันโค้ด: <code><?= $ver ? h(substr(trim($ver), 0, 7)) : 'ไม่ทราบ (ไม่ได้ติดตั้งด้วย git)' ?></code></span>
   </div>
 </div>
-<details class="card">
-  <summary class="card-header"><strong><i class="bi bi-wrench"></i> ข้อมูลตรวจสอบการติดตั้ง</strong></summary>
+<div class="card">
+  <div class="card-header"><strong><i class="bi bi-wrench"></i> ข้อมูลตรวจสอบการติดตั้ง</strong></div>
   <div class="card-body small">
     <dl class="row mb-0">
       <dt class="col-sm-4">โฟลเดอร์โปรแกรม</dt><dd class="col-sm-8"><code><?= h(APP_ROOT) ?></code></dd>
@@ -264,7 +264,7 @@ $dirs = array_map('basename', glob(APP_ROOT . '/modules/*', GLOB_ONLYDIR) ?: [])
           : 'ปิด' ?></dd>
     </dl>
   </div>
-</details>
+</div>
   </div>
 </div>
 <?php require APP_ROOT . '/core/layout/footer.php'; ?>
