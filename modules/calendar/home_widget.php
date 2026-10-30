@@ -26,7 +26,8 @@ $calEvents = cal_events_between($calFrom, $calTo, $calMine ? $user['id'] : null,
 $calQs = fn(array $p) => '?' . http_build_query(array_filter($p + ['cal_range' => $calRange === 'month' ? null : $calRange, 'cal_mine' => $calMine ? 1 : null, 'cal_duty' => $calDuty ? 1 : null])) . '#calendar';
 ?>
 <link href="<?= h(asset_v('modules/calendar/assets/css/calendar.css')) ?>" rel="stylesheet">
-<div class="card mb-4 cal-home" id="calendar">
+<div class="card mb-4 cal-home whiteboard" id="calendar">
+ <div class="wb-surface">
   <div class="card-header d-flex flex-wrap align-items-center gap-2">
     <strong class="me-2"><?= module_logo(module_def('calendar'), 22) ?> ตารางการปฏิบัติงาน</strong>
     <div class="btn-group btn-group-sm">
@@ -47,5 +48,7 @@ $calQs = fn(array $p) => '?' . http_build_query(array_filter($p + ['cal_range' =
   </div>
   <div class="px-3 pt-2 small text-muted"><i class="bi bi-calendar-range"></i> <?= h($calLabel) ?> · <?= count($calEvents) ?> รายการ</div>
   <?= cal_render_table($calEvents, $calFrom, $user['id']) ?>
+ </div>
+ <div class="wb-tray" aria-hidden="true"><span class="wb-marker blue"></span><span class="wb-marker red"></span><span class="wb-marker black"></span><span class="wb-eraser"></span></div>
 </div>
 <?php unset($calRanges, $calRange, $calLabel, $calMine, $calDuty, $calFrom, $calTo, $calEvents, $calQs); ?>

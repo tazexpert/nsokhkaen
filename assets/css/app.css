@@ -200,9 +200,6 @@ h1,h2,h3,h4,h5,.brand,.stat-num,.btn,.card-header,.nav-tabs{font-family:'Prompt'
 .home-section-title>i{color:var(--tone,#4099ff)}
 .home-section-title small{font-family:'Sarabun',sans-serif;font-weight:400;font-size:.85rem;color:#90a4ae;margin-left:4px}
 .home-section-title.tone-blue{--tone:#4099ff}.home-section-title.tone-green{--tone:#2ed8b6}.home-section-title.tone-orange{--tone:#ffb64d}
-/* การ์ดตารางการปฏิบัติงาน */
-.cal-home{border-top:4px solid #4099ff!important;margin-bottom:2rem!important}
-.cal-home>.card-header{background:#f3f8ff;border-bottom:1px solid #e1edff}
 /* กล่องระบบ: แถบสีประจำระบบด้านบน + ไอคอนพื้นสีอ่อน */
 .mod-card{position:relative;overflow:hidden;border-top:4px solid var(--mc,#4099ff)}
 .mod-card .mod-icon.has-logo{background:color-mix(in srgb,var(--mc,#4099ff) 10%,#fff)!important;border-color:color-mix(in srgb,var(--mc,#4099ff) 25%,#fff)}
@@ -232,18 +229,6 @@ h1,h2,h3,h4,h5,.brand,.stat-num,.btn,.card-header,.nav-tabs{font-family:'Prompt'
 .mod-card .mod-role{background:rgba(255,255,255,.22);color:#fff}
 .mod-card .mod-go{color:#fff}
 #modGrid.arranging .mod-card{outline-color:#fff}
-/* การ์ดตารางการปฏิบัติงาน: หัวการ์ดไล่เฉดฟ้า */
-.cal-home{border-top:0!important;overflow:hidden}
-.cal-home>.card-header{background:linear-gradient(45deg,#4099ff,#73b4ff);border-bottom:0;color:#fff}
-.cal-home>.card-header strong{color:#fff}
-.cal-home>.card-header .mod-logo{background:#fff;border-radius:5px;padding:1px}
-.cal-home>.card-header .btn-outline-primary,.cal-home>.card-header .btn-outline-secondary{--bs-btn-color:#fff;--bs-btn-border-color:rgba(255,255,255,.55);--bs-btn-hover-color:#4099ff;--bs-btn-hover-bg:#fff;--bs-btn-hover-border-color:#fff;--bs-btn-active-color:#2f7fe0;--bs-btn-active-bg:#fff;--bs-btn-active-border-color:#fff}
-.cal-home>.card-header .btn-outline-success{--bs-btn-color:#fff;--bs-btn-border-color:rgba(255,255,255,.55);--bs-btn-hover-color:#13866f;--bs-btn-hover-bg:#fff;--bs-btn-hover-border-color:#fff}
-.cal-home>.card-header .btn-success{background:#fff;color:#13866f;border:0}
-.cal-home>.card-header .btn-light{background:rgba(255,255,255,.2);border:0;color:#fff}
-.cal-home>.card-header .btn-light:hover{background:#fff;color:#4099ff}
-.cal-home>.card-header .btn-primary{background:#fff;color:#4099ff;border:0}
-.cal-home>.card-header .btn-primary:hover{background:#eaf3ff;color:#2f7fe0}
 /* ลิงก์และเครื่องมือ: การ์ดไล่เฉด ปุ่มขาว */
 .home-tool{color:#fff;position:relative;overflow:hidden}
 .home-tool.tone-orange{background:var(--g-orange);box-shadow:0 6px 18px rgba(255,182,77,.35)}
@@ -265,15 +250,6 @@ h1,h2,h3,h4,h5,.brand,.stat-num,.btn,.card-header,.nav-tabs{font-family:'Prompt'
 .home-stat.tone-red{background:var(--g-red);box-shadow:0 4px 12px rgba(255,83,112,.35)}
 .home-stat.tone-purple{background:linear-gradient(45deg,#7c3aed,#a78bfa);box-shadow:0 4px 12px rgba(124,58,237,.3)}
 .home-stat span{opacity:.95}
-/* หัวการ์ดตารางการปฏิบัติงาน: เขียวไล่เฉด */
-.cal-home>.card-header{background:linear-gradient(45deg,#1fc9a6,#59e0c5)}
-.cal-home>.card-header .btn-outline-primary,.cal-home>.card-header .btn-outline-secondary{--bs-btn-hover-color:#13866f;--bs-btn-active-color:#13866f}
-.cal-home>.card-header .btn-outline-success{--bs-btn-hover-color:#13866f}
-.cal-home>.card-header .btn-success{color:#13866f}
-.cal-home>.card-header .btn-light:hover{color:#13866f}
-.cal-home>.card-header .btn-primary{color:#13866f}
-.cal-home>.card-header .btn-primary:hover{background:#e6fbf6;color:#0f6f5c}
-.cal-home .cal-table tr.cal-day th{background:#f0fbf8;color:#13866f}
 @media (max-width:575.98px){
   .home-hero-avatar{width:48px;height:48px;font-size:1.5rem}
   .home-hero-stats{width:100%;gap:10px}
