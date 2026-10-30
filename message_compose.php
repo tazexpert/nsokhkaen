@@ -34,7 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors[] = 'ไฟล์แนบรวมกันใหญ่เกินที่เซิร์ฟเวอร์รับได้ (' . round($postMax / 1048576) . ' MB) กรุณาลดจำนวนหรือขนาดไฟล์';
     } else {
         check_csrf();
-        $data = ['to' => (int)post('to'), 'subject' => trim(post('subject')), 'body' => trim(str_replace("\r\n", "\n", post('body')))];
+        $rawBody = (string)($_POST['body'] ?? '');
+        $data = ['to' => (int)post('to'), 'subject' => trim(post('subject')), 'body' => richtext_clean($rawBody)];   // HTML จัดรูปแบบ ผ่านตัวกรอง
         $allowed = array_column($recipients, 'id');
         if ($replyTo) {                                    // ตอบกลับผู้ดูแลระบบ (ไม่ใช่เจ้าหน้าที่) ได้ด้วย
             $allowed[] = $replyTo['sender_id'] == $uid ? $replyTo['recipient_id'] : $replyTo['sender_id'];
@@ -49,8 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         if ($data['body'] === '' && !array_filter(files_array('files'), fn($f) => $f['error'] !== UPLOAD_ERR_NO_FILE)) {
             $errors[] = 'กรุณาพิมพ์ข้อความหรือแนบไฟล์';
-        } elseif (mb_strlen($data['body']) > 20000) {
-            $errors[] = 'ข้อความยาวเกิน 20,000 ตัวอักษร';
+        } elseif (strlen($rawBody) > 1000000) {
+            $errors[] = 'ข้อความยาวเกินไป';
         }
         try {
             $files = msg_check_files(files_array('files'));
@@ -86,6 +87,7 @@ if ($replyTo && !in_array($data['to'], array_map('intval', array_column($recipie
 
 $pageTitle = $replyTo ? 'ตอบกลับข้อความ' : 'เขียนข้อความ';
 $active = 'messages';
+$headExtra = richtext_assets();
 $pageActions = '<a href="' . h(url('messages.php')) . '" class="btn btn-outline-secondary"><i class="bi bi-inbox"></i> กล่องจดหมาย</a>';
 require APP_ROOT . '/core/layout/header.php';
 ?>
@@ -111,8 +113,9 @@ require APP_ROOT . '/core/layout/header.php';
           <input name="subject" id="msgSubject" class="form-control" maxlength="200" required value="<?= h($data['subject']) ?>">
         </div>
         <div class="mb-3">
-          <label class="form-label" for="msgBody">ข้อความ</label>
-          <textarea name="body" id="msgBody" class="form-control" rows="9" maxlength="20000"><?= h($data['body']) ?></textarea>
+          <label class="form-label">ข้อความ</label>
+          <input type="hidden" name="body">
+          <div id="msgBody"><?= richtext_clean(richtext_from_text($data['body'])) ?></div>
         </div>
         <div>
           <label class="form-label" for="msgFiles"><i class="bi bi-paperclip"></i> แนบไฟล์</label>
@@ -140,7 +143,11 @@ require APP_ROOT . '/core/layout/header.php';
     <?php endif; ?>
   </div>
 </div>
+<style>
+  #msgBody .ql-editor { min-height: 14rem; }
+</style>
 <script>
+  const quill = richEditor('#msgBody', { placeholder: 'พิมพ์ข้อความ…' });
   // ตรวจไฟล์แนบก่อนส่ง (จำนวน / ขนาด) เพื่อไม่ต้องรออัปโหลดแล้วค่อยแจ้งข้อผิดพลาด
   (() => {
     const input = document.getElementById('msgFiles'), err = document.getElementById('msgFileErr'), form = document.getElementById('msgForm');
@@ -157,6 +164,7 @@ require APP_ROOT . '/core/layout/header.php';
     input.addEventListener('change', check);
     form.addEventListener('submit', e => {
       if (!check()) { e.preventDefault(); return; }
+      form.body.value = richEditorHtml(quill);
       const b = document.getElementById('msgSend'); b.disabled = true; b.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> กำลังส่ง…';
     });
   })();

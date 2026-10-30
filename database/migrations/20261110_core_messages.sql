@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS core_messages (
   recipient_id       INT UNSIGNED NOT NULL,
   reply_to_id        INT UNSIGNED NULL,
   subject            VARCHAR(200) NOT NULL,
-  body               TEXT         NOT NULL,
+  body               MEDIUMTEXT   NOT NULL,
   read_at            DATETIME     NULL,
   sender_deleted     TINYINT(1)   NOT NULL DEFAULT 0,
   recipient_deleted  TINYINT(1)   NOT NULL DEFAULT 0,

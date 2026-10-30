@@ -119,11 +119,22 @@ function msg_purge(int $messageId): void
     db()->prepare('DELETE FROM core_messages WHERE id = ?')->execute([$messageId]);
 }
 
-/** เนื้อความ: ป้องกัน HTML + ลิงก์กดได้ + ขึ้นบรรทัดใหม่ */
-function msg_body_html(string $text): string
+/** เนื้อความ: ข้อความจัดรูปแบบ (HTML ผ่านตัวกรอง) · ข้อความล้วนแบบเดิม = ป้องกัน HTML + ลิงก์กดได้ + ขึ้นบรรทัดใหม่ */
+function msg_body_html(string $body): string
 {
-    $html = preg_replace('~(https?://[^\s<]+[^\s<.,;:!?)\]\'"])~u', '<a href="$1" target="_blank" rel="noopener">$1</a>', h($text));
+    if ($body !== '' && ltrim($body)[0] === '<') {
+        return richtext_view($body, 'msg-richtext');
+    }
+    $html = preg_replace('~(https?://[^\s<]+[^\s<.,;:!?)\]\'"])~u', '<a href="$1" target="_blank" rel="noopener">$1</a>', h($body));
     return nl2br($html);
+}
+
+/** ตัวอย่างข้อความแบบสั้น (ตัดแท็กออก) สำหรับรายการในกล่องจดหมาย */
+function msg_snippet(string $body, int $len = 160): string
+{
+    $text = preg_replace('~<(?:/p|br|/li|/h[1-3]|/blockquote)\s*/?>~i', ' ', $body);
+    $text = html_entity_decode(strip_tags($text), ENT_QUOTES, 'UTF-8');
+    return mb_strimwidth(trim(preg_replace('/\s+/u', ' ', $text)), 0, $len, '…');
 }
 
 function msg_file_size(int $bytes): string

@@ -23,7 +23,7 @@ $cnt->execute($params);
 $total = (int)$cnt->fetchColumn();
 $pages = max(1, (int)ceil($total / $perPage));
 $page = min($page, $pages);
-$st = db()->prepare("SELECT m.id, m.subject, LEFT(m.body, 200) AS snippet, m.read_at, m.created_at, u.full_name, u.photo,
+$st = db()->prepare("SELECT m.id, m.subject, LEFT(m.body, 2000) AS snippet, m.read_at, m.created_at, u.full_name, u.photo,
                             (SELECT COUNT(*) FROM core_message_files f WHERE f.message_id = m.id) AS nfiles
                      FROM core_messages m JOIN core_users u ON u.id = $other
                      WHERE $where ORDER BY m.id DESC LIMIT $perPage OFFSET " . (($page - 1) * $perPage));
@@ -66,7 +66,7 @@ $link = fn(array $p) => h(url('messages.php?' . http_build_query(array_filter(['
             <?php if ($new): ?><span class="badge text-bg-primary me-1">ใหม่</span><?php endif; ?>
             <?= h($r['subject']) ?><?php if ($r['nfiles']): ?> <i class="bi bi-paperclip text-muted" title="แนบ <?= (int)$r['nfiles'] ?> ไฟล์"></i><?php endif; ?>
           </div>
-          <div class="small text-muted text-truncate"><?= h(preg_replace('/\s+/u', ' ', $r['snippet'])) ?></div>
+          <div class="small text-muted text-truncate"><?= h(msg_snippet($r['snippet'])) ?></div>
           <?php if ($tab === 'sent'): ?><div class="small <?= $r['read_at'] ? 'text-success' : 'text-muted' ?>"><i class="bi <?= $r['read_at'] ? 'bi-check2-all' : 'bi-check2' ?>"></i> <?= $r['read_at'] ? 'อ่านแล้ว ' . h(time_ago($r['read_at'])) : 'ยังไม่ได้อ่าน' ?></div><?php endif; ?>
         </div>
       </a>

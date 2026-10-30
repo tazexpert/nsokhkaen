@@ -2,7 +2,7 @@
 /**
  * สมุดบันทึกส่วนตัว (ทุกคนที่ login มีคนละเล่ม — เมนูบัญชีผู้ใช้ ก่อน "บุคลากรสถิติขอนแก่น")
  * - เห็นและแก้ไขได้เฉพาะเจ้าของ (ผู้ดูแลระบบก็ดูไม่ได้) · ดู/แก้ไขได้เท่านั้น ไม่มีการเพิ่มหรือลบสมุด
- * - จัดรูปแบบได้ (หัวข้อ ตัวหนา/เอียง/ขีดเส้นใต้ สี รายการ จัดแนว ลิงก์) ด้วย Quill · HTML ถูกกรองก่อนบันทึกและก่อนแสดง (notebook_clean_html)
+ * - จัดรูปแบบได้ (หัวข้อ ตัวหนา/เอียง/ขีดเส้นใต้ สี รายการ จัดแนว ลิงก์) ด้วย Quill · HTML ถูกกรองก่อนบันทึกและก่อนแสดง (richtext_clean ใน core/richtext.php)
  * - เนื้อหาเข้ารหัส AES-256-GCM ก่อนเก็บลงฐานข้อมูล (core/notebook.php) → เปิดดูในฐานข้อมูลก็อ่านไม่ออก
  * - ทุกครั้งที่บันทึกเก็บเป็นเวอร์ชันใหม่ → ดูประวัติ/นำเวอร์ชันเดิมกลับมาใช้ได้ หากลบข้อความโดยไม่ตั้งใจ
  * - เปิดแก้ไขหลายหน้าต่างพร้อมกัน: ไม่บันทึกทับ ให้ตรวจสอบก่อน
@@ -41,7 +41,7 @@ function notebook_save(string $text, int $uid): void
 /** แสดงเนื้อหา (ผ่านตัวกรอง HTML) ด้วยสไตล์เดียวกับตัวแก้ไข */
 function notebook_html(string $text): string
 {
-    return '<div class="ql-snow"><div class="ql-editor notebook-view">' . notebook_clean_html(notebook_to_html($text)) . '</div></div>';
+    return richtext_view($text, 'notebook-view');
 }
 
 $latest = notebook_rev($uid);
@@ -52,14 +52,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = post('action');
     if ($action === 'save') {
         $raw = (string)($_POST['content'] ?? '');
-        $text = notebook_clean_html($raw);
+        $text = richtext_clean($raw);
         if (strlen($raw) > NOTEBOOK_MAX) {
             flash('เนื้อหายาวเกินไป กรุณาแบ่งหรือลดเนื้อหาลง', 'danger');
             $conflict = $text;
         } elseif ($latest && (int)$latest['id'] !== int_param('base_id')) {
             $conflict = $text;
         } else {
-            if (!$latest || notebook_clean_html(notebook_to_html((string)$latest['text'])) !== $text) {
+            if (!$latest || richtext_clean(richtext_from_text((string)$latest['text'])) !== $text) {
                 notebook_save($text, $uid);
                 audit_log('notebook.edit', 'แก้ไขสมุดบันทึกส่วนตัว');   // ไม่บันทึกเนื้อหา
                 flash('บันทึกเรียบร้อยแล้ว');
@@ -91,8 +91,7 @@ $shown = $viewRev ?: $latest;
 $broken = $latest && $latest['text'] === null;   // ถอดรหัสไม่ได้ (กุญแจไม่ตรง)
 
 $pageTitle = 'สมุดบันทึก';
-$headExtra = '<link href="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.snow.css" rel="stylesheet">'
-           . ($editing && !$broken ? '<script src="https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/quill.js"></script>' : '');
+$headExtra = richtext_assets($editing && !$broken);
 $active = 'notebook';
 $pageActions = $editing || $broken ? '' : '<a href="' . h(url('notebook.php?edit=1')) . '" class="btn btn-primary"><i class="bi bi-pencil-square"></i> แก้ไข</a>';
 require APP_ROOT . '/core/layout/header.php';
@@ -119,7 +118,7 @@ require APP_ROOT . '/core/layout/header.php';
         <input type="hidden" name="base_id" value="<?= $latest ? (int)$latest['id'] : 0 ?>">
         <div class="card-body">
           <input type="hidden" name="content">
-          <div id="nbEditor"><?= notebook_clean_html(notebook_to_html($conflict ?? ($latest['text'] ?? ''))) ?></div>
+          <div id="nbEditor"><?= richtext_clean(richtext_from_text($conflict ?? ($latest['text'] ?? ''))) ?></div>
           <div class="form-text">ทุกครั้งที่บันทึกจะเก็บเป็นประวัติ นำเวอร์ชันเดิมกลับมาใช้ได้</div>
         </div>
         <div class="card-footer d-flex gap-2 justify-content-end">
@@ -170,59 +169,18 @@ require APP_ROOT . '/core/layout/header.php';
   </div>
 </div>
 <style>
-  /* ตัวแก้ไข / การแสดงผล: ใช้ฟอนต์ของระบบ */
-  .ql-snow .ql-editor, .ql-container.ql-snow { font-family: inherit; font-size: 1rem; }
-  .ql-snow .ql-editor { line-height: 1.8; word-break: break-word; }
-  .notebook-view { padding: 0; min-height: 8rem; }
-  .notebook-view a { color: var(--bs-link-color); }
+  .notebook-view { min-height: 8rem; }
   #nbEditor .ql-editor { min-height: 55vh; }
-  .ql-toolbar.ql-snow { border-radius: .5rem .5rem 0 0; position: sticky; top: 0; z-index: 2; background: var(--bs-body-bg); }
-  .ql-container.ql-snow { border-radius: 0 0 .5rem .5rem; }
-  .ql-editor.ql-blank::before { font-style: normal; color: var(--bs-secondary-color); }
-  /* ป้ายภาษาไทยของตัวเลือกหัวข้อ / กล่องลิงก์ */
-  .ql-snow .ql-picker.ql-header { width: 112px; }
-  .ql-snow .ql-picker.ql-header .ql-picker-label::before, .ql-snow .ql-picker.ql-header .ql-picker-item::before { content: 'ข้อความปกติ'; }
-  .ql-snow .ql-picker.ql-header .ql-picker-label[data-value="1"]::before, .ql-snow .ql-picker.ql-header .ql-picker-item[data-value="1"]::before { content: 'หัวข้อใหญ่'; }
-  .ql-snow .ql-picker.ql-header .ql-picker-label[data-value="2"]::before, .ql-snow .ql-picker.ql-header .ql-picker-item[data-value="2"]::before { content: 'หัวข้อกลาง'; }
-  .ql-snow .ql-picker.ql-header .ql-picker-label[data-value="3"]::before, .ql-snow .ql-picker.ql-header .ql-picker-item[data-value="3"]::before { content: 'หัวข้อย่อย'; }
-  .ql-snow .ql-tooltip::before { content: 'ลิงก์:'; }
-  .ql-snow .ql-tooltip[data-mode=link]::before { content: 'ใส่ลิงก์:'; }
-  .ql-snow .ql-tooltip a.ql-action::after { content: 'แก้ไข'; }
-  .ql-snow .ql-tooltip.ql-editing a.ql-action::after { content: 'บันทึก'; }
-  .ql-snow .ql-tooltip a.ql-remove::before { content: 'ลบลิงก์'; }
-  @media print { .ql-toolbar { display: none; } }
   .notebook-history { max-height: 70vh; overflow-y: auto; }
 </style>
 <?php if ($editing && !$broken): ?>
 <script>
   (() => {
-    const quill = new Quill('#nbEditor', {
-      theme: 'snow',
-      placeholder: 'พิมพ์บันทึกที่นี่…',
-      modules: { toolbar: [
-        [{ header: [1, 2, 3, false] }],
-        ['bold', 'italic', 'underline', 'strike'],
-        [{ color: [] }, { background: [] }],
-        [{ list: 'ordered' }, { list: 'bullet' }, { list: 'check' }],
-        [{ indent: '-1' }, { indent: '+1' }],
-        [{ align: [] }],
-        ['blockquote', 'link'],
-        ['clean'],
-      ] },
-    });
-    // คำอธิบายปุ่ม (ภาษาไทย) เมื่อชี้เมาส์
-    const tips = {
-      '.ql-header': 'ขนาดหัวข้อ', '.ql-bold': 'ตัวหนา (Ctrl+B)', '.ql-italic': 'ตัวเอียง (Ctrl+I)', '.ql-underline': 'ขีดเส้นใต้ (Ctrl+U)',
-      '.ql-strike': 'ขีดฆ่า', '.ql-color': 'สีตัวอักษร', '.ql-background': 'สีไฮไลต์', '.ql-list[value=ordered]': 'รายการแบบตัวเลข',
-      '.ql-list[value=bullet]': 'รายการแบบจุด', '.ql-list[value=check]': 'รายการเช็กลิสต์', '.ql-indent[value="-1"]': 'ลดการเยื้อง',
-      '.ql-indent[value="+1"]': 'เพิ่มการเยื้อง', '.ql-align': 'จัดแนวข้อความ', '.ql-blockquote': 'ข้อความอ้างอิง', '.ql-link': 'แทรกลิงก์',
-      '.ql-clean': 'ล้างรูปแบบข้อความ',
-    };
-    for (const [sel, t] of Object.entries(tips)) document.querySelectorAll('.ql-toolbar ' + sel).forEach(b => b.title = t);
+    const quill = richEditor('#nbEditor', { placeholder: 'พิมพ์บันทึกที่นี่…' });
     quill.focus();
 
     const f = document.getElementById('notebookForm');
-    const html = () => quill.getLength() <= 1 ? '' : quill.root.innerHTML;
+    const html = () => richEditorHtml(quill);
     const orig = html();
     let saving = false;
     f.addEventListener('submit', () => { f.content.value = html(); saving = true; });

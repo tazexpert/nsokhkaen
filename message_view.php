@@ -41,6 +41,7 @@ $files = msg_files((int)$msg['id']);
 $parent = $msg['reply_to_id'] ? msg_get((int)$msg['reply_to_id'], $uid) : null;
 
 $pageTitle = 'ข้อความ';
+$headExtra = richtext_assets(false);
 $active = 'messages';
 $pageActions = '<a href="' . h(url('messages.php' . ($isRecipient ? '' : '?tab=sent'))) . '" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> กล่องจดหมาย</a>';
 require APP_ROOT . '/core/layout/header.php';
