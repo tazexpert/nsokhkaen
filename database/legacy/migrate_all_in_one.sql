@@ -524,6 +524,7 @@ CREATE TABLE IF NOT EXISTS pay_settings (
 CREATE TABLE IF NOT EXISTS cal_events (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   kind        ENUM('event', 'duty') NOT NULL DEFAULT 'event',   -- event = กิจกรรม, duty = เวรสำนักงาน (นำเข้ารายเดือน)
+  visibility  ENUM('public', 'private') NOT NULL DEFAULT 'public', -- private = เห็นเฉพาะผู้บันทึกและผู้รับผิดชอบ
   event_date  DATE         NOT NULL,                 -- วันที่
   end_date    DATE         NULL,                     -- ถึงวันที่ (กิจกรรมหลายวัน — ไม่บังคับ)
   start_time  TIME         NULL,                     -- เวลาเริ่ม (ว่าง = ทั้งวัน)

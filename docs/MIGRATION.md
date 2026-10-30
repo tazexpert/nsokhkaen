@@ -249,6 +249,7 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 | `20261103_payslip_comments.sql` | สลิปเงินเดือน: ผู้อนุมัติแจ้งแก้ไขให้ผู้จัดการสลิป (`pay_slip_comments`) |
 | `20261104_calendar_duty.sql` | ปฏิทิน: เวรสำนักงาน (`cal_events.kind`) |
 | `20261105_core_user_photo.sql` | รูปโปรไฟล์ผู้ใช้ (`core_users.photo`) |
+| `20261106_calendar_visibility.sql` | ปฏิทิน: กิจกรรมสาธารณะ / ส่วนตัว (`cal_events.visibility`) |
 
 > ระบบเบิกวัสดุเดิมยังเปิดใช้อยู่? ก่อนเปิดใช้ระบบใหม่ให้ "ดึงข้อมูลรอบสุดท้าย" ตามหัวข้อด้านบน (`--resync-inventory`)
 
@@ -262,6 +263,7 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261103_payslip_comments.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261104_calendar_duty.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261105_core_user_photo.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261106_calendar_visibility.sql
 ```
 
 หลังอัปเดต:

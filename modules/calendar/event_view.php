@@ -6,6 +6,9 @@ $modal = !empty($_GET['modal']);
 $st = db()->prepare('SELECT e.*, u.full_name AS created_by_name FROM cal_events e LEFT JOIN core_users u ON u.id = e.created_by WHERE e.id = ?');
 $st->execute([int_param('id')]);
 $e = $st->fetch();
+if ($e && !cal_can_see($e)) {        // กิจกรรมส่วนตัวของผู้อื่น = ทำเหมือนไม่มี
+    $e = null;
+}
 if (!$e && $modal) {
     http_response_code(404);
     exit('<div class="modal-body text-center text-muted py-5">ไม่พบกิจกรรม (อาจถูกลบไปแล้ว)</div>');
@@ -27,6 +30,7 @@ ob_start();
   <div class="col-lg-7"><div class="card h-100"><div class="card-body">
     <?php if (in_array($me['id'], $ids, true)): ?><div class="alert alert-warning py-2"><i class="bi bi-person-check"></i> คุณเป็นผู้รับผิดชอบกิจกรรมนี้</div><?php endif; ?>
     <dl class="row mb-0">
+      <?php if (cal_is_private($e)): ?><dt class="col-sm-3">การมองเห็น</dt><dd class="col-sm-9"><span class="badge text-bg-secondary"><i class="bi bi-lock-fill"></i> ส่วนตัว</span> <span class="small text-muted">เห็นเฉพาะผู้บันทึกและผู้รับผิดชอบ</span></dd><?php endif; ?>
       <dt class="col-sm-3">วันที่</dt><dd class="col-sm-9"><?= h(cal_range_text($e)) ?></dd>
       <?php if (!cal_is_duty($e)): ?><dt class="col-sm-3">เวลา</dt><dd class="col-sm-9"><?= h(cal_time_text($e)) ?></dd><?php endif; ?>
       <?php if (!cal_is_duty($e)): ?><dt class="col-sm-3">สถานที่</dt><dd class="col-sm-9"><?= h($e['location'] ?: '-') ?></dd><?php endif; ?>

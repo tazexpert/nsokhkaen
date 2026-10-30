@@ -56,12 +56,41 @@ function cal_users(): array
     return $users;
 }
 
-/** กิจกรรมที่คาบเกี่ยวช่วงวันที่ ($userId = เฉพาะที่ผู้ใช้นั้นรับผิดชอบ · $withDuty = false ไม่รวมเวรสำนักงาน) */
+/**
+ * กิจกรรมส่วนตัว (visibility = private): เห็นเฉพาะผู้บันทึกและผู้รับผิดชอบ — ผู้อื่น (รวมผู้ดูแล/ผู้เยี่ยมชม) ไม่เห็น
+ * เงื่อนไข SQL สำหรับผู้ใช้ปัจจุบัน (ใช้กับ alias e)
+ */
+function cal_visible_sql(): array
+{
+    $me = (int)(current_user()['id'] ?? 0);
+    if (!$me) {
+        return [" AND e.visibility = 'public'", []];
+    }
+    return [" AND (e.visibility = 'public' OR e.created_by = ? OR EXISTS (SELECT 1 FROM cal_event_users v WHERE v.event_id = e.id AND v.user_id = ?))", [$me, $me]];
+}
+
+/** ผู้ใช้ปัจจุบันเห็นกิจกรรมนี้ได้หรือไม่ */
+function cal_can_see(array $e): bool
+{
+    if (($e['visibility'] ?? 'public') !== 'private') {
+        return true;
+    }
+    $me = (int)(current_user()['id'] ?? 0);
+    return $me && ((int)$e['created_by'] === $me || in_array($me, cal_assignees([(int)$e['id']])[(int)$e['id']] ?? [], true));
+}
+
+function cal_is_private(array $e): bool
+{
+    return ($e['visibility'] ?? 'public') === 'private';
+}
+
+/** กิจกรรมที่คาบเกี่ยวช่วงวันที่ ($userId = เฉพาะที่ผู้ใช้นั้นรับผิดชอบ · $withDuty = false ไม่รวมเวรสำนักงาน) — กรองกิจกรรมส่วนตัวของผู้อื่นออกเสมอ */
 function cal_events_between(string $from, string $to, ?int $userId = null, bool $withDuty = true): array
 {
+    [$visSql, $visParams] = cal_visible_sql();
     $sql = 'SELECT e.*, u.full_name AS created_by_name FROM cal_events e LEFT JOIN core_users u ON u.id = e.created_by
-            WHERE e.event_date <= ? AND COALESCE(e.end_date, e.event_date) >= ?' . ($withDuty ? '' : " AND e.kind <> 'duty'");
-    $params = [$to, $from];
+            WHERE e.event_date <= ? AND COALESCE(e.end_date, e.event_date) >= ?' . ($withDuty ? '' : " AND e.kind <> 'duty'") . $visSql;
+    $params = [$to, $from, ...$visParams];
     if ($userId) {
         $sql .= ' AND EXISTS (SELECT 1 FROM cal_event_users eu WHERE eu.event_id = e.id AND eu.user_id = ?)';
         $params[] = $userId;
@@ -230,6 +259,7 @@ function cal_render_table(array $events, string $from, int $meId, bool $showActi
             $html .= '<tr class="' . trim(($duty ? 'cal-duty ' : '') . ($mine ? 'cal-mine ' : '') . ($done ? 'cal-done' : '')) . '">'
                 . '<td class="text-nowrap">' . ($duty ? '<span class="text-muted">-</span>' : h(cal_time_text($e))) . ($multi ? '<div class="small text-muted">' . h(cal_range_text($e)) . '</div>' : '') . '</td>'
                 . '<td><a href="' . h($base . 'event_view.php?id=' . (int)$e['id']) . '" class="fw-semibold text-decoration-none">' . ($duty ? '<i class="bi bi-shield-check"></i> ' : '') . h($e['title']) . '</a>'
+                . (cal_is_private($e) ? ' <span class="badge text-bg-secondary" title="เห็นเฉพาะผู้บันทึกและผู้รับผิดชอบ"><i class="bi bi-lock-fill"></i> ส่วนตัว</span>' : '')
                 . ($mine ? ' <span class="badge text-bg-warning">งานของคุณ</span>' : '')
                 . ($done ? ' <span class="badge text-bg-secondary"><i class="bi bi-check2"></i> จบแล้ว</span>' : '') . '</td>'
                 . '<td>' . ($e['location'] ? '<i class="bi bi-geo-alt text-muted"></i> ' . h($e['location']) : '<span class="text-muted">-</span>') . '</td>'

@@ -6,7 +6,7 @@ $pdo = db();
 $id = int_param('id');
 
 $e = ['event_date' => $_GET['date'] ?? date('Y-m-d'), 'end_date' => null, 'start_time' => '09:00:00', 'end_time' => '16:30:00',
-      'title' => '', 'location' => '', 'link' => '', 'note' => '', 'created_by' => $me['id']];
+      'title' => '', 'location' => '', 'link' => '', 'note' => '', 'created_by' => $me['id'], 'visibility' => 'public'];
 $assigned = [];
 if (!DateTime::createFromFormat('!Y-m-d', (string)$e['event_date'])) {
     $e['event_date'] = date('Y-m-d');
@@ -15,7 +15,7 @@ if ($id) {
     $st = $pdo->prepare('SELECT * FROM cal_events WHERE id = ?');
     $st->execute([$id]);
     $e = $st->fetch();
-    if (!$e || !cal_can_edit($e)) {
+    if (!$e || !cal_can_see($e) || !cal_can_edit($e)) {        // กิจกรรมส่วนตัวของผู้อื่น = ทำเหมือนไม่มี
         flash('ไม่พบกิจกรรม หรือไม่มีสิทธิ์แก้ไข', 'danger');
         redirect('index.php');
     }
@@ -37,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'event_date' => post('event_date'), 'end_date' => post('end_date') ?: null,
         'start_time' => $allDay ? null : (post('start_time') ?: null), 'end_time' => $allDay ? null : (post('end_time') ?: null),
         'title' => post('title'), 'location' => post('location'), 'link' => post('link'), 'note' => trim((string)($_POST['note'] ?? '')),
+        'visibility' => post('visibility') === 'private' ? 'private' : 'public',
     ]);
     $users = cal_users();
     $assigned = array_values(array_unique(array_filter(array_map('intval', (array)($_POST['users'] ?? [])), fn($u) => isset($users[$u]))));
@@ -67,14 +68,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($e['link'] !== '' && !cal_safe_link($e['link'])) {
         $errors[] = 'ลิงก์ต้องขึ้นต้นด้วย http:// หรือ https://';
     }
-    if (!$assigned) {
+    if (!$assigned && $e['visibility'] === 'public') {      // ส่วนตัว: ไม่เลือกผู้รับผิดชอบก็ได้ (เห็นเฉพาะผู้บันทึก)
         $errors[] = 'กรุณาเลือกผู้รับผิดชอบอย่างน้อย 1 คน';
     }
 
     if (!$errors) {
         $data = ['event_date' => $e['event_date'], 'end_date' => $e['end_date'], 'start_time' => $e['start_time'],
                  'end_time' => $e['end_time'], 'title' => mb_substr($e['title'], 0, 255), 'location' => $e['location'] ?: null,
-                 'link' => $e['link'] ?: null, 'note' => $e['note'] ?: null];
+                 'link' => $e['link'] ?: null, 'note' => $e['note'] ?: null, 'visibility' => $e['visibility']];
         $pdo->beginTransaction();
         if ($id) {
             $cols = array_keys($data);
@@ -107,7 +108,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $pdo->commit();
         audit_log('cal_save', '#' . $id . ' ' . $data['title'] . ' (' . count($assigned) . ' คน)', CAL_MODULE);
-        flash('บันทึกกิจกรรมแล้ว — แจ้งเตือนผู้รับผิดชอบ ' . count($assigned) . ' คน');
+        flash('บันทึกกิจกรรมแล้ว' . ($data['visibility'] === 'private' ? ' (ส่วนตัว — เห็นเฉพาะคุณและผู้รับผิดชอบ)' : '')
+            . ($assigned ? ' — แจ้งเตือนผู้รับผิดชอบ ' . count($assigned) . ' คน' : ''));
         redirect('event_view.php?id=' . $id);
     }
 }
@@ -129,6 +131,14 @@ require __DIR__ . '/header.php';
       <div class="card-body row g-3">
         <div class="col-12"><label class="form-label">กิจกรรม <span class="text-danger">*</span></label>
           <input name="title" class="form-control" required maxlength="255" value="<?= h($e['title']) ?>" placeholder="เช่น ประชุมประจำเดือน / ลงพื้นที่สำรวจ"></div>
+        <div class="col-12"><label class="form-label d-block">การมองเห็น</label>
+          <div class="btn-group w-100" role="group">
+            <input type="radio" class="btn-check" name="visibility" value="public" id="visPublic" <?= $e['visibility'] !== 'private' ? 'checked' : '' ?>>
+            <label class="btn btn-outline-primary" for="visPublic"><i class="bi bi-globe2"></i> สาธารณะ <small class="d-none d-md-inline">— ทุกคนเห็น</small></label>
+            <input type="radio" class="btn-check" name="visibility" value="private" id="visPrivate" <?= $e['visibility'] === 'private' ? 'checked' : '' ?>>
+            <label class="btn btn-outline-secondary" for="visPrivate"><i class="bi bi-lock-fill"></i> ส่วนตัว <small class="d-none d-md-inline">— เห็นเฉพาะฉันและผู้รับผิดชอบ</small></label>
+          </div>
+          <div class="form-text" id="visHint"></div></div>
         <div class="col-sm-6"><label class="form-label">วันที่ <span class="text-danger">*</span></label>
           <input type="text" name="event_date" class="form-control thai-date" required value="<?= h($e['event_date']) ?>" placeholder="เลือกวันที่"></div>
         <div class="col-sm-6"><label class="form-label">ถึงวันที่ <small class="text-muted">(ถ้าหลายวัน)</small></label>
@@ -207,8 +217,15 @@ require __DIR__ . '/header.php';
   const allDay = document.getElementById('allDay'), row = document.getElementById('timeRow');
   const sync = () => { row.hidden = allDay.checked; };
   allDay.addEventListener('change', sync); sync(); count();
+  const isPrivate = () => document.getElementById('visPrivate').checked;
+  const visHint = () => {
+    document.getElementById('visHint').textContent = isPrivate()
+      ? 'กิจกรรมส่วนตัว: เห็นเฉพาะคุณ และผู้รับผิดชอบที่เลือก (ไม่เลือกผู้รับผิดชอบก็ได้) — ผู้อื่นและผู้เยี่ยมชมมองไม่เห็น'
+      : 'กิจกรรมสาธารณะ: แสดงในตารางการปฏิบัติงานให้ทุกคนเห็น';
+  };
+  document.querySelectorAll('[name=visibility]').forEach(r => r.addEventListener('change', visHint)); visHint();
   document.getElementById('evForm').addEventListener('submit', ev => {
-    if (!boxes().some(b => b.checked)) { ev.preventDefault(); alert('กรุณาเลือกผู้รับผิดชอบอย่างน้อย 1 คน'); }
+    if (!isPrivate() && !boxes().some(b => b.checked)) { ev.preventDefault(); alert('กรุณาเลือกผู้รับผิดชอบอย่างน้อย 1 คน'); }
   });
 })();
 </script>
