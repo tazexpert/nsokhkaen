@@ -5,6 +5,10 @@
  *   php tools/migrate_legacy.php --check  [ตัวเลือก]   ตรวจความพร้อมอย่างเดียว ไม่เขียนข้อมูล
  *   php tools/migrate_legacy.php --run    [ตัวเลือก]   ย้ายข้อมูลจริง
  *
+ *   --resync-inventory      (ใช้กับ --check / --run) ระบบใหม่ใช้งานอยู่แล้ว แต่ระบบเบิกวัสดุเดิมยังเปิดอยู่:
+ *                           ดึงข้อมูลวัสดุ/ใบเบิก "รอบสุดท้าย" จากระบบเดิมมาแทนที่ โดยไม่แตะข้อมูลอื่นของระบบใหม่
+ *                           (สลิป ปฏิทิน ครุภัณฑ์ การยืม ผู้ใช้/สิทธิ์ที่มีอยู่) — ดู database/legacy/03_resync_inventory.sql
+ *
  * ตัวเลือก:
  *   --inventory-db=NAME     ฐานข้อมูลระบบวัสดุเดิม (ค่าเริ่มต้น nsokhkaen_inventory; ใส่ --skip-inventory เพื่อข้าม)
  *   --inventory-dir=PATH    โฟลเดอร์โปรเจกต์ระบบวัสดุเดิม (เพื่อคัดลอกรูปจาก uploads/)
@@ -22,7 +26,7 @@ if (PHP_SAPI !== 'cli') {
 }
 require __DIR__ . '/../core/bootstrap.php';
 
-$opts = getopt('', ['check', 'run', 'skip-inventory', 'inventory-db:', 'inventory-dir:', 'digitalcc-db:', 'digitalcc-dir:', 'app-url:', 'help']);
+$opts = getopt('', ['check', 'run', 'resync-inventory', 'skip-inventory', 'inventory-db:', 'inventory-dir:', 'digitalcc-db:', 'digitalcc-dir:', 'app-url:', 'help']);
 if (isset($opts['help']) || (!isset($opts['check']) && !isset($opts['run']))) {
     echo preg_replace('/^\s*\* ?/m', '', explode('*/', explode('/**', file_get_contents(__FILE__))[1])[0]), "\n";
     exit(isset($opts['help']) ? 0 : 1);
@@ -33,6 +37,11 @@ $dccDb = $opts['digitalcc-db'] ?? null;
 $invDir = isset($opts['inventory-dir']) ? rtrim($opts['inventory-dir'], '/\\') : null;
 $dccDir = isset($opts['digitalcc-dir']) ? rtrim($opts['digitalcc-dir'], '/\\') : null;
 $appUrl = $opts['app-url'] ?? null;
+$resync = isset($opts['resync-inventory']);
+if ($resync) {
+    $invDb ??= 'nsokhkaen_inventory';
+    $dccDb = null;                      // ดึงรอบสุดท้ายเฉพาะระบบวัสดุ
+}
 
 $pdo = db();
 $problems = [];
@@ -68,7 +77,14 @@ try {
         $counts[$t] = (int)$pdo->query("SELECT COUNT(*) FROM $t")->fetchColumn();
     }
     $ok('มีตารางของระบบใหม่ครบ (สร้างจาก schema.sql แล้ว)');
-    if ($invDb && ($counts['core_users'] || $counts['inv_materials'] || $counts['inv_requisitions'])) {
+    if ($resync) {
+        $counts['core_users'] ? $ok("ระบบใหม่มีผู้ใช้ {$counts['core_users']} คน วัสดุ {$counts['inv_materials']} ใบเบิก {$counts['inv_requisitions']} — จะแทนที่เฉพาะข้อมูลวัสดุ/ใบเบิก")
+            : $bad('ระบบใหม่ยังไม่มีข้อมูล — ใช้การย้ายครั้งแรก (--run โดยไม่ใส่ --resync-inventory) แทน');
+        $mine = (int)$pdo->query("SELECT COUNT(*) FROM inv_requisitions")->fetchColumn();
+        if ($mine) {
+            $warn("ใบเบิก $mine ใบในระบบใหม่ (รวมที่ทดลองบันทึก) จะถูกแทนที่ด้วยใบเบิกจากระบบเดิม");
+        }
+    } elseif ($invDb && ($counts['core_users'] || $counts['inv_materials'] || $counts['inv_requisitions'])) {
         $bad('ฐานข้อมูลปลายทางมีข้อมูลผู้ใช้/วัสดุอยู่แล้ว — ต้องเริ่มจากฐานข้อมูลว่าง (รัน schema.sql ใหม่ และห้ามรัน seed.sql)');
     }
     if ($dccDb && $counts['dcc_centers']) {
@@ -91,9 +107,20 @@ if ($invDb) {
             $n = $pdo->query("SELECT COUNT(*) FROM `$invDb`.`$t`")->fetchColumn();
             echo "         $t: $n แถว\n";
         }
-        $dups = $pdo->query("SELECT COUNT(*) FROM `$invDb`.`users` WHERE role = 'admin' AND is_active = 1")->fetchColumn();
-        $dups ? $ok("ผู้ดูแลระบบเดิม $dups คน จะเป็นผู้ดูแลระบบกลาง (is_superadmin)")
-              : $warn('ไม่มีผู้ดูแลระบบ (admin) ที่ใช้งานอยู่ — หลังย้ายต้องตั้งผู้ดูแลระบบกลางเองในฐานข้อมูล');
+        if ($resync) {
+            $sql = "SELECT o.username, o.full_name FROM `$invDb`.`users` o WHERE NOT EXISTS (SELECT 1 FROM core_users c
+                WHERE (o.username IS NOT NULL AND o.username <> '' AND c.username = o.username COLLATE utf8mb4_unicode_ci)
+                   OR ((o.username IS NULL OR o.username = '') AND ((c.id = o.id AND c.full_name = o.full_name COLLATE utf8mb4_unicode_ci)
+                       OR (o.pin_hash IS NOT NULL AND c.pin_hash = o.pin_hash COLLATE utf8mb4_unicode_ci))))";
+            foreach ($pdo->query($sql) as $u) {
+                $warn('ผู้ใช้ใหม่จากระบบเดิม จะสร้างบัญชีให้ (สิทธิ์เจ้าหน้าที่วัสดุตามเดิม): ' . ($u['username'] ?: '(PIN อย่างเดียว)') . ' · ' . $u['full_name']);
+            }
+        }
+        if (!$resync) {
+            $dups = $pdo->query("SELECT COUNT(*) FROM `$invDb`.`users` WHERE role = 'admin' AND is_active = 1")->fetchColumn();
+            $dups ? $ok("ผู้ดูแลระบบเดิม $dups คน จะเป็นผู้ดูแลระบบกลาง (is_superadmin)")
+                  : $warn('ไม่มีผู้ดูแลระบบ (admin) ที่ใช้งานอยู่ — หลังย้ายต้องตั้งผู้ดูแลระบบกลางเองในฐานข้อมูล');
+        }
     }
     if ($invDir) {
         is_dir("$invDir/uploads") ? $ok("พบโฟลเดอร์รูปภาพ $invDir/uploads") : $bad("ไม่พบโฟลเดอร์ $invDir/uploads");
@@ -179,8 +206,8 @@ function copy_tree(string $from, string $to): int
 $replaceUse = ['USE nsokhkaen;' => 'USE `' . DB_NAME . '`;'];
 try {
     if ($invDb) {
-        echo "\n== ย้ายข้อมูลระบบวัสดุ\n";
-        run_sql_file($pdo, APP_ROOT . '/database/legacy/01_inventory.sql', $replaceUse + ['`nsokhkaen_inventory`' => "`$invDb`"]);
+        echo $resync ? "\n== ดึงข้อมูลวัสดุ/ใบเบิกรอบสุดท้ายจากระบบเดิม\n" : "\n== ย้ายข้อมูลระบบวัสดุ\n";
+        run_sql_file($pdo, APP_ROOT . '/database/legacy/' . ($resync ? '03_resync_inventory.sql' : '01_inventory.sql'), $replaceUse + ['`nsokhkaen_inventory`' => "`$invDb`"]);
         if ($invDir) {
             echo '  คัดลอกรูปวัสดุ: ' . copy_tree("$invDir/uploads/materials", UPLOAD_DIR . '/inventory/materials') . " ไฟล์\n";
             copy_tree("$invDir/uploads/assets", UPLOAD_DIR . '/inventory/assets');
@@ -200,7 +227,8 @@ try {
         $pdo->rollBack();
     }
     echo "\n[ERR] ย้ายข้อมูลไม่สำเร็จ: " . $e->getMessage() . "\n";
-    echo "      ฐานข้อมูลปลายทางอาจมีข้อมูลบางส่วนแล้ว — ลบฐานข้อมูลใหม่ทิ้ง รัน schema.sql ใหม่ แล้วลองอีกครั้ง\n";
+    echo $resync ? "      ข้อมูลวัสดุ/ใบเบิกอาจไม่ครบ — นำเข้าไฟล์สำรองของฐานข้อมูลใหม่ (mysqldump ก่อนรัน) แล้วลองอีกครั้ง\n"
+        : "      ฐานข้อมูลปลายทางอาจมีข้อมูลบางส่วนแล้ว — ลบฐานข้อมูลใหม่ทิ้ง รัน schema.sql ใหม่ แล้วลองอีกครั้ง\n";
     exit(1);
 }
 
