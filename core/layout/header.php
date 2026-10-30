@@ -182,7 +182,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
 <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalTitle" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" style="max-width:420px">
     <form class="modal-content login-modal" method="post" action="<?= h(url('login.php')) ?>" id="loginForm" novalidate>
-      <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal" aria-label="ปิด"></button>
+      <button type="button" class="btn-close position-absolute top-0 end-0 m-3 z-3" data-bs-dismiss="modal" aria-label="ปิด"></button>
       <div class="modal-body p-4 pt-5">
         <div class="text-center mb-4">
           <img src="<?= h(url('assets/img/logo.png')) ?>" alt="" class="auth-logo" style="height:80px">
