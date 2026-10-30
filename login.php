@@ -76,6 +76,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <button class="btn btn-primary btn-lg w-100">เข้าสู่ระบบ</button>
     <div class="text-center mt-3 small">
       <a href="<?= h(url('pin.php')) ?>"><i class="bi bi-grid-3x3-gap"></i> เข้าใช้ด้วย PIN 6 หลัก</a>
+      <span class="text-muted mx-2">·</span>
+      <a href="<?= h(url('index.php')) ?>"><i class="bi bi-house-door"></i> กลับหน้าหลัก</a>
     </div>
   </form>
 </body>

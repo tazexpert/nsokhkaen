@@ -67,12 +67,23 @@ function is_superadmin(): bool
     return (bool)(current_user()['is_superadmin'] ?? false);
 }
 
-/** role ของผู้ใช้ในระบบ $module (superadmin = role สูงสุดของทุกระบบ) หรือ null ถ้าไม่มีสิทธิ์ */
+/** ผู้เยี่ยมชม (ไม่ได้ login) — ใช้แทน $user ในหน้าที่เปิดให้ดูได้โดยไม่ต้อง login */
+function guest_user(): array
+{
+    return ['id' => 0, 'username' => null, 'full_name' => 'ผู้เยี่ยมชม', 'position' => null, 'photo' => null,
+            'is_guest' => true, 'is_superadmin' => false, 'roles' => [], 'via_pin' => false];
+}
+
+/** role ของผู้ใช้ในระบบ $module (superadmin = role สูงสุดของทุกระบบ) หรือ null ถ้าไม่มีสิทธิ์ — ไม่ได้ login = guest_role ของระบบ */
 function module_role(string $module, ?array $user = null): ?string
 {
     $user ??= current_user();
-    if (!$user || !module_def($module)) {
+    if (!module_def($module)) {
         return null;
+    }
+    if (!$user || !empty($user['is_guest'])) {
+        $guest = module_def($module)['guest_role'];
+        return $guest !== null && role_level($module, $guest) > 0 ? $guest : null;
     }
     if ($user['is_superadmin'] && module_def($module)['superadmin_access']) {
         return top_role($module);
@@ -197,6 +208,21 @@ function require_module(string $module, string $minRole = '', string $loginPage 
         forbidden($module, $minRole);
     }
     return $u;
+}
+
+/**
+ * หน้าที่ผู้เยี่ยมชมดูได้ (ระบบที่กำหนด guest_role): login แล้ว = ตรวจสิทธิ์ตามปกติ
+ * ไม่ได้ login = คืน guest_user() ถ้า guest_role ถึง $minRole ไม่เช่นนั้นไปหน้า login
+ */
+function require_module_or_guest(string $module, string $minRole = ''): array
+{
+    if (current_user()) {
+        return require_module($module, $minRole);
+    }
+    if (!user_can($module, $minRole, guest_user())) {
+        return require_module($module, $minRole);            // → หน้า login
+    }
+    return guest_user();
 }
 
 /** สำหรับ API (JSON): ต้อง login + มีสิทธิ์ และตรวจ CSRF เมื่อเป็น POST */

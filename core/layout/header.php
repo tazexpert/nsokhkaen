@@ -13,7 +13,7 @@ $user = current_user();
 $pageTitle = $pageTitle ?? APP_NAME;
 $module = $module ?? null;
 $active = $active ?? '';
-$navMods = $user ? accessible_modules($user) : [];   // ชื่อเฉพาะ — กันชนกับตัวแปรของหน้าที่เรียก (เช่น $mods ในหน้าผู้ใช้งาน)
+$navMods = accessible_modules($user);   // ไม่ได้ login = เฉพาะระบบที่เปิดให้ผู้เยี่ยมชม (guest_role) · ชื่อเฉพาะ — กันชนกับตัวแปรของหน้าที่เรียก (เช่น $mods ในหน้าผู้ใช้งาน)
 // มีมากกว่า 5 ระบบ: แสดง 4 ระบบแรก (ตามลำดับที่ผู้ใช้จัด) ที่เหลือรวมในเมนู "ระบบอื่นๆ"
 $navMore = count($navMods) > 5 ? array_slice($navMods, 4, null, true) : [];
 $navMain = $navMore ? array_slice($navMods, 0, 4, true) : $navMods;
@@ -103,6 +103,14 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
         <span class="navbar-toggler-icon"></span>
       </button>
     </div>
+    <?php else: /* ผู้เยี่ยมชม: ปุ่มเข้าสู่ระบบ */ ?>
+    <div class="d-flex align-items-center gap-1 order-xl-last ms-auto">
+      <a href="<?= h(url('login.php')) ?>" class="btn btn-light btn-login"><i class="bi bi-box-arrow-in-right"></i> <span class="d-none d-sm-inline">เข้าสู่ระบบ</span></a>
+      <button class="navbar-toggler ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="เมนู">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+    </div>
+    <?php endif; ?>
 
     <div class="collapse navbar-collapse" id="mainNav">
       <ul class="navbar-nav me-auto">
@@ -133,11 +141,11 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
                 <?php endforeach; ?>
                 <li><hr class="dropdown-divider"></li>
               <?php endforeach; ?>
-              <li><a class="dropdown-item small text-muted" href="<?= h(url('index.php#arrange')) ?>"><i class="bi bi-arrows-move"></i> จัดเรียงระบบในเมนู</a></li>
+              <?php if ($user): ?><li><a class="dropdown-item small text-muted" href="<?= h(url('index.php#arrange')) ?>"><i class="bi bi-arrows-move"></i> จัดเรียงระบบในเมนู</a></li><?php endif; ?>
             </ul>
           </li>
         <?php endif; ?>
-        <?php if ($user['is_superadmin']): $__isAdm = !$module && in_array($active, ['users', 'settings', 'audit'], true); ?>
+        <?php if (!empty($user['is_superadmin'])): $__isAdm = !$module && in_array($active, ['users', 'settings', 'audit'], true); ?>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle<?= $navActive($__isAdm) ?>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-shield-lock"></i> ผู้ดูแลระบบ</a>
             <ul class="dropdown-menu shadow">
@@ -149,7 +157,6 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
         <?php endif; ?>
       </ul>
     </div>
-    <?php endif; ?>
   </div>
 </nav>
 

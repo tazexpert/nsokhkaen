@@ -1,8 +1,12 @@
 <?php
-/** หน้าหลัก: ตารางการปฏิบัติงาน (จากระบบที่มี home_widget.php) + กล่องเลือกระบบ (จัดเรียงเองได้) */
+/**
+ * หน้าหลัก: ตารางการปฏิบัติงาน (จากระบบที่มี home_widget.php) + กล่องเลือกระบบ (จัดเรียงเองได้)
+ * ไม่ได้ login (ผู้เยี่ยมชม): เห็นเฉพาะคำทักทาย ตารางการปฏิบัติงาน (ดูอย่างเดียว) และลิงก์ที่เกี่ยวข้อง
+ */
 require_once __DIR__ . '/core/bootstrap.php';
-$user = require_login();
-$mods = accessible_modules($user);
+$isGuest = !current_user();
+$viewer = current_user() ?? guest_user();
+$mods = accessible_modules(current_user());
 
 $pageTitle = 'หน้าหลัก';
 $active = 'home';
@@ -17,12 +21,19 @@ $hidePageHead = true;
 require APP_ROOT . '/core/layout/header.php';
 ?>
 <section class="home-hero mb-4">
-  <a href="<?= h(url('account.php')) ?>" class="home-hero-avatar" title="บัญชีของฉัน — เปลี่ยนรูปโปรไฟล์"><?= user_avatar($user, 64) ?></a>
+  <?php if ($isGuest): ?>
+  <span class="home-hero-avatar"><?= user_avatar($viewer, 64) ?></span>
+  <?php else: ?>
+  <a href="<?= h(url('account.php')) ?>" class="home-hero-avatar" title="บัญชีของฉัน — เปลี่ยนรูปโปรไฟล์"><?= user_avatar($viewer, 64) ?></a>
+  <?php endif; ?>
   <div class="min-w-0 me-auto">
     <div class="home-hero-date"><i class="bi bi-calendar3"></i> <?= h(cal_home_date()) ?></div>
-    <h2 class="home-hero-title">สวัสดี <?= h(preg_replace('/\s+/u', ' ', $user['full_name'])) ?></h2>
+    <h2 class="home-hero-title">สวัสดี <?= h(preg_replace('/\s+/u', ' ', $viewer['full_name'])) ?></h2>
     <div class="home-hero-sub"><?= h(ORG_NAME) ?></div>
   </div>
+  <?php if ($isGuest): ?>
+    <a href="<?= h(url('login.php')) ?>" class="btn btn-primary ms-auto"><i class="bi bi-box-arrow-in-right"></i> เข้าสู่ระบบเพื่อใช้งานระบบงาน</a>
+  <?php endif; ?>
 </section>
 
 <?php
@@ -32,6 +43,7 @@ foreach ($widgets as $widget) {
 }
 ?>
 
+<?php if (!$isGuest): /* กล่องเลือกระบบ — เฉพาะผู้ที่ login */ ?>
 <div class="d-flex align-items-center mb-3 mt-2">
   <div class="home-section-title tone-green mb-0"><i class="bi bi-grid-3x3-gap"></i> ระบบงาน <small>เลือกระบบที่ต้องการใช้งาน</small></div>
   <?php if (count($mods) > 1): ?>
@@ -55,7 +67,7 @@ foreach ($widgets as $widget) {
           <h3><?= h($m['name']) ?></h3>
           <span class="d-block small text-muted mb-2"><?= h($m['description']) ?></span>
           <span class="d-flex align-items-center gap-2 flex-wrap">
-            <span class="mod-role"><i class="bi bi-person-badge"></i> <?= h(role_short($m['key'], module_role($m['key'], $user))) ?></span>
+            <span class="mod-role"><i class="bi bi-person-badge"></i> <?= h(role_short($m['key'], module_role($m['key'], $viewer))) ?></span>
             <span class="mod-go ms-auto">เข้าใช้งาน <i class="bi bi-arrow-right"></i></span>
           </span>
         </span>
@@ -116,6 +128,7 @@ foreach ($widgets as $widget) {
   window.addEventListener('hashchange', fromHash); fromHash();
 })();
 </script>
+<?php endif; ?>
 
 <?php
 // ลิงก์ที่เกี่ยวข้อง: เว็บภายนอก (เรียงตามนี้) ตามด้วยลิงก์ของแต่ละระบบ (เช่น เว็บไซต์ศูนย์ดิจิทัลชุมชน)
@@ -130,7 +143,7 @@ foreach (modules() as $m) {
         $links[] = $l + ['url' => module_url($m['key'], $l['href'])];
     }
 }
-if ($links || $user['is_superadmin']): ?>
+if ($links || !empty($viewer['is_superadmin'])): ?>
 <div class="home-section-title tone-orange"><i class="bi bi-link-45deg"></i> ลิงก์และเครื่องมือ</div>
 <div class="row g-3 mb-2">
 <?php endif;
@@ -146,7 +159,7 @@ if ($links): ?>
   </div></div></div>
 <?php endif; ?>
 
-<?php if ($user['is_superadmin']): ?>
+<?php if (!empty($viewer['is_superadmin'])): ?>
   <div class="col-lg"><div class="card h-100 home-tool tone-red"><div class="card-body">
   <div class="home-tool-title"><i class="bi bi-shield-lock"></i> ผู้ดูแลระบบกลาง</div>
   <div class="d-flex flex-wrap gap-2">
@@ -156,5 +169,5 @@ if ($links): ?>
   </div>
   </div></div></div>
 <?php endif; ?>
-<?php if ($links || $user['is_superadmin']): ?></div><?php endif; ?>
+<?php if ($links || !empty($viewer['is_superadmin'])): ?></div><?php endif; ?>
 <?php require APP_ROOT . '/core/layout/footer.php'; ?>

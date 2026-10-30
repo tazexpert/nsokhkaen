@@ -5,4 +5,4 @@ if (!empty($_SESSION['uid'])) {
     audit_log('logout');
 }
 logout_user();
-redirect(url($viaPin ? 'pin.php' : 'login.php'));
+redirect(url($viaPin ? 'pin.php' : 'index.php'));      // หน้าหลักดูได้โดยไม่ต้อง login (ผู้เยี่ยมชม)

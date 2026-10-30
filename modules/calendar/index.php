@@ -1,12 +1,13 @@
 <?php
 /** ปฏิทินรายเดือน: กิจกรรมของทุกคนในสำนักงาน (กิจกรรมที่ตนรับผิดชอบเน้นสี) */
 require_once __DIR__ . '/bootstrap.php';
-$me = require_module(CAL_MODULE);
+$me = require_module_or_guest(CAL_MODULE);
 $m = $_GET['m'] ?? date('Y-m');
 if (!preg_match('/^\d{4}-\d{2}$/', $m) || !checkdate((int)substr($m, 5, 2), 1, (int)substr($m, 0, 4))) {
     $m = date('Y-m');
 }
-$mine = !empty($_GET['mine']);
+$guest = !empty($me['is_guest']);            // ผู้เยี่ยมชม: ดูได้อย่างเดียว ไม่มี "งานของฉัน"
+$mine = !$guest && !empty($_GET['mine']);
 $first = $m . '-01';
 $last = date('Y-m-t', strtotime($first));
 $gridStart = date('Y-m-d', strtotime($first . ' -' . date('w', strtotime($first)) . ' days'));          // อาทิตย์ก่อนวันที่ 1
@@ -39,7 +40,7 @@ require __DIR__ . '/header.php';
     <h2 class="h5 mb-0 mx-1"><?= h(thai_month_long((int)date('n', $ts))) ?> <?= (int)date('Y', $ts) + 543 ?></h2>
     <a href="<?= h($qs(['m' => $next])) ?>" class="btn btn-light btn-sm"><i class="bi bi-chevron-right"></i></a>
     <a href="<?= h($qs(['m' => date('Y-m')])) ?>" class="btn btn-outline-secondary btn-sm">เดือนนี้</a>
-    <div class="btn-group btn-group-sm ms-auto">
+    <div class="btn-group btn-group-sm ms-auto<?= $guest ? ' invisible' : '' ?>">
       <a href="<?= h('?m=' . $m) ?>" class="btn btn-outline-primary<?= $mine ? '' : ' active' ?>">ทุกคน</a>
       <a href="<?= h('?m=' . $m . '&mine=1') ?>" class="btn btn-outline-primary<?= $mine ? ' active' : '' ?>">เฉพาะงานของฉัน</a>
     </div>
@@ -58,7 +59,7 @@ require __DIR__ . '/header.php';
       </div>
     <?php endfor; ?>
   </div>
-  <div class="card-footer small text-muted"><span class="cal-ev mine d-inline-block px-2">งานของคุณ</span> <span class="cal-ev d-inline-block px-2">งานของผู้อื่น</span> <span class="cal-ev duty d-inline-block px-2">เวรสำนักงาน</span> · คลิกกิจกรรมเพื่อดูรายละเอียด</div>
+  <div class="card-footer small text-muted"><?php if (!$guest): ?><span class="cal-ev mine d-inline-block px-2">งานของคุณ</span> <?php endif; ?><span class="cal-ev d-inline-block px-2">งานของผู้อื่น</span> <span class="cal-ev duty d-inline-block px-2">เวรสำนักงาน</span> · คลิกกิจกรรมเพื่อดูรายละเอียด</div>
 </div>
 <?= cal_modal_script() ?>
 <?php require __DIR__ . '/footer.php'; ?>

@@ -11,6 +11,8 @@ return [
     'order'       => 5,
     // ทุกคนที่ login ดูปฏิทินได้ (ไม่ต้องกำหนดสิทธิ์) — ผู้เพิ่มกิจกรรมต้องได้สิทธิ์ "ผู้บันทึกกิจกรรม" ขึ้นไป
     'default_role' => 'viewer',
+    // ผู้เยี่ยมชม (ไม่ login) ดูตารางการปฏิบัติงาน/ปฏิทินได้อย่างเดียว
+    'guest_role' => 'viewer',
     'roles' => [
         'viewer' => 'ผู้ใช้งาน — ดูตารางการปฏิบัติงาน และกิจกรรมที่ตนรับผิดชอบ',
         'editor' => 'ผู้บันทึกกิจกรรม — เพิ่มกิจกรรม แก้ไข/ลบกิจกรรมที่ตนบันทึก',
@@ -19,7 +21,7 @@ return [
     'menu' => [
         ['id' => 'month', 'label' => 'ปฏิทินรายเดือน',   'href' => 'index.php',          'icon' => 'bi-calendar3',      'role' => 'viewer'],
         ['id' => 'list',  'label' => 'ตารางกิจกรรม',      'href' => 'list.php',           'icon' => 'bi-list-task',      'role' => 'viewer'],
-        ['id' => 'mine',  'label' => 'งานของฉัน',         'href' => 'list.php?mine=1',    'icon' => 'bi-person-check',   'role' => 'viewer'],
+        ['id' => 'mine',  'label' => 'งานของฉัน',         'href' => 'list.php?mine=1',    'icon' => 'bi-person-check',   'role' => 'viewer', 'guest' => false],
         ['id' => 'add',   'label' => 'เพิ่มกิจกรรม',       'href' => 'event_form.php',     'icon' => 'bi-plus-circle',    'role' => 'editor'],
         ['id' => 'import', 'label' => 'นำเข้า CSV',        'href' => 'import.php',         'icon' => 'bi-filetype-csv',   'role' => 'editor'],
         ['id' => 'duty',  'label' => 'นำเข้าเวรสำนักงาน',  'href' => 'duty_import.php',    'icon' => 'bi-shield-check',   'role' => 'editor'],

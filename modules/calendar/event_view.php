@@ -1,7 +1,7 @@
 <?php
 /** รายละเอียดกิจกรรม — ?modal=1 คืนเฉพาะเนื้อหาสำหรับ popup (ตารางการปฏิบัติงาน / ปฏิทิน) */
 require_once __DIR__ . '/bootstrap.php';
-$me = require_module(CAL_MODULE);
+$me = require_module_or_guest(CAL_MODULE);
 $modal = !empty($_GET['modal']);
 $st = db()->prepare('SELECT e.*, u.full_name AS created_by_name FROM cal_events e LEFT JOIN core_users u ON u.id = e.created_by WHERE e.id = ?');
 $st->execute([int_param('id')]);

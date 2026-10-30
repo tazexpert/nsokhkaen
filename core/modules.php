@@ -4,6 +4,8 @@
  * แต่ละระบบอยู่ในโฟลเดอร์ modules/<key>/ และมีไฟล์ module.php คืนค่า array:
  *   key, name, short, icon, color, description, order
  *   default_role => 'viewer'  (ไม่บังคับ) ผู้ใช้ทุกคนที่ login ได้ role นี้อัตโนมัติ ถ้าไม่ได้กำหนดสิทธิ์ไว้
+ *   guest_role => 'viewer'   (ไม่บังคับ) ผู้เยี่ยมชมที่ไม่ได้ login ได้ role นี้ — ใช้ได้เฉพาะหน้าที่เรียก require_module_or_guest()
+ *                        (เช่น ปฏิทินการปฏิบัติงาน ดูได้อย่างเดียว) · เมนูที่ใส่ 'guest' => false ไม่แสดงให้ผู้เยี่ยมชม
  *   superadmin_access => false  (ไม่บังคับ) ผู้ดูแลระบบกลางไม่ได้สิทธิ์สูงสุดอัตโนมัติ ต้องกำหนดสิทธิ์รายคน
  *                        (ใช้กับระบบที่มีข้อมูลส่วนบุคคล เช่น สลิปเงินเดือน)
  *   logo   => 'assets/img/logo.png'   (ไม่บังคับ) รูปโลโก้ระบบ สัมพัทธ์จากโฟลเดอร์ระบบ — ไม่มีจะใช้ icon แทน
@@ -26,7 +28,7 @@ function modules(): array
             }
             $m += ['short' => $m['name'], 'icon' => 'bi-grid', 'color' => '#0f6cbd', 'description' => '',
                    'order' => 100, 'menu' => [], 'links' => [], 'enabled' => true, 'logo' => null,
-                   'superadmin_access' => true, 'default_role' => null];
+                   'superadmin_access' => true, 'default_role' => null, 'guest_role' => null];
             if ($m['enabled']) {
                 $mods[$m['key']] = $m;
             }
@@ -92,7 +94,10 @@ function module_logo(array $m, int $size = 22, string $class = ''): string
 function menu_item_visible(string $module, array $item, ?array $user = null): bool
 {
     $user ??= current_user();
-    if (!$user || !user_can($module, $item['role'] ?? '', $user)) {
+    if (!$user || !empty($user['is_guest'])) {            // ผู้เยี่ยมชม: เฉพาะเมนูที่ role ผู้เยี่ยมชมถึง และไม่ได้ปิดไว้
+        return ($item['guest'] ?? true) && empty($item['visible']) && user_can($module, $item['role'] ?? '', guest_user());
+    }
+    if (!user_can($module, $item['role'] ?? '', $user)) {
         return false;
     }
     return !isset($item['visible']) || !is_callable($item['visible']) || (bool)($item['visible'])($user);
