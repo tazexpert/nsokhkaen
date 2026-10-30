@@ -120,7 +120,14 @@ $active = 'settings';
 require APP_ROOT . '/core/layout/header.php';
 ?>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>
-<form method="post" class="card" style="max-width:760px">
+<?php
+// ข้อมูลสำหรับตรวจปัญหาการติดตั้ง (เช่น เพิ่มระบบใหม่แล้วไม่แสดง)
+$opc = function_exists('opcache_get_status') ? @opcache_get_status(false) : false;
+$dirs = array_map('basename', glob(APP_ROOT . '/modules/*', GLOB_ONLYDIR) ?: []);
+?>
+<div class="row g-3 align-items-start">
+  <div class="col-xl-6 d-flex flex-column gap-3">
+<form method="post" class="card">
   <?= csrf_field() ?>
   <div class="card-body">
     <div class="mb-3"><label class="form-label">ชื่อระบบ</label><input name="app_name" class="form-control" required value="<?= h($appName) ?>"></div>
@@ -135,53 +142,7 @@ require APP_ROOT . '/core/layout/header.php';
   </div>
   <div class="card-footer"><button class="btn btn-primary"><i class="bi bi-save"></i> บันทึก</button></div>
 </form>
-
-<div class="card mt-3" style="max-width:760px">
-  <div class="card-header"><strong><i class="bi bi-grid"></i> ระบบที่ติดตั้ง</strong></div>
-  <ul class="list-group list-group-flush">
-    <?php foreach (modules() as $m): ?>
-      <li class="list-group-item">
-        <div class="d-flex"><strong><?= module_logo($m, 22) ?> <?= h($m['name']) ?></strong>
-          <code class="ms-auto small">modules/<?= h($m['key']) ?>/</code></div>
-        <div class="small text-muted">บทบาท: <?= h(implode(' · ', $m['roles'])) ?></div>
-      </li>
-    <?php endforeach; ?>
-  </ul>
-  <?php
-  // โฟลเดอร์ระบบที่อ่านไม่ได้ (ไม่มี module.php หรือไฟล์ไม่ถูกต้อง) — ช่วยตรวจเมื่ออัปเดตโค้ดไม่ครบ
-  $broken = array_filter(glob(APP_ROOT . '/modules/*', GLOB_ONLYDIR) ?: [], fn($d) => !isset(modules()[basename($d)]));
-  // เวอร์ชันโค้ด (commit ของ git) — ใช้ตรวจว่าเซิร์ฟเวอร์อัปเดตโค้ดล่าสุดแล้วหรือยัง
-  $ver = null;
-  $head = @file_get_contents(APP_ROOT . '/.git/HEAD');
-  if ($head !== false) {
-      $head = trim($head);
-      if (str_starts_with($head, 'ref: ')) {
-          $ref = substr($head, 5);
-          $ver = @file_get_contents(APP_ROOT . '/.git/' . $ref);
-          if ($ver === false && preg_match('/^([0-9a-f]{40}) ' . preg_quote($ref, '/') . '$/m', (string)@file_get_contents(APP_ROOT . '/.git/packed-refs'), $mm)) {
-              $ver = $mm[1];
-          }
-      } else {
-          $ver = $head;
-      }
-  }
-  ?>
-  <?php foreach ($broken as $d): ?>
-    <div class="list-group-item list-group-item-warning small"><i class="bi bi-exclamation-triangle"></i> โฟลเดอร์ <code>modules/<?= h(basename($d)) ?>/</code>
-      ไม่มีไฟล์ module.php หรือไฟล์ไม่ถูกต้อง — ระบบนี้จึงไม่แสดง (ตรวจว่าอัปโหลดไฟล์ครบ)</div>
-  <?php endforeach; ?>
-  <div class="card-footer small text-muted d-flex flex-wrap gap-2">
-    <span>เพิ่มระบบใหม่: สร้างโฟลเดอร์ใน <code>modules/</code> พร้อมไฟล์ <code>module.php</code> (ดู docs/ARCHITECTURE.md)</span>
-    <span class="ms-auto">เวอร์ชันโค้ด: <code><?= $ver ? h(substr(trim($ver), 0, 7)) : 'ไม่ทราบ (ไม่ได้ติดตั้งด้วย git)' ?></code></span>
-  </div>
-</div>
-
-<?php
-// ข้อมูลสำหรับตรวจปัญหาการติดตั้ง (เช่น เพิ่มระบบใหม่แล้วไม่แสดง)
-$opc = function_exists('opcache_get_status') ? @opcache_get_status(false) : false;
-$dirs = array_map('basename', glob(APP_ROOT . '/modules/*', GLOB_ONLYDIR) ?: []);
-?>
-<form method="post" class="card mt-3 border-danger" style="max-width:760px" id="resetAuditForm"
+<form method="post" class="card border-danger" id="resetAuditForm"
       onsubmit="return confirm('ยืนยันล้างข้อมูลที่เลือก? ข้อมูลที่ลบแล้วกู้คืนไม่ได้')">
   <?= csrf_field() ?><input type="hidden" name="action" value="reset_audit">
   <div class="card-header text-danger"><strong><i class="bi bi-arrow-counterclockwise"></i> ล้างข้อมูลระบบ (reset)</strong></div>
@@ -249,8 +210,48 @@ $dirs = array_map('basename', glob(APP_ROOT . '/modules/*', GLOB_ONLYDIR) ?: [])
     [sel, doAudit, doNotif].forEach(el => el.addEventListener('change', sync)); sync();
   })();
 </script>
-
-<details class="card mt-3" style="max-width:760px">
+  </div>
+  <div class="col-xl-6 d-flex flex-column gap-3">
+<div class="card">
+  <div class="card-header"><strong><i class="bi bi-grid"></i> ระบบที่ติดตั้ง</strong></div>
+  <ul class="list-group list-group-flush">
+    <?php foreach (modules() as $m): ?>
+      <li class="list-group-item">
+        <div class="d-flex"><strong><?= module_logo($m, 22) ?> <?= h($m['name']) ?></strong>
+          <code class="ms-auto small">modules/<?= h($m['key']) ?>/</code></div>
+        <div class="small text-muted">บทบาท: <?= h(implode(' · ', $m['roles'])) ?></div>
+      </li>
+    <?php endforeach; ?>
+  </ul>
+  <?php
+  // โฟลเดอร์ระบบที่อ่านไม่ได้ (ไม่มี module.php หรือไฟล์ไม่ถูกต้อง) — ช่วยตรวจเมื่ออัปเดตโค้ดไม่ครบ
+  $broken = array_filter(glob(APP_ROOT . '/modules/*', GLOB_ONLYDIR) ?: [], fn($d) => !isset(modules()[basename($d)]));
+  // เวอร์ชันโค้ด (commit ของ git) — ใช้ตรวจว่าเซิร์ฟเวอร์อัปเดตโค้ดล่าสุดแล้วหรือยัง
+  $ver = null;
+  $head = @file_get_contents(APP_ROOT . '/.git/HEAD');
+  if ($head !== false) {
+      $head = trim($head);
+      if (str_starts_with($head, 'ref: ')) {
+          $ref = substr($head, 5);
+          $ver = @file_get_contents(APP_ROOT . '/.git/' . $ref);
+          if ($ver === false && preg_match('/^([0-9a-f]{40}) ' . preg_quote($ref, '/') . '$/m', (string)@file_get_contents(APP_ROOT . '/.git/packed-refs'), $mm)) {
+              $ver = $mm[1];
+          }
+      } else {
+          $ver = $head;
+      }
+  }
+  ?>
+  <?php foreach ($broken as $d): ?>
+    <div class="list-group-item list-group-item-warning small"><i class="bi bi-exclamation-triangle"></i> โฟลเดอร์ <code>modules/<?= h(basename($d)) ?>/</code>
+      ไม่มีไฟล์ module.php หรือไฟล์ไม่ถูกต้อง — ระบบนี้จึงไม่แสดง (ตรวจว่าอัปโหลดไฟล์ครบ)</div>
+  <?php endforeach; ?>
+  <div class="card-footer small text-muted d-flex flex-wrap gap-2">
+    <span>เพิ่มระบบใหม่: สร้างโฟลเดอร์ใน <code>modules/</code> พร้อมไฟล์ <code>module.php</code> (ดู docs/ARCHITECTURE.md)</span>
+    <span class="ms-auto">เวอร์ชันโค้ด: <code><?= $ver ? h(substr(trim($ver), 0, 7)) : 'ไม่ทราบ (ไม่ได้ติดตั้งด้วย git)' ?></code></span>
+  </div>
+</div>
+<details class="card">
   <summary class="card-header"><strong><i class="bi bi-wrench"></i> ข้อมูลตรวจสอบการติดตั้ง</strong></summary>
   <div class="card-body small">
     <dl class="row mb-0">
@@ -264,4 +265,6 @@ $dirs = array_map('basename', glob(APP_ROOT . '/modules/*', GLOB_ONLYDIR) ?: [])
     </dl>
   </div>
 </details>
+  </div>
+</div>
 <?php require APP_ROOT . '/core/layout/footer.php'; ?>
