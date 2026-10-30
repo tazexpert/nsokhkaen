@@ -24,7 +24,7 @@ $calLabel = $calRange === 'all' ? 'ทั้งหมด ตั้งแต่ '
         . ($calFrom !== date('Y-m-01', strtotime($calTo)) ? ' (ตั้งแต่ ' . thai_date($calFrom) . ')' : '')
     : ($calFrom === $calTo ? cal_date_text($calFrom) : thai_date($calFrom) . ' – ' . thai_date($calTo)));
 $calEvents = cal_events_between($calFrom, $calTo, $calMine ? $user['id'] : null, $calDuty);
-$calQs = fn(array $p) => '?' . http_build_query(array_filter($p + ['cal_range' => $calRange === 'all' ? null : $calRange, 'cal_mine' => $calMine ? 1 : null, 'cal_duty' => $calDuty ? 1 : null])) . '#calendar';
+$calQs = fn(array $p) => '?' . http_build_query(array_filter($p + ['cal_range' => $calRange === 'all' ? null : $calRange, 'cal_mine' => $calMine ? 1 : null, 'cal_duty' => $calDuty ? 1 : null]));
 ?>
 <link href="<?= h(asset_v('modules/calendar/assets/css/calendar.css')) ?>" rel="stylesheet">
 <div class="card mb-4 cal-home whiteboard" id="calendar">

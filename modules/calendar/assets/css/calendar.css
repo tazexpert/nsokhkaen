@@ -58,6 +58,7 @@
    ตารางการปฏิบัติงานหน้าหลัก: กระดานไวท์บอร์ด ตัวหนังสือสีน้ำเงินแบบปากกาไวท์บอร์ด (ฟอนต์ปกติ)
    ===================================================================== */
 .whiteboard{
+  scroll-margin-top:96px;
   --wb-ink:#1d4ed8; --wb-ink-soft:rgba(29,78,216,.28); --wb-red:#dc2626;
   border:0; border-radius:12px; padding:12px 12px 0; overflow:visible; margin-bottom:2.2rem!important;
   background:linear-gradient(135deg,#f8fafc 0%,#cbd5e1 18%,#f1f5f9 32%,#94a3b8 55%,#e2e8f0 75%,#64748b 100%);   /* กรอบอะลูมิเนียม */
