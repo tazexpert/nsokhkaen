@@ -29,13 +29,13 @@ foreach ($pdo->query(
 }
 require __DIR__ . '/header.php';
 ?>
-<div class="row g-3 mb-4">
+<div class="row g-3 mb-4" data-reveal>
   <?php foreach ([
       ['centers', 'bi-building', 'ศูนย์ทั้งหมด', 'primary'],
       ['districts', 'bi-geo-alt', 'อำเภอที่มีศูนย์', 'success'],
       ['activities', 'bi-calendar-check', 'กิจกรรม', 'warning'],
   ] as [$k, $icon, $label, $color]): ?>
-  <div class="col-12 col-sm-4">
+  <div class="col-12 col-sm-4 reveal-item">
     <div class="stat-card">
       <span class="stat-icon text-bg-<?= $color ?>"><i class="bi <?= $icon ?>"></i></span>
       <div><div class="stat-num"><?= number_format((int)$stats[$k]) ?></div><div class="stat-label"><?= $label ?></div></div>
@@ -49,8 +49,8 @@ require __DIR__ . '/header.php';
     มี <?= (int)$stats['no_location'] ?> ศูนย์ที่ยังไม่ได้ระบุพิกัด lat/long จึงยังไม่แสดงบนแผนที่ — <a href="centers.php?nolocation=1" class="alert-link">ดูรายการ</a></div>
 <?php endif; ?>
 
-<div class="row g-3">
-  <div class="col-lg-7">
+<div class="row g-3" data-reveal>
+  <div class="col-lg-7 reveal-item">
     <div class="card h-100">
       <div class="card-header d-flex align-items-center">
         <strong>กิจกรรมล่าสุด</strong>
@@ -68,7 +68,7 @@ require __DIR__ . '/header.php';
       </div>
     </div>
   </div>
-  <div class="col-lg-5">
+  <div class="col-lg-5 reveal-item">
     <div class="card h-100">
       <div class="card-header d-flex align-items-center">
         <strong>จำนวนศูนย์ตามอำเภอ</strong>

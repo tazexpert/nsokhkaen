@@ -274,3 +274,7 @@ h1,h2,h3,h4,h5,.brand,.stat-num,.btn,.card-header,.nav-tabs{font-family:'Prompt'
 .js-reveal .reveal-item.revealed{animation:modRise .7s cubic-bezier(.2,.8,.25,1.15) var(--d,0ms) both}
 @keyframes modRise{from{opacity:0;transform:translateY(36px) scale(.96)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.js-reveal .reveal-item{opacity:1;transform:none;animation:none!important}}
+/* แท่งกราฟในกล่องที่มี animation: ค่อย ๆ ยืดออกหลังกล่องขึ้นมา */
+.js-reveal [data-reveal] .bar-fill{transform:scaleX(0);transform-origin:left center}
+.js-reveal .revealed-group .bar-fill{transform:none;transition:transform .9s cubic-bezier(.2,.8,.2,1) .45s}
+@media (prefers-reduced-motion:reduce){.js-reveal [data-reveal] .bar-fill{transform:none;transition:none}}

@@ -41,6 +41,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+  document.documentElement.classList.add('js-reveal');   // animation กล่อง ([data-reveal] .reveal-item) — ไม่มี JS = แสดงปกติ
   const BASE_URL_JS = <?= json_encode(BASE_URL) ?>;
   const CSRF_TOKEN = <?= json_encode(csrf_token()) ?>;
   // ส่ง CSRF token ไปกับทุกคำขอ AJAX ของ jQuery

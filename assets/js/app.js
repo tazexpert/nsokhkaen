@@ -64,3 +64,18 @@ document.querySelectorAll('input[type=file][data-preview]').forEach(input => {
     });
   });
 })();
+
+// animation กล่อง: กลุ่ม [data-reveal] เล่นครั้งเดียวเมื่อเลื่อนมาเห็นครั้งแรก — กล่อง .reveal-item ทยอยลอยขึ้น
+// (หน้าหลัก: ระบบงาน / ลิงก์ · แดชบอร์ดวัสดุฯ · ภาพรวมศูนย์ดิจิทัลฯ) — ตั้งค่าลดการเคลื่อนไหว = แสดงทันที
+(() => {
+  const groups = [...document.querySelectorAll('[data-reveal]')];
+  if (!groups.length) return;
+  const itemsOf = g => [g, ...g.querySelectorAll('.reveal-item')].filter(el => el.classList.contains('reveal-item'));
+  const play = g => { g.classList.add('revealed-group'); itemsOf(g).forEach(el => el.classList.add('revealed')); };
+  groups.forEach(g => itemsOf(g).forEach((el, i) => el.style.setProperty('--d', (i * 110) + 'ms')));
+  if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) { groups.forEach(play); return; }
+  const io = new IntersectionObserver(entries => entries.forEach(e => {
+    if (e.isIntersecting) { play(e.target); io.unobserve(e.target); }
+  }), { threshold: 0.12 });
+  groups.forEach(g => io.observe(g));
+})();

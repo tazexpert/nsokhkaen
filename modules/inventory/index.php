@@ -35,25 +35,25 @@ function dashboardCard(string $colorClass, int $value, string $label, string $hr
 ?>
 
 
-<div class="row g-3 mb-4">
-    <div class="col-6 col-lg">
+<div class="row g-3 mb-4" data-reveal>
+    <div class="col-6 col-lg reveal-item">
         <?php dashboardCard('text-bg-primary', (int) $materialCount, 'วัสดุสิ้นเปลืองทั้งหมด', INV_URL . 'materials.php') ?>
     </div>
-    <div class="col-6 col-lg">
+    <div class="col-6 col-lg reveal-item">
         <?php dashboardCard('text-bg-warning', (int) $lowStockCount, 'วัสดุใกล้หมดสต๊อก', INV_URL . 'materials.php?filter=low_stock') ?>
     </div>
-    <div class="col-6 col-lg">
+    <div class="col-6 col-lg reveal-item">
         <?php dashboardCard('text-bg-success', (int) $equipmentCount, 'ครุภัณฑ์ทั้งหมด', INV_URL . 'equipment.php') ?>
     </div>
-    <div class="col-6 col-lg">
+    <div class="col-6 col-lg reveal-item">
         <?php dashboardCard('text-bg-info', (int) $loanCounts['borrowed'], 'ครุภัณฑ์ที่กำลังยืม', INV_URL . 'loans.php?tab=borrowed') ?>
     </div>
-    <div class="col-6 col-lg">
+    <div class="col-6 col-lg reveal-item">
         <?php dashboardCard((int) $loanCounts['overdue'] ? 'text-bg-danger' : 'text-bg-light border', (int) $loanCounts['overdue'], 'เกินกำหนดคืน', INV_URL . 'loans.php?tab=overdue') ?>
     </div>
 </div>
 
-<div class="card">
+<div class="card reveal-item" data-reveal>
     <div class="card-header d-flex justify-content-between align-items-center">
         <span>ใบเบิกล่าสุด</span>
         <a href="<?= INV_URL ?>requisitions.php" class="small">ดูทั้งหมด &rarr;</a>

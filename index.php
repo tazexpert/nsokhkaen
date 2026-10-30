@@ -20,7 +20,6 @@ $widgets = array_filter(array_map(fn($m) => APP_ROOT . '/modules/' . $m['key'] .
 $hidePageHead = true;
 require APP_ROOT . '/core/layout/header.php';
 ?>
-<script>document.documentElement.classList.add('js-reveal');   // ซ่อนกล่องไว้ก่อน รอ animation (ไม่มี JS = แสดงปกติ)</script>
 <section class="home-hero mb-4">
   <?php if ($isGuest): ?>
   <span class="home-hero-avatar"><?= user_avatar($viewer, 64) ?></span>
@@ -171,17 +170,4 @@ if ($links): ?>
   </div></div></div>
 <?php endif; ?>
 <?php if ($links || !empty($viewer['is_superadmin'])): ?></div><?php endif; ?>
-<script>
-// animation กล่อง (ระบบงาน / ลิงก์และเครื่องมือ): แต่ละส่วนเล่นครั้งเดียวเมื่อเลื่อนมาเห็นครั้งแรก (กล่องทยอยลอยขึ้น)
-(() => {
-  const groups = [...document.querySelectorAll('[data-reveal]')];
-  const play = g => g.querySelectorAll('.reveal-item').forEach(el => el.classList.add('revealed'));
-  groups.forEach(g => g.querySelectorAll('.reveal-item').forEach((el, i) => el.style.setProperty('--d', (i * 110) + 'ms')));
-  if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) { groups.forEach(play); return; }
-  const io = new IntersectionObserver(entries => entries.forEach(e => {
-    if (e.isIntersecting) { play(e.target); io.unobserve(e.target); }
-  }), { threshold: 0.15 });
-  groups.forEach(g => io.observe(g));
-})();
-</script>
 <?php require APP_ROOT . '/core/layout/footer.php'; ?>
