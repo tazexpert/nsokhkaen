@@ -110,9 +110,8 @@
 .whiteboard .cal-person{background:transparent!important;padding:0 4px;color:var(--wb-ink)}
 .whiteboard .cal-person+.cal-person::before{content:"· ";color:var(--wb-ink-soft)}
 .whiteboard .cal-person.pos small{color:rgba(29,78,216,.7)}
-.whiteboard .cal-person.me{background:linear-gradient(transparent 45%,rgba(253,224,71,.75) 45%,rgba(253,224,71,.75) 90%,transparent 90%)!important}
-/* งานของฉัน = ไฮไลต์เหลือง · เวร = ไฮไลต์เขียว · จบแล้ว = ขีดฆ่า */
-.whiteboard .cal-table tr.cal-mine td{background:linear-gradient(transparent 12%,rgba(253,224,71,.28) 12%,rgba(253,224,71,.28) 88%,transparent 88%)!important}
+.whiteboard .cal-person.me{font-weight:inherit}   /* งานของตัวเอง: แสดงแค่ป้าย "งานของคุณ" ไม่ไฮไลต์ */
+/* เวร = ไฮไลต์เขียว · จบแล้ว = ขีดฆ่า (งานของฉันไม่ไฮไลต์ — มีป้าย "งานของคุณ") */
 .whiteboard .cal-table tr.cal-duty td{background:linear-gradient(transparent 12%,rgba(74,222,128,.22) 12%,rgba(74,222,128,.22) 88%,transparent 88%)!important}
 .whiteboard .cal-table tr.cal-duty td:first-child{box-shadow:none}
 .whiteboard .cal-table tr.cal-duty a{color:var(--wb-ink)}
