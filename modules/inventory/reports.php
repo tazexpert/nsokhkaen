@@ -120,6 +120,13 @@ requireAdmin();
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
+    /* animation กราฟ (จอเท่านั้น) */
+    .bar-anim { transform-origin: bottom center; animation: barGrow .8s cubic-bezier(.2,.8,.2,1) var(--d, 0ms) both; }
+    .bar-anim .bar-value { animation: barValueIn .35s ease-out calc(var(--d, 0ms) + .65s) both; }
+    @keyframes barGrow { from { transform: scaleY(0); } to { transform: none; } }
+    @keyframes barValueIn { from { opacity: 0; transform: translate(-50%, 4px); } to { opacity: 1; transform: translateX(-50%); } }
+    @media (prefers-reduced-motion: reduce) { .bar-anim, .bar-anim .bar-value { animation: none; } }
+    @media print { .bar-anim, .bar-anim .bar-value { animation: none !important; } }
     .bar-value {
         font-size: 11px;
         color: #333;
@@ -235,11 +242,13 @@ function renderChart(items) {
     // same markup auto-scales whether .chart-bars is sized for the screen
     // or stretched to fill the landscape print page (see @media print).
     const max = Math.max(...items.map((i) => i.qty));
-    items.forEach((item) => {
+    // animation: แท่งยืดขึ้นจากแกนล่างทีละแท่ง (ทุกครั้งที่โหลด/เปลี่ยนช่วงวันที่) — หน่วงรวมไม่เกิน ~0.9 วินาที
+    const step = Math.min(60, 900 / items.length);
+    items.forEach((item, i) => {
         const pct = max > 0 ? (item.qty / max) * 100 : 0;
         const col = $(`
-            <div class="bar-col" title="${item.name}: ${item.qty} ${item.unit}">
-                <div class="bar" style="height:${pct}%">
+            <div class="bar-col" title="${item.name}: ${item.qty} ${item.unit}" style="--d:${Math.round(i * step)}ms">
+                <div class="bar bar-anim" style="height:${pct}%">
                     <div class="bar-value">${item.qty}</div>
                 </div>
                 <div class="bar-label">${item.name}</div>
