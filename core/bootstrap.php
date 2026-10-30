@@ -16,6 +16,7 @@ require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/modules.php';
 require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/notifications.php';
+require_once __DIR__ . '/messages.php';
 
 /** path ของโปรเจกต์บนเว็บ คำนวณจากไฟล์ที่ถูกเรียกเทียบกับ APP_ROOT */
 function detect_base_url(): string

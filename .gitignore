@@ -3,6 +3,7 @@
 !/uploads/.htaccess
 !/uploads/inventory/loans/.htaccess
 !/uploads/payslip/.htaccess
+!/uploads/messages/.htaccess
 !/uploads/**/
 !/uploads/**/.gitkeep
 /libs/phpqrcode/cache/*

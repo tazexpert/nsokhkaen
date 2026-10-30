@@ -1,10 +1,11 @@
 <?php
 /**
  * บุคลากรสถิติขอนแก่น (ทุกคนที่ login เห็นได้ — เมนูบัญชีผู้ใช้ ใต้ "บัญชีของฉัน"): ชื่อ-สกุล ชื่อเล่น ตำแหน่ง เบอร์โทรศัพท์
+ * ไอคอนซองจดหมาย = ส่งข้อความถึงบุคคลนั้น (message_compose.php?to=id)
  * เฉพาะเจ้าหน้าที่ (ชื่อผู้ใช้เป็นตัวเลข) ที่เปิดใช้งาน · เรียงตามตำแหน่ง (staff_sort_key) แล้วตามชื่อผู้ใช้ · ค้นหา / พิมพ์ได้
  */
 require_once __DIR__ . '/core/bootstrap.php';
-require_login();
+$me = require_login();
 $q = trim($_GET['q'] ?? '');
 $where = ['u.is_active = 1', "u.username REGEXP '^[0-9]+$'"];
 $params = [];
@@ -12,7 +13,7 @@ if ($q !== '') {
     $where[] = '(u.full_name LIKE ? OR u.position LIKE ? OR u.phone LIKE ? OR u.nickname LIKE ?)';
     array_push($params, ...array_fill(0, 4, "%$q%"));
 }
-$st = db()->prepare('SELECT u.username, u.sort_order, u.full_name, u.position, u.phone, u.nickname FROM core_users u WHERE ' . implode(' AND ', $where));
+$st = db()->prepare('SELECT u.id, u.username, u.sort_order, u.full_name, u.position, u.phone, u.nickname FROM core_users u WHERE ' . implode(' AND ', $where));
 $st->execute($params);
 $staff = array_values(sort_staff($st->fetchAll()));     // เรียงตามลำดับตำแหน่ง แล้วตามชื่อผู้ใช้ (ไม่แสดงชื่อผู้ใช้)
 
@@ -32,7 +33,7 @@ require APP_ROOT . '/core/layout/header.php';
   <h2 class="h5 text-center d-none d-print-block my-3">บุคลากร<?= h(ORG_NAME) ?></h2>
   <div class="table-responsive">
     <table class="table table-hover align-middle mb-0 staff-table">
-      <thead><tr><th class="text-center" style="width:56px">ลำดับ</th><th>ชื่อ-สกุล</th><th>ชื่อเล่น</th><th>ตำแหน่ง</th><th>เบอร์โทรศัพท์</th></tr></thead>
+      <thead><tr><th class="text-center" style="width:56px">ลำดับ</th><th>ชื่อ-สกุล</th><th>ชื่อเล่น</th><th>ตำแหน่ง</th><th>เบอร์โทรศัพท์</th><th class="no-print text-center" style="width:72px">ข้อความ</th></tr></thead>
       <tbody>
       <?php foreach ($staff as $i => $s): ?>
         <tr>
@@ -41,9 +42,15 @@ require APP_ROOT . '/core/layout/header.php';
           <td><?= $s['nickname'] ? h($s['nickname']) : '<span class="text-muted">-</span>' ?></td>
           <td><?= h($s['position'] ?: '-') ?></td>
           <td class="text-nowrap"><?= $s['phone'] ? '<a href="tel:' . h(preg_replace('/[^0-9+]/', '', $s['phone'])) . '" class="text-decoration-none">' . h($s['phone']) . '</a>' : '<span class="text-muted">-</span>' ?></td>
+          <td class="no-print text-center">
+            <?php if ((int)$s['id'] !== (int)$me['id']): ?>
+              <a href="<?= h(url('message_compose.php?to=' . (int)$s['id'])) ?>" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip"
+                 title="ส่งข้อความถึง <?= h(preg_replace('/\s+/u', ' ', $s['full_name'])) ?>" aria-label="ส่งข้อความ"><i class="bi bi-envelope"></i></a>
+            <?php endif; ?>
+          </td>
         </tr>
       <?php endforeach; ?>
-      <?php if (!$staff): ?><tr><td colspan="5" class="text-center text-muted py-5">ไม่พบข้อมูล</td></tr><?php endif; ?>
+      <?php if (!$staff): ?><tr><td colspan="6" class="text-center text-muted py-5">ไม่พบข้อมูล</td></tr><?php endif; ?>
       </tbody>
     </table>
   </div>

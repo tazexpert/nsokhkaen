@@ -96,6 +96,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
           <li class="dropdown-header d-flex align-items-center gap-2"><?= user_avatar($user, 40) ?><span><?= h($user['full_name']) ?><?php if ($user['username']): ?><br><small class="font-monospace"><?= h($user['username']) ?></small><?php endif; ?></span></li>
           <li><a class="dropdown-item<?= $navActive(!$module && $active === 'account') ?>" href="<?= h(url('account.php')) ?>"><i class="bi bi-person-gear"></i> บัญชีของฉัน</a></li>
           <li><a class="dropdown-item<?= $navActive(!$module && $active === 'notebook') ?>" href="<?= h(url('notebook.php')) ?>"><i class="bi bi-journal-bookmark"></i> สมุดบันทึก</a></li>
+          <li><a class="dropdown-item d-flex align-items-center<?= $navActive(!$module && $active === 'messages') ?>" href="<?= h(url('messages.php')) ?>"><i class="bi bi-envelope me-1"></i> กล่องจดหมาย<?php if ($__mu = msg_unread_count((int)$user['id'])): ?><span class="badge rounded-pill text-bg-danger ms-auto"><?= $__mu > 99 ? '99+' : $__mu ?></span><?php endif; ?></a></li>
           <li><a class="dropdown-item<?= $navActive(!$module && $active === 'staff') ?>" href="<?= h(url('staff.php')) ?>"><i class="bi bi-people"></i> บุคลากรสถิติขอนแก่น</a></li>
           <li><a class="dropdown-item" href="<?= h(url('index.php#arrange')) ?>"><i class="bi bi-arrows-move"></i> จัดเรียงเมนูระบบ</a></li>
           <li><hr class="dropdown-divider"></li>

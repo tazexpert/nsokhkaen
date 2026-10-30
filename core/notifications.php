@@ -6,6 +6,7 @@
  * ซึ่ง return ฟังก์ชัน fn(array $user): array คืนรายการแจ้งเตือน แต่ละรายการ:
  *   'title' => หัวข้อ, 'text' => รายละเอียด, 'href' => ลิงก์, 'time' => 'Y-m-d H:i:s'
  *   'icon'  => ไอคอน Bootstrap เช่น 'bi-box-seam', 'color' => success|warning|danger|primary|info|secondary
+ * ข้อความใหม่ในกล่องจดหมาย (core/messages.php) รวมอยู่ด้วยเสมอ
  * ระบบกลางเรียกเฉพาะระบบที่ผู้ใช้มีสิทธิ์ และนับ "ยังไม่อ่าน" จากเวลาที่ใหม่กว่า core_users.notif_seen_at
  */
 
@@ -20,6 +21,13 @@ function user_notifications(?array $user = null): array
         return $cache[$user['id']];
     }
     $items = [];
+    try {                                      // ระบบกลาง: ข้อความใหม่ในกล่องจดหมาย
+        foreach (msg_notifications($user) as $n) {
+            $items[] = $n + ['icon' => 'bi-bell', 'color' => 'primary', 'text' => '', 'href' => '#'];
+        }
+    } catch (Throwable $e) {
+        error_log('notifications messages: ' . $e->getMessage());
+    }
     foreach (accessible_modules($user) as $m) {
         $file = APP_ROOT . '/modules/' . $m['key'] . '/notifications.php';
         if (!is_file($file)) {
