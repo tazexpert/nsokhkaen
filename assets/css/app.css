@@ -268,3 +268,16 @@ h1,h2,h3,h4,h5,.brand,.stat-num,.btn,.card-header,.nav-tabs{font-family:'Prompt'
 .btn-login{font-family:'Prompt',sans-serif;color:#1a66c2;font-weight:500;border:0;border-radius:20px;padding:.4rem 1rem;box-shadow:0 2px 8px rgba(0,0,0,.12)}
 .btn-login:hover{background:#fff;color:#0f4f9a}
 .login-modal{border-radius:14px;overflow:hidden;border-top:5px solid #4099ff}
+
+/* ---------- หน้าหลัก: animation กล่องระบบงาน (ครั้งแรกที่เลื่อนมาเห็น) ---------- */
+.js-reveal .reveal-item{opacity:0;transform:translateY(36px) scale(.96)}
+.js-reveal .reveal-item.revealed{animation:modRise .7s cubic-bezier(.2,.8,.25,1.15) var(--d,0ms) both}
+.js-reveal .reveal-item.revealed .mod-icon{animation:modPop .6s cubic-bezier(.3,1.6,.5,1) calc(var(--d,0ms) + .35s) both}
+.js-reveal .reveal-item.revealed .mod-card::after{animation:modGlow 1.4s ease-out calc(var(--d,0ms) + .2s) both}
+.js-reveal .reveal-title{opacity:0;transform:translateX(-18px)}
+.js-reveal .reveal-title.revealed{animation:modSlide .55s ease-out both}
+@keyframes modRise{from{opacity:0;transform:translateY(36px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes modPop{0%{transform:scale(.4) rotate(-12deg);opacity:0}70%{transform:scale(1.12) rotate(3deg);opacity:1}100%{transform:none}}
+@keyframes modGlow{0%{transform:scale(.3);opacity:0}50%{opacity:1}100%{transform:none}}
+@keyframes modSlide{to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.js-reveal .reveal-item,.js-reveal .reveal-title{opacity:1;transform:none;animation:none!important}}

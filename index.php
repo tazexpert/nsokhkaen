@@ -45,7 +45,7 @@ foreach ($widgets as $widget) {
 
 <?php if (!$isGuest): /* กล่องเลือกระบบ — เฉพาะผู้ที่ login */ ?>
 <div class="d-flex align-items-center mb-3 mt-2">
-  <div class="home-section-title tone-green mb-0"><i class="bi bi-grid-3x3-gap"></i> ระบบงาน <small>เลือกระบบที่ต้องการใช้งาน</small></div>
+  <div class="home-section-title tone-green mb-0 reveal-title" id="modTitle"><i class="bi bi-grid-3x3-gap"></i> ระบบงาน <small>เลือกระบบที่ต้องการใช้งาน</small></div>
   <?php if (count($mods) > 1): ?>
     <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" id="arrangeBtn"><i class="bi bi-arrows-move"></i> จัดเรียงระบบ</button>
     <div class="ms-auto d-none gap-2" id="arrangeBar">
@@ -58,9 +58,10 @@ foreach ($widgets as $widget) {
 <div class="alert alert-info py-2 small d-none" id="arrangeHelp"><i class="bi bi-info-circle"></i>
   ลากกล่องเพื่อสลับตำแหน่ง หรือใช้ปุ่มลูกศร — ลำดับนี้ใช้กับเมนูด้านบนด้วย<?= count($mods) > 5 ? ' (เมนูด้านบนแสดง 4 ระบบแรก ที่เหลืออยู่ใน "ระบบอื่นๆ")' : '' ?></div>
 
+<script>document.documentElement.classList.add('js-reveal');   // ซ่อนกล่องไว้ก่อน รอ animation (ไม่มี JS = แสดงปกติ)</script>
 <div class="row g-3 mb-4" id="modGrid">
   <?php foreach ($mods as $m): ?>
-    <div class="col-md-6 col-xl-4 mod-item" data-key="<?= h($m['key']) ?>">
+    <div class="col-md-6 col-xl-4 mod-item reveal-item" data-key="<?= h($m['key']) ?>">
       <a class="mod-card" style="--mc:<?= h($m['color']) ?>" href="<?= h(module_url($m['key'], $m['entry'] ?? 'index.php')) ?>">
         <span class="mod-icon<?= $m['logo'] ? ' has-logo' : '' ?>" style="background:<?= h($m['color']) ?>"><?= $m['logo'] ? module_logo($m, 52) : '<i class="bi ' . h($m['icon']) . '"></i>' ?></span>
         <span class="min-w-0">
@@ -85,6 +86,18 @@ foreach ($widgets as $widget) {
   <?php endif; ?>
 </div>
 <script>
+// animation กล่องระบบงาน: เล่นครั้งเดียวเมื่อเลื่อนมาเห็นครั้งแรก (กล่องทยอยลอยขึ้น โลโก้เด้ง)
+(() => {
+  const grid = document.getElementById('modGrid'), title = document.getElementById('modTitle');
+  const items = [...grid.querySelectorAll('.reveal-item')];
+  items.forEach((el, i) => el.style.setProperty('--d', (i * 110) + 'ms'));
+  const play = () => { title?.classList.add('revealed'); items.forEach(el => el.classList.add('revealed')); };
+  if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) { play(); return; }
+  const io = new IntersectionObserver(entries => {
+    if (entries.some(e => e.isIntersecting)) { play(); io.disconnect(); }
+  }, { threshold: 0.15 });
+  io.observe(grid);
+})();
 (() => {
   const grid = document.getElementById('modGrid'), btn = document.getElementById('arrangeBtn');
   if (!btn) return;
