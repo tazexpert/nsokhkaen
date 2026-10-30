@@ -99,7 +99,7 @@
 .whiteboard .cal-table thead th{color:var(--wb-ink)!important;font-weight:600;border-bottom:3px solid var(--wb-ink)!important;background:transparent}
 .whiteboard .cal-table td,.whiteboard .cal-table th{border-color:var(--wb-ink-soft);background:transparent!important}
 .whiteboard .cal-table tbody td{border-bottom:1.5px solid var(--wb-ink-soft)}
-.whiteboard .cal-table tr.cal-day th{color:var(--wb-ink)!important;padding-top:14px;border-bottom:2px solid var(--wb-ink)}
+.whiteboard .cal-table tr.cal-day th{color:var(--wb-ink)!important;padding-top:14px;border-bottom:1.5px solid var(--wb-ink-soft)}
 .whiteboard .cal-table a{color:var(--wb-ink)}
 .whiteboard .cal-table .text-muted{color:rgba(29,78,216,.6)!important}
 /* ป้าย = วงด้วยปากกา */
@@ -126,13 +126,13 @@
   background:linear-gradient(180deg,#e2e8f0,#94a3b8 60%,#64748b);box-shadow:0 6px 10px rgba(15,23,42,.18)}
 .whiteboard .wb-marker{position:absolute;top:-7px;width:82px;height:12px;border-radius:6px 3px 3px 6px;box-shadow:0 2px 3px rgba(0,0,0,.25)}
 .whiteboard .wb-marker::before{content:"";position:absolute;right:-10px;top:2px;width:12px;height:8px;border-radius:0 4px 4px 0;background:inherit;filter:brightness(.75)}
-.whiteboard .wb-marker.blue{left:56%;background:linear-gradient(#3b82f6,#1d4ed8)}
-.whiteboard .wb-marker.red{left:calc(56% + 100px);background:linear-gradient(#f87171,#dc2626)}
-.whiteboard .wb-marker.black{left:calc(56% + 200px);background:linear-gradient(#475569,#111827)}
-.whiteboard .wb-eraser{position:absolute;left:12%;top:-14px;width:90px;height:20px;border-radius:4px;background:linear-gradient(#334155 0 55%,#e5e7eb 55%);box-shadow:0 2px 4px rgba(0,0,0,.3)}
+.whiteboard .wb-marker.blue{right:222px;background:linear-gradient(#3b82f6,#1d4ed8)}
+.whiteboard .wb-marker.red{right:122px;background:linear-gradient(#f87171,#dc2626)}
+.whiteboard .wb-marker.black{right:22px;background:linear-gradient(#475569,#111827)}
+.whiteboard .wb-eraser{position:absolute;left:12px;top:-14px;width:90px;height:20px;border-radius:4px;background:linear-gradient(#334155 0 55%,#e5e7eb 55%);box-shadow:0 2px 4px rgba(0,0,0,.3)}
 @media (max-width:575.98px){
   .whiteboard{padding:8px 8px 0}
   .whiteboard .wb-tray{margin:0 -8px}
   .whiteboard .wb-marker.black{display:none}
-  .whiteboard .wb-marker.blue{left:40%}.whiteboard .wb-marker.red{left:calc(40% + 96px)}
+  .whiteboard .wb-marker.blue{right:120px}.whiteboard .wb-marker.red{right:20px}
 }
