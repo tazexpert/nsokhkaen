@@ -80,7 +80,7 @@
 
 /* หัวกระดาน + ปุ่ม (วาดด้วยปากกา) */
 .whiteboard .card-header{background:transparent!important;border-bottom:2px dashed var(--wb-ink-soft);color:var(--wb-ink);position:relative;z-index:1}
-.whiteboard .card-header strong{font-size:1.1rem;font-weight:500;color:var(--wb-ink)!important;text-decoration:underline wavy rgba(29,78,216,.45);text-underline-offset:6px}
+.whiteboard .card-header strong{font-size:1.1rem;font-weight:500;color:var(--wb-ink)!important}
 .whiteboard .card-header .mod-logo{background:#fff;border-radius:5px}
 .whiteboard .card-header .btn{background:transparent;color:var(--wb-ink);border:2px solid var(--wb-ink);box-shadow:none;background-image:none}
 .whiteboard .card-header .btn-group>.btn{border-radius:0}
