@@ -20,6 +20,7 @@ $widgets = array_filter(array_map(fn($m) => APP_ROOT . '/modules/' . $m['key'] .
 $hidePageHead = true;
 require APP_ROOT . '/core/layout/header.php';
 ?>
+<script>document.documentElement.classList.add('js-reveal');   // ซ่อนกล่องไว้ก่อน รอ animation (ไม่มี JS = แสดงปกติ)</script>
 <section class="home-hero mb-4">
   <?php if ($isGuest): ?>
   <span class="home-hero-avatar"><?= user_avatar($viewer, 64) ?></span>
@@ -58,8 +59,7 @@ foreach ($widgets as $widget) {
 <div class="alert alert-info py-2 small d-none" id="arrangeHelp"><i class="bi bi-info-circle"></i>
   ลากกล่องเพื่อสลับตำแหน่ง หรือใช้ปุ่มลูกศร — ลำดับนี้ใช้กับเมนูด้านบนด้วย<?= count($mods) > 5 ? ' (เมนูด้านบนแสดง 4 ระบบแรก ที่เหลืออยู่ใน "ระบบอื่นๆ")' : '' ?></div>
 
-<script>document.documentElement.classList.add('js-reveal');   // ซ่อนกล่องไว้ก่อน รอ animation (ไม่มี JS = แสดงปกติ)</script>
-<div class="row g-3 mb-4" id="modGrid">
+<div class="row g-3 mb-4" id="modGrid" data-reveal>
   <?php foreach ($mods as $m): ?>
     <div class="col-md-6 col-xl-4 mod-item reveal-item" data-key="<?= h($m['key']) ?>">
       <a class="mod-card" style="--mc:<?= h($m['color']) ?>" href="<?= h(module_url($m['key'], $m['entry'] ?? 'index.php')) ?>">
@@ -86,18 +86,6 @@ foreach ($widgets as $widget) {
   <?php endif; ?>
 </div>
 <script>
-// animation กล่องระบบงาน: เล่นครั้งเดียวเมื่อเลื่อนมาเห็นครั้งแรก (กล่องทยอยลอยขึ้น)
-(() => {
-  const grid = document.getElementById('modGrid');
-  const items = [...grid.querySelectorAll('.reveal-item')];
-  items.forEach((el, i) => el.style.setProperty('--d', (i * 110) + 'ms'));
-  const play = () => { items.forEach(el => el.classList.add('revealed')); };
-  if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) { play(); return; }
-  const io = new IntersectionObserver(entries => {
-    if (entries.some(e => e.isIntersecting)) { play(); io.disconnect(); }
-  }, { threshold: 0.15 });
-  io.observe(grid);
-})();
 (() => {
   const grid = document.getElementById('modGrid'), btn = document.getElementById('arrangeBtn');
   if (!btn) return;
@@ -158,10 +146,10 @@ foreach (modules() as $m) {
 }
 if ($links || !empty($viewer['is_superadmin'])): ?>
 <div class="home-section-title tone-orange"><i class="bi bi-link-45deg"></i> ลิงก์และเครื่องมือ</div>
-<div class="row g-3 mb-2">
+<div class="row g-3 mb-2" data-reveal>
 <?php endif;
 if ($links): ?>
-  <div class="col-lg"><div class="card h-100 home-tool tone-orange"><div class="card-body">
+  <div class="col-lg reveal-item"><div class="card h-100 home-tool tone-orange"><div class="card-body">
   <div class="home-tool-title"><i class="bi bi-globe2"></i> ลิงก์ที่เกี่ยวข้อง</div>
   <div class="d-flex flex-wrap gap-2">
     <?php foreach ($links as $l): ?>
@@ -173,7 +161,7 @@ if ($links): ?>
 <?php endif; ?>
 
 <?php if (!empty($viewer['is_superadmin'])): ?>
-  <div class="col-lg"><div class="card h-100 home-tool tone-red"><div class="card-body">
+  <div class="col-lg reveal-item"><div class="card h-100 home-tool tone-red"><div class="card-body">
   <div class="home-tool-title"><i class="bi bi-shield-lock"></i> ผู้ดูแลระบบกลาง</div>
   <div class="d-flex flex-wrap gap-2">
     <a href="<?= h(url('admin/users.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-people"></i> ผู้ใช้งานและสิทธิ์</a>
@@ -183,4 +171,17 @@ if ($links): ?>
   </div></div></div>
 <?php endif; ?>
 <?php if ($links || !empty($viewer['is_superadmin'])): ?></div><?php endif; ?>
+<script>
+// animation กล่อง (ระบบงาน / ลิงก์และเครื่องมือ): แต่ละส่วนเล่นครั้งเดียวเมื่อเลื่อนมาเห็นครั้งแรก (กล่องทยอยลอยขึ้น)
+(() => {
+  const groups = [...document.querySelectorAll('[data-reveal]')];
+  const play = g => g.querySelectorAll('.reveal-item').forEach(el => el.classList.add('revealed'));
+  groups.forEach(g => g.querySelectorAll('.reveal-item').forEach((el, i) => el.style.setProperty('--d', (i * 110) + 'ms')));
+  if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) { groups.forEach(play); return; }
+  const io = new IntersectionObserver(entries => entries.forEach(e => {
+    if (e.isIntersecting) { play(e.target); io.unobserve(e.target); }
+  }), { threshold: 0.15 });
+  groups.forEach(g => io.observe(g));
+})();
+</script>
 <?php require APP_ROOT . '/core/layout/footer.php'; ?>
