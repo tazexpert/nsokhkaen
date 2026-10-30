@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- ระบบพิกัด EA ตัวอย่างโครงการ: หมุดแผนที่บนพื้นที่ (สีเหลือง-ส้ม) -->
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fbbf24"/><stop offset="1" stop-color="#d97706"/></linearGradient></defs>
+  <rect width="128" height="128" rx="28" fill="url(#g)"/>
+  <path d="M18 92 L44 80 L84 92 L110 80 L110 104 L84 114 L44 102 L18 114 Z" fill="#fff" opacity=".55"/>
+  <path d="M64 18 C47 18 35 30 35 46 C35 66 64 92 64 92 C64 92 93 66 93 46 C93 30 81 18 64 18 Z" fill="#fff"/>
+  <circle cx="64" cy="46" r="11" fill="#d97706"/>
+</svg>
