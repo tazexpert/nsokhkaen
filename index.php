@@ -45,7 +45,7 @@ foreach ($widgets as $widget) {
 
 <?php if (!$isGuest): /* กล่องเลือกระบบ — เฉพาะผู้ที่ login */ ?>
 <div class="d-flex align-items-center mb-3 mt-2">
-  <div class="home-section-title tone-green mb-0 reveal-title" id="modTitle"><i class="bi bi-grid-3x3-gap"></i> ระบบงาน <small>เลือกระบบที่ต้องการใช้งาน</small></div>
+  <div class="home-section-title tone-green mb-0"><i class="bi bi-grid-3x3-gap"></i> ระบบงาน <small>เลือกระบบที่ต้องการใช้งาน</small></div>
   <?php if (count($mods) > 1): ?>
     <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" id="arrangeBtn"><i class="bi bi-arrows-move"></i> จัดเรียงระบบ</button>
     <div class="ms-auto d-none gap-2" id="arrangeBar">
@@ -86,12 +86,12 @@ foreach ($widgets as $widget) {
   <?php endif; ?>
 </div>
 <script>
-// animation กล่องระบบงาน: เล่นครั้งเดียวเมื่อเลื่อนมาเห็นครั้งแรก (กล่องทยอยลอยขึ้น โลโก้เด้ง)
+// animation กล่องระบบงาน: เล่นครั้งเดียวเมื่อเลื่อนมาเห็นครั้งแรก (กล่องทยอยลอยขึ้น)
 (() => {
-  const grid = document.getElementById('modGrid'), title = document.getElementById('modTitle');
+  const grid = document.getElementById('modGrid');
   const items = [...grid.querySelectorAll('.reveal-item')];
   items.forEach((el, i) => el.style.setProperty('--d', (i * 110) + 'ms'));
-  const play = () => { title?.classList.add('revealed'); items.forEach(el => el.classList.add('revealed')); };
+  const play = () => { items.forEach(el => el.classList.add('revealed')); };
   if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) { play(); return; }
   const io = new IntersectionObserver(entries => {
     if (entries.some(e => e.isIntersecting)) { play(); io.disconnect(); }
