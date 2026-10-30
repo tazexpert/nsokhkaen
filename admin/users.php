@@ -64,7 +64,7 @@ $mods = modules();
 
 $pageTitle = 'ผู้ใช้งานและสิทธิ์';
 $active = 'users';
-$pageActions = '<a href="' . h(url('admin/staff.php')) . '" class="btn btn-outline-primary"><i class="bi bi-person-lines-fill"></i> บุคลากรทั้งหมด</a>';
+$pageActions = '<a href="' . h(url('staff.php')) . '" class="btn btn-outline-primary"><i class="bi bi-person-lines-fill"></i> บุคลากรสถิติขอนแก่น</a>';
 require APP_ROOT . '/core/layout/header.php';
 ?>
 <div class="card">

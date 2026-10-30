@@ -52,7 +52,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
 <body class="<?= h($bodyClass ?? '') ?>">
 <nav class="navbar navbar-dark navbar-expand-xl app-nav sticky-top">
   <div class="container-fluid">
-    <a class="navbar-brand app-brand" href="<?= h(url('index.php')) ?>">
+    <a class="navbar-brand app-brand" href="<?= h(url('index.php')) ?>" title="ระบบบริหารจัดการ สำนักงานสถิติจังหวัดขอนแก่น">
       <img src="<?= h(url('assets/img/logo.png')) ?>" alt="" class="brand-logo">
       <span class="brand-text"><small>ระบบบริหารจัดการ</small><strong>สำนักงานสถิติจังหวัดขอนแก่น</strong></span>
     </a>
@@ -118,6 +118,9 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
     <div class="collapse navbar-collapse" id="mainNav">
       <ul class="navbar-nav me-auto">
         <li class="nav-item"><a class="nav-link<?= $navActive(!$module && $active === 'home') ?>" href="<?= h(url('index.php')) ?>"><i class="bi bi-house-door"></i> หน้าหลัก</a></li>
+        <?php if ($user): /* สมุดรายชื่อบุคลากร — ทุกคนที่ login */ ?>
+          <li class="nav-item"><a class="nav-link<?= $navActive(!$module && $active === 'staff') ?>" href="<?= h(url('staff.php')) ?>" title="บุคลากรสถิติขอนแก่น"><i class="bi bi-people"></i> บุคลากร</a></li>
+        <?php endif; ?>
         <?php foreach ($navMain as $__m): $__isCur = $module === $__m['key']; ?>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle<?= $navActive($__isCur) ?>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
