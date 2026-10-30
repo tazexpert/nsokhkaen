@@ -392,7 +392,9 @@ function staff_category(?string $position): string
 
 /**
  * ลำดับการแสดงบุคลากร: 1 สถิติจังหวัด · 2–4 ผู้อำนวยการกลุ่ม (วิชาการฯ, ปฏิบัติการฯ, ขับเคลื่อนฯ) · 5 ข้าราชการ
- * · 6 พนักงานสถิติ · 7 ผู้ช่วยพนักงานสถิติ · 8 จ้างเหมาบริการ · 9 พนักงานขับรถ — ภายในกลุ่มเรียงตามชื่อผู้ใช้ (ตัวเลข)
+ * · 6 พนักงานสถิติ · 7 ผู้ช่วยพนักงานสถิติ · 8 จ้างเหมาบริการ · 9 พนักงานขับรถ
+ * ภายในกลุ่ม: ผู้ที่กำหนด "ลำดับการแสดง" (core_users.sort_order) ขึ้นก่อนตามเลขลำดับ แล้วจึงเรียงตามชื่อผู้ใช้ (ตัวเลข)
+ * (รหัสผู้ใช้มาจากส่วนกลาง แก้ไม่ได้ — ใช้ลำดับการแสดงแทนเมื่อรหัสไม่ได้เรียงตามที่ต้องการ)
  * บัญชีที่ชื่อผู้ใช้ไม่ใช่ตัวเลข (ผู้ดูแลจากภายนอก) อยู่ท้ายสุด
  */
 function staff_sort_key(array $u): array
@@ -401,8 +403,9 @@ function staff_sort_key(array $u): array
                     'emp' => 6, 'asst' => 7, 'contract' => 8, 'driver' => 9];
     $username = (string)($u['username'] ?? '');
     $numeric = preg_match('/^\d+$/', $username) === 1;
-    return [$numeric ? 0 : 1, $rank[staff_category($u['position'] ?? '')], $numeric ? (int)$username : PHP_INT_MAX,
-            $username, (string)($u['full_name'] ?? '')];
+    $order = isset($u['sort_order']) && $u['sort_order'] !== '' ? (int)$u['sort_order'] : null;
+    return [$numeric ? 0 : 1, $rank[staff_category($u['position'] ?? '')], $order === null ? 1 : 0, $order ?? 0,
+            $numeric ? (int)$username : PHP_INT_MAX, $username, (string)($u['full_name'] ?? '')];
 }
 
 /** เรียงรายชื่อบุคลากรตามลำดับตำแหน่ง (คงคีย์เดิมของ array) */

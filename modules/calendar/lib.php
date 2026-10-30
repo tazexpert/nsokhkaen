@@ -47,7 +47,7 @@ function cal_users(): array
     static $users = null;
     if ($users === null) {
         $users = [];
-        foreach (db()->query('SELECT id, username, full_name, position FROM core_users WHERE is_active = 1 AND username REGEXP \'^[0-9]+$\'') as $u) {
+        foreach (db()->query('SELECT id, username, sort_order, full_name, position FROM core_users WHERE is_active = 1 AND username REGEXP \'^[0-9]+$\'') as $u) {
             $u['type'] = cal_staff_type($u['position']);
             $users[(int)$u['id']] = $u;
         }

@@ -6,7 +6,7 @@ $pdo = db();
 $id = int_param('id');
 $mods = modules();
 
-$u = ['username' => '', 'full_name' => '', 'position' => '', 'work_group_id' => null, 'email' => '', 'phone' => '', 'nickname' => '',
+$u = ['username' => '', 'full_name' => '', 'position' => '', 'work_group_id' => null, 'email' => '', 'phone' => '', 'nickname' => '', 'sort_order' => null,
       'is_superadmin' => 0, 'is_active' => 1, 'has_pin' => 0, 'has_password' => 0];
 $roles = [];
 if ($id) {
@@ -33,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'username' => $username, 'full_name' => post('full_name'), 'position' => post('position'),
         'work_group_id' => isset(work_groups()[int_param('work_group_id')]) ? int_param('work_group_id') : null,
         'email' => post('email'), 'phone' => post('phone'), 'nickname' => post('nickname'),
+        'sort_order' => post('sort_order') === '' ? null : max(1, min(999, int_param('sort_order'))),
         'is_superadmin' => isset($_POST['is_superadmin']) ? 1 : 0, 'is_active' => isset($_POST['is_active']) ? 1 : 0,
     ]);
     $roles = [];
@@ -79,6 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'username' => $username ?: null, 'full_name' => $u['full_name'], 'position' => $u['position'] ?: null,
                 'work_group_id' => $u['work_group_id'],
                 'email' => $u['email'] ?: null, 'phone' => $u['phone'] ?: null, 'nickname' => mb_substr($u['nickname'], 0, 50) ?: null,
+                'sort_order' => $u['sort_order'],
                 'is_superadmin' => $u['is_superadmin'], 'is_active' => $u['is_active'],
             ];
             if ($username === '') {
@@ -138,6 +140,9 @@ require APP_ROOT . '/core/layout/header.php';
           </select></div>
         <div class="col-md-6"><label class="form-label">อีเมล</label><input name="email" type="email" class="form-control" value="<?= h($u['email']) ?>"></div>
         <div class="col-md-6"><label class="form-label">โทรศัพท์</label><input name="phone" class="form-control" value="<?= h($u['phone']) ?>"></div>
+        <div class="col-md-6"><label class="form-label">ลำดับการแสดง <small class="text-muted">(ไม่บังคับ)</small></label>
+          <input name="sort_order" type="number" min="1" max="999" class="form-control" value="<?= h((string)($u['sort_order'] ?? '')) ?>" placeholder="ว่าง = เรียงตามชื่อผู้ใช้">
+          <div class="form-text">ใช้เมื่อรหัสผู้ใช้ไม่ได้เรียงตามที่ต้องการ — ผู้ที่ใส่ลำดับจะขึ้นก่อนในกลุ่มตำแหน่งเดียวกัน (เลขน้อยก่อน)</div></div>
         <div class="col-12 d-flex flex-wrap gap-4">
           <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="is_active" id="is_active" <?= $u['is_active'] ? 'checked' : '' ?> <?= $id === $me['id'] ? 'disabled checked' : '' ?>>
             <label class="form-check-label" for="is_active">เปิดใช้งานบัญชี</label></div>

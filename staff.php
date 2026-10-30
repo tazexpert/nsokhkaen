@@ -12,7 +12,7 @@ if ($q !== '') {
     $where[] = '(u.full_name LIKE ? OR u.position LIKE ? OR u.phone LIKE ? OR u.nickname LIKE ?)';
     array_push($params, ...array_fill(0, 4, "%$q%"));
 }
-$st = db()->prepare('SELECT u.username, u.full_name, u.position, u.phone, u.nickname FROM core_users u WHERE ' . implode(' AND ', $where));
+$st = db()->prepare('SELECT u.username, u.sort_order, u.full_name, u.position, u.phone, u.nickname FROM core_users u WHERE ' . implode(' AND ', $where));
 $st->execute($params);
 $staff = array_values(sort_staff($st->fetchAll()));     // เรียงตามลำดับตำแหน่ง แล้วตามชื่อผู้ใช้ (ไม่แสดงชื่อผู้ใช้)
 
