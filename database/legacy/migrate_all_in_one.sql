@@ -128,6 +128,29 @@ CREATE TABLE IF NOT EXISTS core_message_files (
   CONSTRAINT fk_core_msg_files FOREIGN KEY (message_id) REFERENCES core_messages(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- ลิงก์และเครื่องมือ (หน้าแรก) — จัดการที่ ผู้ดูแลระบบ → ลิงก์และเครื่องมือ (admin/links.php) · url: http(s):// หรือ path ภายในระบบ
+CREATE TABLE IF NOT EXISTS core_links (
+  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  label         VARCHAR(150) NOT NULL,
+  url           VARCHAR(500) NOT NULL,
+  icon          VARCHAR(60)  NOT NULL DEFAULT 'bi-link-45deg',
+  sort_order    INT          NOT NULL DEFAULT 0,
+  members_only  TINYINT(1)   NOT NULL DEFAULT 0,
+  is_active     TINYINT(1)   NOT NULL DEFAULT 1,
+  created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT INTO core_links (label, url, icon, sort_order)
+SELECT * FROM (
+  SELECT 'สำนักงานสถิติจังหวัดขอนแก่น' AS label, 'https://khonkaen.nso.go.th/' AS url, 'bi-building' AS icon, 10 AS sort_order
+  UNION ALL SELECT 'ระบบสารบรรณสำนักงานสถิติจังหวัดขอนแก่น', 'https://nso.eoffice.go.th/', 'bi-envelope-paper', 20
+  UNION ALL SELECT 'ระบบสารบรรณจังหวัดขอนแก่น', 'https://khonkaen.eoffice.go.th/', 'bi-envelope-paper', 30
+  UNION ALL SELECT 'Drive Province (ขอนแก่น)', 'https://driveprovince.nso.go.th/', 'bi-cloud', 40
+  UNION ALL SELECT 'เว็บไซต์ศูนย์ดิจิทัลชุมชน', 'modules/digitalcc/public/', 'bi-globe', 50
+) AS seed
+WHERE NOT EXISTS (SELECT 1 FROM core_links);
+
 -- บันทึกการใช้งาน (เข้าสู่ระบบ การจัดการผู้ใช้/สิทธิ์ ฯลฯ)
 CREATE TABLE IF NOT EXISTS core_audit_log (
   id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

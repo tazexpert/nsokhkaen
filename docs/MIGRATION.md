@@ -255,6 +255,7 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 | `20261109_core_notebook.sql` | สมุดบันทึกส่วนตัว เข้ารหัส (`core_notebook_revisions`) — **สำรองไฟล์ `storage/notebook_key.php` ไว้เสมอ** ถ้าหายจะเปิดบันทึกเดิมไม่ได้ |
 | `20261110_core_messages.sql` | กล่องจดหมาย: ส่งข้อความถึงบุคลากร แนบไฟล์ได้ (`core_messages`, `core_message_files`) |
 | `20261111_core_messages_richtext.sql` | กล่องจดหมาย: ข้อความจัดรูปแบบ (ขยาย `core_messages.body`) |
+| `20261112_core_links.sql` | ลิงก์และเครื่องมือในหน้าแรก เก็บในฐานข้อมูล ผู้ดูแลจัดการได้ (`core_links`) |
 
 > ระบบเบิกวัสดุเดิมยังเปิดใช้อยู่? ก่อนเปิดใช้ระบบใหม่ให้ "ดึงข้อมูลรอบสุดท้าย" ตามหัวข้อด้านบน (`--resync-inventory`)
 
@@ -274,6 +275,7 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261109_core_notebook.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261110_core_messages.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261111_core_messages_richtext.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261112_core_links.sql
 ```
 
 หลังอัปเดต:

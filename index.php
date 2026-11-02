@@ -133,28 +133,19 @@ foreach ($widgets as $widget) {
 <?php endif; ?>
 
 <?php
-// ลิงก์ที่เกี่ยวข้อง: เว็บภายนอก (เรียงตามนี้) ตามด้วยลิงก์ของแต่ละระบบ (เช่น เว็บไซต์ศูนย์ดิจิทัลชุมชน)
-$links = [
-    ['label' => 'สำนักงานสถิติจังหวัดขอนแก่น', 'url' => 'https://khonkaen.nso.go.th/', 'icon' => 'bi-building'],
-    ['label' => 'ระบบสารบรรณสำนักงานสถิติจังหวัดขอนแก่น', 'url' => 'https://nso.eoffice.go.th/', 'icon' => 'bi-envelope-paper'],
-    ['label' => 'ระบบสารบรรณจังหวัดขอนแก่น', 'url' => 'https://khonkaen.eoffice.go.th/', 'icon' => 'bi-envelope-paper'],
-    ['label' => 'Drive Province (ขอนแก่น)', 'url' => 'https://driveprovince.nso.go.th/', 'icon' => 'bi-cloud'],
-];
-foreach (modules() as $m) {
-    foreach ($m['links'] as $l) {
-        $links[] = $l + ['url' => module_url($m['key'], $l['href'])];
-    }
-}
+// ลิงก์ที่เกี่ยวข้อง: จากฐานข้อมูล (core_links) — ผู้ดูแลระบบกลางจัดการที่ admin/links.php
+$links = home_links(!$isGuest);
 if ($links || !empty($viewer['is_superadmin'])): ?>
 <div class="home-section-title tone-orange"><i class="bi bi-link-45deg"></i> ลิงก์และเครื่องมือ</div>
 <div class="row g-3 mb-2" data-reveal>
 <?php endif;
 if ($links): ?>
   <div class="col-lg reveal-item"><div class="card h-100 home-tool tone-orange"><div class="card-body">
-  <div class="home-tool-title"><i class="bi bi-globe2"></i> ลิงก์ที่เกี่ยวข้อง</div>
+  <div class="home-tool-title d-flex align-items-center"><span><i class="bi bi-globe2"></i> ลิงก์ที่เกี่ยวข้อง</span>
+    <?php if (!empty($viewer['is_superadmin'])): ?><a href="<?= h(url('admin/links.php')) ?>" class="ms-auto small fw-normal text-decoration-none"><i class="bi bi-pencil-square"></i> จัดการลิงก์</a><?php endif; ?></div>
   <div class="d-flex flex-wrap gap-2">
     <?php foreach ($links as $l): ?>
-      <a href="<?= h($l['url']) ?>" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm">
+      <a href="<?= h(link_href($l['url'])) ?>" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm">
         <i class="bi <?= h($l['icon'] ?? 'bi-box-arrow-up-right') ?>"></i> <?= h($l['label']) ?></a>
     <?php endforeach; ?>
   </div>
@@ -166,6 +157,7 @@ if ($links): ?>
   <div class="home-tool-title"><i class="bi bi-shield-lock"></i> ผู้ดูแลระบบกลาง</div>
   <div class="d-flex flex-wrap gap-2">
     <a href="<?= h(url('admin/users.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-people"></i> ผู้ใช้งานและสิทธิ์</a>
+    <a href="<?= h(url('admin/links.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-link-45deg"></i> ลิงก์และเครื่องมือ</a>
     <a href="<?= h(url('admin/settings.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-sliders"></i> ตั้งค่าระบบ</a>
     <a href="<?= h(url('admin/audit.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-journal-text"></i> บันทึกการใช้งาน</a>
   </div>
