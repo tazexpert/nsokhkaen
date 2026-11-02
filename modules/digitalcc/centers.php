@@ -53,6 +53,43 @@ $st = $pdo->prepare($sql);
 $st->execute($params);
 $rows = $st->fetchAll();
 
+// ส่งออก CSV ตามเงื่อนไขค้นหาปัจจุบัน (เปิดใน Excel ได้ภาษาไทย)
+// ผู้ดูแลหลายคน: ชื่อและเบอร์คั่นด้วย " / " เรียงตามลำดับเดียวกัน · ไม่มีเบอร์ผู้ดูแล → ใช้เบอร์ของศูนย์
+if (($_GET['export'] ?? '') === 'csv') {
+    $isan = ['ขอนแก่น', 'กาฬสินธุ์', 'ชัยภูมิ', 'นครพนม', 'นครราชสีมา', 'บึงกาฬ', 'บุรีรัมย์', 'มหาสารคาม', 'มุกดาหาร', 'ยโสธร',
+             'ร้อยเอ็ด', 'เลย', 'ศรีสะเกษ', 'สกลนคร', 'สุรินทร์', 'หนองคาย', 'หนองบัวลำภู', 'อำนาจเจริญ', 'อุดรธานี', 'อุบลราชธานี'];
+    $staff = [];
+    foreach ($pdo->query('SELECT center_id, name, phone FROM dcc_center_staff ORDER BY center_id, sort_order, id') as $s) {
+        $staff[(int)$s['center_id']][] = $s;
+    }
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="digitalcc_centers_' . date('Ymd') . '.csv"');
+    $out = fopen('php://output', 'w');
+    fwrite($out, "\xEF\xBB\xBF");
+    fputcsv($out, ['รหัสศูนย์', 'อำเภอ', 'ตำบล', 'รหัสไปรษณีย์', 'ภาค', 'ชื่อศูนย์ดิจิทัลชุมชน', 'ที่ตั้งศูนย์',
+                   'ชื่อ - นามสกุล (ผู้ดูแล ศูนย์)', 'เบอร์ติดต่อ', 'lat', 'long']);
+    foreach ($rows as $r) {
+        $people = $staff[(int)$r['id']] ?? [];
+        $location = implode(' ', array_filter([
+            $r['house_no'] !== '' ? 'เลขที่ ' . $r['house_no'] : '',
+            $r['moo'] !== '' ? 'หมู่ ' . $r['moo'] : '',
+            $r['village'],
+            $r['address'],
+        ], fn($v) => trim($v) !== ''));
+        $phones = array_values(array_filter(array_map(fn($p) => trim($p['phone']), $people)));
+        fputcsv($out, [
+            $r['code'], $r['district'], $r['subdistrict'], $r['postcode'],
+            in_array($r['province'], $isan, true) ? 'ตะวันออกเฉียงเหนือ' : '',
+            $r['name'], $location,
+            implode(' / ', array_map(fn($p) => preg_replace('/\s+/u', ' ', trim($p['name'])), $people)),
+            $phones ? implode(' / ', $phones) : $r['phone'],
+            $r['lat'] !== null ? (float)$r['lat'] : '', $r['lng'] !== null ? (float)$r['lng'] : '',
+        ]);
+    }
+    fclose($out);
+    exit;
+}
+
 $pageTitle = 'ศูนย์ดิจิทัลชุมชน';
 $active = 'centers';
 require __DIR__ . '/header.php';
@@ -68,6 +105,8 @@ require __DIR__ . '/header.php';
         </select>
       </div>
       <div class="col-auto"><button class="btn btn-outline-secondary"><i class="bi bi-search"></i> ค้นหา</button></div>
+      <div class="col-auto"><a href="?<?= h(http_build_query(array_filter(['q' => $q, 'district' => $district, 'nolocation' => $noLoc ? 1 : null, 'export' => 'csv']))) ?>"
+         class="btn btn-outline-success" title="ส่งออกรายชื่อศูนย์ตามเงื่อนไขค้นหาปัจจุบัน"><i class="bi bi-filetype-csv"></i> Export CSV</a></div>
       <?php if (dcc_can('editor')): ?>
       <div class="col-auto ms-auto"><a href="center_form.php" class="btn btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มศูนย์ใหม่</a></div>
       <?php endif; ?>
