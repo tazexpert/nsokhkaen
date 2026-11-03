@@ -98,7 +98,6 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
           <li><a class="dropdown-item<?= $navActive(!$module && $active === 'notebook') ?>" href="<?= h(url('notebook.php')) ?>"><i class="bi bi-journal-bookmark"></i> สมุดบันทึก</a></li>
           <li><a class="dropdown-item d-flex align-items-center<?= $navActive(!$module && $active === 'messages') ?>" href="<?= h(url('messages.php')) ?>"><i class="bi bi-envelope me-1"></i> กล่องจดหมาย<?php if ($__mu = msg_unread_count((int)$user['id'])): ?><span class="badge rounded-pill text-bg-danger ms-auto"><?= $__mu > 99 ? '99+' : $__mu ?></span><?php endif; ?></a></li>
           <li><a class="dropdown-item<?= $navActive(!$module && $active === 'staff') ?>" href="<?= h(url('staff.php')) ?>"><i class="bi bi-people"></i> บุคลากรสถิติขอนแก่น</a></li>
-          <li><a class="dropdown-item<?= $navActive(!$module && $active === 'projects') ?>" href="<?= h(url('projects.php')) ?>"><i class="bi bi-kanban"></i> โครงการที่รับผิดชอบ</a></li>
           <li><a class="dropdown-item" href="<?= h(url('index.php#arrange')) ?>"><i class="bi bi-arrows-move"></i> จัดเรียงเมนูระบบ</a></li>
           <li><hr class="dropdown-divider"></li>
           <li><a class="dropdown-item text-danger" href="<?= h(url('logout.php')) ?>"><i class="bi bi-box-arrow-right"></i> <?= $user['via_pin'] ? 'เปลี่ยนผู้ใช้' : 'ออกจากระบบ' ?></a></li>
@@ -152,11 +151,12 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
             </ul>
           </li>
         <?php endif; ?>
-        <?php if (!empty($user['is_superadmin'])): $__isAdm = !$module && in_array($active, ['users', 'settings', 'audit'], true); ?>
+        <?php if (!empty($user['is_superadmin'])): $__isAdm = !$module && in_array($active, ['users', 'projects', 'links', 'settings', 'audit'], true); ?>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle<?= $navActive($__isAdm) ?>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-shield-lock"></i> ผู้ดูแลระบบ</a>
             <ul class="dropdown-menu shadow">
               <li><a class="dropdown-item<?= $navActive(!$module && $active === 'users') ?>" href="<?= h(url('admin/users.php')) ?>"><i class="bi bi-people"></i> ผู้ใช้งานและสิทธิ์</a></li>
+              <li><a class="dropdown-item<?= $navActive(!$module && $active === 'projects') ?>" href="<?= h(url('projects.php')) ?>"><i class="bi bi-kanban"></i> โครงการที่รับผิดชอบ</a></li>
               <li><a class="dropdown-item<?= $navActive(!$module && $active === 'links') ?>" href="<?= h(url('admin/links.php')) ?>"><i class="bi bi-link-45deg"></i> ลิงก์และเครื่องมือ</a></li>
               <li><a class="dropdown-item<?= $navActive(!$module && $active === 'settings') ?>" href="<?= h(url('admin/settings.php')) ?>"><i class="bi bi-sliders"></i> ตั้งค่าระบบ</a></li>
               <li><a class="dropdown-item<?= $navActive(!$module && $active === 'audit') ?>" href="<?= h(url('admin/audit.php')) ?>"><i class="bi bi-journal-text"></i> บันทึกการใช้งาน</a></li>

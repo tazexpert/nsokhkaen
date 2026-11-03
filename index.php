@@ -157,6 +157,7 @@ if ($links): ?>
   <div class="home-tool-title"><i class="bi bi-shield-lock"></i> ผู้ดูแลระบบกลาง</div>
   <div class="d-flex flex-wrap gap-2">
     <a href="<?= h(url('admin/users.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-people"></i> ผู้ใช้งานและสิทธิ์</a>
+    <a href="<?= h(url('projects.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-kanban"></i> โครงการที่รับผิดชอบ</a>
     <a href="<?= h(url('admin/links.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-link-45deg"></i> ลิงก์และเครื่องมือ</a>
     <a href="<?= h(url('admin/settings.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-sliders"></i> ตั้งค่าระบบ</a>
     <a href="<?= h(url('admin/audit.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-journal-text"></i> บันทึกการใช้งาน</a>
