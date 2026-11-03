@@ -21,7 +21,7 @@ $cells = $plan ? plan_cells((int)$plan['id']) : [];
 $duty = plan_duty_map($y, $m);
 $guardId = plan_guard_code_id($codes);
 
-// รหัสงานสนามที่แสดงในคอลัมน์สรุป: ที่เปิดใช้ + ที่มีในแผนเดือนนี้
+// คอลัมน์สรุป: โครงการที่ดำเนินการในเดือนนี้ + โครงการที่มีในแผนเดือนนี้
 $used = [];
 foreach ($cells as $byDay) {
     foreach ($byDay as $ids) {
@@ -30,14 +30,15 @@ foreach ($cells as $byDay) {
         }
     }
 }
-$fieldCodes = array_filter($codes, fn($c) => $c['kind'] === 'field' && ($c['is_active'] || isset($used[(int)$c['id']])));
+$monthProjects = plan_month_projects($codes, $y, $m);
+$fieldCodes = array_filter($codes, fn($c) => $c['kind'] === 'field' && (isset($monthProjects[(int)$c['id']]) || isset($used[(int)$c['id']])));
 
 $pageTitle = 'แผนการปฏิบัติงาน';
 $active = 'plan';
 $pageActions = '<button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> พิมพ์</button>'
     . ($isAdmin ? '<a href="plan_edit.php?m=' . $ym . '" class="btn btn-primary"><i class="bi bi-pencil-square"></i> ' . ($plan ? 'แก้ไขแผน' : 'สร้างแผน') . '</a>'
         . '<a href="plan_import.php?m=' . $ym . '" class="btn btn-outline-primary"><i class="bi bi-file-earmark-excel"></i> นำเข้า Excel</a>'
-        . '<a href="plan_codes.php" class="btn btn-outline-secondary"><i class="bi bi-tags"></i> รหัสงาน</a>' : '');
+        . '<a href="' . h(url('projects.php')) . '" class="btn btn-outline-secondary"><i class="bi bi-kanban"></i> โครงการ</a>' : '');
 $wd = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
 $today = date('Y-m-d');
 require __DIR__ . '/header.php';

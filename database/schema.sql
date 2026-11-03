@@ -152,6 +152,34 @@ SELECT * FROM (
 ) AS seed
 WHERE NOT EXISTS (SELECT 1 FROM core_links);
 
+-- โครงการที่รับผิดชอบของสำนักงาน (projects.php) — ตัวย่อใช้เป็นรหัสงานในแผนการปฏิบัติงาน
+CREATE TABLE IF NOT EXISTS core_projects (
+  id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  code           VARCHAR(20)  NOT NULL,                 -- ตัวย่อ ใช้ในแผนการปฏิบัติงาน เช่น สรง
+  name           VARCHAR(255) NOT NULL,                 -- ชื่อโครงการเต็ม
+  fiscal_year    SMALLINT UNSIGNED NULL,                -- ปีงบประมาณ (พ.ศ.)
+  start_date     DATE         NULL,                     -- ช่วงปฏิบัติงาน (ไม่บังคับ)
+  end_date       DATE         NULL,
+  work_group_id  INT UNSIGNED NULL,                     -- กลุ่มงานที่รับผิดชอบ
+  owner_id       INT UNSIGNED NULL,                     -- ผู้รับผิดชอบหลัก
+  description    TEXT         NULL,
+  color          VARCHAR(7)   NOT NULL DEFAULT '#0d6efd',
+  sort_order     INT          NOT NULL DEFAULT 0,
+  is_active      TINYINT(1)   NOT NULL DEFAULT 1,
+  created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_core_project_code (code),
+  CONSTRAINT fk_core_project_group FOREIGN KEY (work_group_id) REFERENCES core_work_groups(id) ON DELETE SET NULL,
+  CONSTRAINT fk_core_project_owner FOREIGN KEY (owner_id) REFERENCES core_users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO core_projects (code, name, color, sort_order) VALUES
+  ('สรง', 'สรง', '#2563eb', 10),
+  ('สศส', 'สศส', '#16a34a', 20),
+  ('ธปท', 'ธปท', '#9333ea', 30),
+  ('โพล', 'โพล', '#ea580c', 40),
+  ('สพค', 'สพค', '#0891b2', 50);
+
 -- บันทึกการใช้งาน (เข้าสู่ระบบ การจัดการผู้ใช้/สิทธิ์ ฯลฯ)
 CREATE TABLE IF NOT EXISTS core_audit_log (
   id          BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -616,26 +644,7 @@ CREATE TABLE IF NOT EXISTS cal_event_users (
   CONSTRAINT fk_cal_eu_user FOREIGN KEY (user_id) REFERENCES core_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- แผนการปฏิบัติงานรายเดือน (คน × วัน × รหัสงาน) — modules/calendar/plan*.php
-CREATE TABLE IF NOT EXISTS cal_plan_codes (
-  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  code        VARCHAR(20)  NOT NULL,
-  name        VARCHAR(200) NOT NULL DEFAULT '',
-  kind        ENUM('field', 'guard') NOT NULL DEFAULT 'field',   -- guard = เวรศาลากลาง (รหัส *)
-  color       VARCHAR(7)   NOT NULL DEFAULT '#0d6efd',
-  sort_order  INT          NOT NULL DEFAULT 0,
-  is_active   TINYINT(1)   NOT NULL DEFAULT 1,
-  UNIQUE KEY uq_cal_plan_code (code)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-INSERT IGNORE INTO cal_plan_codes (code, name, kind, color, sort_order) VALUES
-  ('สรง', 'สรง', 'field', '#2563eb', 10),
-  ('สศส', 'สศส', 'field', '#16a34a', 20),
-  ('ธปท', 'ธปท', 'field', '#9333ea', 30),
-  ('โพล', 'โพล', 'field', '#ea580c', 40),
-  ('สพค', 'สพค', 'field', '#0891b2', 50),
-  ('*', 'เวรศาลากลาง', 'guard', '#dc2626', 90);
-
+-- แผนการปฏิบัติงานรายเดือน (คน × วัน × โครงการ / เวรศาลากลาง) — modules/calendar/plan*.php
 CREATE TABLE IF NOT EXISTS cal_plans (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   plan_year   SMALLINT UNSIGNED NOT NULL,          -- ค.ศ.
@@ -659,12 +668,20 @@ CREATE TABLE IF NOT EXISTS cal_plan_people (
   CONSTRAINT fk_cal_pp_user FOREIGN KEY (user_id) REFERENCES core_users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS cal_plan_cells (
+CREATE TABLE IF NOT EXISTS cal_plan_work (
   person_id   INT UNSIGNED NOT NULL,
-  day         TINYINT UNSIGNED NOT NULL,           -- วันที่ 1–31
-  code_id     INT UNSIGNED NOT NULL,
-  PRIMARY KEY (person_id, day, code_id),
-  CONSTRAINT fk_cal_pc_person FOREIGN KEY (person_id) REFERENCES cal_plan_people(id) ON DELETE CASCADE,
-  CONSTRAINT fk_cal_pc_code FOREIGN KEY (code_id) REFERENCES cal_plan_codes(id) ON DELETE CASCADE
+  day         TINYINT UNSIGNED NOT NULL,
+  project_id  INT UNSIGNED NOT NULL,
+  PRIMARY KEY (person_id, day, project_id),
+  KEY idx_cal_plan_work_project (project_id),
+  CONSTRAINT fk_cal_pw_person FOREIGN KEY (person_id) REFERENCES cal_plan_people(id) ON DELETE CASCADE,
+  CONSTRAINT fk_cal_pw_project FOREIGN KEY (project_id) REFERENCES core_projects(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS cal_plan_guard (
+  person_id   INT UNSIGNED NOT NULL,
+  day         TINYINT UNSIGNED NOT NULL,
+  PRIMARY KEY (person_id, day),
+  CONSTRAINT fk_cal_pg_person FOREIGN KEY (person_id) REFERENCES cal_plan_people(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

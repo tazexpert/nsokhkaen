@@ -258,6 +258,7 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 | `20261112_core_links.sql` | ลิงก์และเครื่องมือในหน้าแรก เก็บในฐานข้อมูล ผู้ดูแลจัดการได้ (`core_links`) |
 | `20261113_calendar_plan.sql` | ปฏิทิน: แผนการปฏิบัติงานรายเดือน + เวรศาลากลาง (`cal_plan_*`, `cal_events.kind = guard`) |
 | `20261114_calendar_guard_name.sql` | ปฏิทิน: เปลี่ยนชื่อเวรรักษาการณ์ศาลากลางฯ เป็น "เวรศาลากลาง" |
+| `20261115_core_projects.sql` | โครงการที่รับผิดชอบ (`core_projects`) ใช้เป็นรหัสงานในแผน — ย้ายรหัสงานและแผนเดิมให้อัตโนมัติ |
 
 > ระบบเบิกวัสดุเดิมยังเปิดใช้อยู่? ก่อนเปิดใช้ระบบใหม่ให้ "ดึงข้อมูลรอบสุดท้าย" ตามหัวข้อด้านบน (`--resync-inventory`)
 
@@ -280,6 +281,7 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261112_core_links.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261113_calendar_plan.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261114_calendar_guard_name.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261115_core_projects.sql
 ```
 
 หลังอัปเดต:

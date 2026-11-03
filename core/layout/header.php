@@ -98,6 +98,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
           <li><a class="dropdown-item<?= $navActive(!$module && $active === 'notebook') ?>" href="<?= h(url('notebook.php')) ?>"><i class="bi bi-journal-bookmark"></i> สมุดบันทึก</a></li>
           <li><a class="dropdown-item d-flex align-items-center<?= $navActive(!$module && $active === 'messages') ?>" href="<?= h(url('messages.php')) ?>"><i class="bi bi-envelope me-1"></i> กล่องจดหมาย<?php if ($__mu = msg_unread_count((int)$user['id'])): ?><span class="badge rounded-pill text-bg-danger ms-auto"><?= $__mu > 99 ? '99+' : $__mu ?></span><?php endif; ?></a></li>
           <li><a class="dropdown-item<?= $navActive(!$module && $active === 'staff') ?>" href="<?= h(url('staff.php')) ?>"><i class="bi bi-people"></i> บุคลากรสถิติขอนแก่น</a></li>
+          <li><a class="dropdown-item<?= $navActive(!$module && $active === 'projects') ?>" href="<?= h(url('projects.php')) ?>"><i class="bi bi-kanban"></i> โครงการที่รับผิดชอบ</a></li>
           <li><a class="dropdown-item" href="<?= h(url('index.php#arrange')) ?>"><i class="bi bi-arrows-move"></i> จัดเรียงเมนูระบบ</a></li>
           <li><hr class="dropdown-divider"></li>
           <li><a class="dropdown-item text-danger" href="<?= h(url('logout.php')) ?>"><i class="bi bi-box-arrow-right"></i> <?= $user['via_pin'] ? 'เปลี่ยนผู้ใช้' : 'ออกจากระบบ' ?></a></li>

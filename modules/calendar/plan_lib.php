@@ -1,7 +1,9 @@
 <?php
 /**
- * แผนการปฏิบัติงานรายเดือน (คน × วัน × รหัสงาน) — ใช้โดย plan.php / plan_edit.php / plan_import.php / plan_codes.php
- * - รหัสงาน: cal_plan_codes (โครงการสนาม เช่น สรง สศส ธปท โพล สพค + "*" = เวรศาลากลาง)
+ * แผนการปฏิบัติงานรายเดือน (คน × วัน × รหัสงาน) — ใช้โดย plan.php / plan_edit.php / plan_import.php
+ * - รหัสงาน = ตัวย่อโครงการที่รับผิดชอบ (core_projects จัดการที่ projects.php) + "*" = เวรศาลากลาง
+ *   เก็บใน cal_plan_work (คน × วัน × โครงการ) และ cal_plan_guard (คน × วัน)
+ * - ในโค้ด "รหัสงาน" [id => row] = โครงการ (kind 'field') + เวรศาลากลาง (id = PLAN_GUARD_ID, kind 'guard')
  * - ช่องหนึ่งมีได้หลายรหัส เช่น "สพค*" = ออกสนาม สพค และอยู่เวรศาลากลาง
  * - เวรศาลากลาง → กิจกรรม kind = 'guard' ในปฏิทิน (ตารางการปฏิบัติงาน + แจ้งเตือน) ผ่าน plan_sync_guard()
  * - เวรสำนักงาน ("เวร") ไม่เก็บในแผน — ดึงจากปฏิทิน (kind = 'duty') มาแสดง
@@ -10,26 +12,32 @@
 require_once __DIR__ . '/lib.php';
 
 const PLAN_DUTY_WORD = 'เวร';
+const PLAN_GUARD_ID = -1;
 const PLAN_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
 
-/** รหัสงานทั้งหมด [id => row] เรียงตามลำดับ */
-function plan_codes(bool $activeOnly = false): array
+/** รหัสงานทั้งหมด [id => row]: โครงการ (เรียงตามลำดับ) + เวรศาลากลาง (id = PLAN_GUARD_ID) */
+function plan_codes(): array
 {
     $out = [];
-    foreach (db()->query('SELECT * FROM cal_plan_codes' . ($activeOnly ? ' WHERE is_active = 1' : '') . ' ORDER BY kind = \'guard\', sort_order, id') as $c) {
-        $out[(int)$c['id']] = $c;
+    foreach (projects_all() as $id => $p) {
+        $out[$id] = $p + ['kind' => 'field'];
     }
+    $out[PLAN_GUARD_ID] = ['id' => PLAN_GUARD_ID, 'code' => '*', 'name' => CAL_GUARD_TITLE, 'kind' => 'guard', 'color' => '#dc2626',
+                           'is_active' => 1, 'start_date' => null, 'end_date' => null];
     return $out;
 }
 
 function plan_guard_code_id(array $codes): int
 {
-    foreach ($codes as $id => $c) {
-        if ($c['kind'] === 'guard') {
-            return $id;
-        }
-    }
-    return 0;
+    return PLAN_GUARD_ID;
+}
+
+/** โครงการที่ใช้งานอยู่และมีช่วงปฏิบัติงานคาบเกี่ยวเดือนนั้น (สำหรับแถบเครื่องมือ / คอลัมน์สรุป) */
+function plan_month_projects(array $codes, int $y, int $m): array
+{
+    $from = sprintf('%04d-%02d-01', $y, $m);
+    $to = date('Y-m-t', strtotime($from));
+    return array_filter($codes, fn($c) => $c['kind'] === 'field' && $c['is_active'] && project_in_range($c, $from, $to));
 }
 
 /** "YYYY-MM" → [ปี ค.ศ., เดือน] (ค่าผิด = เดือนปัจจุบัน) */
@@ -73,15 +81,20 @@ function plan_sort_people(array $rows): array
     return array_merge(array_values(sort_staff($acc)), $ext);
 }
 
-/** รหัสงานในแผน [person_id][day] => [code_id, ...] */
+/** รหัสงานในแผน [person_id][day] => [code id, ...] (โครงการเรียงตามลำดับ แล้วเวรศาลากลาง) */
 function plan_cells(int $planId): array
 {
-    $st = db()->prepare('SELECT c.person_id, c.day, c.code_id FROM cal_plan_cells c JOIN cal_plan_people pp ON pp.id = c.person_id
-                         JOIN cal_plan_codes k ON k.id = c.code_id WHERE pp.plan_id = ? ORDER BY k.kind = \'guard\', k.sort_order, k.id');
-    $st->execute([$planId]);
     $out = [];
+    $st = db()->prepare('SELECT w.person_id, w.day, w.project_id FROM cal_plan_work w JOIN cal_plan_people pp ON pp.id = w.person_id
+                         JOIN core_projects p ON p.id = w.project_id WHERE pp.plan_id = ? ORDER BY p.sort_order, p.id');
+    $st->execute([$planId]);
     foreach ($st as $r) {
-        $out[(int)$r['person_id']][(int)$r['day']][] = (int)$r['code_id'];
+        $out[(int)$r['person_id']][(int)$r['day']][] = (int)$r['project_id'];
+    }
+    $st = db()->prepare('SELECT g.person_id, g.day FROM cal_plan_guard g JOIN cal_plan_people pp ON pp.id = g.person_id WHERE pp.plan_id = ?');
+    $st->execute([$planId]);
+    foreach ($st as $r) {
+        $out[(int)$r['person_id']][(int)$r['day']][] = PLAN_GUARD_ID;
     }
     return $out;
 }
@@ -176,7 +189,8 @@ function plan_save(int $y, int $m, array $people, ?string $note, int $actorId): 
             $planId = (int)$pdo->lastInsertId();
         }
         $insP = $pdo->prepare('INSERT INTO cal_plan_people (plan_id, user_id, name, sort_order) VALUES (?, ?, ?, ?)');
-        $insC = $pdo->prepare('INSERT IGNORE INTO cal_plan_cells (person_id, day, code_id) VALUES (?, ?, ?)');
+        $insW = $pdo->prepare('INSERT IGNORE INTO cal_plan_work (person_id, day, project_id) VALUES (?, ?, ?)');
+        $insG = $pdo->prepare('INSERT IGNORE INTO cal_plan_guard (person_id, day) VALUES (?, ?)');
         $seen = [];
         foreach (array_values($people) as $i => $p) {
             $uid = !empty($p['user_id']) ? (int)$p['user_id'] : null;
@@ -189,7 +203,7 @@ function plan_save(int $y, int $m, array $people, ?string $note, int $actorId): 
             foreach ($p['cells'] ?? [] as $day => $ids) {
                 if ((int)$day >= 1 && (int)$day <= $days) {
                     foreach ($ids as $cid) {
-                        $insC->execute([$pid, (int)$day, (int)$cid]);
+                        (int)$cid === PLAN_GUARD_ID ? $insG->execute([$pid, (int)$day]) : $insW->execute([$pid, (int)$day, (int)$cid]);
                     }
                 }
             }
@@ -224,10 +238,9 @@ function plan_sync_guard(int $y, int $m, int $actorId): array
     $from = sprintf('%04d-%02d-01', $y, $m);
     $to = date('Y-m-t', strtotime($from));
     $want = [];      // date => ['users' => [...], 'names' => [...]]
-    $st = $pdo->prepare("SELECT c.day, pp.user_id, pp.name FROM cal_plan_cells c
-                         JOIN cal_plan_people pp ON pp.id = c.person_id JOIN cal_plans p ON p.id = pp.plan_id
-                         JOIN cal_plan_codes k ON k.id = c.code_id
-                         WHERE p.plan_year = ? AND p.plan_month = ? AND k.kind = 'guard' ORDER BY pp.sort_order, pp.id");
+    $st = $pdo->prepare('SELECT g.day, pp.user_id, pp.name FROM cal_plan_guard g
+                         JOIN cal_plan_people pp ON pp.id = g.person_id JOIN cal_plans p ON p.id = pp.plan_id
+                         WHERE p.plan_year = ? AND p.plan_month = ? ORDER BY pp.sort_order, pp.id');
     $st->execute([$y, $m]);
     foreach ($st as $r) {
         $date = sprintf('%04d-%02d-%02d', $y, $m, $r['day']);
