@@ -1,8 +1,8 @@
 -- ============================================================================
--- ปฏิทิน: แผนการปฏิบัติงานรายเดือน (คน × วัน × รหัสงาน) + เวรรักษาการณ์ศาลากลางฯ — รันซ้ำได้
---   · cal_plan_codes  รหัสงาน (โครงการสนาม + "*" เวรรักษาการณ์ศาลากลางฯ) ผู้ดูแลเพิ่ม/แก้ไขได้
+-- ปฏิทิน: แผนการปฏิบัติงานรายเดือน (คน × วัน × รหัสงาน) + เวรศาลากลาง — รันซ้ำได้
+--   · cal_plan_codes  รหัสงาน (โครงการสนาม + "*" เวรศาลากลาง) ผู้ดูแลเพิ่ม/แก้ไขได้
 --   · cal_plans       แผนรายเดือน · cal_plan_people รายชื่อในแผน (มี/ไม่มีบัญชีผู้ใช้) · cal_plan_cells รหัสงานรายวัน
---   · เวรรักษาการณ์ในแผน → สร้างเป็นกิจกรรม kind = 'guard' ในปฏิทินอัตโนมัติ (แสดงในตาราง + แจ้งเตือนผู้รับผิดชอบ)
+--   · เวรศาลากลางในแผน → สร้างเป็นกิจกรรม kind = 'guard' ในปฏิทินอัตโนมัติ (แสดงในตาราง + แจ้งเตือนผู้รับผิดชอบ)
 --   · เวรสำนักงานไม่เก็บในแผน — ดึงจากปฏิทิน (kind = 'duty') มาแสดง
 --   mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261113_calendar_plan.sql
 -- ============================================================================
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS cal_plan_codes (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   code        VARCHAR(20)  NOT NULL,
   name        VARCHAR(200) NOT NULL DEFAULT '',
-  kind        ENUM('field', 'guard') NOT NULL DEFAULT 'field',   -- guard = เวรรักษาการณ์ศาลากลางฯ (รหัส *)
+  kind        ENUM('field', 'guard') NOT NULL DEFAULT 'field',   -- guard = เวรศาลากลาง (รหัส *)
   color       VARCHAR(7)   NOT NULL DEFAULT '#0d6efd',
   sort_order  INT          NOT NULL DEFAULT 0,
   is_active   TINYINT(1)   NOT NULL DEFAULT 1,
@@ -28,7 +28,7 @@ INSERT IGNORE INTO cal_plan_codes (code, name, kind, color, sort_order) VALUES
   ('ธปท', 'ธปท', 'field', '#9333ea', 30),
   ('โพล', 'โพล', 'field', '#ea580c', 40),
   ('สพค', 'สพค', 'field', '#0891b2', 50),
-  ('*', 'เวรรักษาการณ์ศาลากลางจังหวัดขอนแก่น', 'guard', '#dc2626', 90);
+  ('*', 'เวรศาลากลาง', 'guard', '#dc2626', 90);
 
 CREATE TABLE IF NOT EXISTS cal_plans (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

@@ -1,7 +1,7 @@
 <?php
 /**
  * แผนการปฏิบัติงาน (รายเดือน) — ตารางคน × วัน เหมือนไฟล์ Excel เดิม · ทุกคนที่ login ดูได้
- * - สรุปจำนวนวันต่อรหัสงาน / เวรสำนักงาน / เวรรักษาการณ์ คำนวณอัตโนมัติ + แถวรวมคนออกสนามรายวัน
+ * - สรุปจำนวนวันต่อรหัสงาน / เวรสำนักงาน / เวรศาลากลาง คำนวณอัตโนมัติ + แถวรวมคนออกสนามรายวัน
  * - เวรสำนักงานดึงจากปฏิทิน · แก้ไข/นำเข้า/รหัสงาน: ผู้ดูแลปฏิทิน
  */
 require_once __DIR__ . '/bootstrap.php';
@@ -77,7 +77,7 @@ require __DIR__ . '/header.php';
           <?php endfor; ?>
           <?php foreach ($fieldCodes as $c): ?><th class="text-center plan-sum" style="--c:<?= h($c['color']) ?>" title="<?= h($c['name']) ?>"><?= h($c['code']) ?></th><?php endforeach; ?>
           <th class="text-center plan-sum" style="--c:#16a34a" title="เวรสำนักงาน (จากปฏิทิน)">เวร</th>
-          <th class="text-center plan-sum" style="--c:#dc2626" title="เวรรักษาการณ์ศาลากลางฯ">*</th>
+          <th class="text-center plan-sum" style="--c:#dc2626" title="เวรศาลากลาง">*</th>
         </tr>
       </thead>
       <tbody>
@@ -111,7 +111,7 @@ require __DIR__ . '/header.php';
             if ($hasGuard) { $guardN++; }
             $title = implode(' + ', array_filter(array_merge(
                 array_map(fn($cid) => $codes[$cid]['kind'] === 'field' ? $codes[$cid]['code'] . ($codes[$cid]['name'] !== $codes[$cid]['code'] ? ' (' . $codes[$cid]['name'] . ')' : '') : '', $ids),
-                [$hasDuty ? 'เวรสำนักงาน' : '', $hasGuard ? 'เวรรักษาการณ์ศาลากลางฯ' : '']))); ?>
+                [$hasDuty ? 'เวรสำนักงาน' : '', $hasGuard ? 'เวรศาลากลาง' : '']))); ?>
             <td class="text-center plan-cell<?= $w === 0 || $w === 6 ? ' we' : '' ?><?= $date === $today ? ' today' : '' ?><?= $first ? ' has' : '' ?>"
                 <?= $first ? 'style="--c:' . h($first['color']) . '"' : '' ?><?= $title !== '' ? ' title="' . h($d . ' ' . thai_month_long($m) . ': ' . $title) . '"' : '' ?>>
               <?php foreach ($ids as $cid): if (($codes[$cid]['kind'] ?? '') === 'field'): ?><span class="pc"><?= h($codes[$cid]['code']) ?></span><?php endif; endforeach; ?>
@@ -142,7 +142,7 @@ require __DIR__ . '/header.php';
   <div class="card-footer small plan-legend">
     <?php foreach ($fieldCodes as $c): ?><span class="me-3 text-nowrap"><span class="plan-chip" style="--c:<?= h($c['color']) ?>"><?= h($c['code']) ?></span> <?= h($c['name'] !== $c['code'] ? $c['name'] : '') ?></span><?php endforeach; ?>
     <span class="me-3 text-nowrap"><span class="pc-duty">เวร</span> เวรสำนักงาน (จากปฏิทิน)</span>
-    <span class="me-3 text-nowrap"><span class="pc-guard">*</span> <?= h($codes[$guardId]['name'] ?? 'เวรรักษาการณ์ศาลากลางฯ') ?></span>
+    <span class="me-3 text-nowrap"><span class="pc-guard">*</span> <?= h($codes[$guardId]['name'] ?? 'เวรศาลากลาง') ?></span>
     <?php if ($plan['note']): ?><div class="mt-2"><b>หมายเหตุ:</b> <?= nl2br(h($plan['note'])) ?></div><?php endif; ?>
   </div>
   <?php endif; ?>

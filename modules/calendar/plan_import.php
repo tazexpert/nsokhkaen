@@ -2,7 +2,7 @@
 /**
  * นำเข้าแผนการปฏิบัติงานจากไฟล์ Excel รูปแบบเดิม (ผู้ดูแลปฏิทิน)
  * 1) อัปโหลด .xlsx → อ่านเดือนจากหัวตาราง (เลือกเองได้) · จับคู่ชื่อกับบัญชีผู้ใช้ · ตรวจรหัสงาน
- * 2) ตรวจสอบ/แก้การจับคู่ชื่อ → บันทึก (แทนที่แผนเดิมของเดือนนั้น) + สร้างเวรรักษาการณ์ในปฏิทิน
+ * 2) ตรวจสอบ/แก้การจับคู่ชื่อ → บันทึก (แทนที่แผนเดิมของเดือนนั้น) + สร้างเวรศาลากลางในปฏิทิน
  * ช่อง "เวร" ในไฟล์ไม่นำเข้า (เวรสำนักงานใช้ข้อมูลในปฏิทิน) — แสดงรายการที่ไม่ตรงกับปฏิทินให้ตรวจ
  */
 require_once __DIR__ . '/bootstrap.php';
@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             audit_log('cal_plan_import', 'นำเข้าแผนการปฏิบัติงาน ' . plan_month_text($y, $m) . ' จาก ' . $data['file'] . ' (' . count($people) . ' คน)', CAL_MODULE);
             [$gc, $gu, $gd] = $r['guard'];
             flash('นำเข้าแผนการปฏิบัติงานเดือน' . plan_month_text($y, $m) . ' แล้ว ' . count($people) . ' คน'
-                . ($gc + $gu + $gd ? ' · เวรรักษาการณ์ในปฏิทิน: เพิ่ม ' . $gc . ' วัน ปรับ ' . $gu . ' วัน ลบ ' . $gd . ' วัน' : ''));
+                . ($gc + $gu + $gd ? ' · เวรศาลากลางในปฏิทิน: เพิ่ม ' . $gc . ' วัน ปรับ ' . $gu . ' วัน ลบ ' . $gd . ' วัน' : ''));
             redirect('plan.php?m=' . sprintf('%04d-%02d', $y, $m));
         }
         $step = 'preview';
@@ -140,7 +140,7 @@ require __DIR__ . '/header.php';
       <strong><i class="bi bi-info-circle"></i> รูปแบบไฟล์</strong>
       <ul class="mt-2 mb-0">
         <li>ใช้ไฟล์ "แผนการปฏิบัติงานสนามโครงการต่าง ๆ ประจำเดือน …" รูปแบบเดิมได้เลย (หัวตารางมีวันที่ 1–31 และชื่อ-นามสกุลอยู่ทางซ้าย)</li>
-        <li>รหัสในช่อง: <?php foreach ($codes as $c): if ($c['kind'] === 'field' && $c['is_active']): ?><code><?= h($c['code']) ?></code> <?php endif; endforeach; ?> · <code>*</code> = เวรรักษาการณ์ศาลากลางฯ (เช่น <code>สพค*</code>)</li>
+        <li>รหัสในช่อง: <?php foreach ($codes as $c): if ($c['kind'] === 'field' && $c['is_active']): ?><code><?= h($c['code']) ?></code> <?php endif; endforeach; ?> · <code>*</code> = เวรศาลากลาง (เช่น <code>สพค*</code>)</li>
         <li><code>เวร</code> (เวรสำนักงาน) ไม่นำเข้า — ระบบใช้เวรสำนักงานจากปฏิทิน และจะแสดงจุดที่ไม่ตรงกันให้ตรวจ</li>
         <li>คอลัมน์สรุปจำนวนวันในไฟล์ไม่ใช้ — ระบบคำนวณให้เอง</li>
         <li>นำเข้าเดือนที่มีแผนอยู่แล้ว = แทนที่แผนเดิมของเดือนนั้นทั้งหมด</li>
@@ -174,7 +174,7 @@ require __DIR__ . '/header.php';
       <span class="small text-muted">— ตรวจรายการ "ใกล้เคียง" / "ไม่พบ" แล้วเลือกให้ถูกต้อง</span></div>
     <div class="table-responsive">
       <table class="table table-sm align-middle mb-0">
-        <thead><tr><th class="text-center">ที่</th><th>ชื่อในไฟล์</th><th>สถานะ</th><th style="min-width:280px">บัญชีผู้ใช้ในระบบ</th><th class="text-center">งานสนาม</th><th class="text-center">เวรรักษาการณ์</th></tr></thead>
+        <thead><tr><th class="text-center">ที่</th><th>ชื่อในไฟล์</th><th>สถานะ</th><th style="min-width:280px">บัญชีผู้ใช้ในระบบ</th><th class="text-center">งานสนาม</th><th class="text-center">เวรศาลากลาง</th></tr></thead>
         <tbody>
         <?php foreach ($res['people'] as $i => $p):
           $field = 0; $guard = 0;

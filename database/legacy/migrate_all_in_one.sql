@@ -586,7 +586,7 @@ CREATE TABLE IF NOT EXISTS pay_settings (
 -- กิจกรรม/ภารกิจ
 CREATE TABLE IF NOT EXISTS cal_events (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  kind        ENUM('event', 'duty', 'guard') NOT NULL DEFAULT 'event',   -- event = กิจกรรม, duty = เวรสำนักงาน (นำเข้ารายเดือน), guard = เวรรักษาการณ์ศาลากลางฯ (จากแผนการปฏิบัติงาน)
+  kind        ENUM('event', 'duty', 'guard') NOT NULL DEFAULT 'event',   -- event = กิจกรรม, duty = เวรสำนักงาน (นำเข้ารายเดือน), guard = เวรศาลากลาง (จากแผนการปฏิบัติงาน)
   visibility  ENUM('public', 'private') NOT NULL DEFAULT 'public', -- private = เห็นเฉพาะผู้บันทึกและผู้รับผิดชอบ
   event_date  DATE         NOT NULL,                 -- วันที่
   end_date    DATE         NULL,                     -- ถึงวันที่ (กิจกรรมหลายวัน — ไม่บังคับ)
@@ -620,7 +620,7 @@ CREATE TABLE IF NOT EXISTS cal_plan_codes (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   code        VARCHAR(20)  NOT NULL,
   name        VARCHAR(200) NOT NULL DEFAULT '',
-  kind        ENUM('field', 'guard') NOT NULL DEFAULT 'field',   -- guard = เวรรักษาการณ์ศาลากลางฯ (รหัส *)
+  kind        ENUM('field', 'guard') NOT NULL DEFAULT 'field',   -- guard = เวรศาลากลาง (รหัส *)
   color       VARCHAR(7)   NOT NULL DEFAULT '#0d6efd',
   sort_order  INT          NOT NULL DEFAULT 0,
   is_active   TINYINT(1)   NOT NULL DEFAULT 1,
@@ -633,7 +633,7 @@ INSERT IGNORE INTO cal_plan_codes (code, name, kind, color, sort_order) VALUES
   ('ธปท', 'ธปท', 'field', '#9333ea', 30),
   ('โพล', 'โพล', 'field', '#ea580c', 40),
   ('สพค', 'สพค', 'field', '#0891b2', 50),
-  ('*', 'เวรรักษาการณ์ศาลากลางจังหวัดขอนแก่น', 'guard', '#dc2626', 90);
+  ('*', 'เวรศาลากลาง', 'guard', '#dc2626', 90);
 
 CREATE TABLE IF NOT EXISTS cal_plans (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,

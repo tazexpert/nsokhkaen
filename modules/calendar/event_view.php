@@ -33,7 +33,7 @@ ob_start();
     <dl class="row mb-0">
       <?php if (cal_is_private($e)): ?><dt class="col-sm-3">การมองเห็น</dt><dd class="col-sm-9"><span class="badge text-bg-secondary"><i class="bi bi-lock-fill"></i> ส่วนตัว</span> <span class="small text-muted">เห็นเฉพาะผู้บันทึกและผู้รับผิดชอบ</span></dd><?php endif; ?>
       <dt class="col-sm-3">วันที่</dt><dd class="col-sm-9"><?= h(cal_range_text($e)) ?></dd>
-      <?php if (cal_is_guard($e)): ?><dt class="col-sm-3">ประเภท</dt><dd class="col-sm-9"><span class="badge text-bg-danger"><i class="bi bi-shield-shaded"></i> เวรรักษาการณ์</span>
+      <?php if (cal_is_guard($e)): ?><dt class="col-sm-3">ประเภท</dt><dd class="col-sm-9"><span class="badge text-bg-danger"><i class="bi bi-shield-shaded"></i> เวรศาลากลาง</span>
         <span class="small text-muted">จากแผนการปฏิบัติงาน<?= cal_can('admin') ? ' · <a href="plan_edit.php?m=' . h(substr($e['event_date'], 0, 7)) . '">แก้ไขที่แผนการปฏิบัติงาน</a>' : '' ?></span></dd><?php endif; ?>
       <?php if (!cal_is_shift($e)): ?><dt class="col-sm-3">เวลา</dt><dd class="col-sm-9"><?= h(cal_time_text($e)) ?></dd><?php endif; ?>
       <?php if (!cal_is_duty($e)): ?><dt class="col-sm-3">สถานที่</dt><dd class="col-sm-9"><?= h($e['location'] ?: '-') ?></dd><?php endif; ?>

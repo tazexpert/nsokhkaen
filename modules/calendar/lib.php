@@ -16,7 +16,7 @@ function cal_can(string $role): bool
 /** แก้ไข/ลบกิจกรรมนี้ได้หรือไม่ */
 function cal_can_edit(array $e): bool
 {
-    if (cal_is_guard($e)) {            // เวรรักษาการณ์ฯ จัดการที่แผนการปฏิบัติงาน (plan_edit.php)
+    if (cal_is_guard($e)) {            // เวรศาลากลาง จัดการที่แผนการปฏิบัติงาน (plan_edit.php)
         return false;
     }
     $me = current_user();
@@ -88,11 +88,11 @@ function cal_is_private(array $e): bool
 }
 
 /** กิจกรรมที่คาบเกี่ยวช่วงวันที่ ($userId = เฉพาะที่ผู้ใช้นั้นรับผิดชอบ · $withDuty = false ไม่รวมเวรสำนักงาน) — กรองกิจกรรมส่วนตัวของผู้อื่นออกเสมอ */
-function cal_events_between(string $from, string $to, ?int $userId = null, bool $withDuty = true): array
+function cal_events_between(string $from, string $to, ?int $userId = null, bool $withDuty = true, bool $withGuard = true): array
 {
     [$visSql, $visParams] = cal_visible_sql();
     $sql = 'SELECT e.*, u.full_name AS created_by_name FROM cal_events e LEFT JOIN core_users u ON u.id = e.created_by
-            WHERE e.event_date <= ? AND COALESCE(e.end_date, e.event_date) >= ?' . ($withDuty ? '' : " AND e.kind <> 'duty'") . $visSql;
+            WHERE e.event_date <= ? AND COALESCE(e.end_date, e.event_date) >= ?' . ($withDuty ? '' : " AND e.kind <> 'duty'") . ($withGuard ? '' : " AND e.kind <> 'guard'") . $visSql;
     $params = [$to, $from, ...$visParams];
     if ($userId) {
         $sql .= ' AND EXISTS (SELECT 1 FROM cal_event_users eu WHERE eu.event_id = e.id AND eu.user_id = ?)';
@@ -342,15 +342,15 @@ function cal_is_duty(array $e): bool
     return ($e['kind'] ?? 'event') === 'duty';
 }
 
-/** เวรรักษาการณ์ศาลากลางจังหวัด — สร้างจากแผนการปฏิบัติงาน (รหัส *) แสดงในตารางและแจ้งเตือนผู้รับผิดชอบ */
-const CAL_GUARD_TITLE = 'เวรรักษาการณ์ศาลากลางจังหวัดขอนแก่น';
+/** เวรศาลากลาง — สร้างจากแผนการปฏิบัติงาน (รหัส *) แสดงในตารางและแจ้งเตือนผู้รับผิดชอบ */
+const CAL_GUARD_TITLE = 'เวรศาลากลาง';
 
 function cal_is_guard(array $e): bool
 {
     return ($e['kind'] ?? 'event') === 'guard';
 }
 
-/** เวรสำนักงาน / เวรรักษาการณ์: ทั้งวัน ไม่ระบุเวลา */
+/** เวรสำนักงาน / เวรศาลากลาง: ทั้งวัน ไม่ระบุเวลา */
 function cal_is_shift(array $e): bool
 {
     return cal_is_duty($e) || cal_is_guard($e);

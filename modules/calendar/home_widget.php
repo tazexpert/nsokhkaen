@@ -12,6 +12,7 @@ $calRange = $_GET['cal_range'] ?? 'all';
 $calRange = isset($calRanges[$calRange]) ? $calRange : 'all';
 $calMine = !$calGuest && !empty($_GET['cal_mine']);
 $calDuty = !empty($_GET['cal_duty']);            // ค่าเริ่มต้นไม่แสดงเวรสำนักงาน
+$calGuard = !empty($_GET['cal_guard']);          // ค่าเริ่มต้นไม่แสดงเวรศาลากลาง
 [$calFrom, $calTo] = match ($calRange) {
     'today' => [date('Y-m-d'), date('Y-m-d')],
     'week'  => [date('Y-m-d', strtotime('monday this week')), date('Y-m-d', strtotime('sunday this week'))],
@@ -25,8 +26,8 @@ $calLabel = $calRange === 'all' ? 'ทั้งหมด ตั้งแต่ '
     ? thai_month_long((int)substr($calTo, 5, 2)) . ' ' . ((int)substr($calTo, 0, 4) + 543)
         . ($calFrom !== date('Y-m-01', strtotime($calTo)) ? ' (ตั้งแต่ ' . thai_date($calFrom) . ')' : '')
     : ($calFrom === $calTo ? cal_date_text($calFrom) : thai_date($calFrom) . ' – ' . thai_date($calTo)));
-$calEvents = cal_events_between($calFrom, $calTo, $calMine ? $calUser['id'] : null, $calDuty);
-$calQs = fn(array $p) => '?' . http_build_query(array_filter($p + ['cal_range' => $calRange === 'all' ? null : $calRange, 'cal_mine' => $calMine ? 1 : null, 'cal_duty' => $calDuty ? 1 : null]));
+$calEvents = cal_events_between($calFrom, $calTo, $calMine ? $calUser['id'] : null, $calDuty, $calGuard);
+$calQs = fn(array $p) => '?' . http_build_query(array_filter($p + ['cal_range' => $calRange === 'all' ? null : $calRange, 'cal_mine' => $calMine ? 1 : null, 'cal_duty' => $calDuty ? 1 : null, 'cal_guard' => $calGuard ? 1 : null]));
 ?>
 <link href="<?= h(asset_v('modules/calendar/assets/css/calendar.css')) ?>" rel="stylesheet">
 <div class="card mb-4 cal-home whiteboard" id="calendar">
@@ -46,6 +47,8 @@ $calQs = fn(array $p) => '?' . http_build_query(array_filter($p + ['cal_range' =
     <?php endif; ?>
     <a href="<?= h($calQs(['cal_duty' => $calDuty ? null : 1])) ?>" class="btn btn-sm <?= $calDuty ? 'btn-success' : 'btn-outline-success' ?>" title="<?= $calDuty ? 'ซ่อน' : 'แสดง' ?>เวรสำนักงาน">
       <i class="bi <?= $calDuty ? 'bi-check-square' : 'bi-square' ?>"></i> เวรสำนักงาน</a>
+    <a href="<?= h($calQs(['cal_guard' => $calGuard ? null : 1])) ?>" class="btn btn-sm <?= $calGuard ? 'btn-danger' : 'btn-outline-danger' ?>" title="<?= $calGuard ? 'ซ่อน' : 'แสดง' ?>เวรศาลากลาง">
+      <i class="bi <?= $calGuard ? 'bi-check-square' : 'bi-square' ?>"></i> เวรศาลากลาง</a>
     <div class="ms-auto d-flex gap-2">
       <a href="<?= h(module_url('calendar', 'index.php')) ?>" class="btn btn-sm btn-light"><i class="bi bi-calendar3"></i> ปฏิทินรายเดือน</a>
       <?php if (!$calGuest && user_can('calendar', 'editor', $calUser)): ?><a href="<?= h(module_url('calendar', 'event_form.php')) ?>" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มกิจกรรม</a><?php endif; ?>
@@ -57,4 +60,4 @@ $calQs = fn(array $p) => '?' . http_build_query(array_filter($p + ['cal_range' =
  <div class="wb-tray" aria-hidden="true"><span class="wb-marker blue"></span><span class="wb-marker red"></span><span class="wb-marker black"></span><span class="wb-eraser"></span></div>
 </div>
 <?= cal_modal_script() ?>
-<?php unset($calUser, $calGuest, $calRanges, $calRange, $calLabel, $calMine, $calDuty, $calFrom, $calTo, $calEvents, $calQs); ?>
+<?php unset($calUser, $calGuest, $calRanges, $calRange, $calLabel, $calMine, $calDuty, $calGuard, $calFrom, $calTo, $calEvents, $calQs); ?>

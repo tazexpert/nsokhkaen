@@ -1,7 +1,7 @@
 <?php
 /**
  * รหัสงานในแผนการปฏิบัติงาน (ผู้ดูแลปฏิทิน): เพิ่ม / แก้ไขชื่อเต็ม สี ลำดับ / ปิดใช้งาน / ลบ (เฉพาะที่ยังไม่ถูกใช้)
- * รหัส "*" (เวรรักษาการณ์ศาลากลางฯ) แก้ชื่อ/สีได้ แต่ลบหรือเปลี่ยนรหัสไม่ได้
+ * รหัส "*" (เวรศาลากลาง) แก้ชื่อ/สีได้ แต่ลบหรือเปลี่ยนรหัสไม่ได้
  */
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/plan_lib.php';
@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $color = preg_match('/^#[0-9a-fA-F]{6}$/', post('color')) ? strtolower(post('color')) : '#0d6efd';
         $order = (int)post('sort_order');
         if ($row && $row['kind'] === 'guard') {
-            $code = '*';                             // รหัสเวรรักษาการณ์คงที่
+            $code = '*';                             // รหัสเวรศาลากลางคงที่
         } elseif ($code === '' || mb_strlen($code) > 20 || preg_match('/[\s,+\/*]/u', $code) || $code === PLAN_DUTY_WORD) {
             $errors[] = 'รหัสต้องไม่ว่าง ไม่เกิน 20 ตัวอักษร ไม่มีช่องว่างหรือเครื่องหมาย , + / * และห้ามใช้คำว่า "' . PLAN_DUTY_WORD . '" (สงวนไว้สำหรับเวรสำนักงาน)';
         }
@@ -77,7 +77,7 @@ $rowForm = function (?array $c) use ($usage) {
       <td><input name="name" form="<?= $fid ?>" class="form-control form-control-sm" maxlength="200" value="<?= h($c['name'] ?? '') ?>" placeholder="ชื่อเต็มโครงการ"></td>
       <td><input type="color" name="color" form="<?= $fid ?>" class="form-control form-control-sm form-control-color" value="<?= h($c['color'] ?? '#0d6efd') ?>" title="สี"></td>
       <td><input type="number" name="sort_order" form="<?= $fid ?>" class="form-control form-control-sm" style="width:80px" value="<?= (int)($c['sort_order'] ?? 0) ?>" title="ลำดับ"></td>
-      <td class="text-center"><?php if ($c && !$guard): ?><input type="checkbox" name="is_active" value="1" form="<?= $fid ?>" class="form-check-input"<?= $c['is_active'] ? ' checked' : '' ?> title="เปิดใช้งาน"><?php elseif ($guard): ?><span class="badge text-bg-danger">เวรรักษาการณ์</span><?php endif; ?></td>
+      <td class="text-center"><?php if ($c && !$guard): ?><input type="checkbox" name="is_active" value="1" form="<?= $fid ?>" class="form-check-input"<?= $c['is_active'] ? ' checked' : '' ?> title="เปิดใช้งาน"><?php elseif ($guard): ?><span class="badge text-bg-danger">เวรศาลากลาง</span><?php endif; ?></td>
       <td class="text-center small text-muted"><?= $c ? number_format((int)($usage[$c['id']] ?? 0)) : '' ?></td>
       <td class="text-end text-nowrap">
         <button form="<?= $fid ?>" class="btn btn-sm btn-<?= $c ? 'outline-primary' : 'primary' ?>"><i class="bi <?= $c ? 'bi-save' : 'bi-plus-lg' ?>"></i> <?= $c ? 'บันทึก' : 'เพิ่ม' ?></button>
@@ -102,7 +102,7 @@ $rowForm = function (?array $c) use ($usage) {
     </table>
   </div>
   <div class="card-footer small text-muted">
-    รหัสที่ถูกใช้ในแผนแล้วลบไม่ได้ (ปิดใช้งานแทน — แผนเดิมยังแสดงรหัสนั้น) · คำว่า "เวร" สงวนไว้สำหรับเวรสำนักงาน (ดึงจากปฏิทิน) · "*" = เวรรักษาการณ์ศาลากลางฯ (ส่งเข้าปฏิทินและแจ้งเตือนผู้รับผิดชอบ)
+    รหัสที่ถูกใช้ในแผนแล้วลบไม่ได้ (ปิดใช้งานแทน — แผนเดิมยังแสดงรหัสนั้น) · คำว่า "เวร" สงวนไว้สำหรับเวรสำนักงาน (ดึงจากปฏิทิน) · "*" = เวรศาลากลาง (ส่งเข้าปฏิทินและแจ้งเตือนผู้รับผิดชอบ)
   </div>
 </div>
 <?php require __DIR__ . '/footer.php'; ?>

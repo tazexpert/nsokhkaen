@@ -59,7 +59,7 @@ require __DIR__ . '/header.php';
       </div>
     <?php endfor; ?>
   </div>
-  <div class="card-footer small text-muted"><?php if (!$guest): ?><span class="cal-ev mine d-inline-block px-2">งานของคุณ</span> <?php endif; ?><span class="cal-ev d-inline-block px-2">งานของผู้อื่น</span> <span class="cal-ev duty d-inline-block px-2">เวรสำนักงาน</span> <span class="cal-ev guard d-inline-block px-2">เวรรักษาการณ์ศาลากลางฯ</span> · คลิกกิจกรรมเพื่อดูรายละเอียด</div>
+  <div class="card-footer small text-muted"><?php if (!$guest): ?><span class="cal-ev mine d-inline-block px-2">งานของคุณ</span> <?php endif; ?><span class="cal-ev d-inline-block px-2">งานของผู้อื่น</span> <span class="cal-ev duty d-inline-block px-2">เวรสำนักงาน</span> <span class="cal-ev guard d-inline-block px-2">เวรศาลากลาง</span> · คลิกกิจกรรมเพื่อดูรายละเอียด</div>
 </div>
 <?= cal_modal_script() ?>
 <?php require __DIR__ . '/footer.php'; ?>

@@ -1,9 +1,9 @@
 <?php
 /**
  * แผนการปฏิบัติงานรายเดือน (คน × วัน × รหัสงาน) — ใช้โดย plan.php / plan_edit.php / plan_import.php / plan_codes.php
- * - รหัสงาน: cal_plan_codes (โครงการสนาม เช่น สรง สศส ธปท โพล สพค + "*" = เวรรักษาการณ์ศาลากลางฯ)
- * - ช่องหนึ่งมีได้หลายรหัส เช่น "สพค*" = ออกสนาม สพค และอยู่เวรรักษาการณ์
- * - เวรรักษาการณ์ → กิจกรรม kind = 'guard' ในปฏิทิน (ตารางการปฏิบัติงาน + แจ้งเตือน) ผ่าน plan_sync_guard()
+ * - รหัสงาน: cal_plan_codes (โครงการสนาม เช่น สรง สศส ธปท โพล สพค + "*" = เวรศาลากลาง)
+ * - ช่องหนึ่งมีได้หลายรหัส เช่น "สพค*" = ออกสนาม สพค และอยู่เวรศาลากลาง
+ * - เวรศาลากลาง → กิจกรรม kind = 'guard' ในปฏิทิน (ตารางการปฏิบัติงาน + แจ้งเตือน) ผ่าน plan_sync_guard()
  * - เวรสำนักงาน ("เวร") ไม่เก็บในแผน — ดึงจากปฏิทิน (kind = 'duty') มาแสดง
  * - ไม่มีการแจ้งเตือนสำหรับงานสนาม
  */
@@ -106,7 +106,7 @@ function plan_duty_map(int $y, int $m): array
 
 /**
  * ข้อความในช่อง → [code ids, รหัสที่ไม่รู้จัก, มีคำว่า "เวร" หรือไม่]
- * รองรับ "สพค*", "สพค *", "สพค,โพล", "สพค+โพล" — "*" = เวรรักษาการณ์ · "เวร" = เวรสำนักงาน (ไม่เก็บ ดึงจากปฏิทิน)
+ * รองรับ "สพค*", "สพค *", "สพค,โพล", "สพค+โพล" — "*" = เวรศาลากลาง · "เวร" = เวรสำนักงาน (ไม่เก็บ ดึงจากปฏิทิน)
  */
 function plan_parse_cell(string $v, array $codes): array
 {
@@ -157,7 +157,7 @@ function plan_cell_text(array $ids, array $codes): string
 }
 
 /**
- * บันทึกแผนทั้งเดือน (แทนที่ของเดิม) แล้วสร้าง/ปรับเวรรักษาการณ์ในปฏิทิน
+ * บันทึกแผนทั้งเดือน (แทนที่ของเดิม) แล้วสร้าง/ปรับเวรศาลากลางในปฏิทิน
  * $people: [['user_id' => int|null, 'name' => string, 'cells' => [day => [code ids]]], ...]
  */
 function plan_save(int $y, int $m, array $people, ?string $note, int $actorId): array
@@ -203,7 +203,7 @@ function plan_save(int $y, int $m, array $people, ?string $note, int $actorId): 
     }
 }
 
-/** ลบแผนทั้งเดือน (รวมเวรรักษาการณ์ในปฏิทินของเดือนนั้น) */
+/** ลบแผนทั้งเดือน (รวมเวรศาลากลางในปฏิทินของเดือนนั้น) */
 function plan_delete(int $y, int $m, int $actorId): void
 {
     $pdo = db();
@@ -214,7 +214,7 @@ function plan_delete(int $y, int $m, int $actorId): void
 }
 
 /**
- * เวรรักษาการณ์ในแผน → กิจกรรม kind = 'guard' วันละ 1 รายการ
+ * เวรศาลากลางในแผน → กิจกรรม kind = 'guard' วันละ 1 รายการ
  * ผู้รับผิดชอบที่ไม่เปลี่ยน คงเวลามอบหมายเดิม (ไม่แจ้งเตือนซ้ำ) · ผู้ไม่มีบัญชีระบุชื่อไว้ในหมายเหตุ
  * คืน [created, updated, deleted]
  */
@@ -256,7 +256,7 @@ function plan_sync_guard(int $y, int $m, int $actorId): array
         }
     }
     $insE = $pdo->prepare("INSERT INTO cal_events (kind, event_date, title, location, note, created_by) VALUES ('guard', ?, ?, ?, ?, ?)");
-    $updE = $pdo->prepare('UPDATE cal_events SET note = ? WHERE id = ?');
+    $updE = $pdo->prepare('UPDATE cal_events SET note = ?, title = ? WHERE id = ?');
     $insU = $pdo->prepare('INSERT IGNORE INTO cal_event_users (event_id, user_id) VALUES (?, ?)');
     foreach ($want as $date => $w) {
         $note = $w['names'] ? 'ผู้ปฏิบัติงานที่ไม่มีบัญชีในระบบ: ' . implode(', ', $w['names']) : null;
@@ -272,7 +272,7 @@ function plan_sync_guard(int $y, int $m, int $actorId): array
             foreach ($add as $uid) {
                 $insU->execute([$eid, $uid]);
             }
-            $updE->execute([$note, $eid]);
+            $updE->execute([$note, CAL_GUARD_TITLE, $eid]);
             if ($add || $del) {
                 $updated++;
             }
