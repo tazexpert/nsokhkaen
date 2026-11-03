@@ -16,6 +16,9 @@ function cal_can(string $role): bool
 /** แก้ไข/ลบกิจกรรมนี้ได้หรือไม่ */
 function cal_can_edit(array $e): bool
 {
+    if (cal_is_guard($e)) {            // เวรรักษาการณ์ฯ จัดการที่แผนการปฏิบัติงาน (plan_edit.php)
+        return false;
+    }
     $me = current_user();
     return cal_can('admin') || (cal_can('editor') && (int)$e['created_by'] === (int)($me['id'] ?? 0));
 }
@@ -269,10 +272,11 @@ function cal_render_table(array $events, string $from, int $meId, bool $showActi
             $link = cal_safe_link($e['link']);
             $multi = $e['end_date'] && $e['end_date'] !== $e['event_date'];
             $duty = cal_is_duty($e);
+            $guard = cal_is_guard($e);
             $done = cal_is_done($e);
-            $html .= '<tr class="' . trim(($duty ? 'cal-duty ' : '') . ($mine ? 'cal-mine ' : '') . ($done ? 'cal-done' : '')) . '">'
-                . '<td class="text-nowrap">' . ($duty ? '<span class="text-muted">-</span>' : h(cal_time_text($e))) . ($multi ? '<div class="small text-muted">' . h(cal_range_text($e)) . '</div>' : '') . '</td>'
-                . '<td><a href="' . h($base . 'event_view.php?id=' . (int)$e['id']) . '" class="fw-semibold text-decoration-none">' . ($duty ? '<i class="bi bi-shield-check"></i> ' : '') . h($e['title']) . '</a>'
+            $html .= '<tr class="' . trim(($duty ? 'cal-duty ' : '') . ($guard ? 'cal-guard ' : '') . ($mine ? 'cal-mine ' : '') . ($done ? 'cal-done' : '')) . '">'
+                . '<td class="text-nowrap">' . ($duty || $guard ? '<span class="text-muted">-</span>' : h(cal_time_text($e))) . ($multi ? '<div class="small text-muted">' . h(cal_range_text($e)) . '</div>' : '') . '</td>'
+                . '<td><a href="' . h($base . 'event_view.php?id=' . (int)$e['id']) . '" class="fw-semibold text-decoration-none">' . ($duty ? '<i class="bi bi-shield-check"></i> ' : '') . ($guard ? '<i class="bi bi-shield-shaded"></i> ' : '') . h($e['title']) . '</a>'
                 . (cal_is_private($e) ? ' <span class="badge text-bg-secondary" title="เห็นเฉพาะผู้บันทึกและผู้รับผิดชอบ"><i class="bi bi-lock-fill"></i> ส่วนตัว</span>' : '')
                 . ($mine ? ' <span class="badge text-bg-warning">งานของคุณ</span>' : '')
                 . ($done ? ' <span class="badge text-bg-secondary"><i class="bi bi-check2"></i> จบแล้ว</span>' : '') . '</td>'
@@ -336,6 +340,20 @@ const CAL_DUTY_TITLE = 'เวรสำนักงาน';
 function cal_is_duty(array $e): bool
 {
     return ($e['kind'] ?? 'event') === 'duty';
+}
+
+/** เวรรักษาการณ์ศาลากลางจังหวัด — สร้างจากแผนการปฏิบัติงาน (รหัส *) แสดงในตารางและแจ้งเตือนผู้รับผิดชอบ */
+const CAL_GUARD_TITLE = 'เวรรักษาการณ์ศาลากลางจังหวัดขอนแก่น';
+
+function cal_is_guard(array $e): bool
+{
+    return ($e['kind'] ?? 'event') === 'guard';
+}
+
+/** เวรสำนักงาน / เวรรักษาการณ์: ทั้งวัน ไม่ระบุเวลา */
+function cal_is_shift(array $e): bool
+{
+    return cal_is_duty($e) || cal_is_guard($e);
 }
 
 /**

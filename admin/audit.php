@@ -25,7 +25,7 @@ $labels = [
     'user_create' => 'เพิ่มผู้ใช้', 'user_update' => 'แก้ไขผู้ใช้/สิทธิ์', 'user_delete' => 'ลบผู้ใช้',
     'user_toggle_active' => 'เปิด/ปิดบัญชี', 'change_password' => 'เปลี่ยนรหัสผ่าน', 'set_pin' => 'ตั้ง PIN',
     'remove_pin' => 'ลบ PIN', 'settings_update' => 'แก้ไขค่าระบบ', 'change_photo' => 'เปลี่ยนรูปโปรไฟล์',
-    'notebook.edit' => 'แก้ไขสมุดบันทึก', 'notebook.restore' => 'นำสมุดบันทึกเวอร์ชันเดิมกลับมา', 'message.send' => 'ส่งข้อความ', 'audit_reset' => 'ล้างข้อมูลระบบ (reset)', 'link_create' => 'เพิ่มลิงก์', 'link_update' => 'แก้ไขลิงก์', 'link_delete' => 'ลบลิงก์',
+    'notebook.edit' => 'แก้ไขสมุดบันทึก', 'notebook.restore' => 'นำสมุดบันทึกเวอร์ชันเดิมกลับมา', 'message.send' => 'ส่งข้อความ', 'audit_reset' => 'ล้างข้อมูลระบบ (reset)', 'link_create' => 'เพิ่มลิงก์', 'link_update' => 'แก้ไขลิงก์', 'link_delete' => 'ลบลิงก์', 'cal_plan_import' => 'นำเข้าแผนการปฏิบัติงาน', 'cal_plan_save' => 'บันทึกแผนการปฏิบัติงาน', 'cal_plan_delete' => 'ลบแผนการปฏิบัติงาน', 'cal_plan_code' => 'รหัสงานในแผน',
 ];
 /** ชื่อ/ไอคอน/สีของระบบ */
 $modInfo = function (string $key): array {

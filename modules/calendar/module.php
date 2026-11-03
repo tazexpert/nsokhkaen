@@ -16,11 +16,12 @@ return [
     'roles' => [
         'viewer' => 'ผู้ใช้งาน — ดูตารางการปฏิบัติงาน และกิจกรรมที่ตนรับผิดชอบ',
         'editor' => 'ผู้บันทึกกิจกรรม — เพิ่มกิจกรรม แก้ไข/ลบกิจกรรมที่ตนบันทึก',
-        'admin'  => 'ผู้ดูแลปฏิทิน — แก้ไข/ลบกิจกรรมได้ทุกรายการ',
+        'admin'  => 'ผู้ดูแลปฏิทิน — แก้ไข/ลบกิจกรรมได้ทุกรายการ และจัดทำแผนการปฏิบัติงาน (นำเข้า Excel / แก้ไข / รหัสงาน)',
     ],
     'menu' => [
         ['id' => 'month', 'label' => 'ปฏิทินรายเดือน',   'href' => 'index.php',          'icon' => 'bi-calendar3',      'role' => 'viewer'],
         ['id' => 'list',  'label' => 'ตารางกิจกรรม',      'href' => 'list.php',           'icon' => 'bi-list-task',      'role' => 'viewer'],
+        ['id' => 'plan',  'label' => 'แผนการปฏิบัติงาน',  'href' => 'plan.php',           'icon' => 'bi-grid-3x3',       'role' => 'viewer', 'guest' => false],
         ['id' => 'mine',  'label' => 'งานของฉัน',         'href' => 'list.php?mine=1',    'icon' => 'bi-person-check',   'role' => 'viewer', 'guest' => false],
         ['id' => 'add',   'label' => 'เพิ่มกิจกรรม',       'href' => 'event_form.php',     'icon' => 'bi-plus-circle',    'role' => 'editor'],
         ['id' => 'import', 'label' => 'นำเข้า CSV',        'href' => 'import.php',         'icon' => 'bi-filetype-csv',   'role' => 'editor'],

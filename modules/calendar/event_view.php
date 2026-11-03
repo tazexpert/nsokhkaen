@@ -33,7 +33,9 @@ ob_start();
     <dl class="row mb-0">
       <?php if (cal_is_private($e)): ?><dt class="col-sm-3">การมองเห็น</dt><dd class="col-sm-9"><span class="badge text-bg-secondary"><i class="bi bi-lock-fill"></i> ส่วนตัว</span> <span class="small text-muted">เห็นเฉพาะผู้บันทึกและผู้รับผิดชอบ</span></dd><?php endif; ?>
       <dt class="col-sm-3">วันที่</dt><dd class="col-sm-9"><?= h(cal_range_text($e)) ?></dd>
-      <?php if (!cal_is_duty($e)): ?><dt class="col-sm-3">เวลา</dt><dd class="col-sm-9"><?= h(cal_time_text($e)) ?></dd><?php endif; ?>
+      <?php if (cal_is_guard($e)): ?><dt class="col-sm-3">ประเภท</dt><dd class="col-sm-9"><span class="badge text-bg-danger"><i class="bi bi-shield-shaded"></i> เวรรักษาการณ์</span>
+        <span class="small text-muted">จากแผนการปฏิบัติงาน<?= cal_can('admin') ? ' · <a href="plan_edit.php?m=' . h(substr($e['event_date'], 0, 7)) . '">แก้ไขที่แผนการปฏิบัติงาน</a>' : '' ?></span></dd><?php endif; ?>
+      <?php if (!cal_is_shift($e)): ?><dt class="col-sm-3">เวลา</dt><dd class="col-sm-9"><?= h(cal_time_text($e)) ?></dd><?php endif; ?>
       <?php if (!cal_is_duty($e)): ?><dt class="col-sm-3">สถานที่</dt><dd class="col-sm-9"><?= h($e['location'] ?: '-') ?></dd><?php endif; ?>
       <dt class="col-sm-3">ลิงก์ประกอบ</dt><dd class="col-sm-9"><?= $link ? '<a href="' . h($link) . '" target="_blank" rel="noopener" class="text-break">' . h($link) . '</a>' : '-' ?></dd>
       <dt class="col-sm-3">หมายเหตุ</dt><dd class="col-sm-9"><?= $e['note'] ? nl2br(h($e['note'])) : '-' ?></dd>
@@ -55,7 +57,7 @@ ob_start();
 $detail = ob_get_clean();
 if ($modal) {                     // popup: หัว + เนื้อหา + ปุ่ม (ไม่มี layout)
     $base = module_url(CAL_MODULE);
-    echo '<div class="modal-header"><h5 class="modal-title">' . (cal_is_duty($e) ? '<i class="bi bi-shield-check text-success"></i> ' : '<i class="bi bi-calendar-event text-primary"></i> ')
+    echo '<div class="modal-header"><h5 class="modal-title">' . (cal_is_duty($e) ? '<i class="bi bi-shield-check text-success"></i> ' : (cal_is_guard($e) ? '<i class="bi bi-shield-shaded text-danger"></i> ' : '<i class="bi bi-calendar-event text-primary"></i> '))
         . h($e['title']) . '</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button></div>'
         . '<div class="modal-body">' . $detail . '</div>'
         . '<div class="modal-footer">'

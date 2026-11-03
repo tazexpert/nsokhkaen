@@ -50,6 +50,13 @@
 .cal-ev.duty { background: #d1fae5; color: #065f46; }
 .cal-ev.duty:hover { background: #a7f3d0; color: #064e3b; }
 .cal-ev.duty.mine { background: #6ee7b7; color: #064e3b; }
+/* เวรรักษาการณ์ศาลากลางฯ (จากแผนการปฏิบัติงาน) */
+.cal-table tr.cal-guard td { background: #fff1f2; }
+.cal-table tr.cal-guard td:first-child { box-shadow: inset 4px 0 0 #e11d48; }
+.cal-table tr.cal-guard a { color: #be123c; }
+.cal-ev.guard { background: #ffe4e6; color: #9f1239; }
+.cal-ev.guard:hover { background: #fecdd3; color: #881337; }
+.cal-ev.guard.mine { background: #fda4af; color: #881337; }
 /* กิจกรรมวันนี้ที่จบแล้ว: ยังแสดงจนสิ้นวัน แต่จางลง */
 .cal-table tr.cal-done td { opacity: .6; }
 .cal-table tr.cal-done td:last-child { opacity: 1; }
@@ -115,6 +122,9 @@
 .whiteboard .cal-table tr.cal-duty td{background:linear-gradient(transparent 12%,rgba(74,222,128,.22) 12%,rgba(74,222,128,.22) 88%,transparent 88%)!important}
 .whiteboard .cal-table tr.cal-duty td:first-child{box-shadow:none}
 .whiteboard .cal-table tr.cal-duty a{color:var(--wb-ink)}
+.whiteboard .cal-table tr.cal-guard td{background:linear-gradient(transparent 12%,rgba(251,113,133,.2) 12%,rgba(251,113,133,.2) 88%,transparent 88%)!important}
+.whiteboard .cal-table tr.cal-guard td:first-child{box-shadow:none}
+.whiteboard .cal-table tr.cal-guard a{color:var(--wb-ink)}
 .whiteboard .cal-table tr.cal-done td{opacity:.75}
 .whiteboard .cal-table tr.cal-done td:nth-child(-n+2){text-decoration:line-through 2px var(--wb-ink)}
 .whiteboard .cal-table tr.cal-done .badge{text-decoration:none}
