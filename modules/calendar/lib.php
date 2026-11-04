@@ -214,21 +214,37 @@ function cal_work_group_label(int $gid): string
     return $label;
 }
 
-/** กลุ่มงานในตาราง: แบบเดียวกับรายชื่อปกติ — "ชื่อ ผอ. (ตำแหน่งตัวเล็ก) + บุคลากรกลุ่ม…" ไม่มีกรอบ/ตัวหนา */
-function cal_work_group_html(int $gid, int $meId = 0): string
+/**
+ * กลุ่มงานในตาราง: แบบเดียวกับรายชื่อปกติ — "ชื่อ ผอ. (ตำแหน่งตัวเล็ก) + บุคลากรกลุ่ม…" ไม่มีกรอบ/ตัวหนา
+ * ผู้อำนวยการคนเดียวกันหลายกลุ่ม → แสดงชื่อครั้งเดียว ตำแหน่งคั่นด้วย " / " แล้วตามด้วยบุคลากรของแต่ละกลุ่ม
+ */
+function cal_work_groups_html(array $gids, int $meId = 0): string
 {
-    $g = cal_work_groups()[$gid] ?? null;
-    if (!$g) {
-        return '';
-    }
+    $groups = cal_work_groups();
     $users = cal_users();
-    $html = '';
-    if ($g['director'] && isset($users[$g['director']])) {
-        $d = $users[$g['director']];
-        $html = '<span class="cal-person pos' . ($g['director'] === $meId ? ' me' : '') . '">' . h(preg_replace('/\s+/u', ' ', trim($d['full_name'])))
-            . ' <small>' . h($g['director_label'] ?: trim($d['position'])) . '</small></span> <span class="cal-plus">+</span> ';
+    $byDir = [];                                   // director id (0 = ไม่มี) => [gid, ...] ตามลำดับกลุ่ม
+    foreach ($gids as $gid) {
+        if (isset($groups[$gid])) {
+            $d = $groups[$gid]['director'] && isset($users[$groups[$gid]['director']]) ? (int)$groups[$gid]['director'] : 0;
+            $byDir[$d][] = $gid;
+        }
     }
-    return $html . '<span class="cal-person" title="' . count($g['ids']) . ' คน">' . h('บุคลากร' . $g['name']) . '</span>';
+    $plus = ' <span class="cal-plus">+</span> ';
+    $parts = [];
+    foreach ($byDir as $did => $list) {
+        $chips = [];
+        if ($did) {
+            $u = $users[$did];
+            $pos = array_values(array_unique(array_map(fn($gid) => $groups[$gid]['director_label'] ?: trim($u['position']), $list)));
+            $chips[] = '<span class="cal-person pos' . ($did === $meId ? ' me' : '') . '">' . h(preg_replace('/\s+/u', ' ', trim($u['full_name'])))
+                . ' <small>' . h(implode(' / ', $pos)) . '</small></span>';
+        }
+        foreach ($list as $gid) {
+            $chips[] = '<span class="cal-person" title="' . count($groups[$gid]['ids']) . ' คน">' . h('บุคลากร' . $groups[$gid]['name']) . '</span>';
+        }
+        $parts[] = implode($plus, $chips);
+    }
+    return implode($plus, $parts);
 }
 
 function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
@@ -256,13 +272,13 @@ function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
     $rest = $ids;
     foreach (cal_work_groups() as $gid => $g) {
         if (!array_diff($g['ids'], $ids)) {                 // ครบทั้งกลุ่ม (ผู้อำนวยการคนเดียวกันอยู่ได้หลายกลุ่ม)
-            $labels[] = cal_work_group_html($gid, $meId);
+            $labels[] = $gid;
             $rest = array_values(array_diff($rest, $g['ids']));
         }
     }
     $groupHtml = '';
     if ($labels) {
-        $groupHtml = implode(' <span class="cal-plus">+</span> ', $labels) . ' ';
+        $groupHtml = cal_work_groups_html($labels, $meId) . ' ';
         if (!$rest) {
             return $groupHtml;
         }
