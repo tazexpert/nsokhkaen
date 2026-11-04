@@ -214,6 +214,23 @@ function cal_work_group_label(int $gid): string
     return $label;
 }
 
+/** กลุ่มงานในตาราง: แบบเดียวกับรายชื่อปกติ — "ชื่อ ผอ. (ตำแหน่งตัวเล็ก) + บุคลากรกลุ่ม…" ไม่มีกรอบ/ตัวหนา */
+function cal_work_group_html(int $gid, int $meId = 0): string
+{
+    $g = cal_work_groups()[$gid] ?? null;
+    if (!$g) {
+        return '';
+    }
+    $users = cal_users();
+    $html = '';
+    if ($g['director'] && isset($users[$g['director']])) {
+        $d = $users[$g['director']];
+        $html = '<span class="cal-person pos' . ($g['director'] === $meId ? ' me' : '') . '">' . h(preg_replace('/\s+/u', ' ', trim($d['full_name'])))
+            . ' <small>' . h($g['director_label'] ?: trim($d['position'])) . '</small></span> <span class="cal-plus">+</span> ';
+    }
+    return $html . '<span class="cal-person" title="' . count($g['ids']) . ' คน">' . h('บุคลากร' . $g['name']) . '</span>';
+}
+
 function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
 {
     $users = cal_users();
@@ -239,19 +256,17 @@ function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
     $rest = $ids;
     foreach (cal_work_groups() as $gid => $g) {
         if (!array_diff($g['ids'], $ids)) {                 // ครบทั้งกลุ่ม (ผู้อำนวยการคนเดียวกันอยู่ได้หลายกลุ่ม)
-            $labels[] = cal_work_group_label($gid);
+            $labels[] = cal_work_group_html($gid, $meId);
             $rest = array_values(array_diff($rest, $g['ids']));
         }
     }
     $groupHtml = '';
     if ($labels) {
-        $groupHtml = '<span class="badge text-bg-primary text-wrap text-start" title="' . (count($ids) - count($rest)) . ' คน">' . h(implode(' + ', $labels)) . '</span>'
-            . (in_array($meId, array_diff($ids, $rest), true) ? ' <span class="badge text-bg-warning">รวมคุณ</span>' : '');
+        $groupHtml = implode(' <span class="cal-plus">+</span> ', $labels) . ' ';
         if (!$rest) {
             return $groupHtml;
         }
         $ids = $rest;
-        $groupHtml .= ' ';
     }
     $order = array_flip(array_keys($users));                            // เรียงตามลำดับตำแหน่ง (เหมือนหน้าบุคลากร)
     usort($ids, fn($a, $b) => $order[$a] <=> $order[$b]);
