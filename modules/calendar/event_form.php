@@ -170,6 +170,14 @@ require __DIR__ . '/header.php';
           <?php if (cal_group_ids('driver')): ?><button type="button" class="btn btn-sm btn-outline-primary" data-add="driver"><i class="bi bi-car-front"></i> เพิ่มพนักงานขับรถ</button><?php endif; ?>
           <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" data-clear><i class="bi bi-x-lg"></i> ล้าง</button>
         </div>
+        <?php if ($wgs = cal_work_groups()): ?>
+        <div class="d-flex flex-wrap gap-1 mb-2 align-items-center">
+          <span class="small text-muted me-1"><i class="bi bi-diagram-3"></i> กลุ่มงาน:</span>
+          <?php foreach ($wgs as $gid => $g): ?>
+            <button type="button" class="btn btn-sm btn-outline-success" data-add-ids="<?= h(implode(',', $g['ids'])) ?>" title="<?= h(cal_work_group_label($gid)) ?> (<?= count($g['ids']) ?> คน)"><i class="bi bi-plus"></i> <?= h($g['name']) ?></button>
+          <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
         <input type="search" class="form-control form-control-sm mb-2" id="userSearch" placeholder="ค้นหาชื่อ / ตำแหน่ง">
         <div class="cal-userpick border rounded" id="userPick">
           <?php foreach (array_keys(CAL_STAFF_LABEL) as $t): $list = array_filter($users, fn($u) => $u['type'] === $t); if (!$list) continue; ?>
@@ -182,7 +190,7 @@ require __DIR__ . '/header.php';
             <?php endforeach; ?>
           <?php endforeach; ?>
         </div>
-        <div class="form-text">ข้าราชการ = สถิติจังหวัด / ผู้อำนวยการ… / นักวิชาการ… / เจ้าพนักงาน… · พนักงาน = พนักงานสถิติ / ผู้ช่วยพนักงานสถิติ · พนักงานขับรถ ไม่นับรวมใน "เพิ่มทั้งหมด" (แยกตามตำแหน่งในบัญชีผู้ใช้)</div>
+        <div class="form-text">ข้าราชการ = สถิติจังหวัด / ผู้อำนวยการ… / นักวิชาการ… / เจ้าพนักงาน… · พนักงาน = พนักงานสถิติ / ผู้ช่วยพนักงานสถิติ · พนักงานขับรถ ไม่นับรวมใน "เพิ่มทั้งหมด" (แยกตามตำแหน่งในบัญชีผู้ใช้) · กลุ่มงาน = ผู้อำนวยการกลุ่ม + บุคลากรที่กำหนดกลุ่มงานในบัญชีผู้ใช้ (เลือกครบทั้งกลุ่ม ตารางจะแสดงเป็น "ผู้อำนวยการ… + บุคลากรกลุ่ม…")</div>
       </div>
     </div>
   </div>
@@ -208,6 +216,11 @@ require __DIR__ . '/header.php';
   document.querySelectorAll('[data-add]').forEach(btn => btn.addEventListener('click', () => {
     const t = btn.dataset.add;
     document.querySelectorAll('#userPick .opt').forEach(o => { if ((t === '*' && o.dataset.type !== 'driver') || o.dataset.type === t) o.querySelector('input').checked = true; });
+    count();
+  }));
+  document.querySelectorAll('[data-add-ids]').forEach(btn => btn.addEventListener('click', () => {     // เพิ่มทั้งกลุ่มงาน (ผู้อำนวยการ + บุคลากรกลุ่ม)
+    const ids = btn.dataset.addIds.split(',');
+    boxes().forEach(b => { if (ids.includes(b.value)) b.checked = true; });
     count();
   }));
   document.querySelector('[data-clear]').addEventListener('click', () => { boxes().forEach(b => b.checked = false); count(); });

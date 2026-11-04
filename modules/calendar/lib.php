@@ -50,7 +50,7 @@ function cal_users(): array
     static $users = null;
     if ($users === null) {
         $users = [];
-        foreach (db()->query('SELECT id, username, sort_order, full_name, position FROM core_users WHERE is_active = 1 AND username REGEXP \'^[0-9]+$\'') as $u) {
+        foreach (db()->query('SELECT id, username, sort_order, full_name, position, work_group_id FROM core_users WHERE is_active = 1 AND username REGEXP \'^[0-9]+$\'') as $u) {
             $u['type'] = cal_staff_type($u['position']);
             $users[(int)$u['id']] = $u;
         }
@@ -133,6 +133,9 @@ function cal_person_text(array $u): string
 /** ผู้ใช้ในกลุ่ม: '*' = ทุกคน (ไม่รวมพนักงานขับรถ) · '*+driver' = ทุกคนรวมพนักงานขับรถ · หรือ gov / emp / contract / driver */
 function cal_group_ids(string $t): array
 {
+    if (preg_match('/^g(\d+)$/', $t, $m)) {          // กลุ่มงาน (g + id) — ดู cal_work_groups()
+        return cal_work_groups()[(int)$m[1]]['ids'] ?? [];
+    }
     return array_keys(array_filter(cal_users(), fn($u) => match ($t) {
         '*'        => $u['type'] !== 'driver',
         '*+driver' => true,
@@ -141,6 +144,68 @@ function cal_group_ids(string $t): array
 }
 
 /** สรุปผู้รับผิดชอบ: "เจ้าหน้าที่สำนักงานสถิติจังหวัดขอนแก่นทุกคน" / "ข้าราชการ" / "พนักงาน" หรือรายชื่อ */
+/**
+ * กลุ่มงาน [id => ['name', 'director' => user id|null, 'ids' => [...]]] — เฉพาะกลุ่มที่มีอย่างน้อย 2 คน
+ * สมาชิก = เจ้าหน้าที่ที่กำหนดกลุ่มงานในบัญชีผู้ใช้ + ผู้อำนวยการกลุ่ม (จากตำแหน่ง "ผู้อำนวยการ" + ชื่อกลุ่ม)
+ */
+function cal_work_groups(): array
+{
+    static $groups = null;
+    if ($groups !== null) {
+        return $groups;
+    }
+    $groups = [];
+    $users = cal_users();
+    foreach (work_groups() as $gid => $name) {
+        $ids = [];
+        $director = null;
+        foreach ($users as $id => $u) {
+            $pos = preg_replace('/\s+/u', '', (string)$u['position']);
+            if (str_starts_with($pos, 'ผู้อำนวยการ') && str_contains($pos, preg_replace('/\s+/u', '', $name))) {
+                $director = $id;
+                $ids[] = $id;
+            } elseif ((int)$u['work_group_id'] === (int)$gid) {
+                $ids[] = $id;
+            }
+        }
+        if (count(array_unique($ids)) >= 2) {
+            $groups[(int)$gid] = ['name' => $name, 'director' => $director, 'ids' => array_values(array_unique($ids))];
+        }
+    }
+    // เรียงตามลำดับของผู้อำนวยการกลุ่ม (เหมือนลำดับบุคลากร) — กลุ่มที่ไม่มีผู้อำนวยการไว้ท้าย
+    $rank = array_flip(array_keys($users));
+    uksort($groups, fn($a, $b) => [$rank[$groups[$a]['director']] ?? PHP_INT_MAX, $a] <=> [$rank[$groups[$b]['director']] ?? PHP_INT_MAX, $b]);
+    return $groups;
+}
+
+/** ชื่อกลุ่มงาน (ไม่สนช่องว่าง · มีคำว่า "บุคลากร" นำหน้าได้) → id */
+function cal_work_group_by_name(string $k): ?int
+{
+    $k = preg_replace('/^บุคลากร/u', '', preg_replace('/\s+/u', '', $k));
+    foreach (cal_work_groups() as $gid => $g) {
+        if (preg_replace('/\s+/u', '', $g['name']) === $k) {
+            return $gid;
+        }
+    }
+    return null;
+}
+
+/** ข้อความแทนทั้งกลุ่มงาน: "ชื่อผู้อำนวยการ ตำแหน่ง + บุคลากรกลุ่ม…" */
+function cal_work_group_label(int $gid): string
+{
+    $g = cal_work_groups()[$gid] ?? null;
+    if (!$g) {
+        return '';
+    }
+    $users = cal_users();
+    $label = 'บุคลากร' . $g['name'];
+    if ($g['director'] && isset($users[$g['director']])) {
+        $d = $users[$g['director']];
+        $label = preg_replace('/\s+/u', ' ', trim($d['full_name'])) . ' ' . trim($d['position']) . ' + ' . $label;
+    }
+    return $label;
+}
+
 function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
 {
     $users = cal_users();
@@ -161,6 +226,25 @@ function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
                 . (in_array($meId, $ids, true) ? ' <span class="badge text-bg-warning">รวมคุณ</span>' : '');
         }
     }
+    // กลุ่มงานที่ถูกเลือกครบทั้งกลุ่ม → "ผู้อำนวยการ ตำแหน่ง + บุคลากรกลุ่ม…" (หลายกลุ่มต่อด้วย +) แล้วตามด้วยรายชื่อที่เหลือ
+    $labels = [];
+    $rest = $ids;
+    foreach (cal_work_groups() as $gid => $g) {
+        if (!array_diff($g['ids'], $rest)) {
+            $labels[] = cal_work_group_label($gid);
+            $rest = array_values(array_diff($rest, $g['ids']));
+        }
+    }
+    $groupHtml = '';
+    if ($labels) {
+        $groupHtml = '<span class="badge text-bg-primary text-wrap text-start" title="' . (count($ids) - count($rest)) . ' คน">' . h(implode(' + ', $labels)) . '</span>'
+            . (in_array($meId, array_diff($ids, $rest), true) ? ' <span class="badge text-bg-warning">รวมคุณ</span>' : '');
+        if (!$rest) {
+            return $groupHtml;
+        }
+        $ids = $rest;
+        $groupHtml .= ' ';
+    }
     $order = array_flip(array_keys($users));                            // เรียงตามลำดับตำแหน่ง (เหมือนหน้าบุคลากร)
     usort($ids, fn($a, $b) => $order[$a] <=> $order[$b]);
     $chips = array_map(fn($id) => cal_show_position($users[$id]['position'])
@@ -168,7 +252,7 @@ function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
         : '<span class="cal-person' . ($id === $meId ? ' me' : '') . '">' . h($users[$id]['full_name']) . '</span>',
         array_slice($ids, 0, $max));
     $more = count($ids) - $max;
-    return implode(' ', $chips) . ($more > 0 ? ' <span class="small text-muted" title="' . h(implode(', ', array_map(fn($id) => cal_person_text($users[$id]), array_slice($ids, $max)))) . '">+' . $more . ' คน</span>' : '');
+    return $groupHtml . implode(' ', $chips) . ($more > 0 ? ' <span class="small text-muted" title="' . h(implode(', ', array_map(fn($id) => cal_person_text($users[$id]), array_slice($ids, $max)))) . '">+' . $more . ' คน</span>' : '');
 }
 
 /** กิจกรรมจบแล้ววันนี้ (เลยเวลาสิ้นสุดของวันสุดท้าย) — ยังแสดงในตารางจนถึงสิ้นวัน */
@@ -323,6 +407,8 @@ function cal_parse_people(string $v): array
             $ids = array_merge($ids, cal_group_ids('contract'));
         } elseif (in_array($k, ['พนักงานขับรถ', 'คนขับรถ'], true)) {
             $ids = array_merge($ids, cal_group_ids('driver'));
+        } elseif (($gid = cal_work_group_by_name($k)) !== null) {          // กลุ่มงาน เช่น "กลุ่มวิชาการสถิติและวางแผน" / "บุคลากรกลุ่ม…"
+            $ids = array_merge($ids, cal_group_ids('g' . $gid));
         } elseif (isset($byName[$k]) && count(array_unique($byName[$k])) === 1) {
             $ids[] = $byName[$k][0];
         } elseif (isset($byUsername[mb_strtolower($p)])) {
