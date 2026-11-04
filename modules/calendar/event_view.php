@@ -44,7 +44,7 @@ ob_start();
   </div></div></div>
   <div class="col-lg-5"><div class="card h-100">
     <div class="card-header"><strong><i class="bi bi-people"></i> ผู้รับผิดชอบ</strong> <span class="badge text-bg-primary"><?= count($ids) ?> คน</span>
-      <?php $group = cal_assignee_html($ids, $me['id'], 0); if (str_contains($group, 'badge')): ?><div class="small mt-1"><?= $group ?></div><?php endif; ?></div>
+      <?php $group = cal_assignee_html($ids, $me['id'], 0); if (str_contains($group, 'cal-person')): ?><div class="small mt-1"><?= $group ?></div><?php endif; ?></div>
     <ul class="list-group list-group-flush" style="max-height:60vh;overflow:auto">
       <?php foreach ($ids as $uid): if (!isset($users[$uid])) continue; $u = $users[$uid]; ?>
         <li class="list-group-item<?= $uid === $me['id'] ? ' list-group-item-warning' : '' ?>"><?= h($u['full_name']) ?>

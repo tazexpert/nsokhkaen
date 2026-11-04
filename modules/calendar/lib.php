@@ -332,8 +332,8 @@ function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6, array $s
         $g = cal_group_ids($t);
         sort($g);
         if ($g && $sorted === $g) {
-            return '<span class="badge text-bg-primary text-wrap text-start" title="' . count($g) . ' คน">' . $label . '</span>'
-                . (in_array($meId, $ids, true) ? ' <span class="badge text-bg-warning">รวมคุณ</span>' : '');
+            // แสดงแบบเดียวกับรายชื่อปกติ (ไม่มีกรอบ/ป้าย "รวมคุณ" — งานของตัวเองมีป้าย "งานของคุณ" ที่ช่องกิจกรรมแล้ว)
+            return '<span class="cal-person" title="' . count($g) . ' คน">' . h($label) . '</span>';
         }
     }
     // กลุ่มงานที่ถูกเลือกครบทั้งกลุ่ม → "ผู้อำนวยการ ตำแหน่ง + บุคลากรกลุ่ม…" (หลายกลุ่มต่อด้วย +) แล้วตามด้วยรายชื่อที่เหลือ
