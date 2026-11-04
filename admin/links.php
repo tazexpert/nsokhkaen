@@ -122,7 +122,7 @@ require APP_ROOT . '/core/layout/header.php';
                 <form method="post" class="d-inline"><?= csrf_field() ?><input type="hidden" name="id" value="<?= (int)$l['id'] ?>">
                   <button name="action" value="toggle" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="<?= $l['is_active'] ? 'ซ่อนจากหน้าแรก' : 'แสดงในหน้าแรก' ?>"><i class="bi <?= $l['is_active'] ? 'bi-eye-slash' : 'bi-eye' ?>"></i></button>
                 </form>
-                <form method="post" class="d-inline" onsubmit="return confirm('ลบลิงก์ &quot;<?= h(addslashes($l['label'])) ?>&quot;?')"><?= csrf_field() ?>
+                <form method="post" class="d-inline" onsubmit="return confirm(<?= js_attr('ลบลิงก์ "' . $l['label'] . '"?') ?>)"><?= csrf_field() ?>
                   <input type="hidden" name="id" value="<?= (int)$l['id'] ?>">
                   <button name="action" value="delete" class="btn btn-sm btn-outline-danger" data-bs-toggle="tooltip" title="ลบ"><i class="bi bi-trash"></i></button>
                 </form>

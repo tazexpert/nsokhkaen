@@ -197,7 +197,7 @@ require __DIR__ . '/header.php';
   </div>
 </form>
 <?php if ($plan): ?>
-<form method="post" id="planDelete" onsubmit="return confirm('ลบแผนการปฏิบัติงานเดือน<?= h(plan_month_text($y, $m)) ?> ทั้งหมด?\n(เวรศาลากลางของเดือนนี้ในปฏิทินจะถูกลบด้วย)')">
+<form method="post" id="planDelete" onsubmit="return confirm(<?= js_attr('ลบแผนการปฏิบัติงานเดือน' . plan_month_text($y, $m) . " ทั้งหมด?\n(เวรศาลากลางของเดือนนี้ในปฏิทินจะถูกลบด้วย)") ?>)">
   <?= csrf_field() ?><input type="hidden" name="action" value="delete">
 </form>
 <?php endif; ?>

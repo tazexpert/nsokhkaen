@@ -1,3 +1,9 @@
+/* ป้องกัน XSS เมื่อสร้าง HTML จากข้อมูล (API) ใน JavaScript — ใช้ทุกครั้งที่ใส่ข้อมูลลงใน template HTML
+ *   escapeHtml(v)  → ข้อความสำหรับเนื้อหา/attribute HTML
+ *   jsStr(v)       → string literal ของ JS สำหรับใส่ใน onclick="fn(${jsStr(v)})" */
+window.escapeHtml = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+window.jsStr = (v) => window.escapeHtml(JSON.stringify(String(v ?? '')));
+
 // สคริปต์กลางที่ใช้ทุกหน้า
 
 // ยืนยันก่อนส่งฟอร์มที่มี data-confirm (เช่น ปุ่มลบ)

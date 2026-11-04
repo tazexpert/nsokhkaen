@@ -14,29 +14,29 @@ function loadRequisitions() {
         const tbody = $('#requisitionsTable tbody').empty();
         res.data.forEach((r) => {
             const statusBadge = r.approved_at
-                ? `<span class="badge bg-success" title="อนุมัติโดย ${r.approved_by_name || '-'} เมื่อ ${formatThaiDateTime(r.approved_at)}">อนุมัติแล้ว</span>`
+                ? `<span class="badge bg-success" title="อนุมัติโดย ${escapeHtml(r.approved_by_name || '-')} เมื่อ ${formatThaiDateTime(r.approved_at)}">อนุมัติแล้ว</span>`
                 : '<span class="badge bg-secondary">รออนุมัติ</span>';
             // Once approved, cancelling is blocked server-side too (see
             // api/requisition_api.php) - hiding the button here is just so
             // the admin doesn't click it and get a rejection message.
             const actionBtns = IS_ADMIN_JS ? (r.approved_at ? '' : `
-                <button type="button" class="btn btn-sm btn-outline-success" onclick="approveRequisition(${r.id}, '${r.requisition_no}')">
+                <button type="button" class="btn btn-sm btn-outline-success" onclick="approveRequisition(${escapeHtml(r.id)}, ${jsStr(r.requisition_no)})">
                     <i class="bi bi-check-circle"></i> อนุมัติ
                 </button>
-                <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelRequisition(${r.id}, '${r.requisition_no}')">
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelRequisition(${escapeHtml(r.id)}, ${jsStr(r.requisition_no)})">
                     <i class="bi bi-x-circle"></i> ยกเลิก
                 </button>`) : '';
             tbody.append(`
                 <tr>
-                    <td><a href="${REQ_VIEW_URL}?id=${r.id}">${r.requisition_no}</a></td>
+                    <td><a href="${REQ_VIEW_URL}?id=${escapeHtml(r.id)}">${escapeHtml(r.requisition_no)}</a></td>
                     <td>${formatThaiDateTime(r.created_at)}</td>
-                    <td>${r.requester_name || '-'}</td>
-                    <td>${r.purpose || '-'}</td>
-                    <td>${r.item_count}</td>
-                    <td>${r.created_by_name}</td>
+                    <td>${escapeHtml(r.requester_name || '-')}</td>
+                    <td>${escapeHtml(r.purpose || '-')}</td>
+                    <td>${escapeHtml(r.item_count)}</td>
+                    <td>${escapeHtml(r.created_by_name)}</td>
                     <td>${statusBadge}</td>
                     <td class="text-end">
-                        <a href="${REQ_PRINT_URL}?id=${r.id}" target="_blank" class="btn btn-sm btn-outline-primary">
+                        <a href="${REQ_PRINT_URL}?id=${escapeHtml(r.id)}" target="_blank" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-printer"></i> พิมพ์
                         </a>
                         ${actionBtns}

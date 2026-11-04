@@ -66,7 +66,7 @@ const PRINT_URL = '<?= INV_URL ?>requisition_print.php';
 const QR_FROM_LINK = <?= json_encode((string)($_GET['qr'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
 function showAlert(message, type = 'danger') {
-    $('#alertBox').html(`<div class="alert alert-${type} mt-3">${message}</div>`);
+    $('#alertBox').html(`<div class="alert alert-${type} mt-3">${escapeHtml(message)}</div>`);
 }
 
 $('#btnManualLookup').on('click', function () {
@@ -117,16 +117,16 @@ function renderSearchResults(materials) {
     lastSearchResults = materials;
     const rows = materials.map((m) => {
         const thumb = m.image_path
-            ? `<img src="${BASE_URL_JS}${m.image_path}" alt="" style="width:36px;height:36px;object-fit:cover;" class="rounded">`
+            ? `<img src="${BASE_URL_JS}${escapeHtml(m.image_path)}" alt="" style="width:36px;height:36px;object-fit:cover;" class="rounded">`
             : `<span class="text-muted d-inline-flex align-items-center justify-content-center" style="width:36px;height:36px;"><i class="bi bi-image"></i></span>`;
         return `
-            <button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-2" onclick="selectSearchResult(${m.id})">
+            <button type="button" class="list-group-item list-group-item-action d-flex align-items-center gap-2" onclick="selectSearchResult(${escapeHtml(m.id)})">
                 ${thumb}
                 <span class="flex-grow-1">
-                    <div>${m.name}</div>
-                    <small class="text-muted">${m.material_code}</small>
+                    <div>${escapeHtml(m.name)}</div>
+                    <small class="text-muted">${escapeHtml(m.material_code)}</small>
                 </span>
-                <span class="badge bg-secondary">${m.stock_qty} ${m.unit}</span>
+                <span class="badge bg-secondary">${escapeHtml(m.stock_qty)} ${escapeHtml(m.unit)}</span>
             </button>
         `;
     }).join('');
@@ -142,22 +142,22 @@ function selectSearchResult(materialId) {
 }
 
 function renderMaterial(m) {
-    const image = m.image_path ? `<img src="${BASE_URL_JS}${m.image_path}" alt="" class="img-fluid rounded mb-2" style="max-height:160px;">` : '';
+    const image = m.image_path ? `<img src="${BASE_URL_JS}${escapeHtml(m.image_path)}" alt="" class="img-fluid rounded mb-2" style="max-height:160px;">` : '';
     $('#resultBody').html(`
         <span class="badge bg-info mb-2">วัสดุสิ้นเปลือง</span>
         ${image}
-        <h5>${m.name}</h5>
-        <p class="mb-1">รหัส: ${m.material_code}</p>
-        <p class="mb-1">คงเหลือ: <strong>${m.stock_qty}</strong> ${m.unit}</p>
+        <h5>${escapeHtml(m.name)}</h5>
+        <p class="mb-1">รหัส: ${escapeHtml(m.material_code)}</p>
+        <p class="mb-1">คงเหลือ: <strong>${escapeHtml(m.stock_qty)}</strong> ${escapeHtml(m.unit)}</p>
         <div class="mb-3">
             <label class="form-label">จำนวนที่ต้องการเบิก</label>
-            <input type="number" min="1" max="${m.stock_qty}" class="form-control" id="withdrawQty" value="1">
+            <input type="number" min="1" max="${escapeHtml(m.stock_qty)}" class="form-control" id="withdrawQty" value="1">
         </div>
         <div class="mb-3">
             <label class="form-label">หมายเหตุ</label>
             <input type="text" class="form-control" id="withdrawNote">
         </div>
-        <button class="btn btn-primary" onclick="addMaterialToCart(${m.id})">
+        <button class="btn btn-primary" onclick="addMaterialToCart(${escapeHtml(m.id)})">
             <i class="bi bi-cart-plus"></i> เพิ่มลงใบเบิก
         </button>
     `);
@@ -211,13 +211,13 @@ function renderCart(items) {
 
     items.forEach((item, index) => {
         const thumb = item.image_path
-            ? `<img src="${BASE_URL_JS}${item.image_path}" alt="" style="width:36px;height:36px;object-fit:cover;" class="rounded">`
+            ? `<img src="${BASE_URL_JS}${escapeHtml(item.image_path)}" alt="" style="width:36px;height:36px;object-fit:cover;" class="rounded">`
             : `<span class="text-muted d-inline-flex align-items-center justify-content-center" style="width:36px;height:36px;"><i class="bi bi-image"></i></span>`;
         tbody.append(`
             <tr>
                 <td>${thumb}</td>
-                <td>${item.name}</td>
-                <td>${item.display}</td>
+                <td>${escapeHtml(item.name)}</td>
+                <td>${escapeHtml(item.display)}</td>
                 <td class="text-end">
                     <button class="btn btn-sm btn-outline-danger" onclick="removeFromCart(${index})"><i class="bi bi-trash"></i></button>
                 </td>
@@ -248,8 +248,8 @@ function submitRequisition() {
         .done((res) => {
             $('#submitResultBox').html(`
                 <div class="alert alert-success mt-3">
-                    ${res.message}
-                    <a href="${PRINT_URL}?id=${res.requisition_id}" target="_blank" class="btn btn-sm btn-outline-success ms-2">
+                    ${escapeHtml(res.message)}
+                    <a href="${PRINT_URL}?id=${escapeHtml(res.requisition_id)}" target="_blank" class="btn btn-sm btn-outline-success ms-2">
                         <i class="bi bi-printer"></i> พิมพ์ใบเบิก
                     </a>
                 </div>

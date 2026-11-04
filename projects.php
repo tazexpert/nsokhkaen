@@ -165,7 +165,7 @@ require APP_ROOT . '/core/layout/header.php';
                 <td class="text-end text-nowrap">
                   <a href="<?= h(url('projects.php?edit=' . (int)$p['id'])) ?>" class="btn btn-sm btn-outline-primary" title="แก้ไข" aria-label="แก้ไข"><i class="bi bi-pencil"></i></a>
                   <?php if (empty($usage[$p['id']])): ?>
-                    <form method="post" class="d-inline" onsubmit="return confirm('ลบโครงการ <?= h($p['code']) ?>?')"><?= csrf_field() ?>
+                    <form method="post" class="d-inline" onsubmit="return confirm(<?= js_attr('ลบโครงการ ' . $p['code'] . '?') ?>)"><?= csrf_field() ?>
                       <input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
                       <button class="btn btn-sm btn-outline-danger" title="ลบ" aria-label="ลบ"><i class="bi bi-trash"></i></button></form>
                   <?php endif; ?>

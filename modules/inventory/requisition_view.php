@@ -47,10 +47,10 @@ $items = $itemsStmt->fetchAll();
                     <i class="bi bi-x-circle"></i> ยกเลิกใบเบิก
                 </button>
             <?php else: ?>
-                <button type="button" class="btn btn-outline-success" onclick="approveRequisitionView(<?= (int) $requisition['id'] ?>, '<?= htmlspecialchars($requisition['requisition_no'], ENT_QUOTES) ?>')">
+                <button type="button" class="btn btn-outline-success" onclick="approveRequisitionView(<?= (int) $requisition['id'] ?>, <?= js_attr($requisition['requisition_no']) ?>)">
                     <i class="bi bi-check-circle"></i> อนุมัติใบเบิก
                 </button>
-                <button type="button" class="btn btn-outline-danger" onclick="cancelRequisitionView(<?= (int) $requisition['id'] ?>, '<?= htmlspecialchars($requisition['requisition_no'], ENT_QUOTES) ?>')">
+                <button type="button" class="btn btn-outline-danger" onclick="cancelRequisitionView(<?= (int) $requisition['id'] ?>, <?= js_attr($requisition['requisition_no']) ?>)">
                     <i class="bi bi-x-circle"></i> ยกเลิกใบเบิก
                 </button>
             <?php endif; ?>

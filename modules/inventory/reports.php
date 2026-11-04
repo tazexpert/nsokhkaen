@@ -247,11 +247,11 @@ function renderChart(items) {
     items.forEach((item, i) => {
         const pct = max > 0 ? (item.qty / max) * 100 : 0;
         const col = $(`
-            <div class="bar-col" title="${item.name}: ${item.qty} ${item.unit}" style="--d:${Math.round(i * step)}ms">
+            <div class="bar-col" title="${escapeHtml(item.name)}: ${escapeHtml(item.qty)} ${escapeHtml(item.unit)}" style="--d:${Math.round(i * step)}ms">
                 <div class="bar bar-anim" style="height:${pct}%">
-                    <div class="bar-value">${item.qty}</div>
+                    <div class="bar-value">${escapeHtml(item.qty)}</div>
                 </div>
-                <div class="bar-label">${item.name}</div>
+                <div class="bar-label">${escapeHtml(item.name)}</div>
             </div>
         `);
         container.append(col);
@@ -264,8 +264,8 @@ function renderValueTable(items, totalValue) {
         tbody.append(`
             <tr>
                 <td>${i + 1}</td>
-                <td>${item.name}</td>
-                <td class="text-end">${item.qty} ${item.unit}</td>
+                <td>${escapeHtml(item.name)}</td>
+                <td class="text-end">${escapeHtml(item.qty)} ${escapeHtml(item.unit)}</td>
                 <td class="text-end">${formatNumber(item.unit_cost)}</td>
                 <td class="text-end">${formatNumber(item.value)}</td>
             </tr>
@@ -283,10 +283,10 @@ function renderLowStock(lowStock) {
         tbody.append(`
             <tr>
                 <td>${i + 1}</td>
-                <td>${m.name}</td>
-                <td class="text-end text-danger fw-bold">${m.stock_qty}</td>
-                <td class="text-end">${m.min_stock}</td>
-                <td>${m.unit}</td>
+                <td>${escapeHtml(m.name)}</td>
+                <td class="text-end text-danger fw-bold">${escapeHtml(m.stock_qty)}</td>
+                <td class="text-end">${escapeHtml(m.min_stock)}</td>
+                <td>${escapeHtml(m.unit)}</td>
             </tr>
         `);
     });

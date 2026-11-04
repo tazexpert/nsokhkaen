@@ -3,6 +3,16 @@
 
 /* ---------- ทั่วไป ---------- */
 
+/**
+ * ค่าที่ใส่ในโค้ด JavaScript ภายใน attribute HTML (เช่น onclick / onsubmit) — คืน string literal ของ JS ที่ escape แล้ว
+ * ใช้แทน h() เมื่อค่าอยู่ใน JS: h() กันเฉพาะ HTML แต่ ' ที่ถูกถอดกลับใน attribute จะหลุดออกจาก string ของ JS ได้
+ * ตัวอย่าง: onsubmit="return confirm(<?= js_attr('ลบ ' . $name . '?') ?>)"
+ */
+function js_attr($s): string
+{
+    return h(json_encode((string)$s, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP));
+}
+
 function h($s): string
 {
     return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8');

@@ -48,22 +48,22 @@ function loadMaterials(keyword = '') {
         sortMaterials(res.data).forEach((m) => {
             const lowStock = m.stock_qty <= m.min_stock;
             const thumb = m.image_path
-                ? `<img src="${imageUrl(m.image_path)}" alt="" style="width:40px;height:40px;object-fit:cover;" class="rounded">`
+                ? `<img src="${escapeHtml(imageUrl(m.image_path))}" alt="" style="width:40px;height:40px;object-fit:cover;" class="rounded">`
                 : `<span class="text-muted d-inline-flex align-items-center justify-content-center" style="width:40px;height:40px;"><i class="bi bi-image"></i></span>`;
             const actions = IS_ADMIN ? `
-                        <button class="btn btn-sm btn-outline-success" title="รับเข้าสต็อก" onclick="openReceiveStock(${m.id}, '${(m.name || '').replace(/'/g, "\\'")}', ${m.stock_qty}, '${m.unit}')"><i class="bi bi-box-arrow-in-down"></i></button>
-                        <button class="btn btn-sm btn-outline-primary" onclick="editMaterial(${m.id})"><i class="bi bi-pencil"></i></button>
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteMaterial(${m.id})"><i class="bi bi-trash"></i></button>` : '';
+                        <button class="btn btn-sm btn-outline-success" title="รับเข้าสต็อก" onclick="openReceiveStock(${escapeHtml(m.id)}, ${jsStr(m.name)}, ${escapeHtml(m.stock_qty)}, ${jsStr(m.unit)})"><i class="bi bi-box-arrow-in-down"></i></button>
+                        <button class="btn btn-sm btn-outline-primary" onclick="editMaterial(${escapeHtml(m.id)})"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteMaterial(${escapeHtml(m.id)})"><i class="bi bi-trash"></i></button>` : '';
             tbody.append(`
                 <tr>
                     <td>${thumb}</td>
-                    <td>${m.material_code}</td>
-                    <td>${m.name}</td>
-                    <td>${m.category_name || '-'}</td>
-                    <td class="${lowStock ? 'text-danger fw-bold' : ''}">${m.stock_qty}</td>
-                    <td>${m.unit}</td>
+                    <td>${escapeHtml(m.material_code)}</td>
+                    <td>${escapeHtml(m.name)}</td>
+                    <td>${escapeHtml(m.category_name || '-')}</td>
+                    <td class="${lowStock ? 'text-danger fw-bold' : ''}">${escapeHtml(m.stock_qty)}</td>
+                    <td>${escapeHtml(m.unit)}</td>
                     <td>${Number(m.unit_cost).toLocaleString('th-TH', { minimumFractionDigits: 2 })}</td>
-                    <td>${m.storage_location || '-'}</td>
+                    <td>${escapeHtml(m.storage_location || '-')}</td>
                     <td class="text-end">${actions}</td>
                 </tr>
             `);
@@ -279,10 +279,10 @@ function doImport() {
         contentType: false,
         processData: false,
     }).done((res) => {
-        $('#importResult').html(`<div class="alert alert-${res.success ? 'success' : 'danger'}">${res.message}</div>`);
+        $('#importResult').html(`<div class="alert alert-${res.success ? 'success' : 'danger'}">${escapeHtml(res.message)}</div>`);
         if (res.success) loadMaterials();
     }).fail((xhr) => {
-        $('#importResult').html(`<div class="alert alert-danger">${xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'}</div>`);
+        $('#importResult').html(`<div class="alert alert-danger">${escapeHtml(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด')}</div>`);
     });
 }
 
