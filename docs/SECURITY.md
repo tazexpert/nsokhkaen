@@ -17,8 +17,8 @@
 | ผลการตรวจ | จำนวน |
 |---|---|
 | ช่องโหว่ระดับสูง/วิกฤตในโค้ดของระบบ (หลังแก้ไข) | **0** |
-| ช่องโหว่ที่พบและแก้ไขแล้วในรอบนี้ | 7 รายการ (หัวข้อ 6) |
-| OWASP ZAP — ผล FAIL | **0** (ทั้ง Baseline และ Full Scan) |
+| ช่องโหว่ที่พบและแก้ไขแล้วในรอบนี้ | 10 รายการ (หัวข้อ 6) — รวม XSS 2 รายการที่พบจาก ZAP Full Scan แบบ login |
+| OWASP ZAP | Baseline: FAIL **0** · Full Scan แบบ login (3,419 URL, active scan 90 นาที): แจ้ง High 3 ประเภท — XSS **2 รายการเป็นช่องโหว่จริง แก้แล้ว**, SQL Injection 114 รายการ **พิสูจน์แล้วเป็น false positive** (หัวข้อ 3.3) |
 | Semgrep — ผลที่เป็นช่องโหว่จริง | **0** จาก 51 รายการที่แจ้งเตือน (ตรวจยืนยันทุกรายการ หัวข้อ 3.2) |
 | ความเสี่ยงคงเหลือที่ยอมรับได้ (มีมาตรการลดความเสี่ยง) | 3 รายการ (หัวข้อ 8) |
 | สิ่งที่ต้องดำเนินการที่เครื่องเซิร์ฟเวอร์จริง | 8 รายการ (หัวข้อ 7) — **วิกฤต: PHP 8.0.30 บนเครื่องจริงมีช่องโหว่ PHP2Shell (CVE-2026-109618 / CVE-2026-109619) ซึ่งถูกโจมตีจริงแล้ว และไม่มีแพตช์สำหรับ PHP 8.0 — ต้องอัปเกรด PHP เป็น 8.3.36 ขึ้นไปโดยเร็วที่สุด** · และปิด `php-cgi` ของ XAMPP (CVE-2024-4577) |
@@ -50,7 +50,8 @@
 |---|---|---|---|---|
 | Baseline (passive) — **ก่อนแก้ไข** | ไม่ login | 0 | 12 | 50 |
 | Baseline (passive) — **หลังแก้ไข** | ไม่ login | 0 | 8 | 54 |
-| Full Scan (spider + active attack: SQLi, XSS, Path Traversal, Command Injection, RCE ฯลฯ) — **หลังแก้ไข** | login เป็นผู้ดูแลระบบ (เห็นทุกระบบ) | (อยู่ระหว่างสแกน — จะปรับปรุงผล) | | |
+| Full Scan แบบ login เป็นผู้ดูแลระบบ (Automation Framework: spider 3,419 URL + active scan ทุกกฎ 90 นาที: SQLi, XSS, Path Traversal, Command/Code Injection, RFI, SSTI, XXE ฯลฯ) | ทุกระบบ | High: XSS (Persistent) 6, XSS (Reflected) 34, SQL Injection 114 → ตรวจยืนยันในหัวข้อ 3.3 | Medium/Low ตามตารางด้านล่าง | Path Traversal, Remote File Inclusion, OS Command Injection, Server Side Code/Template Injection, XXE, CRLF ฯลฯ **ไม่พบ** |
+| สแกนซ้ำเฉพาะกฎ XSS (strength high / threshold low) หลังแก้ไข | หน้าที่เกี่ยวข้อง | ZAP ยังแจ้งจากข้อมูลทดสอบที่ ZAP บันทึกไว้เอง — ตรวจบริบทในหน้าเว็บและทดสอบในเบราว์เซอร์แล้ว **ไม่ทำงาน** (หัวข้อ 3.3) | | |
 
 รายการ WARN ที่เหลือ (ไม่มีรายการใดเป็นช่องโหว่ที่ใช้โจมตีได้):
 
@@ -66,7 +67,18 @@
 
 รายการที่แก้ไขแล้ว (WARN ก่อนแก้ → PASS หลังแก้): CSP Header Not Set, Missing Anti-clickjacking Header, X-Content-Type-Options Missing, Server Leaks Version (Server header), In Page Banner Information Leak, Cross-Domain JS (ลดความเสี่ยงด้วย SRI)
 
-ไฟล์รายงานฉบับเต็ม: `docs/security/zap_before_baseline.html`, `docs/security/zap_after_baseline.html`, `docs/security/zap_full_auth.html`
+ไฟล์รายงานฉบับเต็ม: `docs/security/zap_before_baseline.html`, `zap_after_baseline.html`, `zap_full_auth_before_xss_fix.html`, `zap_xss_rescan_after_fix.html`, `sqli_verification.txt`, `semgrep_summary.txt`
+
+> หมายเหตุ: การสแกนแบบ active ส่งข้อมูลโจมตีและกดปุ่มต่าง ๆ จริง (เช่น เพิ่ม/ปิดใช้งานข้อมูล) — ทำบน**สำเนาทดสอบ**เท่านั้น ห้ามรันกับเครื่องจริงที่มีข้อมูลใช้งาน
+
+### 3.3 การตรวจยืนยันผลระดับ High จาก ZAP Full Scan
+| ผล ZAP | การตรวจยืนยัน | สรุป |
+|---|---|---|
+| **XSS — ระบบวัสดุ (Stored, DOM-based)** | รายการวัสดุ/ใบเบิก/รายงาน/หน้าสแกน สร้าง HTML ด้วย JavaScript จากข้อมูล API โดยไม่ escape — เจ้าหน้าที่ใส่ HTML ใน "วัตถุประสงค์" ของใบเบิก แล้วสคริปต์ทำงานในเบราว์เซอร์ของผู้ดูแลที่เปิดรายการ (ยกระดับสิทธิ์ได้) · **ทดสอบจริงก่อนแก้: สคริปต์ทำงาน 4 หน้า / หลังแก้: ไม่ทำงาน** | **ช่องโหว่จริง — แก้แล้ว** (`escapeHtml()`/`jsStr()` ใน `assets/js/app.js`) |
+| **XSS — ปุ่มยืนยันลบ (Stored)** | ตัวย่อโครงการ / ชื่อลิงก์ อยู่ในโค้ด JavaScript ของ `onsubmit="confirm('…')"` — `h()` กันเฉพาะ HTML ค่าที่มี `'` จึงหลุดออกจาก string ได้ (ผู้บันทึกต้องเป็นผู้ดูแล) | **ช่องโหว่จริง — แก้แล้ว** (`js_attr()` ใน `core/helpers.php` ใช้ 5 จุด) |
+| XSS ที่ ZAP ยังแจ้งหลังแก้ | หลักฐานคือข้อความทดสอบที่ ZAP บันทึกไว้เอง (`;alert(1)`, `<script>…`) ปรากฏในหน้า: ตรวจ HTML แล้วอยู่ในรูป `&lt;script&gt;` หรืออยู่ใน string `confirm(&quot;…;alert(1)…&quot;)` · เปิดหน้าที่มีข้อมูลโจมตี ~50 รายการในเบราว์เซอร์จริง (ดัก `alert`) → **ไม่ถูกเรียกเลย** | false positive (ZAP ตรวจแบบข้อความตรงกัน) |
+| SQL Injection 114 รายการ | เปิด MariaDB general log แล้วส่งการโจมตีทั้ง 114 รายการซ้ำ: คำสั่ง SQL 1,962 คำสั่ง **ไม่มี payload ในโครงสร้าง SQL เลย** — payload อยู่เฉพาะค่าที่ bind (Execute) เก็บเป็นข้อความธรรมดา | false positive (หน้าเว็บมี CSRF token/เวลาเปลี่ยนทุกครั้ง ทำให้การเปรียบเทียบหน้าเว็บของ ZAP คลาดเคลื่อน) — หลักฐาน `docs/security/sqli_verification.txt` |
+
 
 ### 3.2 Semgrep 1.183.0 (Static Application Security Testing)
 กฎ PHP ของ semgrep-rules (php/lang: security, audit) + generic secrets — **260 กฎ, 191 ไฟล์** — แจ้งเตือน 51 รายการ ตรวจยืนยันด้วยมือทุกรายการ:
@@ -136,6 +148,9 @@
 | 5 | session ไม่มีวันหมดอายุเมื่อไม่ใช้งาน / ไม่เปิด strict mode | ปานกลาง | idle timeout 120 นาที + strict mode + only cookies |
 | 6 | แสดงรายละเอียดข้อผิดพลาดบนหน้าเว็บได้ถ้าเซิร์ฟเวอร์ตั้ง `display_errors=On` (ค่าเริ่มต้น XAMPP) | ต่ำ–ปานกลาง | บังคับไม่แสดง บันทึกลง `storage/logs/` + หน้าแจ้งข้อผิดพลาดพร้อมรหัสอ้างอิง |
 | 7 | อ่านไฟล์ `README.md`, `CLAUDE.md`, `.gitignore` จากเว็บได้ | ต่ำ | ปิด `.md .sql .log .bak .py .sh .ini` และไฟล์ซ่อน |
+| 8 | **Stored XSS (DOM) ในระบบวัสดุ** — เจ้าหน้าที่ฝังสคริปต์ในใบเบิก/ข้อมูลวัสดุ ทำงานในเบราว์เซอร์ผู้ดูแล | **สูง** | escape ทุกค่าที่สร้าง HTML ใน JavaScript (`escapeHtml`, `jsStr`) — ทดสอบก่อน/หลังแก้ |
+| 9 | Stored XSS ในปุ่มยืนยันลบ (โครงการ/ลิงก์/แผน/ใบเบิก) | ปานกลาง | `js_attr()` สำหรับค่าใน JavaScript ภายใน attribute |
+| 10 | ลิงก์แบบ path ภายในรับอักขระ HTML ได้ (แสดงผลถูก escape แล้ว) | ต่ำ | จำกัดอักขระ path ภายใน `[A-Za-z0-9/_.~%?=&#+-]` |
 
 ---
 

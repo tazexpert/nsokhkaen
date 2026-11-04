@@ -51,7 +51,8 @@ function link_url_error(string $url): ?string
     if (preg_match('~^https?://~i', $url)) {
         return filter_var($url, FILTER_VALIDATE_URL) ? null : 'รูปแบบลิงก์ไม่ถูกต้อง';
     }
-    if (preg_match('~^[a-z][a-z0-9+.-]*:~i', $url) || str_starts_with($url, '//') || str_contains($url, '..')) {
+    if (preg_match('~^[a-z][a-z0-9+.-]*:~i', $url) || str_starts_with($url, '//') || str_contains($url, '..')
+        || !preg_match('@^[A-Za-z0-9/_.~%?=&#+-]+$@', $url)) {          // path ภายใน: เฉพาะอักขระที่ใช้ใน URL ได้
         return 'ลิงก์ต้องขึ้นต้นด้วย http:// หรือ https:// หรือเป็น path ภายในระบบ (เช่น modules/digitalcc/public/)';
     }
     return null;
