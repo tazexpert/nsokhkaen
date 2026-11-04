@@ -115,7 +115,7 @@
 .whiteboard .badge.text-bg-danger{color:var(--wb-red)!important;transform:rotate(-3deg);display:inline-block}
 .whiteboard .badge.text-bg-warning{color:#b45309!important}
 .whiteboard .cal-person{background:transparent!important;padding:0 4px;color:var(--wb-ink)}
-.whiteboard .cal-person+.cal-person::before{content:"· ";color:var(--wb-ink-soft)}
+.whiteboard .cal-person+.cal-person::before{content:"+ ";color:var(--wb-ink-soft)}   /* ตัวคั่นรายชื่อ */
 .whiteboard .cal-person.pos small{color:rgba(29,78,216,.7)}
 .whiteboard .cal-plus{color:var(--wb-ink-soft)}
 .whiteboard .cal-person.me{font-weight:inherit}   /* งานของตัวเอง: แสดงแค่ป้าย "งานของคุณ" ไม่ไฮไลต์ */
