@@ -117,6 +117,28 @@ function cal_assignees(array $eventIds): array
     return $out;
 }
 
+/** ตำแหน่งย่อในตาราง: สถิติจังหวัด / ผอ.กว / ผอ.กป / ผอ.กข (รักษาการ = "รก." นำหน้า) — ไม่ใช่ตำแหน่งเหล่านี้คืน null */
+const CAL_POS_ABBR = ['chief' => 'สถิติจังหวัด', 'dir1' => 'ผอ.กว', 'dir2' => 'ผอ.กป', 'dir3' => 'ผอ.กข'];
+
+function cal_position_abbr(string $position, string $kind = ''): ?string
+{
+    $abbr = CAL_POS_ABBR[staff_category($position)] ?? null;
+    return $abbr === null ? null : ($kind === 'acting' ? 'รก.' : '') . $abbr;
+}
+
+/** ตำแหน่งย่อทั้งหมดของผู้ใช้ (ตำแหน่งหลัก + ควบ/รักษาการ) เรียงตามลำดับตำแหน่ง เช่น "รก.สถิติจังหวัด / ผอ.กว / ผอ.กข" — ไม่มี = null */
+function cal_person_abbr(array $u): ?string
+{
+    $list = [];
+    foreach (array_merge([['position' => (string)($u['position'] ?? ''), 'kind' => '']], staff_extras_of($u)) as $p) {
+        if (($a = cal_position_abbr($p['position'], $p['kind'])) !== null) {
+            $list[$a] = array_search(staff_category($p['position']), array_keys(CAL_POS_ABBR), true);
+        }
+    }
+    asort($list);
+    return $list ? implode(' / ', array_keys($list)) : null;
+}
+
 /** ผู้อำนวยการ / สถิติจังหวัด → แสดงตำแหน่งต่อท้ายชื่อในตาราง */
 function cal_show_position(?string $position): bool
 {
@@ -215,8 +237,8 @@ function cal_work_group_label(int $gid): string
 }
 
 /**
- * กลุ่มงานในตาราง: แบบเดียวกับรายชื่อปกติ — "ชื่อ ผอ. (ตำแหน่งตัวเล็ก) + บุคลากรกลุ่ม…" ไม่มีกรอบ/ตัวหนา
- * ผู้อำนวยการคนเดียวกันหลายกลุ่ม → แสดงชื่อครั้งเดียว ตำแหน่งคั่นด้วย " / " แล้วตามด้วยบุคลากรของแต่ละกลุ่ม
+ * กลุ่มงานในตาราง: แบบเดียวกับรายชื่อปกติ — "ผอ.กว + บุคลากรกลุ่ม…" (ตำแหน่งย่อ ไม่แสดงชื่อ · ชี้เมาส์เห็นชื่อ)
+ * ผู้อำนวยการคนเดียวกันหลายกลุ่ม → แสดงครั้งเดียว ตำแหน่งย่อคั่นด้วย " / " แล้วตามด้วยบุคลากรของแต่ละกลุ่ม
  */
 function cal_work_groups_html(array $gids, int $meId = 0): string
 {
@@ -236,8 +258,9 @@ function cal_work_groups_html(array $gids, int $meId = 0): string
         if ($did) {
             $u = $users[$did];
             $pos = array_values(array_unique(array_map(fn($gid) => $groups[$gid]['director_label'] ?: trim($u['position']), $list)));
-            $chips[] = '<span class="cal-person pos' . ($did === $meId ? ' me' : '') . '">' . h(preg_replace('/\s+/u', ' ', trim($u['full_name'])))
-                . ' <small>' . h(implode(' / ', $pos)) . '</small></span>';
+            $abbr = array_values(array_unique(array_map(fn($p) => cal_position_abbr(preg_replace('/^รักษาการ/u', '', $p), str_starts_with($p, 'รักษาการ') ? 'acting' : '') ?? $p, $pos)));
+            $chips[] = '<span class="cal-person pos' . ($did === $meId ? ' me' : '') . '" title="' . h(preg_replace('/\s+/u', ' ', trim($u['full_name'])) . ' — ' . implode(' / ', $pos)) . '">'
+                . h(implode(' / ', $abbr)) . '</span>';
         }
         foreach ($list as $gid) {
             $chips[] = '<span class="cal-person" title="' . count($groups[$gid]['ids']) . ' คน">' . h('บุคลากร' . $groups[$gid]['name']) . '</span>';
@@ -286,8 +309,9 @@ function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
     }
     $order = array_flip(array_keys($users));                            // เรียงตามลำดับตำแหน่ง (เหมือนหน้าบุคลากร)
     usort($ids, fn($a, $b) => $order[$a] <=> $order[$b]);
-    $chips = array_map(fn($id) => cal_show_position($users[$id]['position'])
-        ? '<span class="cal-person pos' . ($id === $meId ? ' me' : '') . '">' . h(preg_replace('/\s+/u', ' ', trim($users[$id]['full_name']))) . ' <small>' . h(trim($users[$id]['position'])) . '</small></span>'
+    // สถิติจังหวัด / ผอ.กลุ่ม → แสดงเฉพาะตำแหน่งย่อ (ชี้เมาส์เห็นชื่อ-ตำแหน่งเต็ม) · คนอื่นแสดงชื่อ
+    $chips = array_map(fn($id) => ($abbr = cal_person_abbr($users[$id])) !== null
+        ? '<span class="cal-person pos' . ($id === $meId ? ' me' : '') . '" title="' . h(preg_replace('/\s+/u', ' ', trim($users[$id]['full_name'])) . ' — ' . implode(' / ', staff_position_lines($users[$id]))) . '">' . h($abbr) . '</span>'
         : '<span class="cal-person' . ($id === $meId ? ' me' : '') . '">' . h($users[$id]['full_name']) . '</span>',
         array_slice($ids, 0, $max));
     $more = count($ids) - $max;
