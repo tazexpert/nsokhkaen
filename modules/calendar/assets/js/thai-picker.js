@@ -1,6 +1,7 @@
 /**
  * ตัวเลือกวันที่/เวลาแบบไทย (flatpickr)
  *   .thai-date  แสดง "29 ตุลาคม 2569" (พ.ศ.) — ค่าที่ส่งยังเป็น Y-m-d
+ *   window.thaiDatePicker(el) — เรียกกับช่อง .thai-date ที่สร้างภายหลัง
  *   .thai-time  เวลา 24 ชม. แบบไทย "09.00" — ฝั่งเซิร์ฟเวอร์แปลงเป็น 09:00:00 ตอนบันทึก
  */
 (() => {
@@ -19,7 +20,8 @@
     s.textContent = fp.currentYear + 543;
   };
 
-  document.querySelectorAll('input.thai-date').forEach(el => {
+  const thaiDate = el => {
+    if (el._flatpickr) return;
     flatpickr(el, {
       locale, altInput: true, altFormat: 'thai', dateFormat: 'Y-m-d', allowInput: false, disableMobile: true,
       formatDate: (d, f) => f === 'Y-m-d'
@@ -30,7 +32,9 @@
       onYearChange: (s, d, fp) => beYear(fp),
       onOpen: (s, d, fp) => beYear(fp),
     });
-  });
+  };
+  document.querySelectorAll('input.thai-date').forEach(thaiDate);
+  window.thaiDatePicker = thaiDate;              // ใช้กับช่องที่เพิ่มภายหลัง (เช่น แถวใหม่ในฟอร์ม)
 
   document.querySelectorAll('input.thai-time').forEach(el => {
     flatpickr(el, {

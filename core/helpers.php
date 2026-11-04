@@ -397,6 +397,48 @@ function staff_category(?string $position): string
  * (รหัสผู้ใช้มาจากส่วนกลาง แก้ไม่ได้ — ใช้ลำดับการแสดงแทนเมื่อรหัสไม่ได้เรียงตามที่ต้องการ)
  * บัญชีที่ชื่อผู้ใช้ไม่ใช่ตัวเลข (ผู้ดูแลจากภายนอก) อยู่ท้ายสุด
  */
+/**
+ * ตำแหน่งเพิ่มเติมที่มีผลวันนี้ (ควบ / รักษาการ) [username => [['position', 'kind', 'label'], ...]] — โหลดครั้งเดียวต่อ request
+ * label = ข้อความแสดง (รักษาการ → "รักษาการ" + ตำแหน่ง) · ยังไม่ได้รัน migration = ไม่มี
+ */
+function staff_extra_positions(): array
+{
+    static $map = null;
+    if ($map !== null) {
+        return $map;
+    }
+    $map = [];
+    try {
+        $st = db()->prepare('SELECT u.id, u.username, p.position, p.kind FROM core_user_positions p JOIN core_users u ON u.id = p.user_id
+                             WHERE (p.start_date IS NULL OR p.start_date <= ?) AND (p.end_date IS NULL OR p.end_date >= ?) ORDER BY p.sort_order, p.id');
+        $st->execute([date('Y-m-d'), date('Y-m-d')]);
+        foreach ($st as $r) {
+            $row = ['position' => trim($r['position']), 'kind' => $r['kind'],
+                    'label' => ($r['kind'] === 'acting' ? 'รักษาการ' : '') . trim($r['position'])];
+            $map['id:' . $r['id']][] = $row;
+            if ((string)$r['username'] !== '') {
+                $map[(string)$r['username']][] = $row;
+            }
+        }
+    } catch (PDOException $e) {
+        // ยังไม่ได้สร้างตาราง core_user_positions
+    }
+    return $map;
+}
+
+/** ตำแหน่งเพิ่มเติมของผู้ใช้ (จาก username หรือ id ในแถว) */
+function staff_extras_of(array $u): array
+{
+    $map = staff_extra_positions();
+    return $map[(string)($u['username'] ?? '')] ?? (isset($u['id']) ? ($map['id:' . $u['id']] ?? []) : []);
+}
+
+/** ตำแหน่งทั้งหมดสำหรับแสดง: ตำแหน่งหลัก + ตำแหน่งควบ/รักษาการ */
+function staff_position_lines(array $u): array
+{
+    return array_values(array_filter(array_merge([trim((string)($u['position'] ?? ''))], array_column(staff_extras_of($u), 'label'))));
+}
+
 function staff_sort_key(array $u): array
 {
     static $rank = ['chief' => 1, 'dir1' => 2, 'dir2' => 3, 'dir3' => 4, 'dir' => 4.5, 'gov' => 5,
@@ -404,7 +446,12 @@ function staff_sort_key(array $u): array
     $username = (string)($u['username'] ?? '');
     $numeric = preg_match('/^\d+$/', $username) === 1;
     $order = isset($u['sort_order']) && $u['sort_order'] !== '' ? (int)$u['sort_order'] : null;
-    return [$numeric ? 0 : 1, $rank[staff_category($u['position'] ?? '')], $order === null ? 1 : 0, $order ?? 0,
+    // ตำแหน่งที่สูงที่สุด ระหว่างตำแหน่งหลักกับตำแหน่งควบ/รักษาการ (เช่น รักษาการสถิติจังหวัด = ลำดับ 1)
+    $best = $rank[staff_category($u['position'] ?? '')];
+    foreach (staff_extras_of($u) as $x) {
+        $best = min($best, $rank[staff_category($x['position'])]);
+    }
+    return [$numeric ? 0 : 1, $best, $order === null ? 1 : 0, $order ?? 0,
             $numeric ? (int)$username : PHP_INT_MAX, $username, (string)($u['full_name'] ?? '')];
 }
 

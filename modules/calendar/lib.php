@@ -146,7 +146,8 @@ function cal_group_ids(string $t): array
 /** สรุปผู้รับผิดชอบ: "เจ้าหน้าที่สำนักงานสถิติจังหวัดขอนแก่นทุกคน" / "ข้าราชการ" / "พนักงาน" หรือรายชื่อ */
 /**
  * กลุ่มงาน [id => ['name', 'director' => user id|null, 'ids' => [...]]] — เฉพาะกลุ่มที่มีอย่างน้อย 2 คน
- * สมาชิก = เจ้าหน้าที่ที่กำหนดกลุ่มงานในบัญชีผู้ใช้ + ผู้อำนวยการกลุ่ม (จากตำแหน่ง "ผู้อำนวยการ" + ชื่อกลุ่ม)
+ * สมาชิก = เจ้าหน้าที่ที่กำหนดกลุ่มงานในบัญชีผู้ใช้ + ผู้อำนวยการกลุ่ม (จากตำแหน่ง "ผู้อำนวยการ" + ชื่อกลุ่ม
+ * ทั้งตำแหน่งหลักและตำแหน่งควบ/รักษาการ — คนเดียวเป็นผู้อำนวยการได้หลายกลุ่ม) · director_label = ตำแหน่งที่ใช้แสดง
  */
 function cal_work_groups(): array
 {
@@ -159,22 +160,29 @@ function cal_work_groups(): array
     foreach (work_groups() as $gid => $name) {
         $ids = [];
         $director = null;
+        $dirLabel = '';
+        $key = preg_replace('/\s+/u', '', $name);
         foreach ($users as $id => $u) {
-            $pos = preg_replace('/\s+/u', '', (string)$u['position']);
-            if (str_starts_with($pos, 'ผู้อำนวยการ') && str_contains($pos, preg_replace('/\s+/u', '', $name))) {
-                $director = $id;
-                $ids[] = $id;
-            } elseif ((int)$u['work_group_id'] === (int)$gid) {
+            $positions = array_merge([['position' => (string)$u['position'], 'label' => trim((string)$u['position'])]], staff_extras_of($u));
+            foreach ($positions as $p) {
+                $pos = preg_replace('/\s+/u', '', $p['position']);
+                if ($director === null && str_starts_with($pos, 'ผู้อำนวยการ') && str_contains($pos, $key)) {
+                    $director = $id;
+                    $dirLabel = $p['label'];
+                    $ids[] = $id;
+                }
+            }
+            if ((int)$u['work_group_id'] === (int)$gid) {
                 $ids[] = $id;
             }
         }
         if (count(array_unique($ids)) >= 2) {
-            $groups[(int)$gid] = ['name' => $name, 'director' => $director, 'ids' => array_values(array_unique($ids))];
+            $groups[(int)$gid] = ['name' => $name, 'director' => $director, 'director_label' => $dirLabel, 'ids' => array_values(array_unique($ids))];
         }
     }
-    // เรียงตามลำดับของผู้อำนวยการกลุ่ม (เหมือนลำดับบุคลากร) — กลุ่มที่ไม่มีผู้อำนวยการไว้ท้าย
-    $rank = array_flip(array_keys($users));
-    uksort($groups, fn($a, $b) => [$rank[$groups[$a]['director']] ?? PHP_INT_MAX, $a] <=> [$rank[$groups[$b]['director']] ?? PHP_INT_MAX, $b]);
+    // เรียงตามลำดับตำแหน่งผู้อำนวยการกลุ่ม (ผอ.กลุ่มวิชาการฯ → ปฏิบัติการฯ → ขับเคลื่อนฯ ตาม staff_sort_key) แล้วตาม id
+    $rank = fn($gid) => staff_sort_key(['username' => '0', 'position' => 'ผู้อำนวยการ' . $groups[$gid]['name']])[1];
+    uksort($groups, fn($a, $b) => [$rank($a), $a] <=> [$rank($b), $b]);
     return $groups;
 }
 
@@ -201,7 +209,7 @@ function cal_work_group_label(int $gid): string
     $label = 'บุคลากร' . $g['name'];
     if ($g['director'] && isset($users[$g['director']])) {
         $d = $users[$g['director']];
-        $label = preg_replace('/\s+/u', ' ', trim($d['full_name'])) . ' ' . trim($d['position']) . ' + ' . $label;
+        $label = preg_replace('/\s+/u', ' ', trim($d['full_name'])) . ' ' . ($g['director_label'] ?: trim($d['position'])) . ' + ' . $label;
     }
     return $label;
 }
@@ -230,7 +238,7 @@ function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
     $labels = [];
     $rest = $ids;
     foreach (cal_work_groups() as $gid => $g) {
-        if (!array_diff($g['ids'], $rest)) {
+        if (!array_diff($g['ids'], $ids)) {                 // ครบทั้งกลุ่ม (ผู้อำนวยการคนเดียวกันอยู่ได้หลายกลุ่ม)
             $labels[] = cal_work_group_label($gid);
             $rest = array_values(array_diff($rest, $g['ids']));
         }

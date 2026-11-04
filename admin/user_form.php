@@ -9,6 +9,7 @@ $mods = modules();
 $u = ['username' => '', 'full_name' => '', 'position' => '', 'work_group_id' => null, 'email' => '', 'phone' => '', 'nickname' => '', 'sort_order' => null,
       'is_superadmin' => 0, 'is_active' => 1, 'has_pin' => 0, 'has_password' => 0];
 $roles = [];
+$extras = [];                         // ตำแหน่งเพิ่มเติม (ควบ / รักษาการ)
 if ($id) {
     $st = $pdo->prepare('SELECT *, (pin_hash IS NOT NULL) AS has_pin, (password_hash IS NOT NULL) AS has_password FROM core_users WHERE id = ?');
     $st->execute([$id]);
@@ -20,6 +21,13 @@ if ($id) {
     $st = $pdo->prepare('SELECT module_key, role FROM core_user_roles WHERE user_id = ?');
     $st->execute([$id]);
     $roles = $st->fetchAll(PDO::FETCH_KEY_PAIR);
+    try {
+        $st = $pdo->prepare('SELECT position, kind, start_date, end_date FROM core_user_positions WHERE user_id = ? ORDER BY sort_order, id');
+        $st->execute([$id]);
+        $extras = $st->fetchAll();
+    } catch (PDOException $e) {
+        // ยังไม่ได้รัน migration 20261116
+    }
 }
 
 $errors = [];
@@ -27,6 +35,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
     $username = post('username');
     $password = (string)($_POST['password'] ?? '');
+    // ตำแหน่งเพิ่มเติม: แถวที่มีชื่อตำแหน่ง
+    $extras = [];
+    $okDate = fn($v) => preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$v) && strtotime($v) ? $v : null;
+    foreach ((array)($_POST['xp_position'] ?? []) as $i => $xp) {
+        $xp = trim(preg_replace('/\s+/u', ' ', (string)$xp));
+        $xp = preg_replace('/^รักษาการ(ในตำแหน่ง)?\s*/u', '', $xp);     // พิมพ์ "รักษาการ…" มาก็ได้ — ใช้ประเภทแทน
+        if ($xp === '') {
+            continue;
+        }
+        $x = ['position' => mb_substr($xp, 0, 150), 'kind' => ($_POST['xp_kind'][$i] ?? '') === 'acting' ? 'acting' : 'concurrent',
+              'start_date' => $okDate($_POST['xp_start'][$i] ?? ''), 'end_date' => $okDate($_POST['xp_end'][$i] ?? '')];
+        if ($x['start_date'] && $x['end_date'] && $x['end_date'] < $x['start_date']) {
+            $errors[] = 'ตำแหน่งเพิ่มเติม "' . $xp . '": วันสิ้นสุดต้องไม่ก่อนวันเริ่มต้น';
+        }
+        $extras[] = $x;
+    }
     $pin = post('pin');
     $removePin = !empty($_POST['remove_pin']);
     $u = array_merge($u, [
@@ -102,6 +126,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ->execute(array_values($data));
                 $id = (int)$pdo->lastInsertId();
             }
+            $pdo->prepare('DELETE FROM core_user_positions WHERE user_id = ?')->execute([$id]);
+            $insX = $pdo->prepare('INSERT INTO core_user_positions (user_id, position, kind, start_date, end_date, sort_order) VALUES (?, ?, ?, ?, ?, ?)');
+            foreach ($extras as $i => $x) {
+                $insX->execute([$id, $x['position'], $x['kind'], $x['start_date'], $x['end_date'], $i + 1]);
+            }
             $pdo->prepare('DELETE FROM core_user_roles WHERE user_id = ?')->execute([$id]);
             $ins = $pdo->prepare('INSERT INTO core_user_roles (user_id, module_key, role) VALUES (?, ?, ?)');
             foreach ($roles as $mk => $r) {
@@ -121,6 +150,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $pageTitle = $id ? 'แก้ไขผู้ใช้งาน: ' . $u['full_name'] : 'เพิ่มผู้ใช้งาน';
 $active = 'users';
+$headExtra = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">'
+    . '<link href="' . h(asset_v('modules/calendar/assets/css/calendar.css')) . '" rel="stylesheet">';
+// ตำแหน่งที่ใช้บ่อย (แนะนำในช่องตำแหน่งเพิ่มเติม)
+$posSuggest = array_merge(['สถิติจังหวัด' . preg_replace('/^สำนักงานสถิติจังหวัด/u', '', ORG_NAME)], array_map(fn($g) => 'ผู้อำนวยการ' . $g, array_values(work_groups())));
 require APP_ROOT . '/core/layout/header.php';
 ?>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>
@@ -149,6 +182,36 @@ require APP_ROOT . '/core/layout/header.php';
           <div class="form-check form-switch"><input class="form-check-input" type="checkbox" name="is_superadmin" id="is_superadmin" <?= $u['is_superadmin'] ? 'checked' : '' ?> <?= $id === $me['id'] ? 'disabled checked' : '' ?>>
             <label class="form-check-label" for="is_superadmin">ผู้ดูแลระบบกลาง <small class="text-muted">(จัดการผู้ใช้/สิทธิ์ และมีสิทธิ์สูงสุดทุกระบบ)</small></label></div>
         </div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header d-flex align-items-center"><strong><i class="bi bi-person-badge"></i> ตำแหน่งเพิ่มเติม (ควบ / รักษาการ)</strong>
+        <button type="button" class="btn btn-sm btn-outline-primary ms-auto" id="xpAdd"><i class="bi bi-plus-lg"></i> เพิ่มตำแหน่ง</button></div>
+      <div class="card-body">
+        <div id="xpRows" class="d-flex flex-column gap-2">
+          <?php foreach ($extras as $x): ?>
+          <div class="row g-2 align-items-center xp-row">
+            <div class="col-md-3"><select name="xp_kind[]" class="form-select form-select-sm"><option value="concurrent">ควบ</option><option value="acting"<?= $x['kind'] === 'acting' ? ' selected' : '' ?>>รักษาการ</option></select></div>
+            <div class="col-md-9"><input name="xp_position[]" class="form-control form-control-sm" list="posSuggest" value="<?= h($x['position']) ?>" placeholder="ชื่อตำแหน่ง"></div>
+            <div class="col-5"><input name="xp_start[]" class="form-control form-control-sm thai-date" value="<?= h((string)$x['start_date']) ?>" placeholder="ตั้งแต่ (ไม่บังคับ)"></div>
+            <div class="col-5"><input name="xp_end[]" class="form-control form-control-sm thai-date" value="<?= h((string)$x['end_date']) ?>" placeholder="ถึง (ไม่บังคับ)"></div>
+            <div class="col-2 text-end"><button type="button" class="btn btn-sm btn-outline-danger xp-del" title="ลบ" aria-label="ลบ"><i class="bi bi-trash"></i></button></div>
+          </div>
+          <?php endforeach; ?>
+        </div>
+        <div class="form-text mt-2">เช่น ผู้อำนวยการกลุ่ม… (ควบ) หรือ สถิติจังหวัดขอนแก่น (รักษาการ — แสดงเป็น "รักษาการสถิติจังหวัดขอนแก่น")
+          · ลำดับบุคลากรใช้ตำแหน่งที่สูงที่สุด · ผู้อำนวยการกลุ่มหลายกลุ่ม ใช้กับการเลือกตามกลุ่มงานในปฏิทิน · เลยวันสิ้นสุดแล้วไม่นำมาใช้</div>
+        <datalist id="posSuggest"><?php foreach ($posSuggest as $ps): ?><option value="<?= h($ps) ?>"><?php endforeach; ?></datalist>
+        <template id="xpTpl">
+          <div class="row g-2 align-items-center xp-row">
+            <div class="col-md-3"><select name="xp_kind[]" class="form-select form-select-sm"><option value="concurrent">ควบ</option><option value="acting">รักษาการ</option></select></div>
+            <div class="col-md-9"><input name="xp_position[]" class="form-control form-control-sm" list="posSuggest" placeholder="ชื่อตำแหน่ง"></div>
+            <div class="col-5"><input name="xp_start[]" class="form-control form-control-sm thai-date" placeholder="ตั้งแต่ (ไม่บังคับ)"></div>
+            <div class="col-5"><input name="xp_end[]" class="form-control form-control-sm thai-date" placeholder="ถึง (ไม่บังคับ)"></div>
+            <div class="col-2 text-end"><button type="button" class="btn btn-sm btn-outline-danger xp-del" title="ลบ" aria-label="ลบ"><i class="bi bi-trash"></i></button></div>
+          </div>
+        </template>
       </div>
     </div>
 
@@ -194,7 +257,23 @@ require APP_ROOT . '/core/layout/header.php';
     <a href="<?= h(url('admin/users.php')) ?>" class="btn btn-light btn-lg">กลับ</a>
   </div>
 </form>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/th.js"></script>
+<script src="<?= h(asset_v('modules/calendar/assets/js/thai-picker.js')) ?>"></script>
 <script>
+// ตำแหน่งเพิ่มเติม: เพิ่ม/ลบแถว
+(() => {
+  const rows = document.getElementById('xpRows');
+  document.getElementById('xpAdd').addEventListener('click', () => {
+    const div = document.createElement('div');
+    div.innerHTML = document.getElementById('xpTpl').innerHTML.trim();
+    const row = div.firstElementChild;
+    rows.appendChild(row);
+    row.querySelectorAll('.thai-date').forEach(el => window.thaiDatePicker && window.thaiDatePicker(el));
+    row.querySelector('[name="xp_position[]"]').focus();
+  });
+  rows.addEventListener('click', e => { const b = e.target.closest('.xp-del'); if (b) b.closest('.xp-row').remove(); });
+})();
 document.getElementById('is_superadmin')?.addEventListener('change', e => { document.getElementById('superNote').hidden = !e.target.checked; });
 </script>
 <?php require APP_ROOT . '/core/layout/footer.php'; ?>

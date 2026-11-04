@@ -102,7 +102,7 @@ require APP_ROOT . '/core/layout/header.php';
           <td><a href="<?= h(url('admin/user_form.php?id=' . (int)$u['id'])) ?>" class="fw-semibold text-decoration-none"><?= h($u['full_name']) ?></a>
             <?php if ($u['is_superadmin']): ?><span class="badge text-bg-warning">ผู้ดูแลระบบกลาง</span><?php endif; ?>
             <?php if (!$u['is_active']): ?><span class="badge text-bg-secondary">ปิดการใช้งาน</span><?php endif; ?>
-            <div class="small text-muted"><?= h($u['position']) ?></div></td>
+            <div class="small text-muted"><?= h(implode(' · ', staff_position_lines($u))) ?></div></td>
           <td class="small"><?= $u['work_group'] ? h($u['work_group']) : '<span class="text-muted">-</span>' ?></td>
           <td class="text-center"><?= $u['has_pin'] ? '<i class="bi bi-check-circle-fill text-success"></i>' : '<span class="text-muted">-</span>' ?></td>
           <?php foreach ($mods as $m): $r = $u['is_superadmin'] && $m['superadmin_access'] ? top_role($m['key']) : ($roles[$u['id']][$m['key']] ?? null); ?>

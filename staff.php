@@ -40,7 +40,8 @@ require APP_ROOT . '/core/layout/header.php';
           <td class="text-center text-muted"><?= $i + 1 ?></td>
           <td class="fw-semibold"><?= h(preg_replace('/\s+/u', ' ', $s['full_name'])) ?></td>
           <td><?= $s['nickname'] ? h($s['nickname']) : '<span class="text-muted">-</span>' ?></td>
-          <td><?= h($s['position'] ?: '-') ?></td>
+          <td><?php $lines = staff_position_lines($s); ?><?= $lines ? h($lines[0]) : '-' ?>
+            <?php foreach (array_slice($lines, 1) as $l): ?><div class="small text-muted"><?= h($l) ?></div><?php endforeach; ?></td>
           <td class="text-nowrap"><?= $s['phone'] ? '<a href="tel:' . h(preg_replace('/[^0-9+]/', '', $s['phone'])) . '" class="text-decoration-none">' . h($s['phone']) . '</a>' : '<span class="text-muted">-</span>' ?></td>
           <td class="no-print text-center">
             <?php if ((int)$s['id'] !== (int)$me['id']): ?>
