@@ -455,7 +455,7 @@ function cal_render_table(array $events, string $from, int $meId, bool $showActi
     $today = date('Y-m-d');
     $tomorrow = date('Y-m-d', strtotime('+1 day'));
     $base = module_url(CAL_MODULE);
-    $html = '<div class="table-responsive"><table class="table align-middle mb-0 cal-table"><thead><tr>'
+    $html = '<div class="table-responsive"><table class="table align-top mb-0 cal-table"><thead><tr>'
         . '<th style="width:120px">เวลา</th><th>กิจกรรม</th><th>สถานที่</th><th>ผู้รับผิดชอบ</th><th>ลิงก์ / หมายเหตุ</th></tr></thead><tbody>';
     foreach ($groups as $day => $list) {
         $tag = $day === $today ? ' <span class="badge text-bg-danger">วันนี้</span>' : ($day === $tomorrow ? ' <span class="badge text-bg-warning">พรุ่งนี้</span>' : '');
