@@ -150,7 +150,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $pageTitle = $id ? 'แก้ไขผู้ใช้งาน: ' . $u['full_name'] : 'เพิ่มผู้ใช้งาน';
 $active = 'users';
-$headExtra = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">'
+$headExtra = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" integrity="sha384-RkASv+6KfBMW9eknReJIJ6b3UnjKOKC5bOUaNgIY778NFbQ8MtWq9Lr/khUgqtTt" crossorigin="anonymous">'
     . '<link href="' . h(asset_v('modules/calendar/assets/css/calendar.css')) . '" rel="stylesheet">';
 // ตำแหน่งที่ใช้บ่อย (แนะนำในช่องตำแหน่งเพิ่มเติม)
 $posSuggest = array_merge(['สถิติจังหวัด' . preg_replace('/^สำนักงานสถิติจังหวัด/u', '', ORG_NAME)], array_map(fn($g) => 'ผู้อำนวยการ' . $g, array_values(work_groups())));
@@ -257,8 +257,8 @@ require APP_ROOT . '/core/layout/header.php';
     <a href="<?= h(url('admin/users.php')) ?>" class="btn btn-light btn-lg">กลับ</a>
   </div>
 </form>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/th.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" integrity="sha384-5JqMv4L/Xa0hfvtF06qboNdhvuYXUku9ZrhZh3bSk8VXF0A/RuSLHpLsSV9Zqhl6" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/th.js" integrity="sha384-E6OVFg1zUc/pckGxry0YZ6VeZ1E17l7Jl8ZQx58jbEfxxkz9LqknQhiIrA9zg/8b" crossorigin="anonymous"></script>
 <script src="<?= h(asset_v('modules/calendar/assets/js/thai-picker.js')) ?>"></script>
 <script>
 // ตำแหน่งเพิ่มเติม: เพิ่ม/ลบแถว

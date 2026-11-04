@@ -145,7 +145,7 @@ $pageTitle = $id ? 'แก้ไขกิจกรรม' : 'เพิ่มก�
 $pageActions = $id ? '' : '<a href="import.php" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> นำเข้าหลายรายการจาก CSV</a>'
     . '<a href="duty_import.php" class="btn btn-outline-secondary"><i class="bi bi-shield-check"></i> นำเข้าเวรสำนักงาน</a>';
 $allDay = $e['start_time'] === null && $e['end_time'] === null;
-$headExtra = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">';
+$headExtra = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" integrity="sha384-RkASv+6KfBMW9eknReJIJ6b3UnjKOKC5bOUaNgIY778NFbQ8MtWq9Lr/khUgqtTt" crossorigin="anonymous">';
 require __DIR__ . '/header.php';
 ?>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>
@@ -238,8 +238,8 @@ require __DIR__ . '/header.php';
   <form method="post" class="mt-3" data-confirm="ลบกิจกรรม &quot;<?= h($e['title']) ?>&quot;?"><?= csrf_field() ?><input type="hidden" name="action" value="delete">
     <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> ลบกิจกรรมนี้</button></form>
 <?php endif; ?>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/th.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" integrity="sha384-5JqMv4L/Xa0hfvtF06qboNdhvuYXUku9ZrhZh3bSk8VXF0A/RuSLHpLsSV9Zqhl6" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/th.js" integrity="sha384-E6OVFg1zUc/pckGxry0YZ6VeZ1E17l7Jl8ZQx58jbEfxxkz9LqknQhiIrA9zg/8b" crossorigin="anonymous"></script>
 <script src="<?= h(asset_v('modules/calendar/assets/js/thai-picker.js')) ?>"></script>
 <script>
 (() => {

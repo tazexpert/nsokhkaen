@@ -11,6 +11,9 @@ function start_session(): void
     if (session_status() !== PHP_SESSION_NONE || PHP_SAPI === 'cli') {
         return;
     }
+    ini_set('session.use_strict_mode', '1');       // ไม่รับ session id ที่ server ไม่ได้สร้าง (กัน session fixation)
+    ini_set('session.use_only_cookies', '1');
+    ini_set('session.use_trans_sid', '0');
     session_name('NSOKKSESS');
     session_set_cookie_params([
         'path'     => BASE_URL,
@@ -19,6 +22,15 @@ function start_session(): void
         'secure'   => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
     ]);
     session_start();
+    // ไม่มีการใช้งานเกิน SESSION_IDLE_MINUTES → ออกจากระบบอัตโนมัติ
+    $now = time();
+    if (!empty($_SESSION['uid']) && SESSION_IDLE_MINUTES > 0 && isset($_SESSION['last_activity'])
+        && $now - (int)$_SESSION['last_activity'] > SESSION_IDLE_MINUTES * 60) {
+        $_SESSION = [];
+        session_regenerate_id(true);
+        $_SESSION['session_expired'] = true;
+    }
+    $_SESSION['last_activity'] = $now;
 }
 
 /** ผู้ใช้ที่ login อยู่ (พร้อมสิทธิ์รายระบบ) หรือ null */
@@ -288,10 +300,39 @@ function find_user_by_pin(string $pin, ?int $excludeId = null): ?array
 }
 
 /** หน่วงเวลาเมื่อกรอกรหัสผ่าน/PIN ผิดหลายครั้งในเซสชันเดียว ลดการเดารหัส */
-function throttle_failed_logins(): void
+/**
+ * ป้องกันการเดารหัสผ่าน/PIN (brute force) — นับจากบันทึกการใช้งาน จึงลบ cookie แล้วลองใหม่ไม่ได้
+ * - IP เดียวกันผิด ≥ LOGIN_LOCK_FAILS ครั้งใน LOGIN_LOCK_MINUTES นาที → ระงับการเข้าสู่ระบบจาก IP นั้นชั่วคราว
+ * - ชื่อผู้ใช้เดียวกันผิด ≥ LOGIN_LOCK_FAILS ครั้ง (จากหลาย IP) → ระงับชื่อผู้ใช้นั้นชั่วคราว
+ * - ผิดตั้งแต่ 5 ครั้งใน session → หน่วงเวลาตอบกลับเพิ่มขึ้นเรื่อย ๆ (สูงสุด 10 วินาที)
+ * คืนข้อความแจ้ง ถ้าถูกระงับ (ไม่ต้องตรวจรหัสผ่าน) หรือ null
+ */
+const LOGIN_LOCK_FAILS = 10;
+const LOGIN_LOCK_MINUTES = 15;
+
+function throttle_failed_logins(?string $username = null): ?string
 {
     $fails = $_SESSION['login_fails'] ?? 0;
     if ($fails >= 5) {
         sleep(min(10, $fails - 4));
     }
+    try {
+        $since = date('Y-m-d H:i:s', time() - LOGIN_LOCK_MINUTES * 60);
+        $st = db()->prepare("SELECT COUNT(*) FROM core_audit_log WHERE action IN ('login_failed', 'login_pin_failed') AND ip = ? AND created_at >= ?");
+        $st->execute([client_ip(), $since]);
+        $byIp = (int)$st->fetchColumn();
+        $byUser = 0;
+        if ($username !== null && $username !== '') {
+            $st = db()->prepare("SELECT COUNT(*) FROM core_audit_log WHERE action = 'login_failed' AND detail = ? AND created_at >= ?");
+            $st->execute(['username: ' . $username, $since]);
+            $byUser = (int)$st->fetchColumn();
+        }
+    } catch (Throwable $e) {
+        return null;
+    }
+    if ($byIp >= LOGIN_LOCK_FAILS || $byUser >= LOGIN_LOCK_FAILS) {
+        audit_log('login_locked', ($username ? 'username: ' . $username . ' · ' : '') . 'ip: ' . client_ip(), 'core', null);
+        return 'เข้าสู่ระบบผิดหลายครั้งเกินไป ระบบระงับการเข้าสู่ระบบชั่วคราว กรุณารอ ' . LOGIN_LOCK_MINUTES . ' นาทีแล้วลองใหม่';
+    }
+    return null;
 }

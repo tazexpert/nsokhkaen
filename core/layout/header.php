@@ -34,12 +34,12 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
 <link rel="apple-touch-icon" href="<?= h(url('assets/img/apple-touch-icon.png')) ?>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600&family=Sarabun:wght@400;500;600&display=swap" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-<?php if (!empty($useLeaflet)): ?><link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" rel="stylesheet"><?php endif; ?>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" integrity="sha384-XGjxtQfXaH2tnPFa9x+ruJTuLE3Aa6LhHSWRr1XeTyhezb4abCG4ccI5AkVDxqC+" crossorigin="anonymous">
+<?php if (!empty($useLeaflet)): ?><link href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous"><?php endif; ?>
 <link href="<?= h(asset_v('assets/css/app.css')) ?>" rel="stylesheet">
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha384-1H217gwSVyLSIfaLxHbE7dRb3v4mYCKbpQvzx0cegeju1MVsGrX5xXxAvs/HgeFs" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 <script>
   document.documentElement.classList.add('js-reveal');   // animation กล่อง ([data-reveal] .reveal-item) — ไม่มี JS = แสดงปกติ
   const BASE_URL_JS = <?= json_encode(BASE_URL) ?>;
@@ -193,7 +193,9 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
           <h2 class="h5 mt-3 mb-1" id="loginModalTitle">เข้าสู่ระบบ</h2>
           <p class="text-muted small mb-0">ระบบบริหารจัดการ <?= h(ORG_NAME) ?></p>
         </div>
-        <?php if (!empty($_GET['login']) && !empty($_SESSION['redirect_after_login'])): ?>
+        <?php if (!empty($_SESSION['session_expired'])): unset($_SESSION['session_expired']); ?>
+          <div class="alert alert-warning py-2 small"><i class="bi bi-clock-history"></i> ออกจากระบบอัตโนมัติ เนื่องจากไม่มีการใช้งานเกิน <?= (int)SESSION_IDLE_MINUTES ?> นาที กรุณาเข้าสู่ระบบอีกครั้ง</div>
+        <?php elseif (!empty($_GET['login']) && !empty($_SESSION['redirect_after_login'])): ?>
           <div class="alert alert-info py-2 small"><i class="bi bi-info-circle"></i> กรุณาเข้าสู่ระบบเพื่อใช้งานหน้าที่ต้องการ</div>
         <?php endif; ?>
         <div class="alert alert-danger py-2 small d-none" id="loginError"></div>

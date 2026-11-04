@@ -13,8 +13,9 @@ $error = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
     $pin = post('pin');
-    throttle_failed_logins();
-    if (!preg_match('/^\d{6}$/', $pin)) {
+    if ($locked = throttle_failed_logins()) {
+        $error = $locked;
+    } elseif (!preg_match('/^\d{6}$/', $pin)) {
         $error = 'กรุณากรอก PIN 6 หลัก';
     } elseif ($row = find_user_by_pin($pin)) {
         login_user((int)$row['id'], true);
@@ -36,7 +37,7 @@ $title = str_contains($target, '/modules/inventory/scan.php') ? 'สแกน QR
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>กรอก PIN - <?= h(APP_NAME) ?></title>
     <link rel="icon" type="image/png" href="<?= h(url('assets/img/favicon.png')) ?>">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" integrity="sha384-tViUnnbYAV00FLIhhi3v/dWt3Jxw4gZQcNoSCxCIFNJVCx7/D55/wXsrNIRANwdD" crossorigin="anonymous">
     <style>
         :root {
             --accent: #2f8fe0;

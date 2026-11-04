@@ -116,7 +116,7 @@ $rows = array_filter(projects_all(), function ($p) use ($fy, $status, $q) {
 });
 
 $pageTitle = 'โครงการที่รับผิดชอบ';
-$headExtra = $canManage ? '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">'
+$headExtra = $canManage ? '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" integrity="sha384-RkASv+6KfBMW9eknReJIJ6b3UnjKOKC5bOUaNgIY778NFbQ8MtWq9Lr/khUgqtTt" crossorigin="anonymous">'
     . '<link href="' . h(asset_v('modules/calendar/assets/css/calendar.css')) . '" rel="stylesheet">' : '';
 $active = 'projects';
 $pageActions = '<a href="' . h(module_url('calendar', 'plan.php')) . '" class="btn btn-outline-secondary"><i class="bi bi-grid-3x3"></i> แผนการปฏิบัติงาน</a>';
@@ -251,8 +251,8 @@ require APP_ROOT . '/core/layout/header.php';
                color: var(--c); background: color-mix(in srgb, var(--c) 15%, white); }
 </style>
 <?php if ($canManage): ?>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13"></script>
-<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/th.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" integrity="sha384-5JqMv4L/Xa0hfvtF06qboNdhvuYXUku9ZrhZh3bSk8VXF0A/RuSLHpLsSV9Zqhl6" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/th.js" integrity="sha384-E6OVFg1zUc/pckGxry0YZ6VeZ1E17l7Jl8ZQx58jbEfxxkz9LqknQhiIrA9zg/8b" crossorigin="anonymous"></script>
 <script src="<?= h(asset_v('modules/calendar/assets/js/thai-picker.js')) ?>"></script>
 <?php endif; ?>
 <?php require APP_ROOT . '/core/layout/footer.php'; ?>

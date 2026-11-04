@@ -140,6 +140,7 @@ function handleImageUpload(string $fieldName, string $subfolder, string $code): 
         mkdir($dir, 0775, true);
     }
 
+    $code = preg_replace('/[^A-Za-z0-9_-]/', '_', $code);     // ชื่อไฟล์จากรหัสวัสดุ: เฉพาะอักขระปลอดภัย (กัน path traversal)
     // Remove any previous image for this item (possibly a different extension)
     foreach (glob($dir . '/' . $code . '.*') ?: [] as $existing) {
         unlink($existing);

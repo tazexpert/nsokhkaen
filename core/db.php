@@ -1,9 +1,20 @@
 <?php
 /** การเชื่อมต่อฐานข้อมูล (PDO) ใช้ร่วมกันทุกระบบ */
 
-function db(): PDO
+/**
+ * การเชื่อมต่อฐานข้อมูล 1 ครั้งต่อ request (ใช้ซ้ำทั้ง request) และปิดเมื่อจบ request เสมอ (db_close ผ่าน shutdown)
+ * DB_PERSISTENT = true → ใช้ connection pooling ของ PDO (persistent) — ก่อนคืน connection เข้า pool จะ rollback ธุรกรรมที่ค้าง
+ */
+function db(bool $close = false): ?PDO
 {
     static $pdo = null;
+    if ($close) {
+        if ($pdo !== null && $pdo->inTransaction()) {
+            $pdo->rollBack();                     // ธุรกรรมค้าง (เช่น เกิดข้อผิดพลาดกลางคัน) ไม่ให้ติดไปกับ connection ถัดไป
+        }
+        $pdo = null;                              // ปิดการเชื่อมต่อ (persistent = คืนเข้า pool)
+        return null;
+    }
     if ($pdo === null) {
         $dsn = 'mysql:host=' . DB_HOST . ';port=' . DB_PORT . ';dbname=' . DB_NAME . ';charset=utf8mb4';
         try {
@@ -11,7 +22,9 @@ function db(): PDO
                 PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES   => false,
+                PDO::ATTR_PERSISTENT         => (bool)DB_PERSISTENT,
             ]);
+            register_shutdown_function('db_close');
         } catch (PDOException $e) {
             error_log('[nsokhkaen] DB connect failed: ' . $e->getMessage());
             http_response_code(500);
@@ -19,6 +32,12 @@ function db(): PDO
         }
     }
     return $pdo;
+}
+
+/** ปิดการเชื่อมต่อฐานข้อมูล (เรียกอัตโนมัติเมื่อจบ request) */
+function db_close(): void
+{
+    db(true);
 }
 
 /** ค่าตั้งค่าระบบกลาง (core_settings) — โหลดครั้งเดียวต่อ request */

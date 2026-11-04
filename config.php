@@ -19,4 +19,9 @@ defined('DB_PASS') || define('DB_PASS', getenv('DB_PASS') !== false ? getenv('DB
 // ใช้เมื่อยังไม่ได้ตั้งค่า app_url ในฐานข้อมูล (ต้องลงท้ายด้วย /)
 defined('DEFAULT_APP_URL') || define('DEFAULT_APP_URL', getenv('APP_URL') ?: 'http://localhost/nsokhkaen/');
 
+// ความปลอดภัย / ความน่าเชื่อถือ (ดู docs/SECURITY.md) — เปลี่ยนค่าได้ใน config.local.php
+defined('APP_DEBUG') || define('APP_DEBUG', false);                 // true = แสดงรายละเอียดข้อผิดพลาดบนหน้าเว็บ (ใช้ตอนพัฒนาเท่านั้น)
+defined('SESSION_IDLE_MINUTES') || define('SESSION_IDLE_MINUTES', 120);   // ไม่มีการใช้งานเกินนี้ → ออกจากระบบอัตโนมัติ (0 = ไม่จำกัด)
+defined('DB_PERSISTENT') || define('DB_PERSISTENT', false);         // true = connection pooling (PDO persistent) — ดู docs/SECURITY.md ก่อนเปิด
+
 date_default_timezone_set('Asia/Bangkok');

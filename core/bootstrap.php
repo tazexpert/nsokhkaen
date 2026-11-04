@@ -11,6 +11,8 @@ define('APP_ROOT', dirname(__DIR__));
 define('UPLOAD_DIR', APP_ROOT . '/uploads');
 
 require_once APP_ROOT . '/config.php';
+require_once __DIR__ . '/security.php';
+security_init();
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/modules.php';

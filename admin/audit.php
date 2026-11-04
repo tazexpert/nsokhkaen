@@ -21,7 +21,7 @@ $since = match ($period) {
 };
 $labels = [
     'login' => 'เข้าสู่ระบบ', 'login_pin' => 'เข้าใช้ด้วย PIN', 'logout' => 'ออกจากระบบ',
-    'login_failed' => 'เข้าสู่ระบบไม่สำเร็จ', 'login_pin_failed' => 'PIN ไม่ถูกต้อง',
+    'login_failed' => 'เข้าสู่ระบบไม่สำเร็จ', 'login_locked' => 'ระงับการเข้าสู่ระบบชั่วคราว (ผิดหลายครั้ง)', 'login_pin_failed' => 'PIN ไม่ถูกต้อง',
     'user_create' => 'เพิ่มผู้ใช้', 'user_update' => 'แก้ไขผู้ใช้/สิทธิ์', 'user_delete' => 'ลบผู้ใช้',
     'user_toggle_active' => 'เปิด/ปิดบัญชี', 'change_password' => 'เปลี่ยนรหัสผ่าน', 'set_pin' => 'ตั้ง PIN',
     'remove_pin' => 'ลบ PIN', 'settings_update' => 'แก้ไขค่าระบบ', 'change_photo' => 'เปลี่ยนรูปโปรไฟล์',

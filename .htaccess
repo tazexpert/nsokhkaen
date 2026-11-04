@@ -4,6 +4,28 @@
 </FilesMatch>
 Options -Indexes
 
+# ไฟล์/โฟลเดอร์ซ่อน (.git .env .gitignore ...) และไฟล์เอกสาร/สำรอง/log ห้ามเปิดจากเว็บ (มีผลทุกโฟลเดอร์ย่อย)
+RedirectMatch 404 "/\.(git|svn|hg|env|idea|vscode)(/|$)"
+<FilesMatch "(^\.|\.(md|sql|log|bak|old|orig|swp|sh|py|ini|dist|lock)$)">
+    Require all denied
+</FilesMatch>
+
+# Security headers สำหรับไฟล์ static (.html .css .js รูป) — หน้า PHP ส่ง header เองจาก core/security.php
+<IfModule mod_headers.c>
+    Header setifempty X-Content-Type-Options "nosniff"
+    Header setifempty X-Frame-Options "SAMEORIGIN"
+    Header setifempty Referrer-Policy "strict-origin-when-cross-origin"
+    Header unset X-Powered-By
+</IfModule>
+
+# CSP สำหรับหน้า .html (เว็บไซต์ศูนย์ดิจิทัลชุมชน) — ค่าเดียวกับ security_csp() ใน core/security.php (แก้ให้ตรงกันทั้งสองที่)
+<IfModule mod_headers.c>
+    <FilesMatch "\.html?$">
+        Header set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://code.jquery.com; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net; img-src 'self' data: blob: https://cdn.jsdelivr.net https://*.tile.openstreetmap.org https://server.arcgisonline.com; connect-src 'self' https://cdn.jsdelivr.net; frame-src 'self' https://app.powerbi.com; media-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+        Header set Permissions-Policy "camera=(self), geolocation=(self), microphone=(), payment=(), usb=()"
+    </FilesMatch>
+</IfModule>
+
 # ขีดจำกัดการอัปโหลด (Apache + mod_php; ถ้าใช้ PHP-FPM ระบบจะอ่านจาก .user.ini)
 <IfModule mod_php.c>
     php_value upload_max_filesize 10M

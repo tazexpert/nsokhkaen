@@ -11,10 +11,10 @@ const QUILL_CDN = 'https://cdn.jsdelivr.net/npm/quill@2.0.3/dist/';
 /** แท็ก <link>/<script> สำหรับ $headExtra — $editor = false ถ้าใช้แค่แสดงผล */
 function richtext_assets(bool $editor = true): string
 {
-    $out = '<link href="' . QUILL_CDN . 'quill.snow.css" rel="stylesheet">'
+    $out = '<link href="' . QUILL_CDN . 'quill.snow.css" rel="stylesheet" integrity="sha384-ecIckRi4QlKYya/FQUbBUjS4qp65jF/J87Guw5uzTbO1C1Jfa/6kYmd6dXUF6D7i" crossorigin="anonymous">'
          . '<link href="' . h(asset_v('assets/css/richtext.css')) . '" rel="stylesheet">';
     if ($editor) {
-        $out .= '<script src="' . QUILL_CDN . 'quill.js"></script><script src="' . h(asset_v('assets/js/richtext.js')) . '"></script>';
+        $out .= '<script src="' . QUILL_CDN . 'quill.js" integrity="sha384-utBUCeG4SYaCm4m7GQZYr8Hy8Fpy3V4KGjBZaf4WTKOcwhCYpt/0PfeEe3HNlwx8" crossorigin="anonymous"></script><script src="' . h(asset_v('assets/js/richtext.js')) . '"></script>';
     }
     return $out;
 }
