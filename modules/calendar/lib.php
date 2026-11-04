@@ -126,17 +126,18 @@ function cal_position_abbr(string $position, string $kind = ''): ?string
     return $abbr === null ? null : ($kind === 'acting' ? 'รก.' : '') . $abbr;
 }
 
-/** ตำแหน่งย่อทั้งหมดของผู้ใช้ (ตำแหน่งหลัก + ควบ/รักษาการ) เรียงตามลำดับตำแหน่ง เช่น "รก.สถิติจังหวัด / ผอ.กว / ผอ.กข" — ไม่มี = null */
+/**
+ * ตำแหน่งย่อของผู้ใช้ในตาราง — แสดงตำแหน่งเดียว: ตำแหน่งหลัก (core_users.position)
+ * ถ้าตำแหน่งหลักไม่ใช่สถิติจังหวัด/ผอ.กลุ่ม แต่มีตำแหน่งควบ/รักษาการที่เป็น → ใช้ตำแหน่งนั้นแทน · ไม่มีเลย = null (แสดงชื่อ)
+ */
 function cal_person_abbr(array $u): ?string
 {
-    $list = [];
     foreach (array_merge([['position' => (string)($u['position'] ?? ''), 'kind' => '']], staff_extras_of($u)) as $p) {
         if (($a = cal_position_abbr($p['position'], $p['kind'])) !== null) {
-            $list[$a] = array_search(staff_category($p['position']), array_keys(CAL_POS_ABBR), true);
+            return $a;
         }
     }
-    asort($list);
-    return $list ? implode(' / ', array_keys($list)) : null;
+    return null;
 }
 
 /** ผู้อำนวยการ / สถิติจังหวัด → แสดงตำแหน่งต่อท้ายชื่อในตาราง */
@@ -238,7 +239,7 @@ function cal_work_group_label(int $gid): string
 
 /**
  * กลุ่มงานในตาราง: แบบเดียวกับรายชื่อปกติ — "ผอ.กว + บุคลากรกลุ่ม…" (ตำแหน่งย่อ ไม่แสดงชื่อ · ชี้เมาส์เห็นชื่อ)
- * ผู้อำนวยการคนเดียวกันหลายกลุ่ม → แสดงครั้งเดียว ตำแหน่งย่อคั่นด้วย " / " แล้วตามด้วยบุคลากรของแต่ละกลุ่ม
+ * ผู้อำนวยการคนเดียวกันหลายกลุ่ม → แสดงครั้งเดียว (ตำแหน่งหลัก) แล้วตามด้วยบุคลากรของแต่ละกลุ่ม
  */
 function cal_work_groups_html(array $gids, int $meId = 0): string
 {
@@ -258,9 +259,9 @@ function cal_work_groups_html(array $gids, int $meId = 0): string
         if ($did) {
             $u = $users[$did];
             $pos = array_values(array_unique(array_map(fn($gid) => $groups[$gid]['director_label'] ?: trim($u['position']), $list)));
-            $abbr = array_values(array_unique(array_map(fn($p) => cal_position_abbr(preg_replace('/^รักษาการ/u', '', $p), str_starts_with($p, 'รักษาการ') ? 'acting' : '') ?? $p, $pos)));
+            $abbr = cal_person_abbr($u) ?? preg_replace('/\s+/u', ' ', trim($u['full_name']));     // ตำแหน่งหลักตำแหน่งเดียว
             $chips[] = '<span class="cal-person pos' . ($did === $meId ? ' me' : '') . '" title="' . h(preg_replace('/\s+/u', ' ', trim($u['full_name'])) . ' — ' . implode(' / ', $pos)) . '">'
-                . h(implode(' / ', $abbr)) . '</span>';
+                . h($abbr) . '</span>';
         }
         foreach ($list as $gid) {
             $chips[] = '<span class="cal-person" title="' . count($groups[$gid]['ids']) . ' คน">' . h('บุคลากร' . $groups[$gid]['name']) . '</span>';
