@@ -140,6 +140,51 @@ function cal_person_abbr(array $u): ?string
     return null;
 }
 
+/** ตำแหน่งย่อที่เลือกแสดงได้ (ตำแหน่งหลักก่อน แล้วควบ/รักษาการ) [abbr => ตำแหน่งเต็ม] — ใช้ในหน้าเพิ่มกิจกรรม */
+function cal_person_abbr_options(array $u): array
+{
+    $out = [];
+    $primary = (string)($u['position'] ?? '');
+    foreach (array_merge([['position' => $primary, 'kind' => '', 'label' => trim($primary)]], staff_extras_of($u)) as $p) {
+        if (($a = cal_position_abbr($p['position'], $p['kind'])) !== null) {
+            $out[$a] ??= $p['label'];
+        }
+    }
+    return $out;
+}
+
+/** มีคอลัมน์ cal_event_users.show_as แล้วหรือยัง (migration 20261117) */
+function cal_has_show_as(): bool
+{
+    static $has = null;
+    if ($has === null) {
+        try {
+            $has = (bool)db()->query("SHOW COLUMNS FROM cal_event_users LIKE 'show_as'")->fetch();
+        } catch (PDOException $e) {
+            $has = false;
+        }
+    }
+    return $has;
+}
+
+/** ตำแหน่งที่เลือกให้แสดง ต่อกิจกรรม [event_id][user_id] => "ผอ.กว / ผอ.กข" (เฉพาะที่เลือกไว้) */
+function cal_assignee_show_as(array $eventIds): array
+{
+    $ids = array_filter(array_map('intval', $eventIds));
+    $out = [];
+    if (!$ids) {
+        return $out;
+    }
+    try {
+        foreach (db()->query('SELECT event_id, user_id, show_as FROM cal_event_users WHERE show_as IS NOT NULL AND event_id IN (' . implode(',', $ids) . ')') as $r) {
+            $out[(int)$r['event_id']][(int)$r['user_id']] = $r['show_as'];
+        }
+    } catch (PDOException $e) {
+        // ยังไม่ได้รัน migration 20261117
+    }
+    return $out;
+}
+
 /** ผู้อำนวยการ / สถิติจังหวัด → แสดงตำแหน่งต่อท้ายชื่อในตาราง */
 function cal_show_position(?string $position): bool
 {
@@ -241,7 +286,7 @@ function cal_work_group_label(int $gid): string
  * กลุ่มงานในตาราง: แบบเดียวกับรายชื่อปกติ — "ผอ.กว + บุคลากรกลุ่ม…" (ตำแหน่งย่อ ไม่แสดงชื่อ · ชี้เมาส์เห็นชื่อ)
  * ผู้อำนวยการคนเดียวกันหลายกลุ่ม → แสดงครั้งเดียว (ตำแหน่งหลัก) แล้วตามด้วยบุคลากรของแต่ละกลุ่ม
  */
-function cal_work_groups_html(array $gids, int $meId = 0): string
+function cal_work_groups_html(array $gids, int $meId = 0, array $showAs = []): string
 {
     $groups = cal_work_groups();
     $users = cal_users();
@@ -259,7 +304,7 @@ function cal_work_groups_html(array $gids, int $meId = 0): string
         if ($did) {
             $u = $users[$did];
             $pos = array_values(array_unique(array_map(fn($gid) => $groups[$gid]['director_label'] ?: trim($u['position']), $list)));
-            $abbr = cal_person_abbr($u) ?? preg_replace('/\s+/u', ' ', trim($u['full_name']));     // ตำแหน่งหลักตำแหน่งเดียว
+            $abbr = $showAs[$did] ?? cal_person_abbr($u) ?? preg_replace('/\s+/u', ' ', trim($u['full_name']));     // ตำแหน่งที่เลือก / ตำแหน่งหลัก
             $chips[] = '<span class="cal-person pos' . ($did === $meId ? ' me' : '') . '" title="' . h(preg_replace('/\s+/u', ' ', trim($u['full_name'])) . ' — ' . implode(' / ', $pos)) . '">'
                 . h($abbr) . '</span>';
         }
@@ -271,7 +316,7 @@ function cal_work_groups_html(array $gids, int $meId = 0): string
     return implode($plus, $parts);
 }
 
-function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
+function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6, array $showAs = []): string
 {
     $users = cal_users();
     $ids = array_values(array_filter($userIds, fn($id) => isset($users[$id])));
@@ -302,7 +347,7 @@ function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
     }
     $groupHtml = '';
     if ($labels) {
-        $groupHtml = cal_work_groups_html($labels, $meId) . ' ';
+        $groupHtml = cal_work_groups_html($labels, $meId, $showAs) . ' ';
         if (!$rest) {
             return $groupHtml;
         }
@@ -311,7 +356,7 @@ function cal_assignee_html(array $userIds, int $meId = 0, int $max = 6): string
     $order = array_flip(array_keys($users));                            // เรียงตามลำดับตำแหน่ง (เหมือนหน้าบุคลากร)
     usort($ids, fn($a, $b) => $order[$a] <=> $order[$b]);
     // สถิติจังหวัด / ผอ.กลุ่ม → แสดงเฉพาะตำแหน่งย่อ (ชี้เมาส์เห็นชื่อ-ตำแหน่งเต็ม) · คนอื่นแสดงชื่อ
-    $chips = array_map(fn($id) => ($abbr = cal_person_abbr($users[$id])) !== null
+    $chips = array_map(fn($id) => ($abbr = $showAs[$id] ?? cal_person_abbr($users[$id])) !== null
         ? '<span class="cal-person pos' . ($id === $meId ? ' me' : '') . '" title="' . h(preg_replace('/\s+/u', ' ', trim($users[$id]['full_name'])) . ' — ' . implode(' / ', staff_position_lines($users[$id]))) . '">' . h($abbr) . '</span>'
         : '<span class="cal-person' . ($id === $meId ? ' me' : '') . '">' . h($users[$id]['full_name']) . '</span>',
         array_slice($ids, 0, $max));
@@ -401,6 +446,7 @@ function cal_render_table(array $events, string $from, int $meId, bool $showActi
         return '<div class="text-center text-muted py-4"><i class="bi bi-calendar-x fs-3 d-block"></i>ไม่มีกิจกรรมในช่วงนี้</div>';
     }
     $assignees = cal_assignees(array_column($events, 'id'));
+    $showAs = cal_assignee_show_as(array_column($events, 'id'));
     $groups = [];
     foreach ($events as $e) {
         $groups[max($e['event_date'], $from)][] = $e;
@@ -429,7 +475,7 @@ function cal_render_table(array $events, string $from, int $meId, bool $showActi
                 . ($mine ? ' <span class="badge text-bg-warning">งานของคุณ</span>' : '')
                 . ($done ? ' <span class="badge text-bg-secondary"><i class="bi bi-check2"></i> จบแล้ว</span>' : '') . '</td>'
                 . '<td>' . ($e['location'] ? '<i class="bi bi-geo-alt text-muted"></i> ' . h($e['location']) : '<span class="text-muted">-</span>') . '</td>'
-                . '<td class="cal-people">' . cal_assignee_html($ids, $meId) . '</td>'
+                . '<td class="cal-people">' . cal_assignee_html($ids, $meId, 6, $showAs[(int)$e['id']] ?? []) . '</td>'
                 . '<td class="small">' . ($link ? '<a href="' . h($link) . '" target="_blank" rel="noopener"><i class="bi bi-link-45deg"></i> เปิดลิงก์</a>' : '')
                 . ($e['note'] ? '<div class="text-muted">' . nl2br(h(mb_strimwidth($e['note'], 0, 160, '…'))) . '</div>' : '')
                 . ($showActions && cal_can_edit($e) ? '<a href="' . h($base . 'event_form.php?id=' . (int)$e['id']) . '" class="btn btn-sm btn-light float-end" title="แก้ไข"><i class="bi bi-pencil"></i></a>' : '')

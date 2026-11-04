@@ -8,6 +8,7 @@ $id = int_param('id');
 $e = ['event_date' => $_GET['date'] ?? date('Y-m-d'), 'end_date' => null, 'start_time' => '09:00:00', 'end_time' => '16:30:00',
       'title' => '', 'location' => '', 'link' => '', 'note' => '', 'created_by' => $me['id'], 'visibility' => 'public'];
 $assigned = [];
+$showAs = [];                       // ตำแหน่งที่แสดงในตาราง (ผู้มีหลายตำแหน่ง) [user_id => [abbr, ...]]
 if (!DateTime::createFromFormat('!Y-m-d', (string)$e['event_date'])) {
     $e['event_date'] = date('Y-m-d');
 }
@@ -20,6 +21,9 @@ if ($id) {
         redirect('index.php');
     }
     $assigned = cal_assignees([$id])[$id] ?? [];
+    foreach (cal_assignee_show_as([$id])[$id] ?? [] as $uid => $txt) {
+        $showAs[$uid] = explode(' / ', $txt);
+    }
 }
 
 $errors = [];
@@ -41,6 +45,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ]);
     $users = cal_users();
     $assigned = array_values(array_unique(array_filter(array_map('intval', (array)($_POST['users'] ?? [])), fn($u) => isset($users[$u]))));
+    // ตำแหน่งที่เลือกให้แสดง: เก็บเฉพาะที่ต่างจากค่าเริ่มต้น (ตำแหน่งหลัก) · เรียงตามลำดับตัวเลือก
+    $showAs = [];
+    $showAsSave = [];
+    foreach ($assigned as $uid) {
+        $opts = array_keys(cal_person_abbr_options($users[$uid]));
+        if (count($opts) < 2) {
+            continue;
+        }
+        $chosen = array_values(array_intersect($opts, array_map('strval', (array)($_POST['show_as'][$uid] ?? []))));
+        $showAs[$uid] = $chosen ?: [$opts[0]];
+        if ($chosen && $chosen !== [$opts[0]]) {
+            $showAsSave[$uid] = implode(' / ', $chosen);
+        }
+    }
 
     if ($e['title'] === '') {
         $errors[] = 'กรุณากรอกชื่อกิจกรรม';
@@ -102,9 +120,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute(array_values($data));
             $id = (int)$pdo->lastInsertId();
         }
-        $ins = $pdo->prepare('INSERT IGNORE INTO cal_event_users (event_id, user_id) VALUES (?, ?)');
-        foreach ($assigned as $uid) {
-            $ins->execute([$id, $uid]);
+        if (cal_has_show_as()) {
+            $ins = $pdo->prepare('INSERT INTO cal_event_users (event_id, user_id, show_as) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE show_as = VALUES(show_as)');
+            foreach ($assigned as $uid) {
+                $ins->execute([$id, $uid, $showAsSave[$uid] ?? null]);
+            }
+        } else {                                    // ยังไม่ได้รัน migration 20261117
+            $ins = $pdo->prepare('INSERT IGNORE INTO cal_event_users (event_id, user_id) VALUES (?, ?)');
+            foreach ($assigned as $uid) {
+                $ins->execute([$id, $uid]);
+            }
         }
         $pdo->commit();
         audit_log('cal_save', '#' . $id . ' ' . $data['title'] . ' (' . count($assigned) . ' คน)', CAL_MODULE);
@@ -185,8 +210,18 @@ require __DIR__ . '/header.php';
             <?php foreach ($list as $u): ?>
               <label class="opt" data-type="<?= h((string)$u['type']) ?>" data-text="<?= h(mb_strtolower($u['full_name'] . ' ' . $u['position'])) ?>">
                 <input type="checkbox" class="form-check-input" name="users[]" value="<?= (int)$u['id'] ?>" <?= in_array((int)$u['id'], $assigned, true) ? 'checked' : '' ?>>
-                <span><?= h($u['full_name']) ?><span class="d-block small text-muted"><?= h($u['position'] ?: '-') ?></span></span>
+                <span><?= h($u['full_name']) ?><span class="d-block small text-muted"><?= h(implode(' / ', staff_position_lines($u)) ?: '-') ?></span></span>
               </label>
+              <?php $opts = cal_person_abbr_options($u); if (count($opts) > 1): $cur = $showAs[(int)$u['id']] ?? [array_key_first($opts)]; ?>
+                <div class="opt-pos" data-for="<?= (int)$u['id'] ?>">
+                  <span class="small text-muted me-1">แสดงในตารางเป็น:</span>
+                  <?php foreach ($opts as $abbr => $full): ?>
+                    <label class="form-check form-check-inline small mb-0" title="<?= h($full) ?>">
+                      <input type="checkbox" class="form-check-input" name="show_as[<?= (int)$u['id'] ?>][]" value="<?= h($abbr) ?>"<?= in_array($abbr, $cur, true) ? ' checked' : '' ?>>
+                      <span class="form-check-label"><?= h($abbr) ?></span></label>
+                  <?php endforeach; ?>
+                </div>
+              <?php endif; ?>
             <?php endforeach; ?>
           <?php endforeach; ?>
         </div>
@@ -208,10 +243,15 @@ require __DIR__ . '/header.php';
 <script src="<?= h(asset_v('modules/calendar/assets/js/thai-picker.js')) ?>"></script>
 <script>
 (() => {
-  const boxes = () => [...document.querySelectorAll('#userPick input[type=checkbox]')];
+  const boxes = () => [...document.querySelectorAll('#userPick input[name="users[]"]')];
   const count = () => {
     document.getElementById('selCount').textContent = boxes().filter(b => b.checked).length + ' คน';
     document.querySelectorAll('#userPick .opt').forEach(o => o.classList.toggle('on', o.querySelector('input').checked));
+    // ตัวเลือกตำแหน่งที่แสดง: เห็นเมื่อเลือกคนนั้นแล้ว (และไม่ถูกซ่อนจากการค้นหา)
+    document.querySelectorAll('#userPick .opt-pos').forEach(p => {
+      const box = document.querySelector('#userPick .opt input[name="users[]"][value="' + p.dataset.for + '"]');
+      p.hidden = !box || !box.checked || box.closest('.opt').hidden;
+    });
   };
   document.querySelectorAll('[data-add]').forEach(btn => btn.addEventListener('click', () => {
     const t = btn.dataset.add;
@@ -228,6 +268,7 @@ require __DIR__ . '/header.php';
   document.getElementById('userSearch').addEventListener('input', e => {
     const q = e.target.value.trim().toLowerCase();
     document.querySelectorAll('#userPick .opt').forEach(o => o.hidden = q !== '' && !o.dataset.text.includes(q));
+    count();
   });
   const allDay = document.getElementById('allDay'), row = document.getElementById('timeRow');
   const sync = () => { row.hidden = allDay.checked; };

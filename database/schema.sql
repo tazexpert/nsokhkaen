@@ -650,6 +650,7 @@ CREATE TABLE IF NOT EXISTS cal_events (
 CREATE TABLE IF NOT EXISTS cal_event_users (
   event_id     INT UNSIGNED NOT NULL,
   user_id      INT UNSIGNED NOT NULL,
+  show_as      VARCHAR(100) NULL,                   -- ตำแหน่งย่อที่แสดงในตาราง (ผู้มีหลายตำแหน่ง) ว่าง = ตำแหน่งหลัก
   assigned_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (event_id, user_id),
   KEY idx_cal_eu_user (user_id),

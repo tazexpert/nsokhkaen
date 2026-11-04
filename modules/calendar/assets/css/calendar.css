@@ -34,6 +34,8 @@
 .cal-userpick .opt { display: flex; gap: 10px; align-items: center; padding: 5px 10px; border-bottom: 1px solid #f1f4f8; cursor: pointer; margin: 0; }
 .cal-userpick .opt.on { background: #e7f1ff; }
 .cal-userpick .opt[hidden] { display: none; }
+.cal-userpick .opt-pos { padding: 3px 10px 6px 40px; background: #e7f1ff; border-bottom: 1px solid #f1f4f8; }   /* เลือกตำแหน่งที่แสดงในตาราง */
+.cal-userpick .opt-pos[hidden] { display: none; }
 
 /* flatpickr: แสดงปี พ.ศ. แทนช่องปี ค.ศ. */
 .flatpickr-current-month .numInputWrapper { display: none; }
