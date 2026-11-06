@@ -1,0 +1,39 @@
+/* ระบบบริหารจัดการ EA */
+.ea-code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .02em; white-space: nowrap; }
+.ea-code .p { color: #94a3b8; }
+.ea-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ea-table td, .ea-table th { vertical-align: top; }
+.ea-table .note { max-width: 320px; font-size: .85em; color: #64748b; }
+.ea-dl dt { color: #64748b; font-weight: 400; }
+.ea-dl dd { font-weight: 500; }
+/* แถบความก้าวหน้า (สำรวจเสร็จ / กำลังสำรวจ) */
+.ea-progress { display: flex; height: 10px; border-radius: 6px; background: #eef2f7; overflow: hidden; }
+.ea-progress > span { display: block; height: 100%; }
+.ea-progress .done { background: #22c55e; }
+.ea-progress .doing { background: #f59e0b; }
+.js-reveal [data-reveal] .ea-progress > span { transform: scaleX(0); transform-origin: left center; }
+.js-reveal .revealed-group .ea-progress > span { transform: none; transition: transform .9s cubic-bezier(.2,.8,.2,1) .45s; }
+/* กราฟแท่งแนวตั้ง: จำนวน EA ตามอำเภอ — แท่งยืดจากแกนล่าง ทยอยทีละแท่ง */
+.ea-vbars { display: flex; align-items: flex-end; gap: 4px; height: 220px; padding: 18px 0 0; border-bottom: 1px solid #cbd5e1; }
+.ea-vbars .col { flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; }
+.ea-vbars .bar { width: 100%; max-width: 34px; border-radius: 4px 4px 0 0; background: linear-gradient(180deg, #2dd4bf, #0f766e); position: relative; }
+.ea-vbars .bar.muni { background: linear-gradient(180deg, #60a5fa, #1d4ed8); }
+.ea-vbars .val { position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); font-size: 10px; color: #334155; white-space: nowrap; margin-bottom: 2px; }
+.ea-vlabels { display: flex; gap: 4px; }
+.ea-vlabels span { flex: 1 1 0; min-width: 0; font-size: 10px; color: #64748b; writing-mode: vertical-rl; transform: rotate(180deg); height: 84px; white-space: nowrap; overflow: hidden; text-align: left; margin: 0 auto; display: flex; justify-content: center; }
+.ea-stack { position: relative; display: flex; flex-direction: column-reverse; width: 100%; max-width: 34px; }
+.ea-anim { transform-origin: bottom center; }
+.js-reveal [data-reveal] .ea-anim { transform: scaleY(0); }
+.js-reveal .revealed-group .ea-anim { animation: eaGrow .8s cubic-bezier(.2,.8,.2,1) var(--d, 0ms) both; transform: none; }
+@keyframes eaGrow { from { transform: scaleY(0); } to { transform: none; } }
+.ea-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+@media (prefers-reduced-motion: reduce) {
+  .js-reveal [data-reveal] .ea-anim, .js-reveal .revealed-group .ea-anim, .js-reveal [data-reveal] .ea-progress > span { animation: none; transform: none; transition: none; }
+}
+@media print {
+  .ea-anim, .ea-progress > span { animation: none !important; transform: none !important; transition: none !important; }
+}
+.ea-bulk { position: sticky; bottom: 0; z-index: 5; background: #f8fafc; border-top: 1px solid #e2e8f0; }
+.ea-pop .bar-label { width: 96px; }
+.ea-pop .bar-val { width: auto; min-width: 64px; font-size: .88rem; font-variant-numeric: tabular-nums; }
+.stat-card .stat-num { font-variant-numeric: tabular-nums; }

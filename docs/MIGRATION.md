@@ -261,6 +261,7 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 | `20261115_core_projects.sql` | โครงการที่รับผิดชอบ (`core_projects`) ใช้เป็นรหัสงานในแผน — ย้ายรหัสงานและแผนเดิมให้อัตโนมัติ |
 | `20261116_core_user_positions.sql` | ผู้ใช้งาน: ตำแหน่งเพิ่มเติม ควบ / รักษาการ (`core_user_positions`) |
 | `20261117_calendar_show_as.sql` | ปฏิทิน: เลือกตำแหน่งที่แสดงในตารางของผู้มีหลายตำแหน่ง (`cal_event_users.show_as`) |
+| `20261118_ea.sql` | ระบบบริหารจัดการ EA: บัญชีเขตแจงนับ (`ea_areas`) และ EA ที่โครงการใช้สำรวจ (`ea_project_eas`) — นำเข้าบัญชี EA ที่เมนู EA → นำเข้าบัญชี EA |
 
 > ระบบเบิกวัสดุเดิมยังเปิดใช้อยู่? ก่อนเปิดใช้ระบบใหม่ให้ "ดึงข้อมูลรอบสุดท้าย" ตามหัวข้อด้านบน (`--resync-inventory`)
 
@@ -286,6 +287,7 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261115_core_projects.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261116_core_user_positions.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261117_calendar_show_as.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261118_ea.sql
 ```
 
 หลังอัปเดต:

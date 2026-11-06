@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- ระบบบริหารจัดการ EA: แผนที่แบ่งเขตแจงนับ (สีเขียวน้ำทะเล) -->
+  <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#14b8a6"/><stop offset="1" stop-color="#0f766e"/></linearGradient></defs>
+  <rect width="128" height="128" rx="28" fill="url(#g)"/>
+  <path d="M24 30 L52 22 L76 30 L104 22 L104 98 L76 106 L52 98 L24 106 Z" fill="#fff" opacity=".92"/>
+  <path d="M52 22 L52 98 M76 30 L76 106 M24 64 L104 60" stroke="#0f766e" stroke-width="4" fill="none" opacity=".55"/>
+  <rect x="56" y="40" width="16" height="16" rx="3" fill="#0f766e"/>
+  <rect x="30" y="70" width="16" height="16" rx="3" fill="#14b8a6"/>
+  <rect x="82" y="68" width="16" height="16" rx="3" fill="#f59e0b"/>
+</svg>

@@ -1,0 +1,271 @@
+<?php
+/**
+ * นำเข้าบัญชีเขตแจงนับ (EA) จากไฟล์ Excel รูปแบบ "บัญชีเขตแจงนับ" (ผู้ดูแลระบบ EA)
+ * 1) อัปโหลด .xlsx → อ่านและตรวจรหัส → เก็บผลอ่านไว้ชั่วคราวที่ storage/tmp
+ * 2) ตรวจสรุป (เพิ่มใหม่ / ปรับปรุง / ไม่เปลี่ยน / ไม่อยู่ในไฟล์) → ยืนยันบันทึก (อ้างอิงตามรหัส EA 11 หลัก)
+ * EA ที่โครงการใช้อยู่ไม่ถูกลบ — EA ที่ไม่อยู่ในไฟล์เลือกทำเครื่องหมาย "เลิกใช้" ได้
+ */
+require_once __DIR__ . '/bootstrap.php';
+$me = require_module(EA_MODULE, 'admin');
+$pdo = db();
+$sessKey = 'ea_import';
+$tmpDir = APP_ROOT . '/storage/tmp';
+$errors = [];
+$step = 'upload';
+
+$tmpFile = function (?string $token) use ($tmpDir): ?string {
+    return $token && preg_match('/^[a-f0-9]{32}$/', $token) ? $tmpDir . '/ea_import_' . $token . '.json' : null;
+};
+$clear = function () use ($sessKey, $tmpFile) {
+    $f = $tmpFile($_SESSION[$sessKey]['token'] ?? null);
+    if ($f && is_file($f)) {
+        @unlink($f);
+    }
+    unset($_SESSION[$sessKey]);
+};
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    check_csrf();
+    $action = post('action');
+    if ($action === 'preview') {
+        $f = $_FILES['file'] ?? null;
+        if (!$f || $f['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_name'])) {
+            $errors[] = 'กรุณาเลือกไฟล์ Excel (.xlsx)';
+        } elseif (strtolower(pathinfo($f['name'], PATHINFO_EXTENSION)) !== 'xlsx') {
+            $errors[] = 'รองรับเฉพาะไฟล์ .xlsx (ถ้าเป็น .xls ให้เปิดใน Excel แล้ว "บันทึกเป็น" .xlsx)';
+        } else {
+            @set_time_limit(120);
+            $res = ea_parse_xlsx($f['tmp_name']);
+            $errors = $res['errors'];
+            if (!$errors) {
+                $clear();
+                if (!is_dir($tmpDir)) {
+                    @mkdir($tmpDir, 0770, true);
+                }
+                $token = bin2hex(random_bytes(16));
+                file_put_contents($tmpFile($token), json_encode($res, JSON_UNESCAPED_UNICODE));
+                $_SESSION[$sessKey] = ['token' => $token, 'file' => mb_substr($f['name'], 0, 150)];
+                redirect('import.php?step=preview');
+            }
+        }
+    } elseif ($action === 'import') {
+        $file = $tmpFile($_SESSION[$sessKey]['token'] ?? null);
+        $res = $file && is_file($file) ? json_decode((string)file_get_contents($file), true) : null;
+        if (!$res) {
+            flash('ไม่พบข้อมูลที่อ่านไว้ กรุณาอัปโหลดไฟล์อีกครั้ง', 'warning');
+            redirect('import.php');
+        }
+        @set_time_limit(300);
+        $source = mb_substr(trim(post('source')), 0, 255);
+        $existing = [];
+        foreach ($pdo->query('SELECT * FROM ea_areas') as $r) {
+            $existing[$r['ea_code']] = $r;
+        }
+        $cols = array_merge(['ea_code'], EA_IMPORT_COLS, ['source']);
+        $ins = $pdo->prepare('INSERT INTO ea_areas (' . implode(',', $cols) . ', is_active) VALUES (' . implode(',', array_fill(0, count($cols), '?')) . ', 1)');
+        $upd = $pdo->prepare('UPDATE ea_areas SET ' . implode(', ', array_map(fn($c) => "$c = ?", array_slice($cols, 1))) . ', is_active = 1 WHERE ea_code = ?');
+        $n = ['new' => 0, 'upd' => 0, 'same' => 0, 'off' => 0];
+        $pdo->beginTransaction();
+        try {
+            $inFile = [];
+            foreach ($res['rows'] as $r) {
+                $r['source'] = $source;
+                $inFile[$r['ea_code']] = true;
+                $old = $existing[$r['ea_code']] ?? null;
+                $vals = array_map(fn($c) => $r[$c], array_slice($cols, 1));
+                if (!$old) {
+                    $ins->execute(array_merge([$r['ea_code']], $vals));
+                    $n['new']++;
+                } elseif (array_map('strval', $vals) !== array_map(fn($c) => (string)$old[$c], array_slice($cols, 1)) || !$old['is_active']) {
+                    $upd->execute(array_merge($vals, [$r['ea_code']]));
+                    $n['upd']++;
+                } else {
+                    $n['same']++;
+                }
+            }
+            if (post('deactivate') === '1') {
+                $off = $pdo->prepare('UPDATE ea_areas SET is_active = 0 WHERE ea_code = ?');
+                foreach ($existing as $code => $old) {
+                    if (!isset($inFile[$code]) && $old['is_active']) {
+                        $off->execute([$code]);
+                        $n['off']++;
+                    }
+                }
+            }
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+        $fileName = $_SESSION[$sessKey]['file'] ?? '';
+        $clear();
+        $msg = 'นำเข้าบัญชี EA แล้ว: เพิ่มใหม่ ' . number_format($n['new']) . ' · ปรับปรุง ' . number_format($n['upd'])
+             . ' · ไม่เปลี่ยนแปลง ' . number_format($n['same']) . ($n['off'] ? ' · ทำเครื่องหมายเลิกใช้ ' . number_format($n['off']) : '');
+        audit_log('ea_import', $msg . ' (ไฟล์ ' . $fileName . ')', EA_MODULE);
+        flash($msg);
+        redirect('eas.php');
+    } elseif ($action === 'cancel') {
+        $clear();
+        redirect('import.php');
+    }
+}
+
+$res = null;
+if (($_GET['step'] ?? '') === 'preview') {
+    $file = $tmpFile($_SESSION[$sessKey]['token'] ?? null);
+    $res = $file && is_file($file) ? json_decode((string)file_get_contents($file), true) : null;
+    $step = $res ? 'preview' : 'upload';
+}
+
+if ($step === 'preview') {
+    $existing = [];
+    foreach ($pdo->query('SELECT * FROM ea_areas') as $r) {
+        $existing[$r['ea_code']] = $r;
+    }
+    $sum = ['new' => 0, 'upd' => 0, 'same' => 0, 'houses' => 0, 'households' => 0, 'population' => 0, 'area1' => 0, 'area2' => 0];
+    $changes = [];
+    $districts = [];
+    $tambons = [];
+    $inFile = [];
+    foreach ($res['rows'] as $r) {
+        $inFile[$r['ea_code']] = true;
+        $sum['houses'] += $r['houses'];
+        $sum['households'] += $r['households'];
+        $sum['population'] += $r['population'];
+        $sum['area' . $r['area_type']]++;
+        $districts[$r['district_code']] = true;
+        $tambons[$r['district_code'] . $r['tambon_code']] = true;
+        $old = $existing[$r['ea_code']] ?? null;
+        if (!$old) {
+            $sum['new']++;
+            continue;
+        }
+        $diff = [];
+        foreach (EA_IMPORT_COLS as $c) {
+            if ((string)$r[$c] !== (string)$old[$c]) {
+                $diff[] = $c;
+            }
+        }
+        if ($diff || !$old['is_active']) {
+            $sum['upd']++;
+            if (count($changes) < 50) {
+                $changes[] = [$r, $old, $diff];
+            }
+        } else {
+            $sum['same']++;
+        }
+    }
+    $missing = array_values(array_filter($existing, fn($o) => !isset($inFile[$o['ea_code']]) && $o['is_active']));
+    $usedMissing = 0;
+    if ($missing) {
+        $usedSet = array_flip($pdo->query('SELECT DISTINCT ea_id FROM ea_project_eas')->fetchAll(PDO::FETCH_COLUMN));
+        $usedMissing = count(array_filter($missing, fn($o) => isset($usedSet[$o['id']])));
+    }
+    $colLabel = ['seq' => 'ลำดับที่', 'region_code' => 'รหัสภาค', 'region_name' => 'ภาค', 'province_code' => 'รหัสจังหวัด', 'province_name' => 'จังหวัด',
+                 'district_code' => 'รหัสอำเภอ', 'district_name' => 'อำเภอ', 'tambon_code' => 'รหัสตำบล', 'tambon_name' => 'ตำบล',
+                 'area_type' => 'เขตการปกครอง', 'ea_no' => 'EA', 'advance_ea' => 'EA เสนอผลล่วงหน้า', 'village_code' => 'รหัสหมู่บ้าน',
+                 'village_name' => 'หมู่บ้าน', 'houses' => 'บ้าน', 'households' => 'ครัวเรือน', 'population' => 'ประชากร', 'note' => 'หมายเหตุ'];
+}
+
+$pageTitle = 'นำเข้าบัญชี EA';
+$active = 'import';
+require __DIR__ . '/header.php';
+?>
+<?php foreach ($errors as $e): ?><div class="alert alert-danger py-2"><i class="bi bi-exclamation-triangle"></i> <?= h($e) ?></div><?php endforeach; ?>
+
+<?php if ($step === 'upload'): ?>
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><strong><i class="bi bi-file-earmark-excel text-success"></i> อัปโหลดไฟล์บัญชีเขตแจงนับ</strong></div>
+      <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+          <?= csrf_field() ?><input type="hidden" name="action" value="preview">
+          <input type="file" name="file" class="form-control mb-3" accept=".xlsx" required>
+          <button class="btn btn-primary"><i class="bi bi-search"></i> อ่านไฟล์และตรวจสอบ</button>
+          <span class="small text-muted ms-2">ยังไม่บันทึกจนกว่าจะกดยืนยัน</span>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header"><strong>รูปแบบไฟล์ที่รองรับ</strong></div>
+      <div class="card-body small">
+        <p class="mb-2">ไฟล์ Excel "บัญชีเขตแจงนับ" (แผ่นงานแรก) หัวตาราง 2 แถว ตามลำดับ:</p>
+        <p class="mb-2">ลำดับที่ · ภาค (รหัส, ชื่อ) · จังหวัด (รหัส, ชื่อ) · อำเภอ/เขต (รหัส, ชื่อ) · ตำบล/แขวง (รหัส, ชื่อ) · เขตการปกครอง ·
+          EA · EA สำหรับเสนอผลล่วงหน้า · หมู่บ้าน/ชุมชน (รหัส, ชื่อ) · ข้อมูลเบื้องต้น (จำนวนบ้าน/อาคาร, ครัวเรือน, ประชากร) · หมายเหตุ</p>
+        <ul class="mb-0">
+          <li>รหัส EA 11 หลัก = จังหวัด (2) + อำเภอ (2) + ตำบล (2) + เขตการปกครอง (1) + EA (4) เช่น <span class="ea-code">40 01 01 1 0001</span></li>
+          <li>เขตการปกครอง: 1 = ในเขตเทศบาล · 2 = นอกเขตเทศบาล</li>
+          <li>นำเข้าซ้ำได้: EA เดิมจะถูกปรับปรุงตามไฟล์ใหม่ (อ้างอิงตามรหัส EA) — ข้อมูล EA ของโครงการไม่ถูกลบ</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+<?php else: ?>
+<div class="row g-3 mb-3" data-reveal>
+  <?php foreach ([
+      ['EA ในไฟล์', count($res['rows']), 'bi-map', 'primary'],
+      ['เพิ่มใหม่', $sum['new'], 'bi-plus-circle', 'success'],
+      ['ปรับปรุง', $sum['upd'], 'bi-pencil-square', 'warning'],
+      ['ไม่เปลี่ยนแปลง', $sum['same'], 'bi-check2-circle', 'secondary'],
+  ] as [$label, $v, $icon, $color]): ?>
+  <div class="col-6 col-md-3 reveal-item">
+    <div class="stat-card"><span class="stat-icon text-bg-<?= $color ?>"><i class="bi <?= $icon ?>"></i></span>
+      <div><div class="stat-num"><?= number_format($v) ?></div><div class="stat-label"><?= $label ?></div></div></div>
+  </div>
+  <?php endforeach; ?>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="row small g-2">
+      <div class="col-md-6">ไฟล์: <strong><?= h($_SESSION[$sessKey]['file'] ?? '') ?></strong></div>
+      <div class="col-md-6"><?= count($districts) ?> อำเภอ · <?= count($tambons) ?> ตำบล ·
+        ในเขตเทศบาล <?= number_format($sum['area1']) ?> EA · นอกเขตเทศบาล <?= number_format($sum['area2']) ?> EA</div>
+      <div class="col-md-6">บ้าน/อาคาร <?= number_format($sum['houses']) ?> · ครัวเรือน <?= number_format($sum['households']) ?> · ประชากร <?= number_format($sum['population']) ?> คน</div>
+      <div class="col-md-6"><?= $res['skipped'] ? 'ข้ามแถวว่าง ' . number_format($res['skipped']) . ' แถว' : '' ?></div>
+    </div>
+  </div>
+</div>
+
+<?php if ($changes): ?>
+<div class="card mb-3">
+  <div class="card-header"><strong>ตัวอย่าง EA ที่จะปรับปรุง</strong> <span class="small text-muted">(แสดงไม่เกิน 50 รายการ)</span></div>
+  <div class="table-responsive" style="max-height:360px">
+    <table class="table table-sm mb-0 ea-table">
+      <thead><tr><th>รหัส EA</th><th>รายการที่เปลี่ยน</th></tr></thead>
+      <tbody>
+      <?php foreach ($changes as [$r, $old, $diff]): ?>
+        <tr><td class="ea-code"><?= h($r['ea_code']) ?></td>
+          <td class="small"><?php if (!$old['is_active']): ?><div>กลับมาใช้งาน (เดิมเลิกใช้)</div><?php endif; ?>
+            <?php foreach (array_diff($diff, ['seq']) as $c): ?><div><span class="text-muted"><?= h($colLabel[$c] ?? $c) ?>:</span>
+              <del class="text-danger"><?= h(mb_strimwidth((string)$old[$c], 0, 80, '…')) ?></del> → <span class="text-success"><?= h(mb_strimwidth((string)$r[$c], 0, 80, '…')) ?></span></div><?php endforeach; ?></td></tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table>
+  </div>
+</div>
+<?php endif; ?>
+
+<form method="post" class="card">
+  <?= csrf_field() ?>
+  <div class="card-body">
+    <label class="form-label">ที่มาของบัญชี EA</label>
+    <input name="source" class="form-control mb-3" maxlength="255" value="<?= h($res['source']) ?>" placeholder="เช่น โครงการสำมะโนประชากรและเคหะ พ.ศ.2568">
+    <?php if ($missing): ?>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" name="deactivate" value="1" id="deact">
+      <label class="form-check-label" for="deact">ทำเครื่องหมาย "เลิกใช้" EA ที่มีในระบบแต่ไม่อยู่ในไฟล์นี้ (<?= number_format(count($missing)) ?> EA<?= $usedMissing ? ' — ในจำนวนนี้มี ' . number_format($usedMissing) . ' EA ที่โครงการใช้อยู่ ข้อมูลโครงการยังคงอยู่' : '' ?>)</label>
+    </div>
+    <?php endif; ?>
+  </div>
+  <div class="card-footer d-flex gap-2">
+    <button name="action" value="import" class="btn btn-success"><i class="bi bi-check-lg"></i> ยืนยันนำเข้า <?= number_format(count($res['rows'])) ?> EA</button>
+    <button name="action" value="cancel" class="btn btn-light" formnovalidate>ยกเลิก</button>
+  </div>
+</form>
+<?php endif; ?>
+<?php require __DIR__ . '/footer.php'; ?>
