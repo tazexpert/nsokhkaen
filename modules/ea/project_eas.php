@@ -70,7 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         audit_log('ea_project_status', 'สถานะ EA ' . $row['ea_code'] . ' โครงการ ' . $project['code'] . ': ' . EA_STATUSES[$s][0], EA_MODULE);
         json_out(['ok' => true, 'done_at' => $s === 'done' ? thai_date(date('Y-m-d')) : '']);
     }
-    ea_require('admin');                           // กำหนด EA / ผู้รับผิดชอบ / นำออก = ผู้ดูแลระบบบริหารโครงการ
+    // ปรับสถานะหลายรายการ: เจ้าหน้าที่โครงการทำได้กับ EA ของตน · อื่น ๆ (กำหนด EA / ผู้รับผิดชอบ / นำออก) = ผู้ดูแลระบบบริหารโครงการ
+    ea_require($action === 'bulk' && post('op') === 'status' ? 'editor' : 'admin');
     $staff = ea_staff();
     $userOrNull = fn(string $v) => ctype_digit($v) && isset($staff[(int)$v]) ? (int)$v : null;
 
@@ -155,7 +156,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $ids = array_values(array_filter(array_map('intval', (array)($_POST['ids'] ?? []))));
             if ($ids) {   // ต้องเป็นรายการของโครงการนี้เท่านั้น
-                $st = $pdo->prepare('SELECT id FROM ea_project_eas WHERE project_id = ? AND id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')');
+                $st = $pdo->prepare('SELECT id FROM ea_project_eas WHERE project_id = ? AND id IN (' . implode(',', array_fill(0, count($ids), '?')) . ')'
+                                    . ($mine ? ' AND assigned_user_id = ' . (int)$mine : ''));
                 $st->execute(array_merge([$pid], $ids));
                 $ids = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
             }
@@ -375,13 +377,13 @@ $roundName = fn(string $rl) => ($rl === '' ? 'ไม่ระบุรอบ' : 
     <div class="table-responsive">
       <table class="table table-hover mb-0 ea-table">
         <thead><tr>
-          <?php if ($canEdit): ?><th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".pe-check" title="เลือกทั้งหน้า"></th><?php endif; ?>
+          <?php if ($canStatus): ?><th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".pe-check" title="เลือกทั้งหน้า"></th><?php endif; ?>
           <th>รหัส EA</th><th>PSU</th><?php if ($round === null && count($rounds) > 1): ?><th>รอบ/งวด</th><?php endif; ?><th>พื้นที่</th><th>เขต</th>
           <th class="ea-num">ครัวเรือน</th><th class="ea-num">ประชากร</th><th>ผู้รับผิดชอบ</th><th>สถานะ</th><th>หมายเหตุ</th></tr></thead>
         <tbody>
         <?php foreach ($rows as $r): ?>
           <tr>
-            <?php if ($canEdit): ?><td><input type="checkbox" class="form-check-input pe-check" name="ids[]" value="<?= (int)$r['pe_id'] ?>"></td><?php endif; ?>
+            <?php if ($canStatus): ?><td><input type="checkbox" class="form-check-input pe-check" name="ids[]" value="<?= (int)$r['pe_id'] ?>"></td><?php endif; ?>
             <td><a href="ea_view.php?id=<?= (int)$r['id'] ?>" class="ea-code text-decoration-none"><?= h($r['ea_code']) ?></a></td>
             <td class="ea-code small"><?= h($r['psu_no'] ?: '-') ?></td>
             <?php if ($round === null && count($rounds) > 1): ?><td class="small text-nowrap"><?= h($r['round_label'] ?: '-') ?><?= $r['enum_type'] !== '' ? '<div class="text-muted">' . h($r['enum_type']) . '</div>' : '' ?></td><?php endif; ?>
@@ -412,7 +414,7 @@ $roundName = fn(string $rl) => ($rl === '' ? 'ไม่ระบุรอบ' : 
         </tbody>
       </table>
     </div>
-    <?php if ($canEdit && $rows): ?>
+    <?php if ($canStatus && $rows): ?>
     <div class="ea-bulk p-2">
       <div class="row g-2 align-items-center small">
         <div class="col-auto text-muted">เลือก <strong data-check-count>0</strong> EA</div>
@@ -423,17 +425,23 @@ $roundName = fn(string $rl) => ($rl === '' ? 'ไม่ระบุรอบ' : 
           </select>
         </div>
         <div class="col-auto">
+          <?php if ($canEdit): ?>
           <select name="op" class="form-select form-select-sm" id="bulkOp">
             <option value="assign">กำหนดผู้รับผิดชอบ</option>
             <option value="status">ปรับสถานะ</option>
             <option value="note">บันทึกหมายเหตุ</option>
             <option value="delete">นำออกจากโครงการ</option>
           </select>
+          <?php else: ?>
+          <input type="hidden" name="op" value="status"><span class="text-muted">ปรับสถานะเป็น</span>
+          <?php endif; ?>
         </div>
+        <?php if ($canEdit): ?>
         <div class="col-auto" data-op="assign"><select name="assign" class="form-select form-select-sm"><option value="">— ไม่กำหนด —</option><?= ea_staff_options() ?></select></div>
-        <div class="col-auto d-none" data-op="status"><select name="status" class="form-select form-select-sm">
+        <?php endif; ?>
+        <div class="col-auto<?= $canEdit ? ' d-none' : '' ?>" data-op="status"><select name="status" class="form-select form-select-sm">
           <?php foreach (EA_STATUSES as $k => [$label]): ?><option value="<?= $k ?>"><?= h($label) ?></option><?php endforeach; ?></select></div>
-        <div class="col-auto d-none" data-op="note"><input name="note" class="form-control form-control-sm" maxlength="255" placeholder="หมายเหตุ (ว่าง = ล้าง)"></div>
+        <?php if ($canEdit): ?><div class="col-auto d-none" data-op="note"><input name="note" class="form-control form-control-sm" maxlength="255" placeholder="หมายเหตุ (ว่าง = ล้าง)"></div><?php endif; ?>
         <div class="col-auto"><button class="btn btn-sm btn-primary" id="bulkBtn">ดำเนินการ</button></div>
         <div class="col-auto ms-auto text-muted">หน้า <?= $page ?> / <?= $pages ?></div>
         <div class="col-auto"><?= ea_pager($n, $page, $per, $query) ?></div>
@@ -587,6 +595,22 @@ $roundName = fn(string $rl) => ($rl === '' ? 'ไม่ระบุรอบ' : 
         sel.classList.remove('is-saving');
       }
     });
+  });
+})();
+</script>
+<?php endif; ?>
+<?php if ($canStatus && !$canEdit): ?>
+<script>
+(() => {
+  // เจ้าหน้าที่โครงการ: ปรับสถานะหลายรายการ — ต้องเลือก EA ก่อน · ทุกรายการตามตัวกรองให้ยืนยัน
+  const form = document.getElementById('bulkForm');
+  if (!form) { return; }
+  form.addEventListener('submit', e => {
+    const scope = document.getElementById('bulkScope');
+    const n = scope.value === 'filtered' ? <?= (int)$n ?> : document.querySelectorAll('.pe-check:checked').length;
+    if (!n) { e.preventDefault(); alert('กรุณาเลือก EA'); return; }
+    const st = form.querySelector('select[name=status]');
+    if (!confirm('ปรับสถานะเป็น "' + st.options[st.selectedIndex].text + '" ' + n.toLocaleString() + ' EA?')) { e.preventDefault(); }
   });
 })();
 </script>
