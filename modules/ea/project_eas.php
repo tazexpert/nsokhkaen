@@ -54,6 +54,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $staff = ea_staff();
     $userOrNull = fn(string $v) => ctype_digit($v) && isset($staff[(int)$v]) ? (int)$v : null;
 
+    // เลือกผู้รับผิดชอบจากตาราง (ช่องเลือกรายแถว บันทึกทันที — AJAX)
+    if ($action === 'set_assignee') {
+        $peId = int_param('pe_id');
+        $uid = $userOrNull(post('user'));
+        $st = $pdo->prepare('SELECT pe.assigned_user_id, a.ea_code FROM ea_project_eas pe JOIN ea_areas a ON a.id = pe.ea_id WHERE pe.id = ? AND pe.project_id = ?');
+        $st->execute([$peId, $pid]);
+        $row = $st->fetch();
+        if (!$row) {
+            json_out(['ok' => false, 'error' => 'ไม่พบ EA ในโครงการนี้'], 404);
+        }
+        if (($row['assigned_user_id'] === null ? null : (int)$row['assigned_user_id']) !== $uid) {
+            $pdo->prepare('UPDATE ea_project_eas SET assigned_user_id = ?, assigned_at = IF(? IS NULL, NULL, NOW()), assigned_by = ? WHERE id = ?')
+                ->execute([$uid, $uid, (int)$me['id'], $peId]);
+            audit_log('ea_project_assign', 'กำหนดผู้รับผิดชอบ EA ' . $row['ea_code'] . ' โครงการ ' . $project['code'] . ': '
+                . ($uid ? $staff[$uid]['full_name'] : 'ไม่กำหนด'), EA_MODULE);
+        }
+        json_out(['ok' => true]);
+    }
+
     if ($action === 'add') {
         $rl = mb_substr(trim(post('round_label')), 0, 50);
         $assign = $userOrNull(post('assign'));
@@ -330,7 +349,14 @@ $roundName = fn(string $rl) => ($rl === '' ? 'ไม่ระบุรอบ' : 
             <td class="small text-nowrap"><?= h(EA_AREA_TYPES[(int)$r['area_type']] ?? '') ?></td>
             <td class="ea-num"><?= number_format((int)$r['households']) ?></td>
             <td class="ea-num"><?= number_format((int)$r['population']) ?></td>
+            <?php if ($canEdit): $au = $r['assigned_user_id'] ? (int)$r['assigned_user_id'] : null; ?>
+            <td><select class="form-select form-select-sm pe-assign" data-pe="<?= (int)$r['pe_id'] ?>" aria-label="ผู้รับผิดชอบ EA <?= h($r['ea_code']) ?>">
+              <option value="">— ไม่กำหนด —</option><?= ea_staff_options($au) ?>
+              <?php if ($au && !isset(ea_staff()[$au])): ?><option value="<?= $au ?>" selected disabled><?= h($names[$au] ?? '') ?> (ปิดบัญชีแล้ว)</option><?php endif; ?>
+            </select></td>
+            <?php else: ?>
             <td><?= $r['assigned_user_id'] ? h($names[(int)$r['assigned_user_id']] ?? '') : '<span class="text-muted">-</span>' ?></td>
+            <?php endif; ?>
             <td class="text-nowrap"><?= ea_status_badge($r['status']) ?><?= $r['done_at'] ? '<div class="small text-muted">' . thai_date(substr($r['done_at'], 0, 10)) . '</div>' : '' ?></td>
             <td class="note"><?= h($r['pe_note']) ?></td>
           </tr>
@@ -411,8 +437,40 @@ $roundName = fn(string $rl) => ($rl === '' ? 'ไม่ระบุรอบ' : 
     </form>
   </div>
 </div>
+<style>
+  .pe-assign { min-width: 190px; }
+  .pe-assign.is-saving { opacity: .6; }
+  .pe-assign.is-saved { border-color: #22c55e; box-shadow: 0 0 0 .2rem rgba(34, 197, 94, .2); transition: box-shadow .3s; }
+</style>
 <script>
 (() => {
+  // เลือกผู้รับผิดชอบจากตาราง: บันทึกทันทีเมื่อเปลี่ยน (ไม่บันทึกได้ = คืนค่าเดิม)
+  const csrf = document.querySelector('#bulkForm input[name="csrf"]');
+  document.querySelectorAll('.pe-assign').forEach(sel => {
+    let prev = sel.value;
+    sel.addEventListener('change', async () => {
+      sel.classList.add('is-saving');
+      sel.classList.remove('is-saved');
+      const fd = new FormData();
+      fd.set('csrf', csrf ? csrf.value : '');
+      fd.set('action', 'set_assignee');
+      fd.set('pe_id', sel.dataset.pe);
+      fd.set('user', sel.value);
+      try {
+        const r = await fetch(location.href, { method: 'POST', body: fd, credentials: 'same-origin', headers: { Accept: 'application/json' } });
+        const j = await r.json();
+        if (!j.ok) { throw new Error(j.error || 'บันทึกไม่สำเร็จ'); }
+        prev = sel.value;
+        sel.classList.add('is-saved');
+        setTimeout(() => sel.classList.remove('is-saved'), 1500);
+      } catch (e) {
+        alert('บันทึกผู้รับผิดชอบไม่สำเร็จ: ' + e.message);
+        sel.value = prev;
+      } finally {
+        sel.classList.remove('is-saving');
+      }
+    });
+  });
   // ตำบลของแต่ละอำเภอ (สำหรับเพิ่ม EA ตามพื้นที่)
   const TAMBONS = <?php $tmap = [];
     foreach (ea_districts() as $c => $nm) {
