@@ -187,7 +187,11 @@ require __DIR__ . '/header.php';
                 <td class="text-center small"><?= !empty($usage[$p['id']]) ? number_format((int)$usage[$p['id']]) : '-' ?></td>
               <?php endif; ?>
                 <td class="text-end text-nowrap">
+                  <?php if (!$es && $us): ?>
+                  <a href="project_units.php?id=<?= (int)$p['id'] ?>" class="btn btn-sm btn-outline-success" title="สถานประกอบการ" aria-label="สถานประกอบการ"><i class="bi bi-shop"></i></a>
+                  <?php else: ?>
                   <a href="project_eas.php?id=<?= (int)$p['id'] ?>" class="btn btn-sm btn-outline-success" title="EA ของโครงการ" aria-label="EA ของโครงการ"><i class="bi bi-map"></i></a>
+                  <?php endif; ?>
               <?php if ($canManage): ?>
                   <a href="<?= h('projects.php?edit=' . (int)$p['id']) ?>" class="btn btn-sm btn-outline-primary" title="แก้ไข" aria-label="แก้ไข"><i class="bi bi-pencil"></i></a>
                   <?php if (empty($usage[$p['id']]) && empty($eaUsage[$p['id']])): ?>

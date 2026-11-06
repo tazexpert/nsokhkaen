@@ -122,7 +122,11 @@ $qs = fn(array $over = []) => http_build_query(array_filter($over + $query, fn($
 
 $pageTitle = 'สถานประกอบการ ' . $project['code'];
 $active = 'projects';
-$pageActions = '<a href="project_eas.php?id=' . $pid . '" class="btn btn-light"><i class="bi bi-map"></i> EA ของโครงการ</a>'
+$st = $pdo->prepare('SELECT COUNT(*) FROM ea_project_eas WHERE project_id = ?');
+$st->execute([$pid]);
+$eaCount = (int)$st->fetchColumn();
+$pageActions = '<a href="projects.php" class="btn btn-light"><i class="bi bi-arrow-left"></i> ทุกโครงการ</a>'
+    . ' <a href="project_eas.php?id=' . $pid . '&amp;ea=1" class="btn btn-outline-secondary"><i class="bi bi-map"></i> ' . ($eaCount ? 'EA ของโครงการ (' . number_format($eaCount) . ')' : 'เพิ่ม EA ให้โครงการ') . '</a>'
     . ($rows ? ' <a href="?' . h($qs(['export' => 'csv'])) . '" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> Export CSV</a>' : '')
     . ($canEdit ? ' <a href="project_import.php" class="btn btn-outline-primary"><i class="bi bi-file-earmark-arrow-up"></i> นำเข้าไฟล์</a>' : '');
 require __DIR__ . '/header.php';

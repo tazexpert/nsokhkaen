@@ -246,6 +246,12 @@ $active = 'projects';
 $st = $pdo->prepare('SELECT COUNT(*) FROM ea_project_units WHERE project_id = ?');
 $st->execute([$pid]);
 $unitCount = (int)$st->fetchColumn();
+// โครงการแบบสถานประกอบการ (ยังไม่มี EA) → แสดงตารางสถานประกอบการ · ?ea=1 = เปิดหน้า EA (เช่น จะเพิ่ม EA)
+$st = $pdo->prepare('SELECT COUNT(*) FROM ea_project_eas WHERE project_id = ?');
+$st->execute([$pid]);
+if ($unitCount && !(int)$st->fetchColumn() && !isset($_GET['ea']) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    redirect('project_units.php?id=' . $pid);
+}
 $pageActions = '<a href="projects.php" class="btn btn-light"><i class="bi bi-arrow-left"></i> ทุกโครงการ</a>'
     . ($unitCount ? ' <a href="project_units.php?id=' . $pid . '" class="btn btn-outline-primary"><i class="bi bi-shop"></i> สถานประกอบการ (' . number_format($unitCount) . ')</a>' : '')
     . ' <a href="?' . h(http_build_query($keep($query) + ['export' => 'csv'])) . '" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> Export CSV</a>'
