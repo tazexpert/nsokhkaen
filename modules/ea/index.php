@@ -71,18 +71,18 @@ require __DIR__ . '/header.php';
   </div>
   <div class="col-xl-4 reveal-item">
     <div class="card h-100">
-      <div class="card-header"><strong>ประชากรตามอำเภอ</strong></div>
+      <div class="card-header"><strong>ครัวเรือนตามอำเภอ</strong></div>
       <div class="card-body ea-pop" style="max-height:380px;overflow:auto">
-        <?php $pmax = max(1, ...array_map(fn($r) => (int)$r['population'], $byDistrict ?: [['population' => 1]]));
-              $byPop = $byDistrict; usort($byPop, fn($a, $b) => $b['population'] <=> $a['population']); ?>
-        <?php foreach ($byPop as $r): ?>
+        <?php $hmax = max(1, ...array_map(fn($r) => (int)$r['households'], $byDistrict ?: [['households' => 1]]));
+              $byHh = $byDistrict; usort($byHh, fn($a, $b) => $b['households'] <=> $a['households']); ?>
+        <?php foreach ($byHh as $r): ?>
           <div class="bar-row">
             <span class="bar-label"><?= h($r['name']) ?></span>
-            <span class="bar-track"><span class="bar-fill" style="width:<?= round($r['population'] / $pmax * 100, 1) ?>%"></span></span>
-            <span class="bar-val text-nowrap"><?= number_format((int)$r['population']) ?></span>
+            <span class="bar-track"><span class="bar-fill" style="width:<?= round($r['households'] / $hmax * 100, 1) ?>%"></span></span>
+            <span class="bar-val text-nowrap"><?= number_format((int)$r['households']) ?></span>
           </div>
         <?php endforeach; ?>
-        <?php if (!$byPop): ?><p class="text-muted mb-0">ยังไม่มีข้อมูล</p><?php endif; ?>
+        <?php if (!$byHh): ?><p class="text-muted mb-0">ยังไม่มีข้อมูล</p><?php endif; ?>
       </div>
     </div>
   </div>
