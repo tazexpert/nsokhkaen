@@ -90,12 +90,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ids = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
             $unknown = [];
         }
-        $ins = $pdo->prepare('INSERT IGNORE INTO ea_project_eas (project_id, ea_id, round_label, enum_type, enum_month, enum_year, fiscal_year, assigned_user_id, created_by)
-                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $ins = $pdo->prepare('INSERT IGNORE INTO ea_project_eas (project_id, ea_id, round_label, enum_type, enum_month, enum_year, fiscal_year, assigned_user_id, assigned_at, assigned_by, created_by)
+                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, IF(? IS NULL, NULL, NOW()), ?, ?)');
         $added = 0;
         $pdo->beginTransaction();
         foreach ($ids as $eid) {
-            $ins->execute([$pid, $eid, $rl, $em ? 'Month' : '', $em, $ey, $efy, $assign, (int)$me['id']]);
+            $ins->execute([$pid, $eid, $rl, $em ? 'Month' : '', $em, $ey, $efy, $assign, $assign, $assign ? (int)$me['id'] : null, (int)$me['id']]);
             $added += $ins->rowCount();
         }
         $pdo->commit();
@@ -128,7 +128,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ph = implode(',', array_fill(0, count($ids), '?'));
         $op = post('op');
         if ($op === 'assign') {
-            $pdo->prepare("UPDATE ea_project_eas SET assigned_user_id = ? WHERE id IN ($ph)")->execute(array_merge([$userOrNull(post('assign'))], $ids));
+            $uid = $userOrNull(post('assign'));
+            // เวลามอบหมายเปลี่ยนเฉพาะรายการที่ผู้รับผิดชอบเปลี่ยน (ใช้แจ้งเตือนผู้ได้รับมอบหมาย)
+            $pdo->prepare("UPDATE ea_project_eas SET assigned_at = IF(assigned_user_id <=> ?, assigned_at, IF(? IS NULL, NULL, NOW())),
+                           assigned_by = IF(assigned_user_id <=> ?, assigned_by, ?), assigned_user_id = ? WHERE id IN ($ph)")
+                ->execute(array_merge([$uid, $uid, $uid, (int)$me['id'], $uid], $ids));
             $msg = 'กำหนดผู้รับผิดชอบ';
         } elseif ($op === 'status' && isset(EA_STATUSES[post('status')])) {
             $s = post('status');
@@ -222,6 +226,7 @@ $pageTitle = 'EA โครงการ ' . $project['code'];
 $active = 'projects';
 $pageActions = '<a href="projects.php" class="btn btn-light"><i class="bi bi-arrow-left"></i> ทุกโครงการ</a>'
     . ' <a href="?' . h(http_build_query($keep($query) + ['export' => 'csv'])) . '" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> Export CSV</a>'
+    . ($canEdit ? ' <a href="assign.php?project=' . $pid . '" class="btn btn-outline-primary"><i class="bi bi-shuffle"></i> มอบหมายผู้ปฏิบัติงาน</a>' : '')
     . ($canEdit ? ' <a href="project_import.php" class="btn btn-outline-primary"><i class="bi bi-file-earmark-arrow-up"></i> นำเข้าไฟล์</a>' : '')
     . ($canEdit ? ' <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal"><i class="bi bi-plus-lg"></i> เพิ่ม EA</button>' : '');
 require __DIR__ . '/header.php';

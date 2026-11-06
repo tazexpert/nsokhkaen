@@ -263,6 +263,7 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 | `20261117_calendar_show_as.sql` | ปฏิทิน: เลือกตำแหน่งที่แสดงในตารางของผู้มีหลายตำแหน่ง (`cal_event_users.show_as`) |
 | `20261118_ea.sql` | ระบบบริหารจัดการ EA: บัญชีเขตแจงนับ (`ea_areas`) และ EA ที่โครงการใช้สำรวจ (`ea_project_eas`) — นำเข้าบัญชี EA ที่เมนู EA → นำเข้าบัญชี EA |
 | `20261119_ea_project_import.sql` | ระบบ EA: เลข PSU ประเภทการแจงนับ (Q1–Q4/Month) เดือน/ปีที่แจงนับ ปีงบประมาณ และพิกัด ของ EA โครงการ (นำเข้าจากไฟล์ EA_Report.csv) |
+| `20261120_ea_assign.sql` | ระบบ EA: เวลา/ผู้มอบหมายผู้ปฏิบัติงาน (`assigned_at`, `assigned_by`) — ใช้กับหน้าสุ่มผู้ปฏิบัติงานและการแจ้งเตือน |
 
 > ระบบเบิกวัสดุเดิมยังเปิดใช้อยู่? ก่อนเปิดใช้ระบบใหม่ให้ "ดึงข้อมูลรอบสุดท้าย" ตามหัวข้อด้านบน (`--resync-inventory`)
 
@@ -290,6 +291,7 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261117_calendar_show_as.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261118_ea.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261119_ea_project_import.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261120_ea_assign.sql
 ```
 
 หลังอัปเดต:

@@ -19,6 +19,7 @@ return [
         ['id' => 'dashboard', 'label' => 'ภาพรวม',           'href' => 'index.php',    'icon' => 'bi-speedometer2', 'role' => 'viewer'],
         ['id' => 'eas',       'label' => 'บัญชี EA',          'href' => 'eas.php',      'icon' => 'bi-map',          'role' => 'viewer'],
         ['id' => 'projects',  'label' => 'EA ของโครงการ',     'href' => 'projects.php', 'icon' => 'bi-diagram-3',    'role' => 'viewer'],
+        ['id' => 'assign',    'label' => 'มอบหมายผู้ปฏิบัติงาน', 'href' => 'assign.php',  'icon' => 'bi-shuffle',      'role' => 'editor'],
         ['id' => 'pimport',   'label' => 'นำเข้า EA โครงการ',  'href' => 'project_import.php', 'icon' => 'bi-filetype-csv', 'role' => 'editor'],
         ['id' => 'import',    'label' => 'นำเข้าบัญชี EA',     'href' => 'import.php',   'icon' => 'bi-file-earmark-arrow-up', 'role' => 'admin'],
     ],

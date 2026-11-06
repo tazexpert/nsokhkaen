@@ -745,6 +745,8 @@ CREATE TABLE IF NOT EXISTS ea_project_eas (
   lat            DECIMAL(10,7) NULL,
   lng            DECIMAL(10,7) NULL,
   assigned_user_id INT UNSIGNED NULL,                   -- ผู้รับผิดชอบ EA
+  assigned_at    DATETIME     NULL,                     -- เวลาที่มอบหมายผู้รับผิดชอบล่าสุด
+  assigned_by    INT UNSIGNED NULL,
   status         ENUM('pending', 'in_progress', 'done') NOT NULL DEFAULT 'pending',
   note           VARCHAR(255) NOT NULL DEFAULT '',
   done_at        DATETIME     NULL,
