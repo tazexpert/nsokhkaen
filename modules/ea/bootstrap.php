@@ -606,14 +606,16 @@ function ea_project_key(string $code): string
 }
 
 /** อ่านแถวจากไฟล์ CSV หรือ xlsx → array ของ array (ค่าเป็นข้อความ) */
-function ea_read_table(string $path, string $ext): array
+function ea_read_table(string $path, string $ext, ?string &$sheetName = null): array
 {
+    $sheetName = '';
     if ($ext === 'xlsx') {
         require_once APP_ROOT . '/libs/simplexlsx/SimpleXLSX.php';
         $x = \Shuchkin\SimpleXLSX::parse($path);
         if (!$x) {
             throw new RuntimeException('อ่านไฟล์ Excel ไม่ได้: ' . \Shuchkin\SimpleXLSX::parseError());
         }
+        $sheetName = (string)$x->sheetName(0);
         return array_map(fn($r) => array_map('strval', array_values($r)), $x->rows(0));
     }
     $text = text_to_utf8((string)file_get_contents($path));
@@ -637,14 +639,21 @@ function ea_read_table(string $path, string $ext): array
  */
 function ea_parse_project_file(string $path, string $ext, string $province = '40', string $region = '6'): array
 {
-    $res = ['rows' => [], 'errors' => [], 'projects' => [], 'skipped' => 0];
+    $res = ['format' => 'report', 'rows' => [], 'errors' => [], 'projects' => [], 'skipped' => 0];
     try {
-        $rows = ea_read_table($path, $ext);
+        $rows = ea_read_table($path, $ext, $sheetName);
     } catch (RuntimeException $e) {
         $res['errors'][] = $e->getMessage();
         return $res;
     }
     $norm = fn($v) => mb_strtolower(preg_replace('/\s+/u', '', (string)$v));
+    // แบบฟอร์ม "บัญชีมอบหมายการปฏิบัติงาน" (มีคอลัมน์ PSU-No และ ชื่อผู้ตรวจงาน/ปฏิบัติงาน)
+    foreach (array_slice($rows, 0, 15, true) as $i => $r) {
+        $cells = array_map($norm, $r);
+        if (in_array('psu-no', $cells, true) && array_filter($cells, fn($c) => str_contains($c, 'ปฏิบัติงาน'))) {
+            return ea_parse_assign_sheet($rows, $i, (string)$sheetName, $province, $region);
+        }
+    }
     // แถวหัวตาราง: มีคอลัมน์ ea และ project
     $head = null;
     foreach (array_slice($rows, 0, 10, true) as $i => $r) {
@@ -772,3 +781,178 @@ function ea_report_row(array $r, string $projectCode): array
 
 /** ลำดับรอบ/งวด: ตามปี-เดือนที่แจงนับ แล้วตามชื่อรอบ */
 const EA_ROUND_ORDER = 'pe.enum_year IS NULL, pe.enum_year, pe.enum_month IS NULL, pe.enum_month, pe.round_label';
+
+/* ------------------------------------------------------------------------
+ * แบบฟอร์ม "บัญชีมอบหมายการปฏิบัติงาน" (Excel เดิมของสำนักงาน) — 1 แผ่นงาน = 1 โครงการ 1 เดือน
+ *   แถวหัวเรื่อง: บัญชีมอบหมายการปฏิบัติงานโครงการ... พ.ศ. xxxx · ประจำเดือน ... พ.ศ. xxxx
+ *   หัวตาราง: ที่ | ชื่อผู้ตรวจงาน/ปฏิบัติงาน | PSU-No | อำเภอ (รหัส ชื่อ) | ตำบล (รหัส ชื่อ) | EA | BLK/หมู่ที่/ชื่อหมู่บ้าน (รหัส ชื่อ) | ยานพาหนะ
+ *   แถวที่ไม่มีชื่อ = EA ของผู้ปฏิบัติงานคนก่อนหน้า · นำเข้าเฉพาะแถวที่มี EA (ข้ามผู้ตรวจงาน แถวรวม แถวว่าง)
+ * โครงการ = ชื่อแผ่นงาน (เช่น "สรง.") หรือชื่อโครงการในหัวเรื่อง · รอบ/งวด = เดือน + ปี
+ * ไฟล์ไม่มีเขตการปกครอง — กำหนดภายหลังด้วย ea_resolve_area_rows()
+ * ------------------------------------------------------------------------ */
+function ea_thai_digits(string $s): string
+{
+    return strtr($s, ['๐' => '0', '๑' => '1', '๒' => '2', '๓' => '3', '๔' => '4', '๕' => '5', '๖' => '6', '๗' => '7', '๘' => '8', '๙' => '9']);
+}
+
+/** ชื่อบุคคลสำหรับจับคู่ (ตัดช่องว่างซ้ำ) */
+function ea_norm_name(string $n): string
+{
+    return trim(preg_replace('/\s+/u', ' ', $n));
+}
+
+function ea_parse_assign_sheet(array $rows, int $head, string $sheet, string $province, string $region): array
+{
+    $res = ['format' => 'assign', 'rows' => [], 'errors' => [], 'projects' => [], 'project_titles' => [], 'people' => [], 'skipped' => 0, 'round' => ''];
+    $norm = fn($v) => mb_strtolower(preg_replace('/\s+/u', '', (string)$v));
+    $title = '';
+    $month = $year = null;
+    foreach (array_slice($rows, 0, $head) as $r) {
+        foreach ($r as $v) {
+            $v = ea_thai_digits(trim(preg_replace('/\s+/u', ' ', (string)$v)));
+            if ($v === '') {
+                continue;
+            }
+            if (preg_match('/ประจำเดือน\s*(\S+)\s*(?:พ\.ศ\.)?\s*(\d{4})/u', $v, $m)) {
+                $month = ea_month_num($m[1]);
+                $year = ea_year($m[2]);
+            } elseif (str_contains($v, 'บัญชีมอบหมาย')) {
+                $title = $v;
+                if (!$year && preg_match('/พ\.ศ\.\s*(\d{4})/u', $v, $m)) {
+                    $year = ea_year($m[1]);           // ไม่มีบรรทัดประจำเดือน = ใช้ปีในหัวเรื่อง
+                }
+            }
+        }
+    }
+    $projName = trim(preg_replace(['/^บัญชีมอบหมายการปฏิบัติงาน\s*/u', '/\s*พ\.ศ\..*$/u'], '', $title));
+    $raw = trim($sheet) !== '' && !preg_match('/^sheet\d*$/i', trim($sheet)) ? trim($sheet) : $projName;
+    $pk = ea_project_key($raw);
+    if ($pk === '') {
+        $res['errors'][] = 'ไม่พบชื่อโครงการ (ชื่อแผ่นงาน หรือหัวเรื่อง "บัญชีมอบหมายการปฏิบัติงานโครงการ...")';
+        return $res;
+    }
+    $res['projects'][$pk] = $raw;
+    $res['project_titles'][$pk] = $projName;
+    $label = ea_round_label($month, $year);
+    $res['round'] = $label;
+    // คอลัมน์จากหัวตาราง (รหัสอยู่คอลัมน์เดียวกับหัว ชื่ออยู่ถัดไป)
+    $col = [];
+    foreach ($rows[$head] as $i => $c) {
+        $c = $norm($c);
+        $k = match (true) {
+            str_contains($c, 'ชื่อผู้') || str_contains($c, 'ปฏิบัติงาน') => 'name',
+            $c === 'psu-no' || $c === 'psu' => 'psu',
+            str_contains($c, 'อำเภอ') => 'district',
+            str_contains($c, 'ตำบล') => 'tambon',
+            $c === 'ea' => 'ea',
+            str_contains($c, 'หมู่') || str_contains($c, 'blk') => 'village',
+            default => null,
+        };
+        if ($k !== null && !isset($col[$k])) {
+            $col[$k] = $i;
+        }
+    }
+    foreach (['name' => 'ชื่อผู้ตรวจงาน/ปฏิบัติงาน', 'district' => 'อำเภอ', 'tambon' => 'ตำบล', 'ea' => 'EA'] as $k => $l) {
+        if (!isset($col[$k])) {
+            $res['errors'][] = 'ไม่พบคอลัมน์ "' . $l . '" ในแบบฟอร์มบัญชีมอบหมาย';
+        }
+    }
+    if ($res['errors']) {
+        return $res;
+    }
+    $get = fn(array $r, int $i) => ea_thai_digits(trim(preg_replace('/\s+/u', ' ', (string)($r[$i] ?? ''))));
+    $code = function (string $v, int $len) {
+        if ($v === '' || !preg_match('/^\d+(\.0+)?$/', $v)) {
+            return null;
+        }
+        $v = (string)(int)$v;
+        return strlen($v) <= $len ? str_pad($v, $len, '0', STR_PAD_LEFT) : null;
+    };
+    $person = '';
+    $seen = [];
+    foreach (array_slice($rows, $head + 1, null, true) as $i => $r) {
+        $line = $i + 1;
+        $name = ea_norm_name($get($r, $col['name']));
+        if ($name !== '') {
+            $person = $name;
+        }
+        $rawEa = $get($r, $col['ea']);
+        if ($rawEa === '') {
+            $res['skipped']++;                         // ผู้ตรวจงาน / แถวรวม / แถวว่าง
+            continue;
+        }
+        $d = $code($get($r, $col['district']), 2);
+        $t = $code($get($r, $col['tambon']), 2);
+        $e = $code($rawEa, 4);
+        if (!$d || !$t || !$e) {
+            if (count($res['errors']) < 30) {
+                $res['errors'][] = 'แถวที่ ' . $line . ': รหัสอำเภอ/ตำบล (2 หลัก) หรือ EA (4 หลัก) ไม่ถูกต้อง';
+            }
+            continue;
+        }
+        $key = $d . $t . $e;
+        if (isset($seen[$key])) {
+            if (count($res['errors']) < 30) {
+                $res['errors'][] = 'แถวที่ ' . $line . ': EA อำเภอ ' . $d . ' ตำบล ' . $t . ' EA ' . $e . ' ซ้ำกับแถวที่ ' . $seen[$key];
+            }
+            continue;
+        }
+        $seen[$key] = $line;
+        $vcRaw = isset($col['village']) ? $get($r, $col['village']) : '';
+        $res['rows'][] = [
+            'partial' => true, 'project_key' => $pk, 'round_label' => $label,
+            'psu_no' => mb_substr($get($r, $col['psu'] ?? -1), 0, 10),
+            'enum_type' => null, 'enum_month' => $month, 'enum_year' => $year,
+            // ปีงบประมาณ: คงค่าเดิมของ EA ที่มีอยู่ · EA ใหม่ใช้ fiscal_year_new (ต.ค.–ธ.ค. = ปีถัดไป)
+            'fiscal_year' => null, 'fiscal_year_new' => $month && $year ? ($month >= 10 ? $year + 1 : $year) : null, 'lat' => null, 'lng' => null,
+            'region_code' => $region, 'province_code' => $province,
+            'district_code' => $d, 'district_name' => mb_substr($get($r, $col['district'] + 1), 0, 100),
+            'tambon_code' => $t, 'tambon_name' => mb_substr($get($r, $col['tambon'] + 1), 0, 100),
+            'area_type' => null, 'ea_no' => $e,
+            'village_code' => $vcRaw === '' ? '' : ($code($vcRaw, 2) ?? mb_substr($vcRaw, 0, 3)),
+            'village_name' => isset($col['village']) ? mb_substr($get($r, $col['village'] + 1), 0, 150) : '',
+            'assignee' => $person, 'line' => $line,
+        ];
+        if ($person !== '') {
+            $res['people'][$person] = true;
+        }
+    }
+    $res['people'] = array_keys($res['people']);
+    if (!$res['rows'] && !$res['errors']) {
+        $res['errors'][] = 'ไม่พบแถวที่มี EA ในแบบฟอร์มบัญชีมอบหมาย';
+    }
+    return $res;
+}
+
+/**
+ * กำหนดเขตการปกครอง (ในเขต/นอกเขตเทศบาล) ให้แถวจากบัญชีมอบหมาย (ไฟล์ไม่มีช่องนี้) แล้วเติม ea_key
+ * ลำดับ: EA ที่โครงการนั้นใช้อยู่แล้ว → มีในบัญชี EA เพียงเขตเดียว → มีหมู่บ้าน = นอกเขต (2) / ไม่มี = ในเขต (1)
+ */
+function ea_resolve_area_rows(array &$rows, array $map): void
+{
+    $cands = [];
+    foreach (db()->query('SELECT province_code, district_code, tambon_code, ea_no, area_type FROM ea_areas') as $a) {
+        $cands[$a['province_code'] . $a['district_code'] . $a['tambon_code'] . $a['ea_no']][] = (int)$a['area_type'];
+    }
+    $used = [];
+    foreach (db()->query('SELECT pe.project_id, a.province_code, a.district_code, a.tambon_code, a.ea_no, a.area_type
+                          FROM ea_project_eas pe JOIN ea_areas a ON a.id = pe.ea_id') as $a) {
+        $used[$a['project_id'] . '|' . $a['province_code'] . $a['district_code'] . $a['tambon_code'] . $a['ea_no']] = (int)$a['area_type'];
+    }
+    foreach ($rows as &$r) {
+        if ($r['area_type'] === null) {
+            $k = $r['province_code'] . $r['district_code'] . $r['tambon_code'] . $r['ea_no'];
+            $pid = $map[$r['project_key']] ?? null;
+            $c = array_values(array_unique($cands[$k] ?? []));
+            if ($pid && isset($used[$pid . '|' . $k])) {
+                $r['area_type'] = $used[$pid . '|' . $k];
+            } elseif (count($c) === 1) {
+                $r['area_type'] = $c[0];
+            } else {
+                $r['area_type'] = $r['village_code'] !== '' || $r['village_name'] !== '' ? 2 : 1;
+            }
+        }
+        $r['ea_key'] = $r['province_code'] . $r['district_code'] . $r['tambon_code'] . $r['area_type'] . $r['ea_no'];
+    }
+    unset($r);
+}

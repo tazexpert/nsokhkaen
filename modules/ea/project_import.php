@@ -28,16 +28,40 @@ $load = function () use ($sessKey, $tmpFile) {
 };
 $projects = projects_all();
 // จับคู่รหัสโครงการในไฟล์กับโครงการในระบบ (ตัดจุด/ช่องว่าง)
-$autoMap = function (array $fileProjects) use ($projects): array {
+$autoMap = function (array $fileProjects, array $titles = []) use ($projects): array {
     $byKey = [];
     foreach ($projects as $p) {
         $byKey[ea_project_key($p['code'])] = (int)$p['id'];
     }
+    $plain = fn(string $v) => preg_replace(['/\s+/u', '/^(โครงการ)/u'], '', $v);
     $map = [];
     foreach ($fileProjects as $k => $raw) {
         $map[$k] = $byKey[$k] ?? null;
+        // บัญชีมอบหมาย: ไม่พบตามตัวย่อ → จับคู่ด้วยชื่อโครงการในหัวเรื่อง
+        $t = $plain((string)($titles[$k] ?? ''));
+        if (!$map[$k] && $t !== '') {
+            foreach ($projects as $p) {
+                $n = $plain($p['name']);
+                if (mb_strlen($n) >= 6 && (str_contains($t, $n) || str_contains($n, $t))) {
+                    $map[$k] = (int)$p['id'];
+                    break;
+                }
+            }
+        }
     }
     return $map;
+};
+// จับคู่ชื่อในบัญชีมอบหมายกับบัญชีผู้ใช้ (ชื่อ-นามสกุล ไม่สนใจช่องว่าง)
+$staffByName = [];
+foreach (ea_staff() as $uid => $u) {
+    $staffByName[preg_replace('/\s+/u', '', (string)$u['full_name'])] = $uid;
+}
+$autoPeople = function (array $people) use ($staffByName): array {
+    $out = [];
+    foreach ($people as $name) {
+        $out[$name] = $staffByName[preg_replace('/\s+/u', '', $name)] ?? null;
+    }
+    return $out;
 };
 $eaIds = fn() => $pdo->query('SELECT ' . EA_KEY_SQL . ', a.id FROM ea_areas a')->fetchAll(PDO::FETCH_KEY_PAIR);   // คีย์ 11 หลัก => id
 
@@ -84,9 +108,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $createMissing = post('create_missing') === '1';
         $sync = post('sync') === '1';
+        // บัญชีมอบหมาย: ผู้ปฏิบัติงานที่เลือกสำหรับชื่อในไฟล์
+        $staff = ea_staff();
+        $people = [];
+        foreach ($res['people'] ?? [] as $i => $name) {
+            $v = (string)($_POST['umap'][$i] ?? '');
+            $people[$name] = ctype_digit($v) && isset($staff[(int)$v]) ? (int)$v : null;
+        }
+        ea_resolve_area_rows($res['rows'], $map);
         $province = $_SESSION[$sessKey]['province'] ?? '40';
         $source = 'เพิ่มจากไฟล์ EA ของโครงการ ' . ($_SESSION[$sessKey]['file'] ?? '');
-        $n = ['new' => 0, 'upd' => 0, 'same' => 0, 'created' => 0, 'skipped' => 0, 'removed' => 0];
+        $n = ['new' => 0, 'upd' => 0, 'same' => 0, 'created' => 0, 'skipped' => 0, 'removed' => 0, 'assigned' => 0];
         ea_resolve_codes($res['rows'], ea_existing_by_key());    // รหัส EA 15 หลัก (เทศบาล/อบต. จาก EA ในตำบลเดียวกัน)
         $pdo->beginTransaction();
         try {
@@ -97,13 +129,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $insEa0 = $pdo->prepare('INSERT INTO ea_areas (ea_code, region_code, province_code, district_code, district_name, tambon_code, tambon_name, area_type, ea_no, village_code, village_name, note, source, local_code, local_name)
                                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
             $old = [];
-            $st = $pdo->query('SELECT id, project_id, round_label, ea_id, psu_no, enum_type, enum_month, enum_year, fiscal_year, lat, lng FROM ea_project_eas');
+            $st = $pdo->query('SELECT id, project_id, round_label, ea_id, psu_no, enum_type, enum_month, enum_year, fiscal_year, lat, lng, assigned_user_id FROM ea_project_eas');
             foreach ($st as $r) {
                 $old[$r['project_id'] . '|' . $r['round_label'] . '|' . $r['ea_id']] = $r;
             }
             $ins = $pdo->prepare('INSERT INTO ea_project_eas (project_id, ea_id, round_label, psu_no, enum_type, enum_month, enum_year, fiscal_year, lat, lng, created_by)
                                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
             $upd = $pdo->prepare('UPDATE ea_project_eas SET psu_no = ?, enum_type = ?, enum_month = ?, enum_year = ?, fiscal_year = ?, lat = ?, lng = ? WHERE id = ?');
+            $setUser = $pdo->prepare('UPDATE ea_project_eas SET assigned_user_id = ?, assigned_at = NOW(), assigned_by = ? WHERE id = ?');
             $touched = [];      // [project_id|round_label => [pe_id => true]]
             foreach ($res['rows'] as $r) {
                 $pid = $map[$r['project_key']] ?? null;
@@ -130,15 +163,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $vals = [$r['psu_no'], $r['enum_type'], $r['enum_month'], $r['enum_year'], $r['fiscal_year'], $r['lat'], $r['lng']];
                 $k = $pid . '|' . $r['round_label'] . '|' . $eid;
                 $o = $old[$k] ?? null;
+                $partial = !empty($r['partial']);       // บัญชีมอบหมาย: ช่องที่ไม่มี (null) คงค่าเดิม
                 if (!$o) {
+                    if ($partial) {
+                        $vals[1] ??= '';
+                        $vals[4] ??= $r['fiscal_year_new'] ?? null;
+                    }
                     $ins->execute(array_merge([$pid, $eid, $r['round_label']], $vals, [(int)$me['id']]));
                     $peId = (int)$pdo->lastInsertId();
-                    $old[$k] = ['id' => $peId];
+                    $old[$k] = ['id' => $peId, 'assigned_user_id' => null];
                     $n['new']++;
                 } else {
                     $peId = (int)$o['id'];
                     $cur = [$o['psu_no'], $o['enum_type'], $o['enum_month'], $o['enum_year'], $o['fiscal_year'],
                             $o['lat'] === null ? null : round((float)$o['lat'], 7), $o['lng'] === null ? null : round((float)$o['lng'], 7)];
+                    if ($partial) {
+                        foreach ($vals as $i => $v) {
+                            if ($v === null || ($i === 0 && $v === '')) {
+                                $vals[$i] = $cur[$i];
+                            }
+                        }
+                    }
                     $norm = fn($a) => array_map(fn($v) => $v === null ? null : (string)$v, $a);
                     if ($norm($cur) !== $norm($vals)) {
                         $upd->execute(array_merge($vals, [$peId]));
@@ -146,6 +191,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     } else {
                         $n['same']++;
                     }
+                }
+                // ผู้ปฏิบัติงานจากบัญชีมอบหมาย
+                $uid = ($r['assignee'] ?? '') !== '' ? ($people[$r['assignee']] ?? null) : null;
+                if ($uid && (int)($old[$k]['assigned_user_id'] ?? 0) !== $uid) {
+                    $setUser->execute([$uid, (int)$me['id'], $peId]);
+                    $old[$k]['assigned_user_id'] = $uid;
+                    $n['assigned']++;
                 }
                 $touched[$pid . '|' . $r['round_label']][$peId] = true;
             }
@@ -173,6 +225,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $clear();
         $msg = 'นำเข้า EA ของโครงการแล้ว: เพิ่ม ' . number_format($n['new']) . ' · ปรับปรุง ' . number_format($n['upd']) . ' · ไม่เปลี่ยนแปลง ' . number_format($n['same'])
              . ($n['created'] ? ' · เพิ่ม EA ใหม่ในบัญชี ' . number_format($n['created']) : '')
+             . ($n['assigned'] ? ' · กำหนดผู้ปฏิบัติงาน ' . number_format($n['assigned']) . ' EA' : '')
              . ($n['removed'] ? ' · นำออก ' . number_format($n['removed']) : '')
              . ($n['skipped'] ? ' · ข้าม ' . number_format($n['skipped']) . ' แถว' : '');
         audit_log('ea_project_import', $msg . ' (ไฟล์ ' . $file . ')', EA_MODULE);
@@ -187,11 +240,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $res = ($_GET['step'] ?? '') === 'preview' ? $load() : null;
 if ($res) {
+    $map = $autoMap($res['projects'], $res['project_titles'] ?? []);
+    ea_resolve_area_rows($res['rows'], $map);
     ea_resolve_codes($res['rows'], ea_existing_by_key());
-    $map = $autoMap($res['projects']);
+    $peopleMap = $autoPeople($res['people'] ?? []);
     $ids = $eaIds();
     $old = [];
-    foreach ($pdo->query('SELECT project_id, round_label, ea_id, psu_no, enum_type, enum_month, enum_year, fiscal_year, lat, lng FROM ea_project_eas') as $r) {
+    foreach ($pdo->query('SELECT project_id, round_label, ea_id, psu_no, enum_type, enum_month, enum_year, fiscal_year, lat, lng, assigned_user_id FROM ea_project_eas') as $r) {
         $old[$r['project_id'] . '|' . $r['round_label'] . '|' . $r['ea_id']] = $r;
     }
     $sum = [];          // [project_key][round_label] => [n, new, upd, sort]
@@ -204,11 +259,16 @@ if ($res) {
         $s = &$sum[$r['project_key']][$r['round_label']];
         $s ??= ['n' => 0, 'new' => 0, 'upd' => 0, 'type' => [], 'sort' => [$r['enum_year'] ?? 9999, $r['enum_month'] ?? 99]];
         $s['n']++;
-        $s['type'][$r['enum_type']] = true;
+        $s['type'][(string)$r['enum_type']] = true;
         $pid = $map[$r['project_key']];
         $o = $pid && $eid ? ($old[$pid . '|' . $r['round_label'] . '|' . $eid] ?? null) : null;
         if (!$o) {
             $s['new']++;
+        } elseif (!empty($r['partial'])) {           // บัญชีมอบหมาย: เทียบ PSU และผู้ปฏิบัติงาน
+            $uid = $peopleMap[$r['assignee'] ?? ''] ?? null;
+            if (($r['psu_no'] !== '' && (string)$o['psu_no'] !== $r['psu_no']) || ($uid && (int)$o['assigned_user_id'] !== $uid)) {
+                $s['upd']++;
+            }
         } elseif ((string)$o['psu_no'] !== $r['psu_no'] || (string)$o['enum_type'] !== $r['enum_type'] || (string)$o['fiscal_year'] !== (string)$r['fiscal_year']
                   || ($o['lat'] === null) !== ($r['lat'] === null) || abs((float)$o['lat'] - (float)$r['lat']) > 1e-7 || abs((float)$o['lng'] - (float)$r['lng']) > 1e-7) {
             $s['upd']++;
@@ -258,9 +318,14 @@ require __DIR__ . '/header.php';
   </div>
   <div class="col-lg-7">
     <div class="card">
-      <div class="card-header"><strong>รูปแบบไฟล์ (EA_Report.csv)</strong></div>
+      <div class="card-header"><strong>รูปแบบไฟล์ที่รองรับ</strong></div>
       <div class="card-body small">
-        <p class="mb-2">ไฟล์ .csv (UTF-8 หรือ Windows-874) หรือ .xlsx แถวแรกเป็นหัวคอลัมน์ — 1 แถว = EA ที่โครงการใช้แจงนับในเดือนนั้น:</p>
+        <p class="mb-1"><strong>1) บัญชีมอบหมายการปฏิบัติงาน</strong> (.xlsx แบบฟอร์มเดิมของสำนักงาน 1 แผ่นงาน = 1 โครงการ 1 เดือน)</p>
+        <ul class="mb-3">
+          <li>โครงการจากชื่อแผ่นงาน (เช่น "สรง.") หรือชื่อโครงการในหัวเรื่อง · รอบจาก "ประจำเดือน ... พ.ศ. ..." (เลขไทยได้)</li>
+          <li>นำเข้าเฉพาะแถวที่มี EA — ผู้ปฏิบัติงานของแต่ละ EA = ชื่อในแถวนั้นหรือแถวก่อนหน้า (ตั้งเป็นผู้รับผิดชอบ) · ข้ามผู้ตรวจงาน แถวรวม แถวว่าง</li>
+        </ul>
+        <p class="mb-1"><strong>2) EA_Report</strong> (.csv UTF-8/Windows-874 หรือ .xlsx) แถวแรกเป็นหัวคอลัมน์ — 1 แถว = EA ที่โครงการใช้แจงนับในเดือนนั้น:</p>
         <div class="table-responsive mb-2"><table class="table table-sm table-bordered mb-0 small">
           <tr><?php foreach (EA_REPORT_HEAD as $c): ?><th class="text-nowrap"><?= h($c) ?></th><?php endforeach; ?></tr>
           <tr><?php foreach (['0077', '16', 'ภูเวียง', '05', 'กุดขอนแก่น', '0012', '13', 'แก่นพัฒนา', '16.5761', '102.5040', 'มกราคม', 'Q1', '2569', 'สรง.', 'นอกเขตเทศบาล', '2569'] as $v): ?><td class="text-nowrap"><?= h($v) ?></td><?php endforeach; ?></tr>
@@ -321,6 +386,38 @@ require __DIR__ . '/header.php';
       </table>
     </div>
   </div>
+
+  <?php if (($res['format'] ?? '') === 'assign'): $staffAll = ea_staff(); ?>
+  <div class="card mb-3">
+    <div class="card-header"><strong><i class="bi bi-person-lines-fill"></i> บัญชีมอบหมายการปฏิบัติงาน</strong>
+      <span class="small text-muted">— รอบ <?= h($res['round'] ?: 'ไม่ระบุ') ?> · นำเข้าเฉพาะแถวที่มี EA <?= number_format(count($res['rows'])) ?> แถว (ข้ามผู้ตรวจงาน/แถวรวม/แถวว่าง <?= number_format($res['skipped']) ?> แถว)</span></div>
+    <div class="card-body">
+      <div class="fw-semibold small mb-2">ผู้ปฏิบัติงานในไฟล์ → บัญชีผู้ใช้ <span class="text-muted fw-normal">(ตั้งเป็นผู้รับผิดชอบ EA ของแต่ละคน)</span></div>
+      <div class="row g-2 mb-3">
+        <?php foreach ($res['people'] as $i => $name): $sel = $peopleMap[$name] ?? null; ?>
+        <div class="col-md-6 col-xl-4"><div class="input-group input-group-sm">
+          <span class="input-group-text text-truncate" style="max-width:55%" title="<?= h($name) ?>"><?= h($name) ?></span>
+          <select name="umap[<?= (int)$i ?>]" class="form-select<?= $sel ? '' : ' is-invalid' ?>">
+            <option value="">— ไม่กำหนดผู้รับผิดชอบ —</option><?= ea_staff_options($sel) ?>
+          </select></div></div>
+        <?php endforeach; ?>
+      </div>
+      <div class="table-responsive" style="max-height:360px">
+        <table class="table table-sm mb-0 ea-table">
+          <thead><tr><th>แถว</th><th>ผู้ปฏิบัติงาน</th><th>PSU</th><th>รหัส EA</th><th>พื้นที่</th><th>เขต</th></tr></thead>
+          <tbody>
+          <?php foreach ($res['rows'] as $r): ?>
+            <tr><td class="text-muted small"><?= (int)$r['line'] ?></td><td class="small"><?= h($r['assignee']) ?></td><td class="ea-code small"><?= h($r['psu_no'] ?: '-') ?></td>
+              <td class="ea-code"><?= h($r['ea_code']) ?><?= isset($ids[$r['ea_key']]) ? '' : ' <span class="badge text-bg-danger">ไม่มีในบัญชี</span>' ?></td>
+              <td class="small"><?= h(ea_place($r)) ?></td><td class="small text-nowrap"><?= h(EA_AREA_TYPES[(int)$r['area_type']] ?? '') ?></td></tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+      </div>
+      <div class="small text-muted mt-2">ไฟล์ไม่มีช่องในเขต/นอกเขตเทศบาล — ใช้ EA ที่โครงการใช้อยู่ → EA ในบัญชีที่มีเขตเดียว → มีหมู่บ้าน = นอกเขต · PSU และผู้ปฏิบัติงานปรับตามไฟล์ ข้อมูลอื่นของ EA เดิมคงไว้</div>
+    </div>
+  </div>
+  <?php endif; ?>
 
   <?php if ($missing): ?>
   <div class="card mb-3 border-danger">
