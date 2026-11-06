@@ -120,7 +120,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $project) {
                 foreach ($rows as $r) {
                     $assign[(int)$r['pe_id']] = $r['assigned_user_id'] ? (int)$r['assigned_user_id'] : null;
                 }
-                $assign = ea_random_assign($target, $chosen, $balance, $keepSame) + $assign;
+                $result = ea_random_assign($target, $chosen, $balance, $keepSame);
+                $randomIds = array_keys($result);          // EA ที่สุ่มรอบนี้ (ใช้แสดงวงล้อ)
+                $assign = $result + $assign;
                 $mode = 'edit';
             }
         }
@@ -258,6 +260,7 @@ require __DIR__ . '/header.php';
       <?= $isRandom ? 'ผลการสุ่ม (ยังไม่บันทึก)' : 'แก้ไขการมอบหมาย' ?> — <strong><?= h($project['code']) ?></strong> <?= h($roundText) ?> ·
       เปลี่ยนผู้ปฏิบัติงานในช่อง หรือกด <i class="bi bi-arrow-left-right"></i> ที่ 2 แถวเพื่อสลับงาน</span>
     <span class="ms-auto d-flex gap-2">
+      <?php if ($isRandom): ?><button type="button" class="btn btn-sm btn-outline-warning" id="wheelReplay"><i class="bi bi-bullseye"></i> ดูวงล้ออีกครั้ง</button><?php endif; ?>
       <?php if ($chosen): ?><button name="action" value="random" class="btn btn-sm btn-outline-primary" formnovalidate><i class="bi bi-shuffle"></i> สุ่มใหม่</button><?php endif; ?>
       <a href="<?= h($critUrl) ?>" class="btn btn-sm btn-light">เปลี่ยนเงื่อนไข / พนักงาน</a>
     </span>
@@ -305,6 +308,14 @@ require __DIR__ . '/header.php';
     </div>
   </div>
 </form>
+<?php if ($isRandom): ?>
+<script type="application/json" id="wheelData"><?= json_encode([
+    'staff' => array_map(fn($id) => ['id' => $id, 'name' => $names[$id] ?? ''], $chosen),
+    'ids'   => $randomIds ?? [],
+    'title' => $project['code'] . ' ' . $roundText,
+], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
+<?php $footerScripts[] = asset_v('modules/ea/assets/js/wheel.js'); ?>
+<?php endif; ?>
 <style>
   #assignTable tr.as-picked > td { background: #fff7d6; }
   #assignTable tr.as-changed .as-sel { border-color: #f59e0b; background-color: #fffbeb; }

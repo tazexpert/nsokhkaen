@@ -37,3 +37,37 @@
 .ea-pop .bar-label { width: 96px; }
 .ea-pop .bar-val { width: auto; min-width: 64px; font-size: .88rem; font-variant-numeric: tabular-nums; }
 .stat-card .stat-num { font-variant-numeric: tabular-nums; }
+/* วงล้อลุ้นผลการสุ่มผู้ปฏิบัติงาน (assign.php) */
+.wheel-overlay { position: fixed; inset: 0; z-index: 2000; background: rgba(15, 23, 42, .62); display: none; align-items: center; justify-content: center; padding: 16px; }
+.wheel-overlay.show { display: flex; animation: wheelFade .25s ease-out; }
+@keyframes wheelFade { from { opacity: 0; } to { opacity: 1; } }
+.wheel-box { position: relative; background: #fff; border-radius: 16px; width: min(940px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+.wheel-head, .wheel-foot { display: flex; align-items: center; gap: 8px; padding: 12px 16px; }
+.wheel-head { border-bottom: 1px solid #e2e8f0; font-weight: 600; }
+.wheel-foot { border-top: 1px solid #e2e8f0; }
+.wheel-body { display: flex; gap: 20px; padding: 16px; min-height: 0; flex: 1; }
+.wheel-wrap { position: relative; flex: 0 0 360px; max-width: 100%; text-align: center; }
+.wheel-svg { width: 100%; max-width: 360px; filter: drop-shadow(0 6px 14px rgba(0,0,0,.18)); }
+.wheel-rot { transform-origin: 160px 160px; transform-box: view-box; }
+.wheel-pointer { position: absolute; top: -4px; left: 50%; transform: translateX(-50%); width: 0; height: 0; z-index: 2;
+  border-left: 16px solid transparent; border-right: 16px solid transparent; border-top: 30px solid #0f172a; filter: drop-shadow(0 2px 2px rgba(0,0,0,.3)); }
+.wheel-now { margin-top: 8px; font-size: 1.25rem; font-weight: 700; min-height: 1.8em; }
+.wheel-list { flex: 1; min-width: 0; overflow: auto; max-height: 420px; }
+.wheel-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #f8fafc; margin-bottom: 8px;
+  border-left: 5px solid var(--c); animation: wheelItem .45s cubic-bezier(.2,.8,.25,1.2) both; }
+@keyframes wheelItem { from { opacity: 0; transform: translateX(24px) scale(.96); } to { opacity: 1; transform: none; } }
+.wheel-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c); flex: 0 0 12px; }
+.min-w-0 { min-width: 0; }
+.wheel-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.wheel-confetti i { position: absolute; top: -12px; width: 8px; height: 12px; border-radius: 2px; animation: wheelConfetti 2.2s ease-in forwards; }
+@keyframes wheelConfetti { to { transform: translate(var(--x), 105vh) rotate(720deg); opacity: .2; } }
+#assignTable tr.as-flash > td { animation-delay: var(--d, 0ms); }
+@media (max-width: 767.98px) {
+  .wheel-body { flex-direction: column; overflow: auto; }
+  .wheel-wrap { flex: none; margin: 0 auto; width: 280px; }
+  .wheel-list { max-height: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wheel-overlay.show, .wheel-item, .wheel-confetti i { animation: none; }
+}
+@media print { .wheel-overlay { display: none !important; } }
