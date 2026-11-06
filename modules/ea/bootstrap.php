@@ -340,3 +340,225 @@ function ea_parse_xlsx(string $path): array
 /** คอลัมน์ข้อมูลที่นำเข้า (ใช้เทียบว่ามีการเปลี่ยนแปลง) */
 const EA_IMPORT_COLS = ['seq', 'region_code', 'region_name', 'province_code', 'province_name', 'district_code', 'district_name', 'tambon_code', 'tambon_name',
                         'area_type', 'ea_no', 'advance_ea', 'village_code', 'village_name', 'houses', 'households', 'population', 'note'];
+
+/* ------------------------------------------------------------------------
+ * EA ของโครงการ: ไฟล์ EA_Report (CSV/xlsx) — 1 แถว = EA ที่โครงการใช้ในเดือนที่แจงนับนั้น
+ * psu_no, รหัสอำเภอ, อำเภอ, รหัสตำบล, ตำบล, ea, รหัสหมู่บ้าน, หมู่บ้าน, latitude, longitude,
+ * enumerate_month, enumerate_type, enumerate_year, project, เขตเทศบาล, ปีงบประมาณ
+ * รอบ/งวด = เดือน + ปีที่แจงนับ เช่น "ม.ค. 2569" (ไม่ระบุเดือน = "ปี 2569")
+ * ------------------------------------------------------------------------ */
+const EA_REPORT_HEAD = ['psu_no', 'รหัสอำเภอ', 'อำเภอ', 'รหัสตำบล', 'ตำบล', 'ea', 'รหัสหมู่บ้าน', 'หมู่บ้าน', 'latitude', 'longitude',
+                       'enumerate_month', 'enumerate_type', 'enumerate_year', 'project', 'เขตเทศบาล', 'ปีงบประมาณ'];
+const EA_MONTHS_SHORT = [1 => 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+const EA_MONTHS_LONG = [1 => 'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+
+/** ชื่อรอบ/งวดจากเดือน-ปีที่แจงนับ */
+function ea_round_label(?int $month, ?int $year): string
+{
+    if ($month && $year) {
+        return EA_MONTHS_SHORT[$month] . ' ' . $year;
+    }
+    return $year ? 'ปี ' . $year : '';
+}
+
+/** เดือนจากข้อความ (มกราคม / ม.ค. / 1) → 1–12 หรือ null */
+function ea_month_num(string $v): ?int
+{
+    $v = trim($v);
+    if ($v === '') {
+        return null;
+    }
+    if (ctype_digit($v)) {
+        return (int)$v >= 1 && (int)$v <= 12 ? (int)$v : null;
+    }
+    $n = str_replace([' ', '.'], '', $v);
+    foreach (EA_MONTHS_LONG as $i => $m) {
+        if ($n === $m || $n === str_replace('.', '', EA_MONTHS_SHORT[$i])) {
+            return $i;
+        }
+    }
+    return null;
+}
+
+/** ปี พ.ศ. (รับ ค.ศ. ได้) */
+function ea_year(string $v): ?int
+{
+    $y = (int)preg_replace('/\D/', '', $v);
+    if ($y > 1900 && $y < 2400) {
+        $y += 543;
+    }
+    return $y >= 2400 && $y <= 2700 ? $y : null;
+}
+
+/** รหัสโครงการเพื่อจับคู่ (ตัดจุด/ช่องว่าง) เช่น "สรง." → "สรง" */
+function ea_project_key(string $code): string
+{
+    return mb_strtolower(preg_replace('/[\s.]+/u', '', $code));
+}
+
+/** อ่านแถวจากไฟล์ CSV หรือ xlsx → array ของ array (ค่าเป็นข้อความ) */
+function ea_read_table(string $path, string $ext): array
+{
+    if ($ext === 'xlsx') {
+        require_once APP_ROOT . '/libs/simplexlsx/SimpleXLSX.php';
+        $x = \Shuchkin\SimpleXLSX::parse($path);
+        if (!$x) {
+            throw new RuntimeException('อ่านไฟล์ Excel ไม่ได้: ' . \Shuchkin\SimpleXLSX::parseError());
+        }
+        return array_map(fn($r) => array_map('strval', array_values($r)), $x->rows(0));
+    }
+    $text = text_to_utf8((string)file_get_contents($path));
+    $first = strtok($text, "\n");
+    $delim = substr_count((string)$first, "\t") > substr_count((string)$first, ',') ? "\t" : (substr_count((string)$first, ';') > substr_count((string)$first, ',') ? ';' : ',');
+    $fh = fopen('php://temp', 'r+');
+    fwrite($fh, $text);
+    rewind($fh);
+    $rows = [];
+    while (($r = fgetcsv($fh, 0, $delim)) !== false) {
+        $rows[] = array_map(fn($v) => (string)$v, $r);
+    }
+    fclose($fh);
+    return $rows;
+}
+
+/**
+ * อ่านไฟล์ EA ของโครงการ → ['rows' => [...], 'errors' => [], 'projects' => [key => code ในไฟล์]]
+ * แต่ละแถว: ea_code, project_key, project_raw, psu_no, enum_type, enum_month, enum_year, fiscal_year, lat, lng, round_label
+ *           + ข้อมูลพื้นที่ (ใช้สร้าง EA ใหม่ถ้าไม่มีในบัญชี)
+ */
+function ea_parse_project_file(string $path, string $ext, string $province = '40'): array
+{
+    $res = ['rows' => [], 'errors' => [], 'projects' => [], 'skipped' => 0];
+    try {
+        $rows = ea_read_table($path, $ext);
+    } catch (RuntimeException $e) {
+        $res['errors'][] = $e->getMessage();
+        return $res;
+    }
+    $norm = fn($v) => mb_strtolower(preg_replace('/\s+/u', '', (string)$v));
+    // แถวหัวตาราง: มีคอลัมน์ ea และ project
+    $head = null;
+    foreach (array_slice($rows, 0, 10, true) as $i => $r) {
+        $cells = array_map($norm, $r);
+        if (in_array('ea', $cells, true) && in_array('project', $cells, true)) {
+            $head = $i;
+            break;
+        }
+    }
+    if ($head === null) {
+        $res['errors'][] = 'ไม่พบหัวตาราง (ต้องมีคอลัมน์ ' . implode(', ', EA_REPORT_HEAD) . ')';
+        return $res;
+    }
+    $col = [];
+    foreach ($rows[$head] as $i => $c) {
+        $col[$norm($c)] ??= $i;
+    }
+    $need = ['รหัสอำเภอ', 'รหัสตำบล', 'ea', 'project', 'เขตเทศบาล'];
+    foreach ($need as $k) {
+        if (!isset($col[$k])) {
+            $res['errors'][] = 'ไม่พบคอลัมน์ "' . $k . '"';
+        }
+    }
+    if ($res['errors']) {
+        return $res;
+    }
+    // ค่าในเซลล์: ตัด ="..." ที่ใส่กันเลขศูนย์หน้าหาย (ไฟล์ที่ส่งออกจากระบบนี้)
+    $get = function (array $r, string $k) use ($col) {
+        if (!isset($col[$k])) {
+            return '';
+        }
+        $v = trim((string)($r[$col[$k]] ?? ''));
+        return preg_match('/^="(.*)"$/s', $v, $m) ? trim($m[1]) : $v;
+    };
+    $code = function (string $v, int $len) {
+        if ($v === '' || !preg_match('/^\d+(\.0+)?$/', $v)) {
+            return null;
+        }
+        $v = (string)(int)$v;
+        return strlen($v) <= $len ? str_pad($v, $len, '0', STR_PAD_LEFT) : null;
+    };
+    $areaOf = function (string $v) {
+        $v = preg_replace('/\s+/u', '', $v);
+        if ($v === '1' || str_starts_with($v, 'ใน')) {
+            return 1;
+        }
+        return $v === '2' || str_starts_with($v, 'นอก') ? 2 : null;
+    };
+    $coord = function (string $v, float $min, float $max) {
+        return is_numeric($v) && (float)$v >= $min && (float)$v <= $max ? round((float)$v, 7) : null;
+    };
+    $seen = [];
+    $err = function (string $msg) use (&$res) {
+        if (count($res['errors']) < 30) {
+            $res['errors'][] = $msg;
+        }
+    };
+    foreach (array_slice($rows, $head + 1, null, true) as $i => $r) {
+        $line = $i + 1;
+        if (!array_filter($r, fn($v) => trim((string)$v) !== '')) {
+            $res['skipped']++;
+            continue;
+        }
+        $d = $code($get($r, 'รหัสอำเภอ'), 2);
+        $t = $code($get($r, 'รหัสตำบล'), 2);
+        $e = $code($get($r, 'ea'), 4);
+        $a = $areaOf($get($r, 'เขตเทศบาล'));
+        $proj = $get($r, 'project');
+        if (!$d || !$t || !$e || !$a) {
+            $err('แถวที่ ' . $line . ': รหัสอำเภอ/ตำบล (2 หลัก) EA (4 หลัก) หรือเขตเทศบาล (ในเขต/นอกเขตเทศบาล) ไม่ถูกต้อง');
+            continue;
+        }
+        if (ea_project_key($proj) === '') {
+            $err('แถวที่ ' . $line . ': ไม่ระบุโครงการ (project)');
+            continue;
+        }
+        $rawMonth = $get($r, 'enumerate_month');
+        $month = ea_month_num($rawMonth);
+        if ($rawMonth !== '' && !$month) {
+            $err('แถวที่ ' . $line . ': เดือนไม่ถูกต้อง "' . $rawMonth . '"');
+            continue;
+        }
+        $year = ea_year($get($r, 'enumerate_year'));
+        $fy = ea_year($get($r, 'ปีงบประมาณ'));
+        $ea = $province . $d . $t . $a . $e;
+        $label = ea_round_label($month, $year);
+        $pk = ea_project_key($proj);
+        $key = $pk . '|' . $label . '|' . $ea;
+        if (isset($seen[$key])) {
+            $err('แถวที่ ' . $line . ': EA ' . $ea . ' ของ ' . $proj . ' รอบ ' . ($label ?: '-') . ' ซ้ำกับแถวที่ ' . $seen[$key]);
+            continue;
+        }
+        $seen[$key] = $line;
+        $res['projects'][$pk] ??= $proj;
+        $psu = $get($r, 'psu_no');
+        $type = $get($r, 'enumerate_type');
+        $res['rows'][] = [
+            'ea_code' => $ea, 'project_key' => $pk, 'round_label' => $label,
+            'psu_no' => mb_substr($psu, 0, 10), 'enum_type' => mb_substr($type, 0, 10),
+            'enum_month' => $month, 'enum_year' => $year, 'fiscal_year' => $fy,
+            'lat' => $coord($get($r, 'latitude'), -90, 90), 'lng' => $coord($get($r, 'longitude'), -180, 180),
+            'district_code' => $d, 'district_name' => mb_substr($get($r, 'อำเภอ'), 0, 100),
+            'tambon_code' => $t, 'tambon_name' => mb_substr($get($r, 'ตำบล'), 0, 100),
+            'area_type' => $a, 'ea_no' => $e,
+            'village_code' => ($vc = $get($r, 'รหัสหมู่บ้าน')) === '' ? '' : ($code($vc, 2) ?? mb_substr($vc, 0, 3)),
+            'village_name' => mb_substr($get($r, 'หมู่บ้าน'), 0, 150),
+        ];
+    }
+    if (!$res['rows'] && !$res['errors']) {
+        $res['errors'][] = 'ไม่พบข้อมูล EA ในไฟล์';
+    }
+    return $res;
+}
+
+/** แถวสำหรับส่งออก EA ของโครงการในรูปแบบเดียวกับไฟล์ EA_Report (นำเข้ากลับได้) */
+function ea_report_row(array $r, string $projectCode): array
+{
+    $t = fn($v) => $v === '' || $v === null ? '' : '="' . $v . '"';
+    return [$t($r['psu_no']), $t($r['district_code']), $r['district_name'], $t($r['tambon_code']), $r['tambon_name'], $t($r['ea_no']),
+            $t($r['village_code']), $r['village_name'], $r['lat'] !== null ? (float)$r['lat'] : '', $r['lng'] !== null ? (float)$r['lng'] : '',
+            $r['enum_month'] ? EA_MONTHS_LONG[(int)$r['enum_month']] : '', $r['enum_type'], $r['enum_year'] ?? '', $projectCode,
+            EA_AREA_TYPES[(int)$r['area_type']] ?? '', $r['fiscal_year'] ?? ''];
+}
+
+/** ลำดับรอบ/งวด: ตามปี-เดือนที่แจงนับ แล้วตามชื่อรอบ */
+const EA_ROUND_ORDER = 'pe.enum_year IS NULL, pe.enum_year, pe.enum_month IS NULL, pe.enum_month, pe.round_label';

@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'save') {
 
 $st = $pdo->prepare('SELECT pe.*, p.code, p.name, p.color, u.full_name AS assignee FROM ea_project_eas pe
                      JOIN core_projects p ON p.id = pe.project_id LEFT JOIN core_users u ON u.id = pe.assigned_user_id
-                     WHERE pe.ea_id = ? ORDER BY p.sort_order, p.id, pe.round_label');
+                     WHERE pe.ea_id = ? ORDER BY p.sort_order, p.id, ' . EA_ROUND_ORDER . '');
 $st->execute([$id]);
 $uses = $st->fetchAll();
 $edit = ea_can('admin') && isset($_GET['edit']);
@@ -89,18 +89,19 @@ $c = $ea['ea_code'];
       <div class="card-header"><strong><i class="bi bi-diagram-3"></i> โครงการที่ใช้ EA นี้สำรวจ</strong></div>
       <div class="table-responsive">
         <table class="table mb-0 ea-table">
-          <thead><tr><th>โครงการ</th><th>รอบ/งวด</th><th>ผู้รับผิดชอบ</th><th>สถานะ</th></tr></thead>
+          <thead><tr><th>โครงการ</th><th>รอบ/งวด</th><th>PSU</th><th>ผู้รับผิดชอบ</th><th>สถานะ</th></tr></thead>
           <tbody>
           <?php foreach ($uses as $u): ?>
             <tr>
               <td><a href="project_eas.php?id=<?= (int)$u['project_id'] ?>&amp;round=<?= urlencode($u['round_label']) ?>" class="text-decoration-none">
                 <span class="badge" style="background:<?= h($u['color']) ?>"><?= h($u['code']) ?></span> <?= h($u['name']) ?></a></td>
-              <td><?= h($u['round_label'] ?: '-') ?></td>
+              <td class="text-nowrap"><?= h($u['round_label'] ?: '-') ?><?= $u['enum_type'] !== '' ? ' <span class="small text-muted">' . h($u['enum_type']) . '</span>' : '' ?></td>
+              <td class="ea-code small"><?= h($u['psu_no'] ?: '-') ?></td>
               <td><?= h($u['assignee'] ?: '-') ?></td>
               <td><?= ea_status_badge($u['status']) ?><?= $u['note'] !== '' ? '<div class="small text-muted">' . h($u['note']) . '</div>' : '' ?></td>
             </tr>
           <?php endforeach; ?>
-          <?php if (!$uses): ?><tr><td colspan="4" class="text-center text-muted py-4">ยังไม่มีโครงการใช้ EA นี้</td></tr><?php endif; ?>
+          <?php if (!$uses): ?><tr><td colspan="5" class="text-center text-muted py-4">ยังไม่มีโครงการใช้ EA นี้</td></tr><?php endif; ?>
           </tbody>
         </table>
       </div>

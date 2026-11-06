@@ -17,6 +17,7 @@ if (!$project) {
 $round = isset($_GET['round']) ? mb_substr(trim((string)$_GET['round']), 0, 50) : null;   // null = ทุกรอบ
 $f = ea_filter_input();
 $fStatus = isset(EA_STATUSES[$_GET['status'] ?? '']) ? $_GET['status'] : '';
+$fy = ctype_digit((string)($_GET['fy'] ?? '')) ? (int)$_GET['fy'] : '';      // ปีงบประมาณ
 $fUser = ($_GET['user'] ?? '') === 'none' ? 'none' : (ctype_digit((string)($_GET['user'] ?? '')) ? (int)$_GET['user'] : '');
 
 // เงื่อนไขรายการตามตัวกรองปัจจุบัน
@@ -26,6 +27,10 @@ array_unshift($params, $pid);
 if ($round !== null) {
     $where[] = 'pe.round_label = ?';
     $params[] = $round;
+}
+if ($fy !== '') {
+    $where[] = 'pe.fiscal_year = ?';
+    $params[] = $fy;
 }
 if ($fStatus !== '') {
     $where[] = 'pe.status = ?';
@@ -38,7 +43,7 @@ if ($fUser === 'none') {
     $params[] = $fUser;
 }
 $from = ' FROM ea_project_eas pe JOIN ea_areas a ON a.id = pe.ea_id WHERE ' . implode(' AND ', $where);
-$query = ['id' => $pid, 'round' => $round] + $f + ['status' => $fStatus, 'user' => $fUser];
+$query = ['id' => $pid, 'fy' => $fy, 'round' => $round] + $f + ['status' => $fStatus, 'user' => $fUser];
 $keep = fn(array $q) => array_filter($q, fn($v, $k) => $v !== null && ($v !== '' || $k === 'round'), ARRAY_FILTER_USE_BOTH);
 $back = 'project_eas.php?' . http_build_query($keep($query));
 
@@ -52,6 +57,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'add') {
         $rl = mb_substr(trim(post('round_label')), 0, 50);
         $assign = $userOrNull(post('assign'));
+        // ชื่อรอบรูปแบบ "ม.ค. 2570" / "มกราคม 2570" → เก็บเดือน/ปีที่แจงนับด้วย (เรียงรอบตามเวลาได้)
+        $em = $ey = null;
+        if (preg_match('/^(\S+)\s+(\d{4})$/u', $rl, $mm) && ($em = ea_month_num($mm[1]))) {
+            $ey = ea_year($mm[2]);
+            $rl = ea_round_label($em, $ey);
+        }
+        $efy = $em && $ey ? ($em >= 10 ? $ey + 1 : $ey) : null;
         if (post('method') === 'codes') {
             $codes = ea_parse_codes(post('codes'));
             if (!$codes) {
@@ -78,11 +90,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $ids = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
             $unknown = [];
         }
-        $ins = $pdo->prepare('INSERT IGNORE INTO ea_project_eas (project_id, ea_id, round_label, assigned_user_id, created_by) VALUES (?, ?, ?, ?, ?)');
+        $ins = $pdo->prepare('INSERT IGNORE INTO ea_project_eas (project_id, ea_id, round_label, enum_type, enum_month, enum_year, fiscal_year, assigned_user_id, created_by)
+                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
         $added = 0;
         $pdo->beginTransaction();
         foreach ($ids as $eid) {
-            $ins->execute([$pid, $eid, $rl, $assign, (int)$me['id']]);
+            $ins->execute([$pid, $eid, $rl, $em ? 'Month' : '', $em, $ey, $efy, $assign, (int)$me['id']]);
             $added += $ins->rowCount();
         }
         $pdo->commit();
@@ -138,15 +151,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     redirect($back);
 }
 
-$selectCols = 'SELECT pe.id AS pe_id, pe.round_label, pe.status, pe.note AS pe_note, pe.assigned_user_id, pe.done_at, a.*';
+$selectCols = 'SELECT pe.id AS pe_id, pe.round_label, pe.status, pe.note AS pe_note, pe.assigned_user_id, pe.done_at,
+                      pe.psu_no, pe.enum_type, pe.enum_month, pe.enum_year, pe.fiscal_year, pe.lat, pe.lng, a.*';
 if (($_GET['export'] ?? '') === 'csv') {
-    $st = $pdo->prepare($selectCols . $from . ' ORDER BY pe.round_label, a.ea_code');
+    $st = $pdo->prepare($selectCols . $from . ' ORDER BY ' . EA_ROUND_ORDER . ', a.ea_code');
     $st->execute($params);
     $staff = ea_staff();
     $out = ea_csv_start('ea_' . $project['code'] . ($round ? '_' . preg_replace('/[^\p{L}\p{N}_-]+/u', '_', $round) : '') . '_' . date('Ymd') . '.csv');
-    fputcsv($out, array_merge(['โครงการ', 'รอบ/งวด'], EA_CSV_HEAD, ['ผู้รับผิดชอบ', 'สถานะ', 'วันที่สำรวจเสร็จ', 'หมายเหตุโครงการ']));
+    // รูปแบบเดียวกับไฟล์ EA_Report (นำเข้ากลับได้ที่ "นำเข้า EA โครงการ") + คอลัมน์การติดตามงาน
+    fputcsv($out, array_merge(EA_REPORT_HEAD, ['รหัส EA', 'รอบ/งวด', 'ผู้รับผิดชอบ', 'สถานะ', 'วันที่สำรวจเสร็จ', 'หมายเหตุ']));
     foreach ($st as $r) {
-        fputcsv($out, array_merge([$project['code'], $r['round_label']], ea_csv_row($r), [
+        fputcsv($out, array_merge(ea_report_row($r, $project['code']), ['="' . $r['ea_code'] . '"', $r['round_label'],
             $r['assigned_user_id'] ? ($staff[(int)$r['assigned_user_id']]['full_name'] ?? '') : '', EA_STATUSES[$r['status']][0] ?? $r['status'],
             $r['done_at'] ? thai_date(substr($r['done_at'], 0, 10)) : '', $r['pe_note']]));
     }
@@ -155,9 +170,19 @@ if (($_GET['export'] ?? '') === 'csv') {
 }
 
 // รอบ/งวดของโครงการ
-$st = $pdo->prepare('SELECT round_label, COUNT(*) n FROM ea_project_eas WHERE project_id = ? GROUP BY round_label ORDER BY round_label');
+$st = $pdo->prepare('SELECT pe.round_label, COUNT(*) n, GROUP_CONCAT(DISTINCT NULLIF(pe.enum_type, \'\') ORDER BY pe.enum_type) types
+                     FROM ea_project_eas pe WHERE pe.project_id = ?' . ($fy !== '' ? ' AND pe.fiscal_year = ' . (int)$fy : '') . '
+                     GROUP BY pe.round_label ORDER BY MIN(pe.enum_year) IS NULL, MIN(pe.enum_year), MIN(pe.enum_month) IS NULL, MIN(pe.enum_month), pe.round_label');
 $st->execute([$pid]);
-$rounds = $st->fetchAll(PDO::FETCH_KEY_PAIR);
+$rounds = [];
+$roundTypes = [];
+foreach ($st as $r) {
+    $rounds[(string)$r['round_label']] = (int)$r['n'];
+    $roundTypes[(string)$r['round_label']] = (string)$r['types'];
+}
+$st = $pdo->prepare('SELECT DISTINCT fiscal_year FROM ea_project_eas WHERE project_id = ? AND fiscal_year IS NOT NULL ORDER BY fiscal_year');
+$st->execute([$pid]);
+$fiscalYears = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
 // สรุปตามตัวกรอง
 $st = $pdo->prepare("SELECT COUNT(*) n, COALESCE(SUM(a.houses), 0) houses, COALESCE(SUM(a.households), 0) households, COALESCE(SUM(a.population), 0) population,
                             COALESCE(SUM(pe.status = 'done'), 0) done, COALESCE(SUM(pe.status = 'in_progress'), 0) doing" . $from);
@@ -183,7 +208,7 @@ $page = max(1, int_param('page', 1));
 $per = 200;
 $pages = max(1, (int)ceil($tot['n'] / $per));
 $page = min($page, $pages);
-$st = $pdo->prepare($selectCols . $from . ' ORDER BY pe.round_label, a.ea_code LIMIT ' . $per . ' OFFSET ' . (($page - 1) * $per));
+$st = $pdo->prepare($selectCols . $from . ' ORDER BY ' . EA_ROUND_ORDER . ', a.ea_code LIMIT ' . $per . ' OFFSET ' . (($page - 1) * $per));
 $st->execute($params);
 $rows = $st->fetchAll();
 $names = [];
@@ -197,22 +222,39 @@ $pageTitle = 'EA โครงการ ' . $project['code'];
 $active = 'projects';
 $pageActions = '<a href="projects.php" class="btn btn-light"><i class="bi bi-arrow-left"></i> ทุกโครงการ</a>'
     . ' <a href="?' . h(http_build_query($keep($query) + ['export' => 'csv'])) . '" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> Export CSV</a>'
+    . ($canEdit ? ' <a href="project_import.php" class="btn btn-outline-primary"><i class="bi bi-file-earmark-arrow-up"></i> นำเข้าไฟล์</a>' : '')
     . ($canEdit ? ' <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal"><i class="bi bi-plus-lg"></i> เพิ่ม EA</button>' : '');
 require __DIR__ . '/header.php';
 $n = (int)$tot['n'];
-$roundUrl = fn($r) => 'project_eas.php?id=' . $pid . ($r === null ? '' : '&round=' . urlencode($r));
+$roundUrl = fn($r) => 'project_eas.php?id=' . $pid . ($fy !== '' ? '&fy=' . $fy : '') . ($r === null ? '' : '&round=' . urlencode($r));
+$roundName = fn(string $rl) => ($rl === '' ? 'ไม่ระบุรอบ' : $rl) . ($roundTypes[$rl] ?? '' ? ' · ' . str_replace(',', '/', $roundTypes[$rl]) : '');
 ?>
 <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
   <span class="fw-semibold" style="color:<?= h($project['color']) ?>"><?= h($project['name']) ?></span>
   <span class="text-muted small">· <?= h(project_period_text($project)) ?></span>
 </div>
-<?php if ($rounds && (count($rounds) > 1 || array_key_first($rounds) !== '')): ?>
-<ul class="nav nav-pills mb-3 small">
-  <li class="nav-item"><a class="nav-link<?= $round === null ? ' active' : '' ?>" href="<?= h($roundUrl(null)) ?>">ทุกรอบ (<?= number_format(array_sum($rounds)) ?>)</a></li>
-  <?php foreach ($rounds as $rl => $cnt): $rl = (string)$rl; ?>
-  <li class="nav-item"><a class="nav-link<?= $round === $rl ? ' active' : '' ?>" href="<?= h($roundUrl($rl)) ?>"><?= h($rl === '' ? 'ไม่ระบุรอบ' : $rl) ?> (<?= number_format($cnt) ?>)</a></li>
-  <?php endforeach; ?>
-</ul>
+<?php if ($fiscalYears || ($rounds && (count($rounds) > 1 || array_key_first($rounds) !== ''))): ?>
+<div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <?php if ($fiscalYears): ?>
+  <select class="form-select form-select-sm w-auto" data-goto title="ปีงบประมาณ">
+    <option value="project_eas.php?id=<?= $pid ?>">ทุกปีงบประมาณ</option>
+    <?php foreach ($fiscalYears as $y): ?><option value="project_eas.php?id=<?= $pid ?>&amp;fy=<?= $y ?>" <?= $fy === $y ? 'selected' : '' ?>>ปีงบประมาณ <?= $y ?></option><?php endforeach; ?>
+  </select>
+  <?php endif; ?>
+  <?php if (count($rounds) > 8): ?>
+  <select class="form-select form-select-sm w-auto" data-goto title="รอบ/งวดการแจงนับ">
+    <option value="<?= h($roundUrl(null)) ?>">ทุกรอบ (<?= number_format(array_sum($rounds)) ?> EA)</option>
+    <?php foreach ($rounds as $rl => $cnt): ?><option value="<?= h($roundUrl($rl)) ?>" <?= $round === $rl ? 'selected' : '' ?>><?= h($roundName($rl)) ?> (<?= number_format($cnt) ?> EA)</option><?php endforeach; ?>
+  </select>
+  <?php elseif ($rounds): ?>
+  <ul class="nav nav-pills small">
+    <li class="nav-item"><a class="nav-link<?= $round === null ? ' active' : '' ?>" href="<?= h($roundUrl(null)) ?>">ทุกรอบ (<?= number_format(array_sum($rounds)) ?>)</a></li>
+    <?php foreach ($rounds as $rl => $cnt): ?>
+    <li class="nav-item"><a class="nav-link<?= $round === $rl ? ' active' : '' ?>" href="<?= h($roundUrl($rl)) ?>"><?= h($roundName($rl)) ?> (<?= number_format($cnt) ?>)</a></li>
+    <?php endforeach; ?>
+  </ul>
+  <?php endif; ?>
+</div>
 <?php endif; ?>
 
 <div class="row g-3 mb-3" data-reveal>
@@ -252,6 +294,7 @@ $roundUrl = fn($r) => 'project_eas.php?id=' . $pid . ($r === null ? '' : '&round
     <form class="row g-2 align-items-center">
       <input type="hidden" name="id" value="<?= $pid ?>">
       <?php if ($round !== null): ?><input type="hidden" name="round" value="<?= h($round) ?>"><?php endif; ?>
+      <?php if ($fy !== ''): ?><input type="hidden" name="fy" value="<?= $fy ?>"><?php endif; ?>
       <div class="col-md-3 col-12"><input name="q" class="form-control" placeholder="รหัส EA / หมู่บ้าน / ตำบล" value="<?= h($f['q']) ?>"></div>
       <?= ea_filter_selects($f) ?>
       <div class="col-md-2 col-6"><select name="status" class="form-select"><option value="">ทุกสถานะ</option>
@@ -268,15 +311,17 @@ $roundUrl = fn($r) => 'project_eas.php?id=' . $pid . ($r === null ? '' : '&round
       <table class="table table-hover mb-0 ea-table">
         <thead><tr>
           <?php if ($canEdit): ?><th style="width:32px"><input type="checkbox" class="form-check-input" data-check-all=".pe-check" title="เลือกทั้งหน้า"></th><?php endif; ?>
-          <th>รหัส EA</th><?php if ($round === null && count($rounds) > 1): ?><th>รอบ/งวด</th><?php endif; ?><th>พื้นที่</th><th>เขต</th>
+          <th>รหัส EA</th><th>PSU</th><?php if ($round === null && count($rounds) > 1): ?><th>รอบ/งวด</th><?php endif; ?><th>พื้นที่</th><th>เขต</th>
           <th class="ea-num">ครัวเรือน</th><th class="ea-num">ประชากร</th><th>ผู้รับผิดชอบ</th><th>สถานะ</th><th>หมายเหตุ</th></tr></thead>
         <tbody>
         <?php foreach ($rows as $r): ?>
           <tr>
             <?php if ($canEdit): ?><td><input type="checkbox" class="form-check-input pe-check" name="ids[]" value="<?= (int)$r['pe_id'] ?>"></td><?php endif; ?>
             <td><a href="ea_view.php?id=<?= (int)$r['id'] ?>" class="ea-code text-decoration-none"><?= h($r['ea_code']) ?></a></td>
-            <?php if ($round === null && count($rounds) > 1): ?><td class="small"><?= h($r['round_label'] ?: '-') ?></td><?php endif; ?>
-            <td><?= h(ea_place($r)) ?></td>
+            <td class="ea-code small"><?= h($r['psu_no'] ?: '-') ?></td>
+            <?php if ($round === null && count($rounds) > 1): ?><td class="small text-nowrap"><?= h($r['round_label'] ?: '-') ?><?= $r['enum_type'] !== '' ? '<div class="text-muted">' . h($r['enum_type']) . '</div>' : '' ?></td><?php endif; ?>
+            <td><?= h(ea_place($r)) ?><?php if ($r['lat'] !== null && $r['lng'] !== null): ?>
+              <a href="https://www.google.com/maps?q=<?= (float)$r['lat'] ?>,<?= (float)$r['lng'] ?>" target="_blank" rel="noopener" class="ms-1" title="พิกัด <?= (float)$r['lat'] ?>, <?= (float)$r['lng'] ?>"><i class="bi bi-geo-alt-fill text-success"></i></a><?php endif; ?></td>
             <td class="small text-nowrap"><?= h(EA_AREA_TYPES[(int)$r['area_type']] ?? '') ?></td>
             <td class="ea-num"><?= number_format((int)$r['households']) ?></td>
             <td class="ea-num"><?= number_format((int)$r['population']) ?></td>
@@ -285,7 +330,7 @@ $roundUrl = fn($r) => 'project_eas.php?id=' . $pid . ($r === null ? '' : '&round
             <td class="note"><?= h($r['pe_note']) ?></td>
           </tr>
         <?php endforeach; ?>
-        <?php if (!$rows): ?><tr><td colspan="10" class="text-center text-muted py-5"><?= $rounds ? 'ไม่พบ EA ตามเงื่อนไข' : 'ยังไม่ได้กำหนด EA ให้โครงการนี้' . ($canEdit ? ' — กดปุ่ม "เพิ่ม EA"' : '') ?></td></tr><?php endif; ?>
+        <?php if (!$rows): ?><tr><td colspan="12" class="text-center text-muted py-5"><?= $rounds ? 'ไม่พบ EA ตามเงื่อนไข' : 'ยังไม่ได้กำหนด EA ให้โครงการนี้' . ($canEdit ? ' — กดปุ่ม "เพิ่ม EA"' : '') ?></td></tr><?php endif; ?>
         </tbody>
       </table>
     </div>
@@ -331,7 +376,7 @@ $roundUrl = fn($r) => 'project_eas.php?id=' . $pid . ($r === null ? '' : '&round
       <div class="modal-body">
         <div class="row g-2 mb-3">
           <div class="col-md-6"><label class="form-label">รอบ/งวดการสำรวจ <span class="small text-muted">(ไม่บังคับ)</span></label>
-            <input name="round_label" class="form-control" maxlength="50" list="roundList" value="<?= h((string)$round) ?>" placeholder="เช่น ม.ค. 2570 / ไตรมาส 1/2570">
+            <input name="round_label" class="form-control" maxlength="50" list="roundList" value="<?= h((string)$round) ?>" placeholder="เช่น ม.ค. 2570 (เดือน + ปี พ.ศ.)">
             <datalist id="roundList"><?php foreach (array_keys($rounds) as $rl): if ((string)$rl !== ''): ?><option value="<?= h($rl) ?>"><?php endif; endforeach; ?></datalist></div>
           <div class="col-md-6"><label class="form-label">ผู้รับผิดชอบ <span class="small text-muted">(ไม่บังคับ)</span></label>
             <select name="assign" class="form-select"><option value="">— กำหนดภายหลัง —</option><?= ea_staff_options() ?></select></div>

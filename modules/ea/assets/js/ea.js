@@ -8,6 +8,10 @@
       if (sel.form.method.toLowerCase() === 'get') { sel.form.submit(); }
     });
   });
+  // ช่องเลือกที่เปลี่ยนหน้า (ปีงบประมาณ / รอบ)
+  document.querySelectorAll('select[data-goto]').forEach(sel => {
+    sel.addEventListener('change', () => { location.href = sel.value; });
+  });
   // เลือกทั้งหมด + นับจำนวนที่เลือก
   document.querySelectorAll('[data-check-all]').forEach(all => {
     const boxes = () => document.querySelectorAll(all.dataset.checkAll);

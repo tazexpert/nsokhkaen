@@ -737,6 +737,13 @@ CREATE TABLE IF NOT EXISTS ea_project_eas (
   project_id     INT UNSIGNED NOT NULL,
   ea_id          INT UNSIGNED NOT NULL,
   round_label    VARCHAR(50)  NOT NULL DEFAULT '',      -- รอบ/งวดการสำรวจ เช่น "ม.ค. 2570", "ไตรมาส 1" ('' = ไม่แยกรอบ)
+  psu_no         VARCHAR(10)  NOT NULL DEFAULT '',      -- เลข PSU (จากไฟล์ EA ของโครงการ)
+  enum_type      VARCHAR(10)  NOT NULL DEFAULT '',      -- Q1–Q4 = รายไตรมาส, Month = รายเดือน
+  enum_month     TINYINT UNSIGNED NULL,                 -- เดือนที่แจงนับ 1–12
+  enum_year      SMALLINT UNSIGNED NULL,                -- ปีที่แจงนับ (พ.ศ.)
+  fiscal_year    SMALLINT UNSIGNED NULL,                -- ปีงบประมาณ (พ.ศ.)
+  lat            DECIMAL(10,7) NULL,
+  lng            DECIMAL(10,7) NULL,
   assigned_user_id INT UNSIGNED NULL,                   -- ผู้รับผิดชอบ EA
   status         ENUM('pending', 'in_progress', 'done') NOT NULL DEFAULT 'pending',
   note           VARCHAR(255) NOT NULL DEFAULT '',
@@ -747,6 +754,7 @@ CREATE TABLE IF NOT EXISTS ea_project_eas (
   UNIQUE KEY uq_ea_project_round (project_id, round_label, ea_id),
   KEY idx_ea_pe_ea (ea_id),
   KEY idx_ea_pe_user (assigned_user_id),
+  KEY idx_ea_pe_period (project_id, enum_year, enum_month),
   CONSTRAINT fk_ea_pe_project FOREIGN KEY (project_id) REFERENCES core_projects(id) ON DELETE CASCADE,
   CONSTRAINT fk_ea_pe_ea FOREIGN KEY (ea_id) REFERENCES ea_areas(id),
   CONSTRAINT fk_ea_pe_user FOREIGN KEY (assigned_user_id) REFERENCES core_users(id) ON DELETE SET NULL,

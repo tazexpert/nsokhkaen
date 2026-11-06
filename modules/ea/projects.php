@@ -7,7 +7,8 @@ $showAll = !empty($_GET['all']);
 $stats = [];
 foreach ($pdo->query("SELECT project_id, round_label, COUNT(*) n, SUM(status = 'done') done, SUM(status = 'in_progress') doing,
                              COUNT(assigned_user_id) assigned, MAX(updated_at) last
-                      FROM ea_project_eas GROUP BY project_id, round_label ORDER BY project_id, round_label") as $r) {
+                      FROM ea_project_eas GROUP BY project_id, round_label
+                      ORDER BY project_id, MIN(enum_year) IS NULL, MIN(enum_year), MIN(enum_month) IS NULL, MIN(enum_month), round_label") as $r) {
     $stats[(int)$r['project_id']][] = $r;
 }
 $projects = array_filter(projects_all(), fn($p) => $showAll || $p['is_active'] || isset($stats[(int)$p['id']]));
