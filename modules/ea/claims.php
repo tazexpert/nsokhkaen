@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('ยกเลิกการออกใบสำคัญแล้ว (กลับเป็นร่าง)');
     } elseif ($action === 'copy') {
         // คัดลอกเป็นร่างใบใหม่ (ไม่รวมรายวัน สัญญายืมเงิน) — ใช้กับการเดินทางรอบถัดไป
-        $cols = ['user_id', 'project_id', 'office', 'addressee', 'order_no', 'order_date', 'full_name', 'position', 'level', 'department', 'companions', 'purpose',
+        $cols = ['user_id', 'project_id', 'project_other', 'office', 'addressee', 'order_no', 'order_date', 'full_name', 'position', 'level', 'department', 'companions', 'purpose',
                  'depart_from', 'return_to', 'origin_address', 'claim_for', 'per_diem_type', 'per_diem_rate', 'lodging_type', 'vehicle_kind', 'km_rate', 'other_desc'];
         $pdo->prepare('INSERT INTO ea_claims (' . implode(',', $cols) . ', claim_date, created_by) SELECT ' . implode(',', $cols) . ', CURDATE(), ? FROM ea_claims WHERE id = ?')
             ->execute([(int)$me['id'], $c['id']]);
@@ -109,7 +109,7 @@ require __DIR__ . '/header.php';
         <tr>
           <td class="text-nowrap small"><?= h(thai_date($r['claim_date'])) ?></td>
           <?php if ($isAdmin): ?><td class="small"><?= h($r['full_name']) ?></td><?php endif; ?>
-          <td><?php if ($p): ?><span class="fw-semibold" style="color:<?= h($p['color']) ?>"><?= h($p['code']) ?></span> <?php endif; ?>
+          <td><?php if ($p): ?><span class="fw-semibold" style="color:<?= h($p['color']) ?>"><?= h($p['code']) ?></span> <?php elseif ($r['project_other'] !== ''): ?><span class="fw-semibold"><?= h($r['project_other']) ?></span><br><?php endif; ?>
             <span class="small"><?= h(mb_strimwidth((string)$r['purpose'], 0, 110, '…')) ?: '<span class="text-muted">-</span>' ?></span>
             <?= $r['order_no'] !== '' ? '<div class="small text-muted">คำสั่ง ' . h($r['order_no']) . '</div>' : '' ?></td>
           <td class="small text-nowrap"><?= $r['d1'] ? h(claim_date_short($r['d1']) . ($r['d2'] !== $r['d1'] ? ' – ' . claim_date_short($r['d2']) : '')) . '<div class="text-muted">' . (int)$r['ndays'] . ' วัน</div>' : '<span class="text-muted">ยังไม่มีรายวัน</span>' ?></td>

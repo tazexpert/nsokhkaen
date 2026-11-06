@@ -809,6 +809,7 @@ CREATE TABLE IF NOT EXISTS ea_claims (
   id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id        INT UNSIGNED NOT NULL,                 -- ผู้ขอเบิก
   project_id     INT UNSIGNED NULL,                     -- โครงการที่ไปปฏิบัติงาน
+  project_other  VARCHAR(255) NOT NULL DEFAULT '',      -- ชื่อโครงการที่พิมพ์เอง (อื่น ๆ)
   claim_date     DATE         NOT NULL,                 -- วันที่เขียนใบเบิก
   office         VARCHAR(150) NOT NULL DEFAULT '',      -- ที่ทำการ
   addressee      VARCHAR(150) NOT NULL DEFAULT '',      -- เรียน

@@ -54,6 +54,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $projects = projects_all();
     $c = array_merge($c, [
         'project_id' => isset($projects[int_param('project_id')]) ? int_param('project_id') : null,
+        // อื่น ๆ: พิมพ์ชื่อโครงการเอง (ไม่ผูกกับโครงการในระบบ)
+        'project_other' => post('project_id') === 'other' ? $txt('project_other', 255) : '',
         'claim_date' => $date(post('claim_date')) ?? date('Y-m-d'),
         'office' => $txt('office', 150), 'addressee' => $txt('addressee', 150), 'order_no' => $txt('order_no', 100), 'order_date' => $date(post('order_date')),
         'full_name' => $txt('full_name', 150), 'position' => $txt('position', 150), 'level' => $txt('level', 100), 'department' => $txt('department', 150),
@@ -95,7 +97,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     claim_calc($c, $days, post('auto_per_diem') === '1');
     if (!$errors) {
-        $cols = ['user_id', 'project_id', 'claim_date', 'office', 'addressee', 'order_no', 'order_date', 'full_name', 'position', 'level', 'department', 'companions',
+        if (post('project_id') === 'other' && $c['project_other'] === '') {
+            $errors[] = 'เลือกโครงการ "อื่น ๆ" กรุณาพิมพ์ชื่อโครงการ';
+        }
+    }
+    if (!$errors) {
+        $cols = ['user_id', 'project_id', 'project_other', 'claim_date', 'office', 'addressee', 'order_no', 'order_date', 'full_name', 'position', 'level', 'department', 'companions',
                  'purpose', 'depart_from', 'return_to', 'origin_address', 'claim_for', 'per_diem_type', 'per_diem_rate', 'per_diem_days', 'per_diem_amount',
                  'per_diem_note', 'lodging_type', 'lodging_days', 'lodging_amount', 'vehicle_kind', 'km_rate', 'vehicle_desc', 'vehicle_amount', 'other_desc',
                  'other_amount', 'total_amount', 'receive_amount', 'loan_no', 'loan_date', 'loan_amount', 'note'];
@@ -160,11 +167,15 @@ require __DIR__ . '/header.php';
           <div class="col-md-4"><label class="form-label small">เรียน</label><input name="addressee" class="form-control" maxlength="150" value="<?= h($c['addressee']) ?>"></div>
           <div class="col-md-4"><label class="form-label small">ตามคำสั่ง/บันทึก ที่</label><input name="order_no" class="form-control" maxlength="100" value="<?= h($c['order_no']) ?>" placeholder="เช่น ขก 0013/549"></div>
           <div class="col-md-4"><label class="form-label small">ลงวันที่</label><input type="text" name="order_date" class="form-control thai-date" value="<?= h((string)$c['order_date']) ?>"></div>
-          <div class="col-12"><label class="form-label small">โครงการ</label>
-            <select name="project_id" class="form-select"><option value="">— ไม่ระบุ —</option>
+          <?php $isOther = !$c['project_id'] && ($c['project_other'] ?? '') !== '' || post('project_id') === 'other'; ?>
+          <div class="col-md-<?= $isOther ? '5' : '12' ?>" id="projCol"><label class="form-label small">โครงการ</label>
+            <select name="project_id" id="projSel" class="form-select"><option value="">— ไม่ระบุ —</option>
               <?php foreach (projects_all() as $p): if (!$p['is_active'] && (int)$p['id'] !== (int)$c['project_id']) { continue; } ?>
               <option value="<?= (int)$p['id'] ?>" <?= (int)$c['project_id'] === (int)$p['id'] ? 'selected' : '' ?> data-name="<?= h($p['name']) ?>"><?= h($p['code'] . ' — ' . $p['name']) ?></option><?php endforeach; ?>
+              <option value="other" <?= $isOther ? 'selected' : '' ?>>อื่น ๆ (พิมพ์เอง)</option>
             </select></div>
+          <div class="col-md-7<?= $isOther ? '' : ' d-none' ?>" id="projOtherCol"><label class="form-label small">ชื่อโครงการ (อื่น ๆ)</label>
+            <input name="project_other" id="projOther" class="form-control" maxlength="255" value="<?= h($c['project_other'] ?? '') ?>" placeholder="พิมพ์ชื่อโครงการ"></div>
         </div>
       </div>
 
@@ -387,6 +398,15 @@ require __DIR__ . '/header.php';
     ta.value = ta.value.trim() ? ta.value.trim() + ', ' + v : v;
     $('localPick').value = '';
   });
+  // โครงการ "อื่น ๆ" → แสดงช่องพิมพ์ชื่อโครงการ
+  const projSync = () => {
+    const other = $('projSel').value === 'other';
+    $('projOtherCol').classList.toggle('d-none', !other);
+    $('projCol').className = other ? 'col-md-5' : 'col-12';
+    $('projOther').required = other;
+    if (other && document.activeElement === $('projSel')) { $('projOther').focus(); }
+  };
+  $('projSel').addEventListener('change', projSync);
   $('vhKind').addEventListener('change', () => { const r = $('vhKind').selectedOptions[0].dataset.rate; if (+r) { $('kmRate').value = r; } recalc(); });
   $('pdType').addEventListener('change', () => { $('pdRate').value = $('pdType').selectedOptions[0].dataset.rate; recalc(); });
   document.getElementById('claimForm').addEventListener('input', recalc);

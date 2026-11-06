@@ -341,7 +341,7 @@ function claim_defaults(array $user): array
 {
     [$pos, $lv] = claim_split_position((string)($user['position'] ?? ''));
     $c = [
-        'id' => 0, 'user_id' => (int)$user['id'], 'project_id' => null, 'claim_date' => date('Y-m-d'),
+        'id' => 0, 'user_id' => (int)$user['id'], 'project_id' => null, 'project_other' => '', 'claim_date' => date('Y-m-d'),
         'office' => ORG_NAME, 'addressee' => 'สถิติจังหวัดขอนแก่น', 'order_no' => '', 'order_date' => null,
         'full_name' => preg_replace('/\s+/u', ' ', (string)$user['full_name']), 'position' => $pos, 'level' => $lv, 'department' => ORG_NAME,
         'companions' => '', 'purpose' => '', 'depart_from' => 'home', 'return_to' => 'home', 'origin_address' => '', 'claim_for' => 'self',
@@ -354,7 +354,7 @@ function claim_defaults(array $user): array
     $st->execute([(int)$user['id']]);
     if ($last = $st->fetch()) {
         foreach (['office', 'addressee', 'position', 'level', 'department', 'origin_address', 'depart_from', 'return_to', 'per_diem_type', 'per_diem_rate',
-                  'vehicle_kind', 'km_rate', 'project_id', 'purpose'] as $k) {
+                  'vehicle_kind', 'km_rate', 'project_id', 'project_other', 'purpose'] as $k) {
             $c[$k] = $last[$k];
         }
     }
