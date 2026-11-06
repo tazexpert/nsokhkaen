@@ -7,7 +7,7 @@
  */
 require_once __DIR__ . '/bootstrap.php';
 require_once APP_ROOT . '/libs/simplexlsx/SimpleXLSX.php';
-$me = require_module(CAL_MODULE, 'editor');
+$me = require_module(CAL_MODULE, 'admin');   // นำเข้าเวรสำนักงาน: เฉพาะผู้ดูแลปฏิทิน
 $pdo = db();
 $sessKey = 'cal_duty_import';
 

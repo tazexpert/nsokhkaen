@@ -7,7 +7,7 @@
  */
 require_once __DIR__ . '/bootstrap.php';
 require_once APP_ROOT . '/libs/simplexlsx/SimpleXLSX.php';
-$me = require_module(CAL_MODULE, 'editor');
+$me = require_module(CAL_MODULE, 'admin');   // นำเข้ากิจกรรมจาก CSV: เฉพาะผู้ดูแลปฏิทิน
 $pdo = db();
 $sessKey = 'cal_import';
 const CAL_IMPORT_HEADERS = ['วันที่', 'ถึงวันที่', 'เวลาเริ่ม', 'เวลาสิ้นสุด', 'กิจกรรม', 'สถานที่', 'ผู้รับผิดชอบ', 'ลิงก์', 'หมายเหตุ'];
