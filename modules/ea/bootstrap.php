@@ -87,13 +87,73 @@ function ea_staff_options(?int $selected = null): string
 }
 
 /**
- * รหัส EA 15 หลัก = ภาค(1) + จังหวัด(2) + อำเภอ(2) + ตำบล(2) + เขตการปกครอง(1) + หมู่บ้าน(3; ไม่มี = 999) + EA(4)
- * เช่น 6 40 01 01 1 999 0001 = 640010119990001
+ * รหัส EA 15 หลัก = ภาค(1) + จังหวัด(2) + อำเภอ(2) + ตำบล(2) + เขตการปกครอง(1) + รหัสเทศบาล/อบต.(3) + EA(4)
+ * เช่น 6 40 01 01 1 999 0001 = 640010119990001 (999 = เทศบาลนครขอนแก่น) · 6 40 01 03 2 002 0001 (002 = อบต.โคกสี)
+ * ไม่ทราบรหัสเทศบาล/อบต. = 999 (ปรับให้ถูกต้องโดยนำเข้าไฟล์ SurveyEaHome)
  */
-function ea_make_code(string $region, string $province, string $district, string $tambon, $area, string $village, string $eaNo): string
+function ea_make_code(string $region, string $province, string $district, string $tambon, $area, string $local, string $eaNo): string
 {
-    $v = $village === '' ? '999' : (ctype_digit($village) ? str_pad((string)(int)$village, 3, '0', STR_PAD_LEFT) : '999');
-    return substr($region, 0, 1) . $province . $district . $tambon . $area . $v . $eaNo;
+    $l = ctype_digit($local) && $local !== '' ? str_pad(substr($local, -3), 3, '0', STR_PAD_LEFT) : '999';
+    return substr($region, 0, 1) . $province . $district . $tambon . $area . $l . $eaNo;
+}
+
+/** EA ทั้งหมดในระบบ [คีย์ 11 หลัก => แถว] */
+function ea_existing_by_key(): array
+{
+    $out = [];
+    foreach (db()->query('SELECT * FROM ea_areas') as $r) {
+        $out[ea_key($r)] = $r;
+    }
+    return $out;
+}
+
+/** แยกรหัส EA 15 หลัก → ส่วนประกอบ (null = รูปแบบไม่ถูกต้อง) */
+function ea_split_code(string $code): ?array
+{
+    if (!preg_match('/^(\d)(\d{2})(\d{2})(\d{2})([12])(\d{3})(\d{4})$/', $code, $m)) {
+        return null;
+    }
+    return ['region_code' => $m[1], 'province_code' => $m[2], 'district_code' => $m[3], 'tambon_code' => $m[4],
+            'area_type' => (int)$m[5], 'local_code' => $m[6], 'ea_no' => $m[7]];
+}
+
+/**
+ * เติมรหัสเทศบาล/อบต. และรหัส EA 15 หลักให้แถวที่ไม่มี (ไฟล์บัญชีเขตแจงนับ / EA ของโครงการไม่มีรหัสเทศบาล/อบต.)
+ * ลำดับ: EA เดิมในระบบ → EA อื่นในตำบล+เขตการปกครองเดียวกัน (ในระบบหรือในไฟล์) → 999
+ */
+function ea_resolve_codes(array &$rows, array $existingByKey): void
+{
+    $tl = [];                                       // อำเภอ+ตำบล+เขต => [local_code, local_name] ที่พบบ่อยที่สุด
+    $count = [];
+    $add = function (array $r) use (&$count) {
+        if (($r['local_code'] ?? '') !== '') {
+            $k = $r['province_code'] . $r['district_code'] . $r['tambon_code'] . $r['area_type'];
+            $kk = $r['local_code'] . '|' . ($r['local_name'] ?? '');
+            $count[$k][$kk] = ($count[$k][$kk] ?? 0) + 1;
+        }
+    };
+    array_map($add, $existingByKey);
+    array_map($add, $rows);
+    foreach ($count as $k => $c) {
+        arsort($c);
+        $tl[$k] = explode('|', (string)array_key_first($c), 2);
+    }
+    foreach ($rows as &$r) {
+        if (!array_key_exists('local_code', $r) || $r['local_code'] === null) {
+            $old = $existingByKey[$r['ea_key']] ?? null;
+            $k = $r['province_code'] . $r['district_code'] . $r['tambon_code'] . $r['area_type'];
+            if ($old && $old['local_code'] !== '') {
+                [$r['local_code'], $r['local_name']] = [$old['local_code'], $old['local_name']];
+            } elseif (isset($tl[$k])) {
+                [$r['local_code'], $r['local_name']] = $tl[$k];
+            } else {
+                [$r['local_code'], $r['local_name']] = ['', ''];
+            }
+        }
+        $region = $r['region_code'] ?? ($existingByKey[$r['ea_key']]['region_code'] ?? '');
+        $r['ea_code'] = ea_make_code((string)$region, $r['province_code'], $r['district_code'], $r['tambon_code'], $r['area_type'], (string)$r['local_code'], $r['ea_no']);
+    }
+    unset($r);
 }
 
 /** คีย์ไม่ซ้ำของ EA (ใช้จับคู่) = จังหวัด + อำเภอ + ตำบล + เขตการปกครอง + EA (11 หลัก) */
@@ -152,8 +212,8 @@ function ea_filter_sql(array $f): array
             $where[] = $cw;
             array_push($params, ...$cp);
         } else {
-            $where[] = '(a.ea_code LIKE ? OR a.village_name LIKE ? OR a.tambon_name LIKE ? OR a.district_name LIKE ? OR a.note LIKE ?)';
-            array_push($params, "$q%", "%$q%", "%$q%", "%$q%", "%$q%");
+            $where[] = '(a.ea_code LIKE ? OR a.village_name LIKE ? OR a.tambon_name LIKE ? OR a.district_name LIKE ? OR a.local_name LIKE ? OR a.note LIKE ?)';
+            array_push($params, "$q%", "%$q%", "%$q%", "%$q%", "%$q%", "%$q%");
         }
     }
     return [$where, $params];
@@ -226,7 +286,8 @@ function ea_csv_start(string $filename)
 }
 
 /** หัวคอลัมน์ CSV ของบัญชี EA (รูปแบบเดียวกับไฟล์ "บัญชีเขตแจงนับ") */
-const EA_CSV_HEAD = ['รหัส EA', 'รหัสภาค', 'ภาค', 'รหัสจังหวัด', 'จังหวัด', 'รหัสอำเภอ', 'อำเภอ', 'รหัสตำบล', 'ตำบล', 'เขตการปกครอง', 'EA',
+const EA_CSV_HEAD = ['รหัส EA', 'รหัสภาค', 'ภาค', 'รหัสจังหวัด', 'จังหวัด', 'รหัสอำเภอ', 'อำเภอ', 'รหัสตำบล', 'ตำบล', 'เขตการปกครอง',
+                     'รหัสเทศบาล/อบต.', 'เทศบาล / อบต.', 'EA',
                      'EA สำหรับเสนอผลล่วงหน้า', 'รหัสหมู่บ้าน', 'หมู่บ้าน/ชุมชน', 'จำนวนบ้าน/อาคาร/สิ่งปลูกสร้าง', 'จำนวนครัวเรือน', 'จำนวนประชากร', 'หมายเหตุ'];
 
 function ea_csv_row(array $r): array
@@ -234,7 +295,7 @@ function ea_csv_row(array $r): array
     // ใส่ ="..." ให้รหัสที่ขึ้นต้นด้วย 0 ไม่ถูก Excel ตัดเลขศูนย์
     $t = fn($v) => $v === '' ? '' : '="' . $v . '"';
     return [$t($r['ea_code']), $r['region_code'], $r['region_name'], $t($r['province_code']), $r['province_name'], $t($r['district_code']), $r['district_name'],
-            $t($r['tambon_code']), $r['tambon_name'], $r['area_type'], $t($r['ea_no']), $r['advance_ea'], $t($r['village_code']), $r['village_name'],
+            $t($r['tambon_code']), $r['tambon_name'], $r['area_type'], $t($r['local_code']), $r['local_name'], $t($r['ea_no']), $r['advance_ea'], $t($r['village_code']), $r['village_name'],
             (int)$r['houses'], (int)$r['households'], (int)$r['population'], (string)$r['note']];
 }
 
@@ -254,6 +315,13 @@ function ea_parse_xlsx(string $path): array
     }
     $rows = $x->rows(0);
     $norm = fn($v) => preg_replace('/\s+/u', '', (string)$v);
+    // ไฟล์ SurveyEaHome (มีคอลัมน์ "รหัส EA" 15 หลัก)
+    foreach (array_slice($rows, 0, 10, true) as $ri => $r) {
+        if (in_array('รหัสEA', array_map($norm, array_values($r)), true)) {
+            return ea_parse_survey_rows($rows, $ri);
+        }
+    }
+    $res['format'] = 'census';
     // หาแถวหัวตาราง: มีช่อง "EA" และ "อำเภอ..."
     $head = null;
     foreach (array_slice($rows, 0, 15, true) as $ri => $r) {
@@ -354,7 +422,7 @@ function ea_parse_xlsx(string $path): array
         $vcode = $vc === '' ? '' : ($code($vc, 2) ?? mb_substr($vc, 0, 3));
         $rc = mb_substr($get($r, $col['region']), 0, 2);
         $res['rows'][] = [
-            'ea_key' => $ea, 'ea_code' => ea_make_code($rc, $p, $d, $t, $a, $vcode, $e), 'seq' => (int)$get($r, 0),
+            'ea_key' => $ea, 'seq' => (int)$get($r, 0),        // ea_code / local_code เติมด้วย ea_resolve_codes()
             'region_code' => $rc, 'region_name' => mb_substr($get($r, $col['region'] === null ? null : $col['region'] + 1), 0, 50),
             'province_code' => $p, 'province_name' => mb_substr($get($r, $col['province'] + 1), 0, 50),
             'district_code' => $d, 'district_name' => mb_substr($get($r, $col['district'] + 1), 0, 100),
@@ -376,7 +444,90 @@ function ea_parse_xlsx(string $path): array
 
 /** คอลัมน์ข้อมูลที่นำเข้า (ใช้เทียบว่ามีการเปลี่ยนแปลง) */
 const EA_IMPORT_COLS = ['seq', 'region_code', 'region_name', 'province_code', 'province_name', 'district_code', 'district_name', 'tambon_code', 'tambon_name',
-                        'area_type', 'ea_no', 'advance_ea', 'village_code', 'village_name', 'houses', 'households', 'population', 'note'];
+                        'area_type', 'local_code', 'local_name', 'ea_no', 'advance_ea', 'village_code', 'village_name', 'houses', 'households', 'population', 'note'];
+
+/** คอลัมน์ที่แถวนำเข้ามีค่า (ไม่รวม null) ตามลำดับ ea_code + EA_IMPORT_COLS + source */
+function ea_row_cols(array $r): array
+{
+    return array_values(array_filter(array_merge(['ea_code'], EA_IMPORT_COLS, ['source']), fn($c) => array_key_exists($c, $r) && $r[$c] !== null));
+}
+
+/* ------------------------------------------------------------------------
+ * ไฟล์ SurveyEaHome (บัญชี EA ล่าสุด): ลำดับที่ | ภูมิภาค | จังหวัด | เขต/อำเภอ | แขวง/ตำบล | เทศบาล / อบต. | รหัส EA |
+ *   จำนวนบ้าน/อาคารฯ | จำนวนอาคาร/สิ่งปลูกสร้าง
+ * รหัส ภาค จังหวัด อำเภอ ตำบล เขตการปกครอง เทศบาล/อบต. EA เติมจากรหัส EA 15 หลัก
+ * "จำนวนบ้าน/อาคารฯ" = จำนวนครัวเรือน (ตรงกับคอลัมน์ครัวเรือนในบัญชีเขตแจงนับ) · "จำนวนอาคาร/สิ่งปลูกสร้าง" = บ้าน/อาคาร (ใช้เมื่อมากกว่า 0)
+ * ข้อมูลที่ไฟล์ไม่มี (หมู่บ้าน ประชากร หมายเหตุ) คงค่าเดิมในระบบ
+ * ------------------------------------------------------------------------ */
+function ea_parse_survey_rows(array $rows, int $head): array
+{
+    $res = ['format' => 'survey', 'source' => 'บัญชี EA ล่าสุด (SurveyEaHome)', 'rows' => [], 'errors' => [], 'skipped' => 0];
+    $norm = fn($v) => preg_replace('/\s+/u', '', (string)$v);
+    $col = [];
+    foreach (array_values($rows[$head]) as $i => $c) {
+        $c = $norm($c);
+        $k = match (true) {
+            str_starts_with($c, 'ลำดับ') => 'seq',
+            $c === 'ภูมิภาค' || $c === 'ภาค' => 'region_name',
+            $c === 'จังหวัด' => 'province_name',
+            str_contains($c, 'อำเภอ') => 'district_name',
+            str_contains($c, 'ตำบล') => 'tambon_name',
+            str_contains($c, 'เทศบาล') || str_contains($c, 'อบต') => 'local_name',
+            $c === 'รหัสEA' => 'ea_code',
+            str_starts_with($c, 'จำนวนอาคาร') => 'houses',
+            str_starts_with($c, 'จำนวนบ้าน') || str_contains($c, 'ครัวเรือน') => 'households',
+            default => null,
+        };
+        if ($k !== null && !isset($col[$k])) {
+            $col[$k] = $i;
+        }
+    }
+    $get = fn(array $r, string $k) => isset($col[$k]) ? trim(preg_replace('/\s+/u', ' ', (string)($r[$col[$k]] ?? ''))) : '';
+    $num = fn(string $v) => $v === '' ? null : max(0, (int)round((float)str_replace(',', '', $v)));
+    $seen = [];
+    foreach (array_slice($rows, $head + 1, null, true) as $ri => $r) {
+        $r = array_values($r);
+        $line = $ri + 1;
+        $raw = preg_replace('/\D/', '', $get($r, 'ea_code'));
+        if ($raw === '') {
+            $res['skipped']++;
+            continue;
+        }
+        $p = ea_split_code(str_pad($raw, 15, '0', STR_PAD_LEFT));
+        if (!$p) {
+            if (count($res['errors']) < 30) {
+                $res['errors'][] = 'แถวที่ ' . $line . ': รหัส EA "' . $get($r, 'ea_code') . '" ต้องเป็นตัวเลข 15 หลัก (ภาค จังหวัด อำเภอ ตำบล เขต 1/2 เทศบาล/อบต. EA)';
+            }
+            continue;
+        }
+        $code = implode('', [$p['region_code'], $p['province_code'], $p['district_code'], $p['tambon_code'], $p['area_type'], $p['local_code'], $p['ea_no']]);
+        $key = $p['province_code'] . $p['district_code'] . $p['tambon_code'] . $p['area_type'] . $p['ea_no'];
+        if (isset($seen[$key])) {
+            if (count($res['errors']) < 30) {
+                $res['errors'][] = 'แถวที่ ' . $line . ': รหัส EA ' . $code . ' ซ้ำกับแถวที่ ' . $seen[$key];
+            }
+            continue;
+        }
+        $seen[$key] = $line;
+        $row = $p + ['ea_key' => $key, 'ea_code' => $code, 'seq' => (int)$get($r, 'seq'),
+            'region_name' => mb_substr($get($r, 'region_name'), 0, 50), 'province_name' => mb_substr($get($r, 'province_name'), 0, 50),
+            'district_name' => mb_substr($get($r, 'district_name'), 0, 100), 'tambon_name' => mb_substr($get($r, 'tambon_name'), 0, 100),
+            'local_name' => mb_substr($get($r, 'local_name'), 0, 150)];
+        $hh = $num($get($r, 'households'));
+        if ($hh !== null) {
+            $row['households'] = $hh;
+        }
+        $bld = $num($get($r, 'houses'));
+        if ($bld) {                                 // 0 / ว่าง = ไม่มีข้อมูล คงค่าเดิม
+            $row['houses'] = $bld;
+        }
+        $res['rows'][] = $row;
+    }
+    if (!$res['rows'] && !$res['errors']) {
+        $res['errors'][] = 'ไม่พบข้อมูล EA ในไฟล์';
+    }
+    return $res;
+}
 
 /* ------------------------------------------------------------------------
  * EA ของโครงการ: ไฟล์ EA_Report (CSV/xlsx) — 1 แถว = EA ที่โครงการใช้ในเดือนที่แจงนับนั้น
@@ -571,7 +722,7 @@ function ea_parse_project_file(string $path, string $ext, string $province = '40
         $type = $get($r, 'enumerate_type');
         $vcode = ($vc = $get($r, 'รหัสหมู่บ้าน')) === '' ? '' : ($code($vc, 2) ?? mb_substr($vc, 0, 3));
         $res['rows'][] = [
-            'ea_key' => $ea, 'ea_code' => ea_make_code($region, $province, $d, $t, $a, $vcode, $e), 'project_key' => $pk, 'round_label' => $label,
+            'ea_key' => $ea, 'region_code' => $region, 'province_code' => $province, 'project_key' => $pk, 'round_label' => $label,
             'psu_no' => mb_substr($psu, 0, 10), 'enum_type' => mb_substr($type, 0, 10),
             'enum_month' => $month, 'enum_year' => $year, 'fiscal_year' => $fy,
             'lat' => $coord($get($r, 'latitude'), -90, 90), 'lng' => $coord($get($r, 'longitude'), -180, 180),

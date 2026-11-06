@@ -18,16 +18,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'save') {
     ea_require('admin');
     $num = fn(string $k) => max(0, (int)str_replace(',', '', post($k)));
     $vcode = mb_substr(trim(post('village_code')), 0, 3);
-    // รหัส EA 15 หลักเปลี่ยนตามรหัสหมู่บ้าน
-    $newCode = ea_make_code($ea['region_code'], $ea['province_code'], $ea['district_code'], $ea['tambon_code'], $ea['area_type'], $vcode, $ea['ea_no']);
+    $lcode = preg_match('/^\d{1,3}$/', trim(post('local_code'))) ? str_pad(trim(post('local_code')), 3, '0', STR_PAD_LEFT) : '';
+    // รหัส EA 15 หลักเปลี่ยนตามรหัสเทศบาล/อบต.
+    $newCode = ea_make_code($ea['region_code'], $ea['province_code'], $ea['district_code'], $ea['tambon_code'], $ea['area_type'], $lcode, $ea['ea_no']);
     $dup = $pdo->prepare('SELECT COUNT(*) FROM ea_areas WHERE ea_code = ? AND id <> ?');
     $dup->execute([$newCode, $id]);
     if ($dup->fetchColumn()) {
-        flash('รหัส EA ' . $newCode . ' ซ้ำกับ EA อื่น — ตรวจรหัสหมู่บ้าน', 'danger');
+        flash('รหัส EA ' . $newCode . ' ซ้ำกับ EA อื่น — ตรวจรหัสเทศบาล/อบต.', 'danger');
         redirect('ea_view.php?id=' . $id . '&edit=1');
     }
-    $pdo->prepare('UPDATE ea_areas SET ea_code = ?, village_code = ?, village_name = ?, advance_ea = ?, houses = ?, households = ?, population = ?, note = ?, is_active = ? WHERE id = ?')
-        ->execute([$newCode, $vcode, mb_substr(trim(post('village_name')), 0, 150), mb_substr(trim(post('advance_ea')), 0, 20),
+    $pdo->prepare('UPDATE ea_areas SET ea_code = ?, local_code = ?, local_name = ?, village_code = ?, village_name = ?, advance_ea = ?, houses = ?, households = ?, population = ?, note = ?, is_active = ? WHERE id = ?')
+        ->execute([$newCode, $lcode, mb_substr(trim(post('local_name')), 0, 150), $vcode, mb_substr(trim(post('village_name')), 0, 150), mb_substr(trim(post('advance_ea')), 0, 20),
                    $num('houses'), $num('households'), $num('population'), mb_substr(trim(post('note')), 0, 2000), post('is_active') === '1' ? 1 : 0, $id]);
     audit_log('ea_edit', 'แก้ไขข้อมูล EA ' . $ea['ea_code'], EA_MODULE);
     flash('บันทึกข้อมูล EA ' . $ea['ea_code'] . ' แล้ว');
@@ -53,7 +54,7 @@ $c = $ea['ea_code'];
     <div class="card h-100">
       <div class="card-header d-flex align-items-center">
         <strong class="ea-code fs-5"><?= h($c) ?></strong>
-        <span class="ea-code small text-muted ms-2" title="ภาค-จังหวัด-อำเภอ-ตำบล-เขตการปกครอง-หมู่บ้าน-EA"><?php
+        <span class="ea-code small text-muted ms-2" title="ภาค-จังหวัด-อำเภอ-ตำบล-เขตการปกครอง-เทศบาล/อบต.-EA"><?php
           $parts = []; $pos = 0; foreach ([1, 2, 2, 2, 1, 3, 4] as $len) { $parts[] = substr($c, $pos, $len); $pos += $len; }
           echo h(implode('-', $parts)); ?></span>
         <?php if (!$ea['is_active']): ?><span class="ms-2 text-muted">(เลิกใช้)</span><?php endif; ?>
@@ -63,6 +64,8 @@ $c = $ea['ea_code'];
         <?= csrf_field() ?><input type="hidden" name="action" value="save">
         <p class="small text-muted"><?= h(ea_place($ea)) ?> · <?= h(EA_AREA_TYPES[(int)$ea['area_type']] ?? '') ?> — รหัสและพื้นที่แก้ได้โดยนำเข้าบัญชีใหม่</p>
         <div class="row g-2">
+          <div class="col-3"><label class="form-label small">รหัสเทศบาล/อบต.</label><input name="local_code" class="form-control" maxlength="3" pattern="\d{1,3}" value="<?= h($ea['local_code']) ?>"></div>
+          <div class="col-9"><label class="form-label small">เทศบาล / อบต.</label><input name="local_name" class="form-control" maxlength="150" value="<?= h($ea['local_name']) ?>"></div>
           <div class="col-3"><label class="form-label small">รหัสหมู่บ้าน</label><input name="village_code" class="form-control" maxlength="3" value="<?= h($ea['village_code']) ?>"></div>
           <div class="col-9"><label class="form-label small">หมู่บ้าน/ชุมชน</label><input name="village_name" class="form-control" maxlength="150" value="<?= h($ea['village_name']) ?>"></div>
           <div class="col-md-3 col-6"><label class="form-label small">EA เสนอผลล่วงหน้า</label><input name="advance_ea" class="form-control" maxlength="20" value="<?= h($ea['advance_ea']) ?>"></div>
@@ -83,6 +86,7 @@ $c = $ea['ea_code'];
           <dt class="col-5">อำเภอ/เขต</dt><dd class="col-7"><?= h($ea['district_code'] . ' ' . $ea['district_name']) ?></dd>
           <dt class="col-5">ตำบล/แขวง</dt><dd class="col-7"><?= h($ea['tambon_code'] . ' ' . $ea['tambon_name']) ?></dd>
           <dt class="col-5">เขตการปกครอง</dt><dd class="col-7"><?= (int)$ea['area_type'] ?> <?= h(EA_AREA_TYPES[(int)$ea['area_type']] ?? '') ?></dd>
+          <dt class="col-5">เทศบาล / อบต.</dt><dd class="col-7"><?= h(trim($ea['local_code'] . ' ' . $ea['local_name']) ?: '-') ?></dd>
           <dt class="col-5">EA</dt><dd class="col-7 ea-code"><?= h($ea['ea_no']) ?></dd>
           <?php if ($ea['advance_ea'] !== ''): ?><dt class="col-5">EA สำหรับเสนอผลล่วงหน้า</dt><dd class="col-7"><?= h($ea['advance_ea']) ?></dd><?php endif; ?>
           <dt class="col-5">หมู่บ้าน/ชุมชน</dt><dd class="col-7"><?= $ea['village_name'] !== '' ? h(($ea['village_code'] !== '' ? $ea['village_code'] . ' ' : '') . $ea['village_name']) : '-' ?></dd>

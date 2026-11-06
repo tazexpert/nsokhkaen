@@ -59,14 +59,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         @set_time_limit(300);
         $source = mb_substr(trim(post('source')), 0, 255);
-        $existing = [];
-        foreach ($pdo->query('SELECT * FROM ea_areas') as $r) {
-            $existing[ea_key($r)] = $r;
-        }
-        $cols = array_merge(['ea_code'], EA_IMPORT_COLS, ['source']);
-        $ins = $pdo->prepare('INSERT INTO ea_areas (' . implode(',', $cols) . ', is_active) VALUES (' . implode(',', array_fill(0, count($cols), '?')) . ', 1)');
-        $upd = $pdo->prepare('UPDATE ea_areas SET ' . implode(', ', array_map(fn($c) => "$c = ?", $cols)) . ', is_active = 1 WHERE id = ?');
+        $existing = ea_existing_by_key();
+        ea_resolve_codes($res['rows'], $existing);
         $n = ['new' => 0, 'upd' => 0, 'same' => 0, 'off' => 0];
+        $stmts = [];
+        $prep = function (string $sql) use (&$stmts, $pdo) {
+            return $stmts[$sql] ??= $pdo->prepare($sql);
+        };
         $pdo->beginTransaction();
         try {
             $inFile = [];
@@ -74,12 +73,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $r['source'] = $source;
                 $inFile[$r['ea_key']] = true;
                 $old = $existing[$r['ea_key']] ?? null;
+                // เฉพาะคอลัมน์ที่ไฟล์มีข้อมูล (SurveyEaHome ไม่มีหมู่บ้าน/ประชากร/หมายเหตุ → คงค่าเดิม)
+                $cols = ea_row_cols($r);
                 $vals = array_map(fn($c) => $r[$c], $cols);
                 if (!$old) {
-                    $ins->execute($vals);
+                    $prep('INSERT INTO ea_areas (' . implode(',', $cols) . ', is_active) VALUES (' . implode(',', array_fill(0, count($cols), '?')) . ', 1)')->execute($vals);
                     $n['new']++;
                 } elseif (array_map('strval', $vals) !== array_map(fn($c) => (string)$old[$c], $cols) || !$old['is_active']) {
-                    $upd->execute(array_merge($vals, [$old['id']]));
+                    $prep('UPDATE ea_areas SET ' . implode(', ', array_map(fn($c) => "$c = ?", $cols)) . ', is_active = 1 WHERE id = ?')->execute(array_merge($vals, [$old['id']]));
                     $n['upd']++;
                 } else {
                     $n['same']++;
@@ -161,30 +162,31 @@ if (($_GET['step'] ?? '') === 'preview') {
 }
 
 if ($step === 'preview') {
-    $existing = [];
-    foreach ($pdo->query('SELECT * FROM ea_areas') as $r) {
-        $existing[ea_key($r)] = $r;
-    }
-    $sum = ['new' => 0, 'upd' => 0, 'same' => 0, 'houses' => 0, 'households' => 0, 'population' => 0, 'area1' => 0, 'area2' => 0];
+    $existing = ea_existing_by_key();
+    ea_resolve_codes($res['rows'], $existing);
+    $sum = ['new' => 0, 'upd' => 0, 'same' => 0, 'houses' => 0, 'households' => 0, 'population' => 0, 'area1' => 0, 'area2' => 0, 'code' => 0];
     $changes = [];
     $districts = [];
     $tambons = [];
     $inFile = [];
     foreach ($res['rows'] as $r) {
         $inFile[$r['ea_key']] = true;
-        $sum['houses'] += $r['houses'];
-        $sum['households'] += $r['households'];
-        $sum['population'] += $r['population'];
+        $old = $existing[$r['ea_key']] ?? null;
+        foreach (['houses', 'households', 'population'] as $c) {     // ไฟล์ไม่มีค่า = ใช้ค่าเดิม
+            $sum[$c] += (int)($r[$c] ?? $old[$c] ?? 0);
+        }
         $sum['area' . $r['area_type']]++;
         $districts[$r['district_code']] = true;
         $tambons[$r['district_code'] . $r['tambon_code']] = true;
-        $old = $existing[$r['ea_key']] ?? null;
         if (!$old) {
             $sum['new']++;
             continue;
         }
+        if ($r['ea_code'] !== $old['ea_code']) {
+            $sum['code']++;
+        }
         $diff = [];
-        foreach (array_merge(['ea_code'], EA_IMPORT_COLS) as $c) {
+        foreach (array_diff(ea_row_cols($r), ['source']) as $c) {
             if ((string)$r[$c] !== (string)$old[$c]) {
                 $diff[] = $c;
             }
@@ -204,7 +206,7 @@ if ($step === 'preview') {
         $usedSet = array_flip($pdo->query('SELECT DISTINCT ea_id FROM ea_project_eas')->fetchAll(PDO::FETCH_COLUMN));
         $usedMissing = count(array_filter($missing, fn($o) => isset($usedSet[$o['id']])));
     }
-    $colLabel = ['ea_code' => 'รหัส EA', 'seq' => 'ลำดับที่', 'region_code' => 'รหัสภาค', 'region_name' => 'ภาค', 'province_code' => 'รหัสจังหวัด', 'province_name' => 'จังหวัด',
+    $colLabel = ['ea_code' => 'รหัส EA', 'local_code' => 'รหัสเทศบาล/อบต.', 'local_name' => 'เทศบาล / อบต.', 'seq' => 'ลำดับที่', 'region_code' => 'รหัสภาค', 'region_name' => 'ภาค', 'province_code' => 'รหัสจังหวัด', 'province_name' => 'จังหวัด',
                  'district_code' => 'รหัสอำเภอ', 'district_name' => 'อำเภอ', 'tambon_code' => 'รหัสตำบล', 'tambon_name' => 'ตำบล',
                  'area_type' => 'เขตการปกครอง', 'ea_no' => 'EA', 'advance_ea' => 'EA เสนอผลล่วงหน้า', 'village_code' => 'รหัสหมู่บ้าน',
                  'village_name' => 'หมู่บ้าน', 'houses' => 'บ้าน', 'households' => 'ครัวเรือน', 'population' => 'ประชากร', 'note' => 'หมายเหตุ'];
@@ -235,14 +237,18 @@ require __DIR__ . '/header.php';
     <div class="card">
       <div class="card-header"><strong>รูปแบบไฟล์ที่รองรับ</strong></div>
       <div class="card-body small">
-        <p class="mb-2">ไฟล์ Excel "บัญชีเขตแจงนับ" (แผ่นงานแรก) หัวตาราง 2 แถว ตามลำดับ:</p>
+        <p class="mb-1"><strong>1) SurveyEaHome.xlsx</strong> (บัญชี EA ล่าสุด — แนะนำ) แถวแรกเป็นหัวคอลัมน์:</p>
+        <p class="mb-2">ลำดับที่ · ภูมิภาค · จังหวัด · เขต/อำเภอ · แขวง/ตำบล · เทศบาล / อบต. · รหัส EA (15 หลัก) · จำนวนบ้าน/อาคารฯ · จำนวนอาคาร/สิ่งปลูกสร้าง
+          <br><span class="text-muted">รหัสภาค จังหวัด อำเภอ ตำบล เขต เทศบาล/อบต. EA เติมจากรหัส EA อัตโนมัติ</span></p>
+        <p class="mb-1"><strong>2) บัญชีเขตแจงนับ</strong> (ชุดตรวจสอบ) หัวตาราง 2 แถว:</p>
         <p class="mb-2">ลำดับที่ · ภาค (รหัส, ชื่อ) · จังหวัด (รหัส, ชื่อ) · อำเภอ/เขต (รหัส, ชื่อ) · ตำบล/แขวง (รหัส, ชื่อ) · เขตการปกครอง ·
-          EA · EA สำหรับเสนอผลล่วงหน้า · หมู่บ้าน/ชุมชน (รหัส, ชื่อ) · ข้อมูลเบื้องต้น (จำนวนบ้าน/อาคาร, ครัวเรือน, ประชากร) · หมายเหตุ</p>
+          EA · EA สำหรับเสนอผลล่วงหน้า · หมู่บ้าน/ชุมชน (รหัส, ชื่อ) · ข้อมูลเบื้องต้น (จำนวนบ้าน/อาคาร, ครัวเรือน, ประชากร) · หมายเหตุ
+          <br><span class="text-muted">ไม่มีรหัสเทศบาล/อบต. — ใช้รหัสเดิมในระบบ (จาก SurveyEaHome)</span></p>
         <ul class="mb-0">
-          <li>รหัส EA 15 หลัก = ภาค (1) + จังหวัด (2) + อำเภอ (2) + ตำบล (2) + เขตการปกครอง (1) + หมู่บ้าน (3; ไม่มี = 999) + EA (4)
-            เช่น <span class="ea-code">6 40 01 01 1 999 0001</span> = <span class="ea-code">640010119990001</span></li>
+          <li>รหัส EA 15 หลัก = ภาค (1) + จังหวัด (2) + อำเภอ (2) + ตำบล (2) + เขตการปกครอง (1) + เทศบาล/อบต. (3) + EA (4)
+            เช่น <span class="ea-code">6 40 01 01 1 999 0001</span> = <span class="ea-code">640010119990001</span> (999 = เทศบาลนครขอนแก่น)</li>
           <li>เขตการปกครอง: 1 = ในเขตเทศบาล · 2 = นอกเขตเทศบาล</li>
-          <li>นำเข้าซ้ำได้: EA เดิมจะถูกปรับปรุงตามไฟล์ใหม่ (จับคู่ด้วย จังหวัด+อำเภอ+ตำบล+เขตการปกครอง+EA) — ข้อมูล EA ของโครงการไม่ถูกลบ</li>
+          <li>นำเข้าซ้ำ/สลับไฟล์ได้: EA เดิมถูกปรับปรุงตามไฟล์ใหม่ (จับคู่ด้วย จังหวัด+อำเภอ+ตำบล+เขตการปกครอง+EA) — ข้อมูล EA ของโครงการไม่ถูกลบ</li>
         </ul>
       </div>
     </div>
@@ -297,11 +303,16 @@ require __DIR__ . '/header.php';
 <div class="card mb-3">
   <div class="card-body">
     <div class="row small g-2">
-      <div class="col-md-6">ไฟล์: <strong><?= h($_SESSION[$sessKey]['file'] ?? '') ?></strong></div>
+      <div class="col-md-6">ไฟล์: <strong><?= h($_SESSION[$sessKey]['file'] ?? '') ?></strong>
+        <span class="text-muted">· รูปแบบ <?= ($res['format'] ?? '') === 'survey' ? 'SurveyEaHome (บัญชี EA ล่าสุด)' : 'บัญชีเขตแจงนับ' ?></span></div>
       <div class="col-md-6"><?= count($districts) ?> อำเภอ · <?= count($tambons) ?> ตำบล ·
         ในเขตเทศบาล <?= number_format($sum['area1']) ?> EA · นอกเขตเทศบาล <?= number_format($sum['area2']) ?> EA</div>
       <div class="col-md-6">บ้าน/อาคาร <?= number_format($sum['houses']) ?> · ครัวเรือน <?= number_format($sum['households']) ?> · ประชากร <?= number_format($sum['population']) ?> คน</div>
-      <div class="col-md-6"><?= $res['skipped'] ? 'ข้ามแถวว่าง ' . number_format($res['skipped']) . ' แถว' : '' ?></div>
+      <div class="col-md-6"><?= $sum['code'] ? 'รหัส EA เปลี่ยน ' . number_format($sum['code']) . ' EA (ตามรหัสเทศบาล/อบต.) · ' : '' ?><?= $res['skipped'] ? 'ข้ามแถวว่าง ' . number_format($res['skipped']) . ' แถว' : '' ?></div>
+      <?php if (($res['format'] ?? '') === 'survey'): ?>
+      <div class="col-12 text-muted">เติมรหัส ภาค จังหวัด อำเภอ ตำบล เขตการปกครอง เทศบาล/อบต. และ EA จากรหัส EA 15 หลัก ·
+        "จำนวนบ้าน/อาคารฯ" → จำนวนครัวเรือน · หมู่บ้าน ประชากร หมายเหตุ คงค่าเดิมในระบบ</div>
+      <?php endif; ?>
     </div>
   </div>
 </div>

@@ -51,7 +51,7 @@ require __DIR__ . '/header.php';
 <div class="card">
   <div class="card-header">
     <form class="row g-2 align-items-center">
-      <div class="col-md-4 col-12"><input name="q" class="form-control" placeholder="รหัส EA (วางได้หลายรหัส) / หมู่บ้าน / ตำบล / หมายเหตุ" value="<?= h($f['q']) ?>"></div>
+      <div class="col-md-4 col-12"><input name="q" class="form-control" placeholder="รหัส EA (วางได้หลายรหัส) / หมู่บ้าน / ตำบล / เทศบาล / หมายเหตุ" value="<?= h($f['q']) ?>"></div>
       <?= ea_filter_selects($f) ?>
       <div class="col-md-3 col-6">
         <select name="project" class="form-select">
@@ -77,7 +77,7 @@ require __DIR__ . '/header.php';
   </div>
   <div class="table-responsive">
     <table class="table table-hover mb-0 ea-table">
-      <thead><tr><th>รหัส EA</th><th>อำเภอ</th><th>ตำบล</th><th>เขตการปกครอง</th><th>หมู่บ้าน/ชุมชน</th>
+      <thead><tr><th>รหัส EA</th><th>อำเภอ</th><th>ตำบล / อปท.</th><th>เขตการปกครอง</th><th>หมู่บ้าน/ชุมชน</th>
         <th class="ea-num">บ้าน/อาคาร</th><th class="ea-num">ครัวเรือน</th><th class="ea-num">ประชากร</th><th>หมายเหตุ</th><th class="text-center">โครงการ</th></tr></thead>
       <tbody>
       <?php foreach ($rows as $r): ?>
@@ -85,7 +85,7 @@ require __DIR__ . '/header.php';
           <td><a href="ea_view.php?id=<?= (int)$r['id'] ?>" class="ea-code fw-semibold text-decoration-none"><?= h($r['ea_code']) ?></a>
             <?= $r['is_active'] ? '' : '<div class="small">เลิกใช้</div>' ?></td>
           <td><?= h($r['district_name']) ?></td>
-          <td><?= h($r['tambon_name']) ?></td>
+          <td><?= h($r['tambon_name']) ?><?= $r['local_name'] !== '' ? '<div class="small text-muted">' . h($r['local_name']) . '</div>' : '' ?></td>
           <td class="text-nowrap"><?= (int)$r['area_type'] ?> <?= h(EA_AREA_TYPES[(int)$r['area_type']] ?? '') ?></td>
           <td><?= $r['village_name'] !== '' ? h(($r['village_code'] !== '' ? 'ม.' . (int)$r['village_code'] . ' ' : '') . $r['village_name']) : '<span class="text-muted">-</span>' ?></td>
           <td class="ea-num"><?= number_format((int)$r['houses']) ?></td>

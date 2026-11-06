@@ -706,7 +706,7 @@ CREATE TABLE IF NOT EXISTS cal_plan_guard (
 
 CREATE TABLE IF NOT EXISTS ea_areas (
   id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  ea_code        VARCHAR(15)  NOT NULL,                 -- รหัส EA 15 หลัก = ภาค(1)+จังหวัด(2)+อำเภอ(2)+ตำบล(2)+เขตการปกครอง(1)+หมู่บ้าน(3; ไม่มี = 999)+EA(4)
+  ea_code        VARCHAR(15)  NOT NULL,                 -- รหัส EA 15 หลัก = ภาค(1)+จังหวัด(2)+อำเภอ(2)+ตำบล(2)+เขตการปกครอง(1)+รหัสเทศบาล/อบต.(3)+EA(4)
   seq            INT UNSIGNED NOT NULL DEFAULT 0,       -- ลำดับที่ในบัญชี
   region_code    VARCHAR(2)   NOT NULL DEFAULT '',
   region_name    VARCHAR(50)  NOT NULL DEFAULT '',
@@ -717,6 +717,8 @@ CREATE TABLE IF NOT EXISTS ea_areas (
   tambon_code    CHAR(2)      NOT NULL,
   tambon_name    VARCHAR(100) NOT NULL DEFAULT '',
   area_type      TINYINT UNSIGNED NOT NULL,             -- เขตการปกครอง 1 = ในเขตเทศบาล, 2 = นอกเขตเทศบาล
+  local_code     VARCHAR(3)   NOT NULL DEFAULT '',      -- รหัสเทศบาล / อบต. (หลักที่ 9–11 ของรหัส EA)
+  local_name     VARCHAR(150) NOT NULL DEFAULT '',      -- ชื่อเทศบาล / อบต.
   ea_no          CHAR(4)      NOT NULL,
   advance_ea     VARCHAR(20)  NOT NULL DEFAULT '',      -- EA สำหรับเสนอผลล่วงหน้า
   village_code   VARCHAR(3)   NOT NULL DEFAULT '',      -- หมู่บ้าน/ชุมชน (นอกเขตเทศบาล)

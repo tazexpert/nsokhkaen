@@ -87,14 +87,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $province = $_SESSION[$sessKey]['province'] ?? '40';
         $source = 'เพิ่มจากไฟล์ EA ของโครงการ ' . ($_SESSION[$sessKey]['file'] ?? '');
         $n = ['new' => 0, 'upd' => 0, 'same' => 0, 'created' => 0, 'skipped' => 0, 'removed' => 0];
+        ea_resolve_codes($res['rows'], ea_existing_by_key());    // รหัส EA 15 หลัก (เทศบาล/อบต. จาก EA ในตำบลเดียวกัน)
         $pdo->beginTransaction();
         try {
             $ids = $eaIds();
             $insEa = $pdo->prepare('INSERT INTO ea_areas (ea_code, region_code, region_name, province_code, province_name, district_code, district_name, tambon_code, tambon_name,
-                                    area_type, ea_no, village_code, village_name, note, source)
-                                    SELECT ?, region_code, region_name, province_code, province_name, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? FROM ea_areas WHERE province_code = ? LIMIT 1');
-            $insEa0 = $pdo->prepare('INSERT INTO ea_areas (ea_code, region_code, province_code, district_code, district_name, tambon_code, tambon_name, area_type, ea_no, village_code, village_name, note, source)
-                                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                                    area_type, ea_no, village_code, village_name, note, source, local_code, local_name)
+                                    SELECT ?, region_code, region_name, province_code, province_name, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? FROM ea_areas WHERE province_code = ? LIMIT 1');
+            $insEa0 = $pdo->prepare('INSERT INTO ea_areas (ea_code, region_code, province_code, district_code, district_name, tambon_code, tambon_name, area_type, ea_no, village_code, village_name, note, source, local_code, local_name)
+                                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
             $old = [];
             $st = $pdo->query('SELECT id, project_id, round_label, ea_id, psu_no, enum_type, enum_month, enum_year, fiscal_year, lat, lng FROM ea_project_eas');
             foreach ($st as $r) {
@@ -117,7 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         continue;
                     }
                     $args = [$r['district_code'], $r['district_name'], $r['tambon_code'], $r['tambon_name'], $r['area_type'], $r['ea_no'], $r['village_code'], $r['village_name'],
-                             'EA ที่ไม่มีในบัญชีเขตแจงนับ — เพิ่มจากไฟล์ EA ของโครงการ', mb_substr($source, 0, 255)];
+                             'EA ที่ไม่มีในบัญชี EA — เพิ่มจากไฟล์ EA ของโครงการ', mb_substr($source, 0, 255), $r['local_code'], $r['local_name']];
                     $insEa->execute(array_merge([$r['ea_code']], $args, [$province]));
                     if (!$insEa->rowCount()) {
                         $insEa0->execute(array_merge([$r['ea_code'], $_SESSION[$sessKey]['region'] ?? '6', $province], $args));
@@ -186,6 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $res = ($_GET['step'] ?? '') === 'preview' ? $load() : null;
 if ($res) {
+    ea_resolve_codes($res['rows'], ea_existing_by_key());
     $map = $autoMap($res['projects']);
     $ids = $eaIds();
     $old = [];
