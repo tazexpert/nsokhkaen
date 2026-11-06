@@ -118,7 +118,7 @@ $active = 'plan';
 $pageActions = '<a href="plan.php?m=' . $ym . '" class="btn btn-light"><i class="bi bi-grid-3x3"></i> กลับไปหน้าแผน</a>';
 require __DIR__ . '/header.php';
 ?>
-<?php if ($errors): ?><div class="alert alert-danger"><b>ยังไม่ได้บันทึก</b> — แก้รหัสที่ไม่รู้จัก (ช่องสีแดง) หรือเพิ่มโครงการที่ <a href="<?= h(module_url('ea', 'manage_projects.php')) ?>" target="_blank">โครงการที่รับผิดชอบ</a><br><?= implode('<br>', array_map('h', array_slice($errors, 0, 20))) ?><?= count($errors) > 20 ? '<br>…' : '' ?></div><?php endif; ?>
+<?php if ($errors): ?><div class="alert alert-danger"><b>ยังไม่ได้บันทึก</b> — แก้รหัสที่ไม่รู้จัก (ช่องสีแดง) หรือเพิ่มโครงการที่ <a href="<?= h(module_url('ea', 'projects.php')) ?>" target="_blank">โครงการที่รับผิดชอบ</a><br><?= implode('<br>', array_map('h', array_slice($errors, 0, 20))) ?><?= count($errors) > 20 ? '<br>…' : '' ?></div><?php endif; ?>
 <?php if ($notice): ?><div class="alert alert-info py-2 small"><i class="bi bi-info-circle"></i> <?= h($notice) ?></div><?php endif; ?>
 
 <form method="post" id="planForm">
@@ -127,7 +127,7 @@ require __DIR__ . '/header.php';
     <div class="card-header d-flex flex-wrap align-items-center gap-2">
       <h2 class="h5 mb-0 me-2"><?= h(plan_month_text($y, $m)) ?></h2>
       <span class="small text-muted me-1">เครื่องมือ:</span>
-      <?php if (count($activeCodes) <= 1): ?><span class="small text-danger">ไม่มีโครงการที่ดำเนินการในเดือนนี้ — <a href="<?= h(module_url('ea', 'manage_projects.php')) ?>">เพิ่ม/แก้ช่วงเวลาโครงการ</a></span><?php endif; ?>
+      <?php if (count($activeCodes) <= 1): ?><span class="small text-danger">ไม่มีโครงการที่ดำเนินการในเดือนนี้ — <a href="<?= h(module_url('ea', 'projects.php')) ?>">เพิ่ม/แก้ช่วงเวลาโครงการ</a></span><?php endif; ?>
       <div class="btn-group btn-group-sm flex-wrap plan-palette" role="group" aria-label="เลือกรหัสแล้วคลิกช่อง">
         <input type="radio" class="btn-check" name="tool" id="tool-type" value="" checked><label class="btn btn-outline-secondary" for="tool-type" title="พิมพ์ในช่องเอง"><i class="bi bi-cursor-text"></i> พิมพ์</label>
         <?php foreach ($activeCodes as $c): ?>

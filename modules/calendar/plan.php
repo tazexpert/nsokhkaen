@@ -38,7 +38,7 @@ $active = 'plan';
 $pageActions = '<button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> พิมพ์</button>'
     . ($isAdmin ? '<a href="plan_edit.php?m=' . $ym . '" class="btn btn-primary"><i class="bi bi-pencil-square"></i> ' . ($plan ? 'แก้ไขแผน' : 'สร้างแผน') . '</a>'
         . '<a href="plan_import.php?m=' . $ym . '" class="btn btn-outline-primary"><i class="bi bi-file-earmark-excel"></i> นำเข้า Excel</a>'
-        . '<a href="' . h(module_url('ea', 'manage_projects.php')) . '" class="btn btn-outline-secondary"><i class="bi bi-kanban"></i> โครงการ</a>' : '');
+        . '<a href="' . h(module_url('ea', 'projects.php')) . '" class="btn btn-outline-secondary"><i class="bi bi-kanban"></i> โครงการ</a>' : '');
 $wd = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
 $today = date('Y-m-d');
 require __DIR__ . '/header.php';

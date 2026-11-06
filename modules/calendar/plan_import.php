@@ -165,7 +165,7 @@ require __DIR__ . '/header.php';
     <div class="alert alert-warning">
       <b><i class="bi bi-question-circle"></i> รหัสที่ไม่รู้จัก (จะไม่ถูกนำเข้า):</b>
       <?php foreach ($res['unknown'] as [$n, $d, $code]): ?><span class="badge text-bg-light border me-1"><?= h(preg_replace('/\s+/u', ' ', $n)) ?> · วันที่ <?= $d ?> · "<?= h($code) ?>"</span><?php endforeach; ?>
-      <div class="small mt-1">ถ้าเป็นรหัสโครงการใหม่ ให้เพิ่มที่ <a href="<?= h(module_url('ea', 'manage_projects.php')) ?>" target="_blank">โครงการที่รับผิดชอบ</a> แล้วนำเข้าใหม่ · ถ้าพิมพ์ผิด แก้ได้ที่หน้าแก้ไขแผนหลังนำเข้า</div>
+      <div class="small mt-1">ถ้าเป็นรหัสโครงการใหม่ ให้เพิ่มที่ <a href="<?= h(module_url('ea', 'projects.php')) ?>" target="_blank">โครงการที่รับผิดชอบ</a> แล้วนำเข้าใหม่ · ถ้าพิมพ์ผิด แก้ได้ที่หน้าแก้ไขแผนหลังนำเข้า</div>
     </div>
   <?php endif; ?>
 

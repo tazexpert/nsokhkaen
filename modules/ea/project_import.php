@@ -460,7 +460,7 @@ require __DIR__ . '/header.php';
             <option value="">— เลือกโครงการ —</option>
             <?php foreach ($projects as $p): ?><option value="<?= (int)$p['id'] ?>" <?= $map[$pk] === (int)$p['id'] ? 'selected' : '' ?>><?= h($p['code'] . ' — ' . $p['name']) ?></option><?php endforeach; ?>
           </select>
-          <div class="small text-muted">ในไฟล์: <?= h($u0['project_titles'][$pk] ?: $u0['projects'][$pk]) ?><?= $map[$pk] ? '' : ' — ไม่พบโครงการชื่อนี้ เลือกโครงการ หรือ' . (projects_can_manage() ? ' <a href="' . h(module_url('ea', 'manage_projects.php')) . '" target="_blank">เพิ่มโครงการ</a>' : 'แจ้งผู้ดูแลเพิ่มโครงการ') ?></div>
+          <div class="small text-muted">ในไฟล์: <?= h($u0['project_titles'][$pk] ?: $u0['projects'][$pk]) ?><?= $map[$pk] ? '' : ' — ไม่พบโครงการชื่อนี้ เลือกโครงการ หรือ' . (projects_can_manage() ? ' <a href="' . h(module_url('ea', 'projects.php')) . '" target="_blank">เพิ่มโครงการ</a>' : 'แจ้งผู้ดูแลเพิ่มโครงการ') ?></div>
         </div>
       </div>
       <div class="fw-semibold small mb-2">ผู้ปฏิบัติงานในไฟล์ → บัญชีผู้ใช้</div>
@@ -575,7 +575,7 @@ require __DIR__ . '/header.php';
               <option value="">— ข้าม ไม่นำเข้า —</option>
               <?php foreach ($projects as $p): ?><option value="<?= (int)$p['id'] ?>" <?= $map[$k] === (int)$p['id'] ? 'selected' : '' ?>><?= h($p['code'] . ' — ' . $p['name']) ?></option><?php endforeach; ?>
             </select>
-            <?php if (!$map[$k]): ?><div class="small text-danger">ไม่พบโครงการรหัสนี้ — เลือกโครงการ หรือ<?= projects_can_manage() ? ' <a href="' . h(module_url('ea', 'manage_projects.php')) . '" target="_blank">เพิ่มโครงการ</a> แล้วอัปโหลดใหม่' : 'แจ้งผู้ดูแลเพิ่มโครงการ' ?></div><?php endif; ?></td>
+            <?php if (!$map[$k]): ?><div class="small text-danger">ไม่พบโครงการรหัสนี้ — เลือกโครงการ หรือ<?= projects_can_manage() ? ' <a href="' . h(module_url('ea', 'projects.php')) . '" target="_blank">เพิ่มโครงการ</a> แล้วอัปโหลดใหม่' : 'แจ้งผู้ดูแลเพิ่มโครงการ' ?></div><?php endif; ?></td>
             <td class="small text-nowrap"><?php
               $det = $detected[$k] ?? ''; $cur = $map[$k] ? (string)($projects[$map[$k]]['survey_period'] ?? '') : '';
               if ($det === '') {
