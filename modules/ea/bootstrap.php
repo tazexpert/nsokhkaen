@@ -86,11 +86,45 @@ function ea_staff_options(?int $selected = null): string
     return $out;
 }
 
-/** แยกรหัส EA 11 หลักจากข้อความ (คั่นด้วยช่องว่าง/จุลภาค/ขึ้นบรรทัด) */
+/**
+ * รหัส EA 15 หลัก = ภาค(1) + จังหวัด(2) + อำเภอ(2) + ตำบล(2) + เขตการปกครอง(1) + หมู่บ้าน(3; ไม่มี = 999) + EA(4)
+ * เช่น 6 40 01 01 1 999 0001 = 640010119990001
+ */
+function ea_make_code(string $region, string $province, string $district, string $tambon, $area, string $village, string $eaNo): string
+{
+    $v = $village === '' ? '999' : (ctype_digit($village) ? str_pad((string)(int)$village, 3, '0', STR_PAD_LEFT) : '999');
+    return substr($region, 0, 1) . $province . $district . $tambon . $area . $v . $eaNo;
+}
+
+/** คีย์ไม่ซ้ำของ EA (ใช้จับคู่) = จังหวัด + อำเภอ + ตำบล + เขตการปกครอง + EA (11 หลัก) */
+function ea_key(array $r): string
+{
+    return $r['province_code'] . $r['district_code'] . $r['tambon_code'] . $r['area_type'] . $r['ea_no'];
+}
+
+/** SQL ของคีย์ EA (ตาราง alias a) */
+const EA_KEY_SQL = 'CONCAT(a.province_code, a.district_code, a.tambon_code, a.area_type, a.ea_no)';
+
+/** แยกรหัส EA จากข้อความ (คั่นด้วยช่องว่าง/จุลภาค/ขึ้นบรรทัด) — รับรหัส 15 หลัก หรือรหัสเดิม 11 หลัก */
 function ea_parse_codes(string $text): array
 {
-    preg_match_all('/\d{11}/', $text, $m);
-    return array_values(array_unique($m[0]));
+    preg_match_all('/(?<!\d)(\d{15}|\d{11})(?!\d)/', $text, $m);
+    return array_values(array_unique($m[1]));
+}
+
+/** เงื่อนไข SQL หา EA จากรายการรหัส (15 หลัก = ea_code, 11 หลัก = คีย์) → [sql, params] */
+function ea_codes_sql(array $codes): array
+{
+    $c15 = array_values(array_filter($codes, fn($c) => strlen($c) === 15));
+    $c11 = array_values(array_filter($codes, fn($c) => strlen($c) === 11));
+    $or = [];
+    if ($c15) {
+        $or[] = 'a.ea_code IN (' . implode(',', array_fill(0, count($c15), '?')) . ')';
+    }
+    if ($c11) {
+        $or[] = EA_KEY_SQL . ' IN (' . implode(',', array_fill(0, count($c11), '?')) . ')';
+    }
+    return ['(' . ($or ? implode(' OR ', $or) : '0') . ')', array_merge($c15, $c11)];
 }
 
 /** เงื่อนไขกรอง EA จาก $_GET (ใช้ร่วมหลายหน้า) — คืน [where[], params[]] ; ตารางต้องมี alias a */
@@ -114,8 +148,9 @@ function ea_filter_sql(array $f): array
     if ($q !== '') {
         $codes = ea_parse_codes($q);
         if ($codes) {
-            $where[] = 'a.ea_code IN (' . implode(',', array_fill(0, count($codes), '?')) . ')';
-            array_push($params, ...$codes);
+            [$cw, $cp] = ea_codes_sql($codes);
+            $where[] = $cw;
+            array_push($params, ...$cp);
         } else {
             $where[] = '(a.ea_code LIKE ? OR a.village_name LIKE ? OR a.tambon_name LIKE ? OR a.district_name LIKE ? OR a.note LIKE ?)';
             array_push($params, "$q%", "%$q%", "%$q%", "%$q%", "%$q%");
@@ -307,24 +342,26 @@ function ea_parse_xlsx(string $path): array
             }
             continue;
         }
-        $ea = $p . $d . $t . $a . $e;
+        $ea = $p . $d . $t . $a . $e;                  // คีย์ไม่ซ้ำ (ไม่รวมภาค/หมู่บ้าน)
         if (isset($seen[$ea])) {
             if (count($res['errors']) < 30) {
-                $res['errors'][] = 'แถวที่ ' . $line . ': รหัส EA ' . $ea . ' ซ้ำกับแถวที่ ' . $seen[$ea];
+                $res['errors'][] = 'แถวที่ ' . $line . ': EA ' . $p . '-' . $d . '-' . $t . '-' . $a . '-' . $e . ' ซ้ำกับแถวที่ ' . $seen[$ea];
             }
             continue;
         }
         $seen[$ea] = $line;
         $vc = $get($r, $col['village'] ?? null);
+        $vcode = $vc === '' ? '' : ($code($vc, 2) ?? mb_substr($vc, 0, 3));
+        $rc = mb_substr($get($r, $col['region']), 0, 2);
         $res['rows'][] = [
-            'ea_code' => $ea, 'seq' => (int)$get($r, 0),
-            'region_code' => mb_substr($get($r, $col['region']), 0, 2), 'region_name' => mb_substr($get($r, $col['region'] === null ? null : $col['region'] + 1), 0, 50),
+            'ea_key' => $ea, 'ea_code' => ea_make_code($rc, $p, $d, $t, $a, $vcode, $e), 'seq' => (int)$get($r, 0),
+            'region_code' => $rc, 'region_name' => mb_substr($get($r, $col['region'] === null ? null : $col['region'] + 1), 0, 50),
             'province_code' => $p, 'province_name' => mb_substr($get($r, $col['province'] + 1), 0, 50),
             'district_code' => $d, 'district_name' => mb_substr($get($r, $col['district'] + 1), 0, 100),
             'tambon_code' => $t, 'tambon_name' => mb_substr($get($r, $col['tambon'] + 1), 0, 100),
             'area_type' => (int)$a, 'ea_no' => $e,
             'advance_ea' => mb_substr($get($r, $col['advance']), 0, 20),
-            'village_code' => $vc === '' ? '' : ($code($vc, 2) ?? mb_substr($vc, 0, 3)),
+            'village_code' => $vcode,
             'village_name' => mb_substr($get($r, $col['village'] === null ? null : $col['village'] + 1), 0, 150),
             'houses' => $num($get($r, $col['houses'] ?? null)), 'households' => $num($get($r, $col['households'] ?? null)),
             'population' => $num($get($r, $col['population'] ?? null)),
@@ -423,10 +460,10 @@ function ea_read_table(string $path, string $ext): array
 
 /**
  * อ่านไฟล์ EA ของโครงการ → ['rows' => [...], 'errors' => [], 'projects' => [key => code ในไฟล์]]
- * แต่ละแถว: ea_code, project_key, project_raw, psu_no, enum_type, enum_month, enum_year, fiscal_year, lat, lng, round_label
+ * แต่ละแถว: ea_key (11 หลัก ใช้จับคู่), ea_code (15 หลัก), project_key, project_raw, psu_no, enum_type, enum_month, enum_year, fiscal_year, lat, lng, round_label
  *           + ข้อมูลพื้นที่ (ใช้สร้าง EA ใหม่ถ้าไม่มีในบัญชี)
  */
-function ea_parse_project_file(string $path, string $ext, string $province = '40'): array
+function ea_parse_project_file(string $path, string $ext, string $province = '40', string $region = '6'): array
 {
     $res = ['rows' => [], 'errors' => [], 'projects' => [], 'skipped' => 0];
     try {
@@ -532,15 +569,16 @@ function ea_parse_project_file(string $path, string $ext, string $province = '40
         $res['projects'][$pk] ??= $proj;
         $psu = $get($r, 'psu_no');
         $type = $get($r, 'enumerate_type');
+        $vcode = ($vc = $get($r, 'รหัสหมู่บ้าน')) === '' ? '' : ($code($vc, 2) ?? mb_substr($vc, 0, 3));
         $res['rows'][] = [
-            'ea_code' => $ea, 'project_key' => $pk, 'round_label' => $label,
+            'ea_key' => $ea, 'ea_code' => ea_make_code($region, $province, $d, $t, $a, $vcode, $e), 'project_key' => $pk, 'round_label' => $label,
             'psu_no' => mb_substr($psu, 0, 10), 'enum_type' => mb_substr($type, 0, 10),
             'enum_month' => $month, 'enum_year' => $year, 'fiscal_year' => $fy,
             'lat' => $coord($get($r, 'latitude'), -90, 90), 'lng' => $coord($get($r, 'longitude'), -180, 180),
             'district_code' => $d, 'district_name' => mb_substr($get($r, 'อำเภอ'), 0, 100),
             'tambon_code' => $t, 'tambon_name' => mb_substr($get($r, 'ตำบล'), 0, 100),
             'area_type' => $a, 'ea_no' => $e,
-            'village_code' => ($vc = $get($r, 'รหัสหมู่บ้าน')) === '' ? '' : ($code($vc, 2) ?? mb_substr($vc, 0, 3)),
+            'village_code' => $vcode,
             'village_name' => mb_substr($get($r, 'หมู่บ้าน'), 0, 150),
         ];
     }

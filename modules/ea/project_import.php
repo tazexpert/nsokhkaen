@@ -3,7 +3,8 @@
  * นำเข้า EA ของโครงการจากไฟล์ EA_Report (.csv / .xlsx) — เจ้าหน้าที่โครงการ (editor)
  * 1 แถว = EA ที่โครงการใช้แจงนับในเดือนนั้น: psu_no, รหัสอำเภอ, อำเภอ, รหัสตำบล, ตำบล, ea, รหัสหมู่บ้าน, หมู่บ้าน,
  *   latitude, longitude, enumerate_month, enumerate_type, enumerate_year, project, เขตเทศบาล, ปีงบประมาณ
- * รหัส EA 11 หลัก = จังหวัด + รหัสอำเภอ + รหัสตำบล + เขตเทศบาล (1 ใน / 2 นอก) + ea · รอบ/งวด = เดือน + ปีที่แจงนับ
+ * จับคู่ EA ด้วย จังหวัด + รหัสอำเภอ + รหัสตำบล + เขตเทศบาล (1 ใน / 2 นอก) + ea · รหัส EA 15 หลัก = ภาค + ... + หมู่บ้าน (999 = ไม่มี) + ea
+ * รอบ/งวด = เดือน + ปีที่แจงนับ
  * นำเข้าซ้ำได้: ปรับปรุง PSU/ประเภท/ปีงบประมาณ/พิกัด ของรายการเดิม — ผู้รับผิดชอบและสถานะคงเดิม
  */
 require_once __DIR__ . '/bootstrap.php';
@@ -38,7 +39,7 @@ $autoMap = function (array $fileProjects) use ($projects): array {
     }
     return $map;
 };
-$eaIds = fn() => $pdo->query('SELECT ea_code, id FROM ea_areas')->fetchAll(PDO::FETCH_KEY_PAIR);
+$eaIds = fn() => $pdo->query('SELECT ' . EA_KEY_SQL . ', a.id FROM ea_areas a')->fetchAll(PDO::FETCH_KEY_PAIR);   // คีย์ 11 หลัก => id
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
@@ -52,8 +53,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors[] = 'รองรับเฉพาะไฟล์ .csv และ .xlsx';
         } else {
             @set_time_limit(120);
-            $province = (string)($pdo->query('SELECT province_code FROM ea_areas GROUP BY province_code ORDER BY COUNT(*) DESC LIMIT 1')->fetchColumn() ?: '40');
-            $res = ea_parse_project_file($f['tmp_name'], $ext, $province);
+            // จังหวัด/ภาคจากบัญชี EA (ไฟล์ไม่มีคอลัมน์จังหวัดและภาค) — ยังไม่มีบัญชี = ขอนแก่น ภาค 6
+            $pr = $pdo->query("SELECT province_code, MAX(region_code) FROM ea_areas WHERE region_code <> '' GROUP BY province_code ORDER BY COUNT(*) DESC LIMIT 1")->fetch(PDO::FETCH_NUM);
+            [$province, $region] = $pr ? [(string)$pr[0], (string)$pr[1]] : ['40', '6'];
+            $res = ea_parse_project_file($f['tmp_name'], $ext, $province, $region);
             $errors = $res['errors'];
             if (!$errors) {
                 $clear();
@@ -62,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $token = bin2hex(random_bytes(16));
                 file_put_contents($tmpFile($token), json_encode($res, JSON_UNESCAPED_UNICODE));
-                $_SESSION[$sessKey] = ['token' => $token, 'file' => mb_substr($f['name'], 0, 150), 'province' => $province];
+                $_SESSION[$sessKey] = ['token' => $token, 'file' => mb_substr($f['name'], 0, 150), 'province' => $province, 'region' => $region];
                 redirect('project_import.php?step=preview');
             }
         }
@@ -90,8 +93,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $insEa = $pdo->prepare('INSERT INTO ea_areas (ea_code, region_code, region_name, province_code, province_name, district_code, district_name, tambon_code, tambon_name,
                                     area_type, ea_no, village_code, village_name, note, source)
                                     SELECT ?, region_code, region_name, province_code, province_name, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? FROM ea_areas WHERE province_code = ? LIMIT 1');
-            $insEa0 = $pdo->prepare('INSERT INTO ea_areas (ea_code, province_code, district_code, district_name, tambon_code, tambon_name, area_type, ea_no, village_code, village_name, note, source)
-                                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+            $insEa0 = $pdo->prepare('INSERT INTO ea_areas (ea_code, region_code, province_code, district_code, district_name, tambon_code, tambon_name, area_type, ea_no, village_code, village_name, note, source)
+                                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
             $old = [];
             $st = $pdo->query('SELECT id, project_id, round_label, ea_id, psu_no, enum_type, enum_month, enum_year, fiscal_year, lat, lng FROM ea_project_eas');
             foreach ($st as $r) {
@@ -107,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $n['skipped']++;
                     continue;
                 }
-                $eid = $ids[$r['ea_code']] ?? null;
+                $eid = $ids[$r['ea_key']] ?? null;
                 if (!$eid) {
                     if (!$createMissing) {
                         $n['skipped']++;
@@ -117,10 +120,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                              'EA ที่ไม่มีในบัญชีเขตแจงนับ — เพิ่มจากไฟล์ EA ของโครงการ', mb_substr($source, 0, 255)];
                     $insEa->execute(array_merge([$r['ea_code']], $args, [$province]));
                     if (!$insEa->rowCount()) {
-                        $insEa0->execute(array_merge([$r['ea_code'], $province], $args));
+                        $insEa0->execute(array_merge([$r['ea_code'], $_SESSION[$sessKey]['region'] ?? '6', $province], $args));
                     }
                     $eid = (int)$pdo->lastInsertId();
-                    $ids[$r['ea_code']] = $eid;
+                    $ids[$r['ea_key']] = $eid;
                     $n['created']++;
                 }
                 $vals = [$r['psu_no'], $r['enum_type'], $r['enum_month'], $r['enum_year'], $r['fiscal_year'], $r['lat'], $r['lng']];
@@ -192,9 +195,9 @@ if ($res) {
     $sum = [];          // [project_key][round_label] => [n, new, upd, sort]
     $missing = [];
     foreach ($res['rows'] as $r) {
-        $eid = $ids[$r['ea_code']] ?? null;
+        $eid = $ids[$r['ea_key']] ?? null;
         if (!$eid) {
-            $missing[$r['ea_code']] = $r;
+            $missing[$r['ea_key']] = $r;
         }
         $s = &$sum[$r['project_key']][$r['round_label']];
         $s ??= ['n' => 0, 'new' => 0, 'upd' => 0, 'type' => [], 'sort' => [$r['enum_year'] ?? 9999, $r['enum_month'] ?? 99]];
@@ -217,8 +220,8 @@ if ($res) {
     // รายการเดิมในรอบเดียวกันที่ไม่อยู่ในไฟล์ (ถ้าเลือกนำออก)
     $inFile = [];
     foreach ($res['rows'] as $r) {
-        if ($map[$r['project_key']] && isset($ids[$r['ea_code']])) {
-            $inFile[$map[$r['project_key']] . '|' . $r['round_label']][$ids[$r['ea_code']]] = true;
+        if ($map[$r['project_key']] && isset($ids[$r['ea_key']])) {
+            $inFile[$map[$r['project_key']] . '|' . $r['round_label']][$ids[$r['ea_key']]] = true;
         }
     }
     $removable = 0;
@@ -261,7 +264,8 @@ require __DIR__ . '/header.php';
           <tr><?php foreach (['0077', '16', 'ภูเวียง', '05', 'กุดขอนแก่น', '0012', '13', 'แก่นพัฒนา', '16.5761', '102.5040', 'มกราคม', 'Q1', '2569', 'สรง.', 'นอกเขตเทศบาล', '2569'] as $v): ?><td class="text-nowrap"><?= h($v) ?></td><?php endforeach; ?></tr>
         </table></div>
         <ul class="mb-0">
-          <li>รหัส EA 11 หลัก = จังหวัด + รหัสอำเภอ + รหัสตำบล + เขตเทศบาล (ในเขต = 1, นอกเขต = 2) + ea</li>
+          <li>รหัส EA 15 หลัก = ภาค + จังหวัด + รหัสอำเภอ + รหัสตำบล + เขตเทศบาล (ในเขต = 1, นอกเขต = 2) + รหัสหมู่บ้าน 3 หลัก (ไม่มี = 999) + ea
+            เช่น <span class="ea-code">640010119990001</span> — จับคู่กับบัญชี EA ด้วยจังหวัด/อำเภอ/ตำบล/เขต/ea</li>
           <li>รอบ/งวด = เดือน + ปีที่แจงนับ เช่น "ม.ค. 2569" · enumerate_type: Q1–Q4 (รายไตรมาส) หรือ Month (รายเดือน)</li>
           <li>project จับคู่กับรหัสโครงการในระบบ (ไม่สนใจจุด เช่น "สรง." = สรง) — เลือกเองได้ในขั้นตรวจสอบ</li>
           <li>นำเข้าซ้ำได้: ปรับปรุง PSU ประเภท ปีงบประมาณ และพิกัด — ผู้รับผิดชอบและสถานะการสำรวจคงเดิม</li>

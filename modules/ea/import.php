@@ -2,7 +2,9 @@
 /**
  * นำเข้าบัญชีเขตแจงนับ (EA) จากไฟล์ Excel รูปแบบ "บัญชีเขตแจงนับ" (ผู้ดูแลระบบ EA)
  * 1) อัปโหลด .xlsx → อ่านและตรวจรหัส → เก็บผลอ่านไว้ชั่วคราวที่ storage/tmp
- * 2) ตรวจสรุป (เพิ่มใหม่ / ปรับปรุง / ไม่เปลี่ยน / ไม่อยู่ในไฟล์) → ยืนยันบันทึก (อ้างอิงตามรหัส EA 11 หลัก)
+ * 2) ตรวจสรุป (เพิ่มใหม่ / ปรับปรุง / ไม่เปลี่ยน / ไม่อยู่ในไฟล์) → ยืนยันบันทึก
+ *    (จับคู่ EA เดิมด้วย จังหวัด+อำเภอ+ตำบล+เขตการปกครอง+EA — รหัส 15 หลักปรับตามหมู่บ้านในไฟล์ใหม่)
+ * ผู้ดูแลล้างบัญชี EA แล้วนำเข้าใหม่ได้ (ยืนยันด้วย PIN)
  * EA ที่โครงการใช้อยู่ไม่ถูกลบ — EA ที่ไม่อยู่ในไฟล์เลือกทำเครื่องหมาย "เลิกใช้" ได้
  */
 require_once __DIR__ . '/bootstrap.php';
@@ -59,35 +61,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $source = mb_substr(trim(post('source')), 0, 255);
         $existing = [];
         foreach ($pdo->query('SELECT * FROM ea_areas') as $r) {
-            $existing[$r['ea_code']] = $r;
+            $existing[ea_key($r)] = $r;
         }
         $cols = array_merge(['ea_code'], EA_IMPORT_COLS, ['source']);
         $ins = $pdo->prepare('INSERT INTO ea_areas (' . implode(',', $cols) . ', is_active) VALUES (' . implode(',', array_fill(0, count($cols), '?')) . ', 1)');
-        $upd = $pdo->prepare('UPDATE ea_areas SET ' . implode(', ', array_map(fn($c) => "$c = ?", array_slice($cols, 1))) . ', is_active = 1 WHERE ea_code = ?');
+        $upd = $pdo->prepare('UPDATE ea_areas SET ' . implode(', ', array_map(fn($c) => "$c = ?", $cols)) . ', is_active = 1 WHERE id = ?');
         $n = ['new' => 0, 'upd' => 0, 'same' => 0, 'off' => 0];
         $pdo->beginTransaction();
         try {
             $inFile = [];
             foreach ($res['rows'] as $r) {
                 $r['source'] = $source;
-                $inFile[$r['ea_code']] = true;
-                $old = $existing[$r['ea_code']] ?? null;
-                $vals = array_map(fn($c) => $r[$c], array_slice($cols, 1));
+                $inFile[$r['ea_key']] = true;
+                $old = $existing[$r['ea_key']] ?? null;
+                $vals = array_map(fn($c) => $r[$c], $cols);
                 if (!$old) {
-                    $ins->execute(array_merge([$r['ea_code']], $vals));
+                    $ins->execute($vals);
                     $n['new']++;
-                } elseif (array_map('strval', $vals) !== array_map(fn($c) => (string)$old[$c], array_slice($cols, 1)) || !$old['is_active']) {
-                    $upd->execute(array_merge($vals, [$r['ea_code']]));
+                } elseif (array_map('strval', $vals) !== array_map(fn($c) => (string)$old[$c], $cols) || !$old['is_active']) {
+                    $upd->execute(array_merge($vals, [$old['id']]));
                     $n['upd']++;
                 } else {
                     $n['same']++;
                 }
             }
             if (post('deactivate') === '1') {
-                $off = $pdo->prepare('UPDATE ea_areas SET is_active = 0 WHERE ea_code = ?');
-                foreach ($existing as $code => $old) {
-                    if (!isset($inFile[$code]) && $old['is_active']) {
-                        $off->execute([$code]);
+                $off = $pdo->prepare('UPDATE ea_areas SET is_active = 0 WHERE id = ?');
+                foreach ($existing as $key => $old) {
+                    if (!isset($inFile[$key]) && $old['is_active']) {
+                        $off->execute([$old['id']]);
                         $n['off']++;
                     }
                 }
@@ -104,6 +106,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         audit_log('ea_import', $msg . ' (ไฟล์ ' . $fileName . ')', EA_MODULE);
         flash($msg);
         redirect('eas.php');
+    } elseif ($action === 'clear') {
+        // ล้างบัญชี EA (ยืนยันด้วย PIN — ผิด 5 ครั้ง พัก 15 นาที)
+        $scope = post('scope') === 'all' ? 'all' : 'list';
+        $st = $pdo->prepare('SELECT pin_hash FROM core_users WHERE id = ?');
+        $st->execute([(int)$me['id']]);
+        $hash = (string)$st->fetchColumn();
+        $lock = $_SESSION['ea_clear_lock'] ?? ['n' => 0, 'until' => 0];
+        if ($lock['until'] > time()) {
+            $errors[] = 'ใส่ PIN ผิดหลายครั้ง กรุณารอ ' . ceil(($lock['until'] - time()) / 60) . ' นาทีแล้วลองใหม่';
+        } elseif ($hash === '') {
+            $errors[] = 'บัญชีของคุณยังไม่ได้ตั้ง PIN — กรุณาตั้ง PIN ที่ "บัญชีของฉัน" ก่อน';
+        } elseif (!preg_match('/^\d{6}$/', post('pin')) || !password_verify(post('pin'), $hash)) {
+            $lock['n']++;
+            if ($lock['n'] >= 5) {
+                $lock = ['n' => 0, 'until' => time() + 900];
+            }
+            $_SESSION['ea_clear_lock'] = $lock;
+            $errors[] = 'PIN ไม่ถูกต้อง';
+        }
+        if (!$errors) {
+            unset($_SESSION['ea_clear_lock']);
+            $pdo->beginTransaction();
+            if ($scope === 'all') {
+                $pe = $pdo->exec('DELETE FROM ea_project_eas');
+                $n = $pdo->exec('DELETE FROM ea_areas');
+                $msg = 'ล้างบัญชี EA ทั้งหมดแล้ว: EA ' . number_format($n) . ' · EA ของโครงการและการมอบหมาย ' . number_format($pe) . ' รายการ';
+            } else {
+                // EA ที่โครงการใช้อยู่เก็บไว้ (ทำเครื่องหมายเลิกใช้) — นำเข้าใหม่แล้วกลับมาใช้งานตามคีย์เดิม
+                $n = $pdo->exec('DELETE FROM ea_areas WHERE id NOT IN (SELECT ea_id FROM ea_project_eas)');
+                $kept = $pdo->exec('UPDATE ea_areas SET is_active = 0');
+                $msg = 'ล้างบัญชี EA แล้ว: ลบ ' . number_format($n) . ' EA' . ($kept ? ' · เก็บ ' . number_format($kept) . ' EA ที่โครงการใช้อยู่ (เลิกใช้จนกว่าจะนำเข้าใหม่)' : '');
+            }
+            $pdo->commit();
+            if ($scope === 'all') {
+                $pdo->exec('ALTER TABLE ea_project_eas AUTO_INCREMENT = 1');
+                $pdo->exec('ALTER TABLE ea_areas AUTO_INCREMENT = 1');
+            }
+            audit_log('ea_clear', $msg, EA_MODULE);
+            flash($msg . ' — นำเข้าบัญชี EA ใหม่ได้เลย');
+            redirect('import.php');
+        }
     } elseif ($action === 'cancel') {
         $clear();
         redirect('import.php');
@@ -120,7 +163,7 @@ if (($_GET['step'] ?? '') === 'preview') {
 if ($step === 'preview') {
     $existing = [];
     foreach ($pdo->query('SELECT * FROM ea_areas') as $r) {
-        $existing[$r['ea_code']] = $r;
+        $existing[ea_key($r)] = $r;
     }
     $sum = ['new' => 0, 'upd' => 0, 'same' => 0, 'houses' => 0, 'households' => 0, 'population' => 0, 'area1' => 0, 'area2' => 0];
     $changes = [];
@@ -128,20 +171,20 @@ if ($step === 'preview') {
     $tambons = [];
     $inFile = [];
     foreach ($res['rows'] as $r) {
-        $inFile[$r['ea_code']] = true;
+        $inFile[$r['ea_key']] = true;
         $sum['houses'] += $r['houses'];
         $sum['households'] += $r['households'];
         $sum['population'] += $r['population'];
         $sum['area' . $r['area_type']]++;
         $districts[$r['district_code']] = true;
         $tambons[$r['district_code'] . $r['tambon_code']] = true;
-        $old = $existing[$r['ea_code']] ?? null;
+        $old = $existing[$r['ea_key']] ?? null;
         if (!$old) {
             $sum['new']++;
             continue;
         }
         $diff = [];
-        foreach (EA_IMPORT_COLS as $c) {
+        foreach (array_merge(['ea_code'], EA_IMPORT_COLS) as $c) {
             if ((string)$r[$c] !== (string)$old[$c]) {
                 $diff[] = $c;
             }
@@ -155,13 +198,13 @@ if ($step === 'preview') {
             $sum['same']++;
         }
     }
-    $missing = array_values(array_filter($existing, fn($o) => !isset($inFile[$o['ea_code']]) && $o['is_active']));
+    $missing = array_values(array_filter($existing, fn($o) => !isset($inFile[ea_key($o)]) && $o['is_active']));
     $usedMissing = 0;
     if ($missing) {
         $usedSet = array_flip($pdo->query('SELECT DISTINCT ea_id FROM ea_project_eas')->fetchAll(PDO::FETCH_COLUMN));
         $usedMissing = count(array_filter($missing, fn($o) => isset($usedSet[$o['id']])));
     }
-    $colLabel = ['seq' => 'ลำดับที่', 'region_code' => 'รหัสภาค', 'region_name' => 'ภาค', 'province_code' => 'รหัสจังหวัด', 'province_name' => 'จังหวัด',
+    $colLabel = ['ea_code' => 'รหัส EA', 'seq' => 'ลำดับที่', 'region_code' => 'รหัสภาค', 'region_name' => 'ภาค', 'province_code' => 'รหัสจังหวัด', 'province_name' => 'จังหวัด',
                  'district_code' => 'รหัสอำเภอ', 'district_name' => 'อำเภอ', 'tambon_code' => 'รหัสตำบล', 'tambon_name' => 'ตำบล',
                  'area_type' => 'เขตการปกครอง', 'ea_no' => 'EA', 'advance_ea' => 'EA เสนอผลล่วงหน้า', 'village_code' => 'รหัสหมู่บ้าน',
                  'village_name' => 'หมู่บ้าน', 'houses' => 'บ้าน', 'households' => 'ครัวเรือน', 'population' => 'ประชากร', 'note' => 'หมายเหตุ'];
@@ -196,13 +239,45 @@ require __DIR__ . '/header.php';
         <p class="mb-2">ลำดับที่ · ภาค (รหัส, ชื่อ) · จังหวัด (รหัส, ชื่อ) · อำเภอ/เขต (รหัส, ชื่อ) · ตำบล/แขวง (รหัส, ชื่อ) · เขตการปกครอง ·
           EA · EA สำหรับเสนอผลล่วงหน้า · หมู่บ้าน/ชุมชน (รหัส, ชื่อ) · ข้อมูลเบื้องต้น (จำนวนบ้าน/อาคาร, ครัวเรือน, ประชากร) · หมายเหตุ</p>
         <ul class="mb-0">
-          <li>รหัส EA 11 หลัก = จังหวัด (2) + อำเภอ (2) + ตำบล (2) + เขตการปกครอง (1) + EA (4) เช่น <span class="ea-code">40 01 01 1 0001</span></li>
+          <li>รหัส EA 15 หลัก = ภาค (1) + จังหวัด (2) + อำเภอ (2) + ตำบล (2) + เขตการปกครอง (1) + หมู่บ้าน (3; ไม่มี = 999) + EA (4)
+            เช่น <span class="ea-code">6 40 01 01 1 999 0001</span> = <span class="ea-code">640010119990001</span></li>
           <li>เขตการปกครอง: 1 = ในเขตเทศบาล · 2 = นอกเขตเทศบาล</li>
-          <li>นำเข้าซ้ำได้: EA เดิมจะถูกปรับปรุงตามไฟล์ใหม่ (อ้างอิงตามรหัส EA) — ข้อมูล EA ของโครงการไม่ถูกลบ</li>
+          <li>นำเข้าซ้ำได้: EA เดิมจะถูกปรับปรุงตามไฟล์ใหม่ (จับคู่ด้วย จังหวัด+อำเภอ+ตำบล+เขตการปกครอง+EA) — ข้อมูล EA ของโครงการไม่ถูกลบ</li>
         </ul>
       </div>
     </div>
   </div>
+  <?php
+    $cnt = $pdo->query('SELECT (SELECT COUNT(*) FROM ea_areas) n, (SELECT COUNT(DISTINCT ea_id) FROM ea_project_eas) used, (SELECT COUNT(*) FROM ea_project_eas) pe')->fetch();
+    $st = $pdo->prepare("SELECT pin_hash IS NOT NULL AND pin_hash <> '' FROM core_users WHERE id = ?");
+    $st->execute([(int)$me['id']]);
+    $hasPin = (bool)$st->fetchColumn();
+  ?>
+  <?php if ((int)$cnt['n']): ?>
+  <div class="col-lg-6" id="clear">
+    <form method="post" class="card border-danger" data-confirm="ยืนยันล้างบัญชี EA?">
+      <?= csrf_field() ?><input type="hidden" name="action" value="clear">
+      <div class="card-header text-danger"><strong><i class="bi bi-trash3"></i> ล้างบัญชี EA เพื่อนำเข้าใหม่</strong></div>
+      <div class="card-body">
+        <p class="small mb-2">บัญชีปัจจุบัน <strong><?= number_format((int)$cnt['n']) ?></strong> EA · โครงการใช้อยู่ <?= number_format((int)$cnt['used']) ?> EA (<?= number_format((int)$cnt['pe']) ?> รายการ)</p>
+        <div class="form-check mb-1"><input class="form-check-input" type="radio" name="scope" value="list" id="cl1" checked>
+          <label class="form-check-label" for="cl1">ล้างบัญชี EA — <strong>เก็บ EA ของโครงการและการมอบหมายไว้</strong>
+            <div class="small text-muted">ลบ EA ที่ไม่มีโครงการใช้ · EA ที่โครงการใช้อยู่ทำเครื่องหมายเลิกใช้ แล้วกลับมาใช้งานเมื่อนำเข้าไฟล์ใหม่ที่มี EA นั้น</div></label></div>
+        <div class="form-check mb-3"><input class="form-check-input" type="radio" name="scope" value="all" id="cl2">
+          <label class="form-check-label" for="cl2">ล้างทั้งหมด — <strong class="text-danger">บัญชี EA + EA ของโครงการ + ผู้รับผิดชอบ/สถานะการสำรวจ</strong>
+            <div class="small text-muted">เริ่มต้นใหม่ทั้งหมด กู้คืนไม่ได้</div></label></div>
+        <?php if ($hasPin): ?>
+        <div class="d-flex gap-2 align-items-center">
+          <input type="password" name="pin" class="form-control" style="max-width:160px" inputmode="numeric" pattern="\d{6}" maxlength="6" placeholder="PIN 6 หลัก" required autocomplete="off">
+          <button class="btn btn-danger"><i class="bi bi-trash3"></i> ล้างบัญชี EA</button>
+        </div>
+        <?php else: ?>
+        <div class="alert alert-warning py-2 mb-0 small">ต้องตั้ง PIN ที่ <a href="<?= h(url('account.php')) ?>">บัญชีของฉัน</a> ก่อน จึงจะล้างบัญชี EA ได้</div>
+        <?php endif; ?>
+      </div>
+    </form>
+  </div>
+  <?php endif; ?>
 </div>
 <?php else: ?>
 <div class="row g-3 mb-3" data-reveal>

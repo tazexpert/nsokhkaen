@@ -44,7 +44,8 @@ $query = $f + ['project' => $project ?: '', 'status' => $status === 'active' ? '
 
 $pageTitle = 'บัญชี EA';
 $active = 'eas';
-$pageActions = (ea_can('admin') ? '<a href="import.php" class="btn btn-outline-primary"><i class="bi bi-file-earmark-arrow-up"></i> นำเข้าบัญชี EA</a>' : '');
+$pageActions = (ea_can('admin') ? '<a href="import.php#clear" class="btn btn-outline-danger"><i class="bi bi-trash3"></i> ล้างและนำเข้าใหม่</a>'
+    . ' <a href="import.php" class="btn btn-outline-primary"><i class="bi bi-file-earmark-arrow-up"></i> นำเข้าบัญชี EA</a>' : '');
 require __DIR__ . '/header.php';
 ?>
 <div class="card">

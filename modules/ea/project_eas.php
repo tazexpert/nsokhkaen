@@ -67,15 +67,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (post('method') === 'codes') {
             $codes = ea_parse_codes(post('codes'));
             if (!$codes) {
-                flash('ไม่พบรหัส EA 11 หลักในข้อความที่วาง', 'warning');
+                flash('ไม่พบรหัส EA (15 หลัก) ในข้อความที่วาง', 'warning');
                 redirect($back);
             }
-            $ph = implode(',', array_fill(0, count($codes), '?'));
-            $st = $pdo->prepare("SELECT id, ea_code, is_active FROM ea_areas WHERE ea_code IN ($ph)");
-            $st->execute($codes);
+            [$cw, $cp] = ea_codes_sql($codes);
+            $st = $pdo->prepare('SELECT a.id, a.ea_code, ' . EA_KEY_SQL . ' AS ea_key FROM ea_areas a WHERE ' . $cw);
+            $st->execute($cp);
             $found = $st->fetchAll();
             $ids = array_map(fn($r) => (int)$r['id'], $found);
-            $unknown = array_values(array_diff($codes, array_column($found, 'ea_code')));
+            $unknown = array_values(array_diff($codes, array_column($found, 'ea_code'), array_column($found, 'ea_key')));
         } else {
             $af = ['district' => preg_match('/^\d{2}$/', post('add_district')) ? post('add_district') : '',
                    'tambon' => preg_match('/^\d{2}$/', post('add_tambon')) ? post('add_tambon') : '',
@@ -403,7 +403,7 @@ $roundName = fn(string $rl) => ($rl === '' ? 'ไม่ระบุรอบ' : 
             <p class="small text-muted mt-2 mb-0">เพิ่ม EA ที่ใช้งานอยู่ทั้งหมดในพื้นที่ที่เลือก (EA ที่มีในรอบนี้แล้วจะไม่ซ้ำ)</p>
           </div>
           <div class="tab-pane fade" id="addCodes">
-            <textarea name="codes" class="form-control font-monospace" rows="7" placeholder="วางรหัส EA 11 หลัก คั่นด้วยการขึ้นบรรทัด ช่องว่าง หรือจุลภาค&#10;เช่น คัดลอกคอลัมน์รหัส EA จากรายชื่อ EA ตัวอย่างของโครงการใน Excel"></textarea>
+            <textarea name="codes" class="form-control font-monospace" rows="7" placeholder="วางรหัส EA 15 หลัก (เช่น 640010119990001) คั่นด้วยการขึ้นบรรทัด ช่องว่าง หรือจุลภาค&#10;เช่น คัดลอกคอลัมน์รหัส EA จากรายชื่อ EA ตัวอย่างของโครงการใน Excel"></textarea>
           </div>
         </div>
       </div>

@@ -17,8 +17,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'save') {
     check_csrf();
     ea_require('admin');
     $num = fn(string $k) => max(0, (int)str_replace(',', '', post($k)));
-    $pdo->prepare('UPDATE ea_areas SET village_code = ?, village_name = ?, advance_ea = ?, houses = ?, households = ?, population = ?, note = ?, is_active = ? WHERE id = ?')
-        ->execute([mb_substr(trim(post('village_code')), 0, 3), mb_substr(trim(post('village_name')), 0, 150), mb_substr(trim(post('advance_ea')), 0, 20),
+    $vcode = mb_substr(trim(post('village_code')), 0, 3);
+    // รหัส EA 15 หลักเปลี่ยนตามรหัสหมู่บ้าน
+    $newCode = ea_make_code($ea['region_code'], $ea['province_code'], $ea['district_code'], $ea['tambon_code'], $ea['area_type'], $vcode, $ea['ea_no']);
+    $dup = $pdo->prepare('SELECT COUNT(*) FROM ea_areas WHERE ea_code = ? AND id <> ?');
+    $dup->execute([$newCode, $id]);
+    if ($dup->fetchColumn()) {
+        flash('รหัส EA ' . $newCode . ' ซ้ำกับ EA อื่น — ตรวจรหัสหมู่บ้าน', 'danger');
+        redirect('ea_view.php?id=' . $id . '&edit=1');
+    }
+    $pdo->prepare('UPDATE ea_areas SET ea_code = ?, village_code = ?, village_name = ?, advance_ea = ?, houses = ?, households = ?, population = ?, note = ?, is_active = ? WHERE id = ?')
+        ->execute([$newCode, $vcode, mb_substr(trim(post('village_name')), 0, 150), mb_substr(trim(post('advance_ea')), 0, 20),
                    $num('houses'), $num('households'), $num('population'), mb_substr(trim(post('note')), 0, 2000), post('is_active') === '1' ? 1 : 0, $id]);
     audit_log('ea_edit', 'แก้ไขข้อมูล EA ' . $ea['ea_code'], EA_MODULE);
     flash('บันทึกข้อมูล EA ' . $ea['ea_code'] . ' แล้ว');
@@ -43,7 +52,10 @@ $c = $ea['ea_code'];
   <div class="col-lg-6 reveal-item">
     <div class="card h-100">
       <div class="card-header d-flex align-items-center">
-        <strong class="ea-code fs-5"><?= h(substr($c, 0, 2)) ?><span class="p">-</span><?= h(substr($c, 2, 2)) ?><span class="p">-</span><?= h(substr($c, 4, 2)) ?><span class="p">-</span><?= h(substr($c, 6, 1)) ?><span class="p">-</span><?= h(substr($c, 7)) ?></strong>
+        <strong class="ea-code fs-5"><?= h($c) ?></strong>
+        <span class="ea-code small text-muted ms-2" title="ภาค-จังหวัด-อำเภอ-ตำบล-เขตการปกครอง-หมู่บ้าน-EA"><?php
+          $parts = []; $pos = 0; foreach ([1, 2, 2, 2, 1, 3, 4] as $len) { $parts[] = substr($c, $pos, $len); $pos += $len; }
+          echo h(implode('-', $parts)); ?></span>
         <?php if (!$ea['is_active']): ?><span class="ms-2 text-muted">(เลิกใช้)</span><?php endif; ?>
       </div>
       <?php if ($edit): ?>

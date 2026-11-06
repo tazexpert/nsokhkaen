@@ -705,7 +705,7 @@ CREATE TABLE IF NOT EXISTS cal_plan_guard (
 
 CREATE TABLE IF NOT EXISTS ea_areas (
   id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  ea_code        CHAR(11)     NOT NULL,                 -- รหัส EA 11 หลัก = จังหวัด(2)+อำเภอ(2)+ตำบล(2)+เขตการปกครอง(1)+EA(4)
+  ea_code        VARCHAR(15)  NOT NULL,                 -- รหัส EA 15 หลัก = ภาค(1)+จังหวัด(2)+อำเภอ(2)+ตำบล(2)+เขตการปกครอง(1)+หมู่บ้าน(3; ไม่มี = 999)+EA(4)
   seq            INT UNSIGNED NOT NULL DEFAULT 0,       -- ลำดับที่ในบัญชี
   region_code    VARCHAR(2)   NOT NULL DEFAULT '',
   region_name    VARCHAR(50)  NOT NULL DEFAULT '',
@@ -729,6 +729,7 @@ CREATE TABLE IF NOT EXISTS ea_areas (
   created_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_ea_code (ea_code),
+  UNIQUE KEY uq_ea_area_key (province_code, district_code, tambon_code, area_type, ea_no),
   KEY idx_ea_area (district_code, tambon_code, area_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
