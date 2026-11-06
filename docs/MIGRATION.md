@@ -267,6 +267,7 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 | `20261121_ea_code15.sql` | ระบบ EA: รหัส EA 15 หลัก (ภาค+จังหวัด+อำเภอ+ตำบล+เขตการปกครอง+หมู่บ้าน 3 หลัก/999+EA) เช่น 640010119990001 — แปลงรหัสเดิมให้อัตโนมัติ |
 | `20261122_ea_local_org.sql` | ระบบ EA: เทศบาล / อบต. ของ EA (`local_code`, `local_name`) — หลังรันให้นำเข้าไฟล์ SurveyEaHome.xlsx ที่ EA → นำเข้าบัญชี EA เพื่อปรับรหัส EA 15 หลักให้ถูกต้อง (ปัจจุบันใช้ไฟล์ EaDetail.xlsx) |
 | `20261123_ea_vacant.sql` | ระบบ EA: จำนวนบ้านว่าง (`vacant_houses`) — นำเข้าไฟล์ EaDetail.xlsx ที่ EA → นำเข้าบัญชี EA |
+| `20261124_project_period.sql` | โครงการที่รับผิดชอบ: คาบการสำรวจ รายเดือน/รายไตรมาส/รายปี (`core_projects.survey_period`) — เติมจาก EA ของโครงการที่นำเข้าแล้วให้อัตโนมัติ |
 
 > ระบบเบิกวัสดุเดิมยังเปิดใช้อยู่? ก่อนเปิดใช้ระบบใหม่ให้ "ดึงข้อมูลรอบสุดท้าย" ตามหัวข้อด้านบน (`--resync-inventory`)
 
@@ -298,6 +299,7 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261121_ea_code15.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261122_ea_local_org.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261123_ea_vacant.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261124_project_period.sql
 ```
 
 หลังอัปเดต:

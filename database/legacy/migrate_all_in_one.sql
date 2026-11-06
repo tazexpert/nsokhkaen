@@ -170,6 +170,7 @@ CREATE TABLE IF NOT EXISTS core_projects (
   code           VARCHAR(20)  NOT NULL,                 -- ตัวย่อ ใช้ในแผนการปฏิบัติงาน เช่น สรง
   name           VARCHAR(255) NOT NULL,                 -- ชื่อโครงการเต็ม
   fiscal_year    SMALLINT UNSIGNED NULL,                -- ปีงบประมาณ (พ.ศ.)
+  survey_period  VARCHAR(10)  NOT NULL DEFAULT '',      -- คาบการสำรวจ: monthly | quarterly | yearly ('' = ไม่ระบุ)
   start_date     DATE         NULL,                     -- ช่วงปฏิบัติงาน (ไม่บังคับ)
   end_date       DATE         NULL,
   work_group_id  INT UNSIGNED NULL,                     -- กลุ่มงานที่รับผิดชอบ

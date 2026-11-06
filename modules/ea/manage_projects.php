@@ -17,7 +17,7 @@ $find = function (int $id) use ($pdo): ?array {
     return $st->fetch() ?: null;
 };
 $editId = $canManage ? int_param('edit') : 0;
-$form = ['code' => '', 'name' => '', 'fiscal_year' => $thisFy, 'start_date' => '', 'end_date' => '', 'work_group_id' => '',
+$form = ['code' => '', 'name' => '', 'fiscal_year' => $thisFy, 'survey_period' => '', 'start_date' => '', 'end_date' => '', 'work_group_id' => '',
          'owner_id' => '', 'description' => '', 'color' => '#0d6efd', 'sort_order' => '', 'is_active' => 1];
 if ($editId && ($row = $find($editId))) {
     $form = $row;
@@ -37,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $form = [
             'code' => trim(post('code')), 'name' => trim(post('name')),
             'fiscal_year' => post('fiscal_year') !== '' ? (int)post('fiscal_year') : null,
+            'survey_period' => isset(PROJECT_PERIODS[post('survey_period')]) ? post('survey_period') : '',
             'start_date' => $date(post('start_date')), 'end_date' => $date(post('end_date')),
             'work_group_id' => (int)post('work_group_id') ?: null, 'owner_id' => (int)post('owner_id') ?: null,
             'description' => trim(post('description')),
@@ -67,15 +68,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      $form['work_group_id'], $form['owner_id'], $form['description'] !== '' ? $form['description'] : null, $form['color']];
             if ($editId) {
                 $pdo->prepare('UPDATE core_projects SET code = ?, name = ?, fiscal_year = ?, start_date = ?, end_date = ?, work_group_id = ?, owner_id = ?,
-                               description = ?, color = ?, sort_order = ?, is_active = ? WHERE id = ?')
-                    ->execute([...$vals, $form['sort_order'] ?? 0, $form['is_active'], $editId]);
+                               description = ?, color = ?, sort_order = ?, is_active = ?, survey_period = ? WHERE id = ?')
+                    ->execute([...$vals, $form['sort_order'] ?? 0, $form['is_active'], $form['survey_period'], $editId]);
                 audit_log('project_update', $form['code'] . ' — ' . $form['name']);
                 flash('บันทึกโครงการ "' . $form['code'] . '" แล้ว');
             } else {
                 $order = $form['sort_order'] ?? (int)$pdo->query('SELECT COALESCE(MAX(sort_order), 0) + 10 FROM core_projects')->fetchColumn();
-                $pdo->prepare('INSERT INTO core_projects (code, name, fiscal_year, start_date, end_date, work_group_id, owner_id, description, color, sort_order, is_active)
-                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-                    ->execute([...$vals, $order, $form['is_active']]);
+                $pdo->prepare('INSERT INTO core_projects (code, name, fiscal_year, start_date, end_date, work_group_id, owner_id, description, color, sort_order, is_active, survey_period)
+                               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+                    ->execute([...$vals, $order, $form['is_active'], $form['survey_period']]);
                 audit_log('project_create', $form['code'] . ' — ' . $form['name']);
                 flash('เพิ่มโครงการ "' . $form['code'] . '" แล้ว');
             }
@@ -151,7 +152,7 @@ require __DIR__ . '/header.php';
       </div>
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
-          <thead><tr><th>ตัวย่อ</th><th>ชื่อโครงการ</th><th class="text-center">ปีงบฯ</th><th>ช่วงปฏิบัติงาน</th><th>ผู้รับผิดชอบ</th><th>สถานะ</th>
+          <thead><tr><th>ตัวย่อ</th><th>ชื่อโครงการ</th><th class="text-center">ปีงบฯ</th><th>คาบการสำรวจ</th><th>ช่วงปฏิบัติงาน</th><th>ผู้รับผิดชอบ</th><th>สถานะ</th>
             <?php if ($canManage): ?><th class="text-center" title="จำนวนช่อง (คน-วัน) ในแผนการปฏิบัติงาน">ใช้ในแผน</th><th></th><?php endif; ?></tr></thead>
           <tbody>
           <?php foreach ($rows as $p): [$st, $sc] = project_status($p); ?>
@@ -160,6 +161,7 @@ require __DIR__ . '/header.php';
               <td><div class="fw-semibold"><?= h($p['name']) ?></div>
                 <?php if ($p['description']): ?><div class="small text-muted"><?= nl2br(h(mb_strimwidth($p['description'], 0, 200, '…'))) ?></div><?php endif; ?></td>
               <td class="text-center"><?= $p['fiscal_year'] ? (int)$p['fiscal_year'] : '-' ?></td>
+              <td class="small text-nowrap"><?= h(project_period_label($p['survey_period'] ?? '') ?: '-') ?></td>
               <td class="small text-nowrap"><?= h(project_period_text($p)) ?></td>
               <td class="small"><?= $p['owner_id'] && isset($names[$p['owner_id']]) ? h(preg_replace('/\s+/u', ' ', $names[$p['owner_id']])) : '' ?>
                 <?php if ($p['work_group_id'] && isset($groups[$p['work_group_id']])): ?><div class="text-muted"><?= h($groups[$p['work_group_id']]) ?></div><?php endif; ?>
@@ -178,7 +180,7 @@ require __DIR__ . '/header.php';
               <?php endif; ?>
             </tr>
           <?php endforeach; ?>
-          <?php if (!$rows): ?><tr><td colspan="8" class="text-center text-muted py-5">ไม่พบโครงการ</td></tr><?php endif; ?>
+          <?php if (!$rows): ?><tr><td colspan="9" class="text-center text-muted py-5">ไม่พบโครงการ</td></tr><?php endif; ?>
           </tbody>
         </table>
       </div>
@@ -211,6 +213,14 @@ require __DIR__ . '/header.php';
         <div class="mb-2">
           <label class="form-label" for="pjName">ชื่อโครงการ <span class="text-danger">*</span></label>
           <input name="name" id="pjName" class="form-control" maxlength="255" required value="<?= h($form['name']) ?>">
+        </div>
+        <div class="mb-2">
+          <label class="form-label" for="pjPeriod">คาบการสำรวจ</label>
+          <select name="survey_period" id="pjPeriod" class="form-select">
+            <option value="">— ไม่ระบุ (กำหนดจากไฟล์นำเข้า EA) —</option>
+            <?php foreach (PROJECT_PERIODS as $k => $l): ?><option value="<?= $k ?>" <?= ($form['survey_period'] ?? '') === $k ? 'selected' : '' ?>><?= h($l) ?></option><?php endforeach; ?>
+          </select>
+          <div class="form-text">ไม่ระบุ = ระบบกำหนดให้ตอนนำเข้า EA ของโครงการ (Q1–Q4 = รายไตรมาส · Month = รายเดือน · ไม่มีเดือน = รายปี)</div>
         </div>
         <div class="row g-2 mb-2">
           <div class="col-6"><label class="form-label" for="pjStart">เริ่มปฏิบัติงาน</label><input type="text" name="start_date" id="pjStart" class="form-control thai-date" value="<?= h((string)$form['start_date']) ?>"></div>

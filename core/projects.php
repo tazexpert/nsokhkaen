@@ -5,6 +5,46 @@
  * ผู้จัดการโครงการได้: ผู้ดูแลระบบกลาง ผู้ดูแลปฏิทิน (ผู้จัดทำแผนการปฏิบัติงาน) และผู้ดูแลระบบบริหารโครงการ
  */
 
+/** คาบการสำรวจของโครงการ (core_projects.survey_period) */
+const PROJECT_PERIODS = ['monthly' => 'รายเดือน', 'quarterly' => 'รายไตรมาส', 'yearly' => 'รายปี'];
+
+function project_period_label(?string $p): string
+{
+    return PROJECT_PERIODS[(string)$p] ?? '';
+}
+
+/**
+ * คาบการสำรวจจากประเภทการแจงนับในไฟล์นำเข้า: Q1–Q4 = รายไตรมาส · Month = รายเดือน
+ * (บัญชีมอบหมายไม่มีประเภท: มีเดือน = รายเดือน · มีแต่ปี = รายปี) — คืน '' ถ้าระบุไม่ได้
+ */
+function project_period_detect(array $types, bool $hasMonth = true): string
+{
+    $q = $m = 0;
+    foreach ($types as $t) {
+        $t = strtoupper(trim((string)$t));
+        if (preg_match('/^Q[1-4]$/', $t)) {
+            $q++;
+        } elseif ($t === 'MONTH' || $t === 'M') {
+            $m++;
+        } elseif ($t === 'YEAR' || $t === 'Y') {
+            return 'yearly';
+        }
+    }
+    if ($q || $m) {
+        return $q >= $m ? 'quarterly' : 'monthly';
+    }
+    return $hasMonth ? '' : 'yearly';
+}
+
+/** ประเภทการแจงนับ (enum_type) ของ EA ใหม่ตามคาบการสำรวจของโครงการ */
+function project_enum_type(string $period, ?int $month): string
+{
+    if ($period === 'quarterly' && $month) {
+        return 'Q' . (int)ceil($month / 3);
+    }
+    return $period === 'monthly' ? 'Month' : '';
+}
+
 function projects_can_manage(?array $user = null): bool
 {
     $user = $user ?? current_user();

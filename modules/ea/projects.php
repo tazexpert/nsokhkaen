@@ -42,7 +42,7 @@ require __DIR__ . '/header.php';
         <div class="small text-muted mt-2"><?= count($rounds) ?> รอบ: <?= h(implode(', ', array_map(fn($r) => ($r['round_label'] ?: 'ไม่ระบุรอบ') . ' (' . $r['n'] . ')', array_slice($rounds, 0, 6)))) ?><?= count($rounds) > 6 ? ' …' : '' ?></div>
         <?php endif; ?>
         <?php else: ?><div class="small text-muted mt-1">ยังไม่ได้กำหนด EA</div><?php endif; ?>
-        <div class="small text-muted mt-2"><i class="bi bi-calendar3"></i> <?= h(project_period_text($p)) ?><?= $p['fiscal_year'] ? ' · ปีงบประมาณ ' . (int)$p['fiscal_year'] : '' ?></div>
+        <div class="small text-muted mt-2"><?php if (($p['survey_period'] ?? '') !== ''): ?><i class="bi bi-arrow-repeat"></i> <?= h(project_period_label($p['survey_period'])) ?> · <?php endif; ?><i class="bi bi-calendar3"></i> <?= h(project_period_text($p)) ?><?= $p['fiscal_year'] ? ' · ปีงบประมาณ ' . (int)$p['fiscal_year'] : '' ?></div>
       </div>
     </a>
   </div>

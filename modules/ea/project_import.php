@@ -63,6 +63,20 @@ $autoPeople = function (array $people) use ($staffByName): array {
     }
     return $out;
 };
+// คาบการสำรวจที่อ่านได้จากไฟล์ [project_key => monthly|quarterly|yearly|'']
+$detectPeriods = function (array $res): array {
+    $types = [];
+    $hasMonth = [];
+    foreach ($res['rows'] as $r) {
+        $types[$r['project_key']][] = (string)($r['enum_type'] ?? '');
+        $hasMonth[$r['project_key']] = ($hasMonth[$r['project_key']] ?? false) || !empty($r['enum_month']);
+    }
+    $out = [];
+    foreach ($types as $k => $t) {
+        $out[$k] = project_period_detect($t, $hasMonth[$k]);
+    }
+    return $out;
+};
 $eaIds = fn() => $pdo->query('SELECT ' . EA_KEY_SQL . ', a.id FROM ea_areas a')->fetchAll(PDO::FETCH_KEY_PAIR);   // คีย์ 11 หลัก => id
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -116,6 +130,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $people[$name] = ctype_digit($v) && isset($staff[(int)$v]) ? (int)$v : null;
         }
         ea_resolve_area_rows($res['rows'], $map);
+        $detected = $detectPeriods($res);
+        $periodOf = [];                             // project_id => คาบการสำรวจที่ใช้ (ของโครงการ หรือจากไฟล์)
+        $setPeriod = [];
+        foreach ($map as $k => $pid) {
+            if ($pid) {
+                $cur = (string)($projects[$pid]['survey_period'] ?? '');
+                $periodOf[$pid] = $cur !== '' ? $cur : ($detected[$k] ?? '');
+                if ($cur === '' && ($detected[$k] ?? '') !== '') {
+                    $setPeriod[$pid] = $detected[$k];
+                }
+            }
+        }
         $province = $_SESSION[$sessKey]['province'] ?? '40';
         $source = 'เพิ่มจากไฟล์ EA ของโครงการ ' . ($_SESSION[$sessKey]['file'] ?? '');
         $n = ['new' => 0, 'upd' => 0, 'same' => 0, 'created' => 0, 'skipped' => 0, 'removed' => 0, 'assigned' => 0];
@@ -166,7 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $partial = !empty($r['partial']);       // บัญชีมอบหมาย: ช่องที่ไม่มี (null) คงค่าเดิม
                 if (!$o) {
                     if ($partial) {
-                        $vals[1] ??= '';
+                        $vals[1] ??= project_enum_type($periodOf[$pid] ?? '', $r['enum_month'] ?? null);
                         $vals[4] ??= $r['fiscal_year_new'] ?? null;
                     }
                     $ins->execute(array_merge([$pid, $eid, $r['round_label']], $vals, [(int)$me['id']]));
@@ -216,6 +242,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
             }
+            // คาบการสำรวจของโครงการที่ยังไม่ระบุ: ตั้งตามไฟล์
+            $sp = $pdo->prepare("UPDATE core_projects SET survey_period = ? WHERE id = ? AND survey_period = ''");
+            foreach ($setPeriod as $pid => $per) {
+                $sp->execute([$per, $pid]);
+            }
             $pdo->commit();
         } catch (Throwable $e) {
             $pdo->rollBack();
@@ -227,6 +258,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              . ($n['created'] ? ' · เพิ่ม EA ใหม่ในบัญชี ' . number_format($n['created']) : '')
              . ($n['assigned'] ? ' · กำหนดผู้ปฏิบัติงาน ' . number_format($n['assigned']) . ' EA' : '')
              . ($n['removed'] ? ' · นำออก ' . number_format($n['removed']) : '')
+             . ($setPeriod ? ' · ตั้งคาบการสำรวจ ' . implode(', ', array_map(fn($pid, $per) => $projects[$pid]['code'] . ' = ' . project_period_label($per), array_keys($setPeriod), $setPeriod)) : '')
              . ($n['skipped'] ? ' · ข้าม ' . number_format($n['skipped']) . ' แถว' : '');
         audit_log('ea_project_import', $msg . ' (ไฟล์ ' . $file . ')', EA_MODULE);
         flash($msg, $n['skipped'] ? 'warning' : 'success');
@@ -241,6 +273,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $res = ($_GET['step'] ?? '') === 'preview' ? $load() : null;
 if ($res) {
     $map = $autoMap($res['projects'], $res['project_titles'] ?? []);
+    $detected = $detectPeriods($res);
     ea_resolve_area_rows($res['rows'], $map);
     ea_resolve_codes($res['rows'], ea_existing_by_key());
     $peopleMap = $autoPeople($res['people'] ?? []);
@@ -365,7 +398,7 @@ require __DIR__ . '/header.php';
     <div class="card-header"><strong>โครงการในไฟล์</strong> <span class="small text-muted">— ไฟล์ <?= h($_SESSION[$sessKey]['file'] ?? '') ?></span></div>
     <div class="table-responsive">
       <table class="table mb-0 ea-table">
-        <thead><tr><th>project ในไฟล์</th><th style="width:320px">นำเข้าเป็นโครงการ</th><th>รอบ/งวด (จำนวน EA · เพิ่มใหม่ · ปรับปรุง)</th></tr></thead>
+        <thead><tr><th>project ในไฟล์</th><th style="width:320px">นำเข้าเป็นโครงการ</th><th>คาบการสำรวจ</th><th>รอบ/งวด (จำนวน EA · เพิ่มใหม่ · ปรับปรุง)</th></tr></thead>
         <tbody>
         <?php foreach ($res['projects'] as $k => $raw): ?>
           <tr>
@@ -375,6 +408,17 @@ require __DIR__ . '/header.php';
               <?php foreach ($projects as $p): ?><option value="<?= (int)$p['id'] ?>" <?= $map[$k] === (int)$p['id'] ? 'selected' : '' ?>><?= h($p['code'] . ' — ' . $p['name']) ?></option><?php endforeach; ?>
             </select>
             <?php if (!$map[$k]): ?><div class="small text-danger">ไม่พบโครงการรหัสนี้ — เลือกโครงการ หรือ<?= projects_can_manage() ? ' <a href="' . h(module_url('ea', 'manage_projects.php')) . '" target="_blank">เพิ่มโครงการ</a> แล้วอัปโหลดใหม่' : 'แจ้งผู้ดูแลเพิ่มโครงการ' ?></div><?php endif; ?></td>
+            <td class="small text-nowrap"><?php
+              $det = $detected[$k] ?? ''; $cur = $map[$k] ? (string)($projects[$map[$k]]['survey_period'] ?? '') : '';
+              if ($det === '') {
+                  echo $cur !== '' ? h(project_period_label($cur)) : '<span class="text-muted">อ่านจากไฟล์ไม่ได้</span>';
+              } elseif ($cur === '') {
+                  echo '<span class="text-success">' . h(project_period_label($det)) . '</span><div class="text-muted">ตั้งให้โครงการเมื่อนำเข้า</div>';
+              } elseif ($cur === $det) {
+                  echo h(project_period_label($cur)) . ' <i class="bi bi-check-circle-fill text-success"></i>';
+              } else {
+                  echo h(project_period_label($cur)) . '<div class="text-warning">ไฟล์เป็น' . h(project_period_label($det)) . ' (ไม่เปลี่ยน)</div>';
+              } ?></td>
             <td class="small"><?php foreach ($sum[$k] as $rl => $s): ?>
               <span class="d-inline-block me-3 text-nowrap"><strong><?= h($rl ?: 'ไม่ระบุรอบ') ?></strong>
                 <span class="text-muted"><?= h(implode('/', array_filter(array_keys($s['type'])))) ?></span>
