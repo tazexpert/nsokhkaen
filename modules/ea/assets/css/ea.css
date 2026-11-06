@@ -71,3 +71,19 @@
   .wheel-overlay.show, .wheel-item, .wheel-confetti i { animation: none; }
 }
 @media print { .wheel-overlay { display: none !important; } }
+.wheel-start { margin-top: 6px; min-width: 200px; font-weight: 700; box-shadow: 0 6px 16px rgba(245, 158, 11, .35); }
+.wheel-start:not([disabled]) { animation: wheelPulse 1.6s ease-in-out infinite; }
+@keyframes wheelPulse { 50% { transform: scale(1.05); } }
+.wheel-ready { height: 100%; min-height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+  border: 2px dashed #e2e8f0; border-radius: 12px; padding: 20px; }
+/* เต็มจอ */
+.wheel-overlay.wheel-max { padding: 0; }
+.wheel-overlay.wheel-max .wheel-box { width: 100%; height: 100%; max-height: none; border-radius: 0; }
+.wheel-overlay.wheel-max .wheel-body { align-items: center; }
+.wheel-overlay.wheel-max .wheel-wrap { flex: 0 0 min(72vh, 52vw); }
+.wheel-overlay.wheel-max .wheel-svg { max-width: none; }
+.wheel-overlay.wheel-max .wheel-now { font-size: 2rem; }
+.wheel-overlay.wheel-max .wheel-list { max-height: calc(100vh - 140px); font-size: 1.1rem; }
+.wheel-overlay:fullscreen { background: #fff; }
+@media (max-width: 767.98px) { .wheel-overlay.wheel-max .wheel-wrap { flex: none; width: min(92vw, 60vh); } }
+@media (prefers-reduced-motion: reduce) { .wheel-start:not([disabled]) { animation: none; } }

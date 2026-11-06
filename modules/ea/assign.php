@@ -108,6 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $project) {
     check_csrf();
     $action = post('action');
     if ($action === 'random') {
+        $ajax = post('ajax') === '1';
         if (!$rows) {
             $errors[] = 'ไม่พบ EA ของโครงการตามเงื่อนไขที่เลือก';
         } elseif (count($chosen) < 1) {
@@ -121,10 +122,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $project) {
                     $assign[(int)$r['pe_id']] = $r['assigned_user_id'] ? (int)$r['assigned_user_id'] : null;
                 }
                 $result = ea_random_assign($target, $chosen, $balance, $keepSame);
-                $randomIds = array_keys($result);          // EA ที่สุ่มรอบนี้ (ใช้แสดงวงล้อ)
-                $assign = $result + $assign;
-                $mode = 'edit';
+                // เก็บผลสุ่มไว้ในเซสชัน (ยังไม่บันทึก) → หน้าแสดงผล ?mode=random
+                $_SESSION['ea_assign_rand'] = ['crit' => $critUrl, 'assign' => $result + $assign, 'ids' => array_keys($result),
+                                               'chosen' => $chosen, 'balance' => $balance, 'scope' => $scope, 'keep_same' => $keepSame];
+                $next = $critUrl . '&mode=random';
+                if ($ajax) {                               // วงล้อ: ส่งสรุปผลรายคนกลับไปแสดง
+                    $sum = [];
+                    $byPe = array_column($rows, null, 'pe_id');
+                    foreach ($result as $peId => $uid) {
+                        $r = $byPe[$peId];
+                        $sum[$uid] ??= ['id' => $uid, 'n' => 0, 'hh' => 0, 'codes' => []];
+                        $sum[$uid]['n']++;
+                        $sum[$uid]['hh'] += (int)$r['households'];
+                        $sum[$uid]['codes'][$r['ea_code']] = true;
+                    }
+                    foreach ($sum as &$x) {
+                        $x['codes'] = array_slice(array_map('strval', array_keys($x['codes'])), 0, 6);
+                    }
+                    unset($x);
+                    json_out(['ok' => true, 'results' => array_values($sum), 'total' => count($result), 'next' => $next]);
+                }
+                redirect($next);
             }
+        }
+        if ($ajax) {
+            json_out(['ok' => false, 'error' => implode(' ', $errors)]);
         }
     } elseif ($action === 'save') {
         $valid = array_flip(array_map(fn($r) => (int)$r['pe_id'], $rows));
@@ -145,6 +167,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $project) {
             $changed++;
         }
         $pdo->commit();
+        unset($_SESSION['ea_assign_rand']);
         $msg = 'บันทึกการมอบหมายผู้ปฏิบัติงาน ' . $project['code'] . ' ' . $roundText . ' แล้ว (เปลี่ยน ' . number_format($changed) . ' EA)';
         audit_log('ea_assign', $msg, EA_MODULE);
         flash($msg);
@@ -154,6 +177,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $project) {
     }
 }
 if ($project && ($_GET['mode'] ?? '') === 'edit') {
+    $mode = 'edit';
+}
+// ผลการสุ่มล่าสุด (ยังไม่บันทึก)
+$isRandom = false;
+if ($project && ($_GET['mode'] ?? '') === 'random') {
+    $rs = $_SESSION['ea_assign_rand'] ?? null;
+    if ($rs && $rs['crit'] === $critUrl) {
+        $valid = array_flip(array_map(fn($r) => (int)$r['pe_id'], $rows));
+        $assign = array_intersect_key($rs['assign'], $valid);
+        $randomIds = array_values(array_filter($rs['ids'], fn($id) => isset($valid[$id])));
+        $chosen = array_values(array_filter($rs['chosen'], fn($id) => isset($staffAll[$id])));
+        [$balance, $scope, $keepSame] = [$rs['balance'], $rs['scope'], $rs['keep_same']];
+        $isRandom = true;
+    } else {
+        $errors[] = 'ไม่พบผลการสุ่มล่าสุด — แสดงการมอบหมายที่บันทึกไว้';
+    }
     $mode = 'edit';
 }
 if ($mode === 'edit' && !$assign) {               // แก้ไขการมอบหมายที่บันทึกไว้
@@ -218,7 +257,7 @@ require __DIR__ . '/header.php';
     <div class="row g-1">
       <?php foreach ($staffAll as $id => $u): ?>
       <div class="col-md-4 col-sm-6"><div class="form-check">
-        <input type="checkbox" class="form-check-input staff-check" name="staff[]" value="<?= $id ?>" id="s<?= $id ?>" <?= in_array($id, $chosen, true) ? 'checked' : '' ?>>
+        <input type="checkbox" class="form-check-input staff-check" name="staff[]" value="<?= $id ?>" id="s<?= $id ?>" data-name="<?= h($u['full_name']) ?>" <?= in_array($id, $chosen, true) ? 'checked' : '' ?>>
         <label class="form-check-label" for="s<?= $id ?>"><?= h($u['full_name']) ?> <span class="small text-muted"><?= h(implode(' / ', staff_position_lines($u))) ?></span></label>
       </div></div>
       <?php endforeach; ?>
@@ -237,7 +276,7 @@ require __DIR__ . '/header.php';
     </div>
   </div>
   <div class="card-footer d-flex gap-2 flex-wrap">
-    <button name="action" value="random" class="btn btn-primary" <?= $rows ? '' : 'disabled' ?>><i class="bi bi-shuffle"></i> สุ่มผู้ปฏิบัติงาน</button>
+    <button name="action" value="random" class="btn btn-primary" data-wheel-open <?= $rows ? '' : 'disabled' ?>><i class="bi bi-bullseye"></i> สุ่มผู้ปฏิบัติงาน</button>
     <?php if ($assignedCount): ?><button name="action" value="edit" class="btn btn-outline-secondary"><i class="bi bi-pencil-square"></i> แก้ไขการมอบหมายที่บันทึกไว้</button><?php endif; ?>
     <span class="small text-muted align-self-center">ผลการสุ่มยังไม่บันทึก — ตรวจ/สลับงานได้ก่อนกดบันทึก</span>
   </div>
@@ -247,11 +286,10 @@ require __DIR__ . '/header.php';
     foreach ($pdo->query('SELECT id, full_name FROM core_users') as $u) {
         $names[(int)$u['id']] = $u['full_name'];
     }
-    $isRandom = ($_POST['action'] ?? '') === 'random';
 ?>
 <form method="post" action="<?= h($critUrl) ?>" id="assignForm">
   <?= csrf_field() ?>
-  <?php foreach ($chosen as $id): ?><input type="hidden" name="staff[]" value="<?= $id ?>"><?php endforeach; ?>
+  <?php foreach ($chosen as $id): ?><input type="hidden" name="staff[]" value="<?= $id ?>" data-name="<?= h($names[$id] ?? '') ?>"><?php endforeach; ?>
   <input type="hidden" name="balance" value="<?= h($balance) ?>"><input type="hidden" name="scope" value="<?= h($scope) ?>">
   <?php if ($keepSame): ?><input type="hidden" name="keep_same" value="1"><?php endif; ?>
 
@@ -261,7 +299,7 @@ require __DIR__ . '/header.php';
       เปลี่ยนผู้ปฏิบัติงานในช่อง หรือกด <i class="bi bi-arrow-left-right"></i> ที่ 2 แถวเพื่อสลับงาน</span>
     <span class="ms-auto d-flex gap-2">
       <?php if ($isRandom): ?><button type="button" class="btn btn-sm btn-outline-warning" id="wheelReplay"><i class="bi bi-bullseye"></i> ดูวงล้ออีกครั้ง</button><?php endif; ?>
-      <?php if ($chosen): ?><button name="action" value="random" class="btn btn-sm btn-outline-primary" formnovalidate><i class="bi bi-shuffle"></i> สุ่มใหม่</button><?php endif; ?>
+      <?php if ($chosen): ?><button name="action" value="random" class="btn btn-sm btn-outline-primary" data-wheel-open formnovalidate><i class="bi bi-shuffle"></i> สุ่มใหม่</button><?php endif; ?>
       <a href="<?= h($critUrl) ?>" class="btn btn-sm btn-light">เปลี่ยนเงื่อนไข / พนักงาน</a>
     </span>
   </div>
@@ -308,14 +346,6 @@ require __DIR__ . '/header.php';
     </div>
   </div>
 </form>
-<?php if ($isRandom): ?>
-<script type="application/json" id="wheelData"><?= json_encode([
-    'staff' => array_map(fn($id) => ['id' => $id, 'name' => $names[$id] ?? ''], $chosen),
-    'ids'   => $randomIds ?? [],
-    'title' => $project['code'] . ' ' . $roundText,
-], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
-<?php $footerScripts[] = asset_v('modules/ea/assets/js/wheel.js'); ?>
-<?php endif; ?>
 <style>
   #assignTable tr.as-picked > td { background: #fff7d6; }
   #assignTable tr.as-changed .as-sel { border-color: #f59e0b; background-color: #fffbeb; }
@@ -383,12 +413,18 @@ document.addEventListener('DOMContentLoaded', () => {
     dirty = true;
     refresh();
   });
-  document.getElementById('assignForm').addEventListener('submit', e => {
-    if (e.submitter && e.submitter.value === 'random' && dirty
-        && !confirm('สุ่มใหม่ — ผลที่แก้ไขในตารางจะถูกแทนที่ ดำเนินการต่อ?')) { e.preventDefault(); }
-  });
+  window.eaAssignDirty = () => dirty;      // wheel.js ถามก่อนสุ่มใหม่ทับผลที่แก้ไขไว้
   refresh();
 });
 </script>
+<?php endif; ?>
+<?php if ($project): ?>
+<script type="application/json" id="wheelData"><?= json_encode([
+    'title'  => $project['code'] . ' ' . $roundText,
+    'replay' => $isRandom,                       // หน้าแสดงผลสุ่ม: ปุ่ม "ดูวงล้ออีกครั้ง"
+    'ids'    => $isRandom ? array_values($randomIds) : [],
+    'eaCount' => count($rows),
+], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
+<?php $footerScripts[] = asset_v('modules/ea/assets/js/wheel.js'); ?>
 <?php endif; ?>
 <?php require __DIR__ . '/footer.php'; ?>
