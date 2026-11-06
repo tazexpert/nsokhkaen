@@ -14,10 +14,12 @@ if (!$project) {
     flash('ไม่พบโครงการ', 'warning');
     redirect('projects.php');
 }
-$canEdit = ea_can('editor');
+$canEdit = ea_can('admin');                    // กำหนดผู้ปฏิบัติงาน / ลบ
+$canStatus = ea_can('editor');                 // อัปเดตสถานะ (เจ้าหน้าที่โครงการ: เฉพาะที่ตนรับผิดชอบ)
+$mine = ea_mine_only();
 
 // รอบ/งวดของสถานประกอบการในโครงการ
-$st = $pdo->prepare('SELECT round_label, COUNT(*) n FROM ea_project_units WHERE project_id = ? GROUP BY round_label
+$st = $pdo->prepare('SELECT round_label, COUNT(*) n FROM ea_project_units WHERE project_id = ?' . ($mine ? ' AND assigned_user_id = ' . (int)$mine : '') . ' GROUP BY round_label
                      ORDER BY MIN(enum_year) IS NULL, MIN(enum_year), MIN(enum_type), MIN(enum_month), round_label');
 $st->execute([$pid]);
 $rounds = $st->fetchAll(PDO::FETCH_KEY_PAIR);
@@ -29,13 +31,13 @@ $fUser = ($_GET['user'] ?? '') === 'none' ? 'none' : (ctype_digit((string)($_GET
 // แก้ไขจากตาราง (AJAX)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
-    ea_require('editor');
+    ea_require(post('action') === 'set_status' ? 'editor' : 'admin');
     $id = int_param('unit_id');
     $st = $pdo->prepare('SELECT * FROM ea_project_units WHERE id = ? AND project_id = ?');
     $st->execute([$id, $pid]);
     $u = $st->fetch();
-    if (!$u) {
-        json_out(['ok' => false, 'error' => 'ไม่พบสถานประกอบการ'], 404);
+    if (!$u || ($mine && (int)$u['assigned_user_id'] !== $mine)) {
+        json_out(['ok' => false, 'error' => 'ไม่พบสถานประกอบการที่คุณรับผิดชอบ'], 404);
     }
     $action = post('action');
     if ($action === 'set_assignee') {
@@ -64,6 +66,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $where = ['u.project_id = ?', 'u.round_label = ?'];
 $params = [$pid, $round];
+if ($mine) {
+    $where[] = 'u.assigned_user_id = ?';
+    $params[] = $mine;
+}
 if ($q !== '') {
     $where[] = '(u.name LIKE ? OR u.road LIKE ? OR u.tambon_name LIKE ? OR u.district_name LIKE ?)';
     array_push($params, "%$q%", "%$q%", "%$q%", "%$q%");
@@ -102,7 +108,7 @@ if (($_GET['export'] ?? '') === 'csv') {
 
 // สรุปรายผู้ปฏิบัติงาน (ทั้งรอบ ไม่ขึ้นกับตัวกรอง)
 $st = $pdo->prepare("SELECT assigned_user_id uid, COUNT(*) n, SUM(status = 'done') done, SUM(status = 'in_progress') doing
-                     FROM ea_project_units WHERE project_id = ? AND round_label = ? GROUP BY assigned_user_id");
+                     FROM ea_project_units WHERE project_id = ? AND round_label = ?" . ($mine ? ' AND assigned_user_id = ' . (int)$mine : '') . ' GROUP BY assigned_user_id');
 $st->execute([$pid, $round]);
 $byUser = [];
 foreach ($st as $r) {
@@ -122,11 +128,11 @@ $qs = fn(array $over = []) => http_build_query(array_filter($over + $query, fn($
 
 $pageTitle = 'สถานประกอบการ ' . $project['code'];
 $active = 'projects';
-$st = $pdo->prepare('SELECT COUNT(*) FROM ea_project_eas WHERE project_id = ?');
+$st = $pdo->prepare('SELECT COUNT(*) FROM ea_project_eas WHERE project_id = ?' . ($mine ? ' AND assigned_user_id = ' . (int)$mine : ''));
 $st->execute([$pid]);
 $eaCount = (int)$st->fetchColumn();
 $pageActions = '<a href="projects.php" class="btn btn-light"><i class="bi bi-arrow-left"></i> ทุกโครงการ</a>'
-    . ' <a href="project_eas.php?id=' . $pid . '&amp;ea=1" class="btn btn-outline-secondary"><i class="bi bi-map"></i> ' . ($eaCount ? 'EA ของโครงการ (' . number_format($eaCount) . ')' : 'เพิ่ม EA ให้โครงการ') . '</a>'
+    . ($eaCount || $canEdit ? ' <a href="project_eas.php?id=' . $pid . '&amp;ea=1" class="btn btn-outline-secondary"><i class="bi bi-map"></i> ' . ($eaCount ? 'EA ของโครงการ (' . number_format($eaCount) . ')' : 'เพิ่ม EA ให้โครงการ') . '</a>' : '')
     . ($rows ? ' <a href="?' . h($qs(['export' => 'csv'])) . '" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> Export CSV</a>' : '')
     . ($canEdit ? ' <a href="project_import.php" class="btn btn-outline-primary"><i class="bi bi-file-earmark-arrow-up"></i> นำเข้าไฟล์</a>' : '');
 require __DIR__ . '/header.php';
@@ -185,7 +191,7 @@ require __DIR__ . '/header.php';
       <div class="col-auto ms-auto small text-muted"><?= number_format(count($rows)) ?> รายการ</div>
     </form>
   </div>
-  <?php if ($canEdit): ?><input type="hidden" id="unitCsrf" value="<?= h(csrf_token()) ?>"><?php endif; ?>
+  <?php if ($canStatus): ?><input type="hidden" id="unitCsrf" value="<?= h(csrf_token()) ?>"><?php endif; ?>
   <div class="table-responsive">
     <table class="table table-hover mb-0 ea-table align-middle">
       <thead><tr><th>#</th><th>สถานประกอบการ</th><th>EA</th><th>ที่ตั้ง</th><th style="min-width:200px">ผู้ปฏิบัติงาน</th><th>สถานะ</th><?php if ($canEdit): ?><th></th><?php endif; ?></tr></thead>
@@ -201,14 +207,19 @@ require __DIR__ . '/header.php';
           <td><select class="form-select form-select-sm unit-set" data-unit="<?= (int)$r['id'] ?>" data-action="set_assignee" aria-label="ผู้ปฏิบัติงาน">
             <option value="">— ไม่กำหนด —</option><?= ea_staff_options($au) ?>
             <?php if ($au && !isset(ea_staff()[$au])): ?><option value="<?= $au ?>" selected disabled><?= h($names[$au] ?? '') ?> (ปิดบัญชีแล้ว)</option><?php endif; ?></select></td>
+          <?php else: ?>
+          <td class="small"><?= $au ? h($names[$au] ?? '') : '<span class="text-muted">-</span>' ?></td>
+          <?php endif; ?>
+          <?php if ($canStatus): ?>
           <td><select class="form-select form-select-sm unit-set" data-unit="<?= (int)$r['id'] ?>" data-action="set_status" aria-label="สถานะ">
             <?php foreach (EA_STATUSES as $k => [$l]): ?><option value="<?= $k ?>" <?= $r['status'] === $k ? 'selected' : '' ?>><?= h($l) ?></option><?php endforeach; ?></select></td>
+          <?php else: ?>
+          <td><?= ea_status_badge($r['status']) ?></td>
+          <?php endif; ?>
+          <?php if ($canEdit): ?>
           <td class="text-end"><form method="post" class="d-inline" data-confirm="ลบ &quot;<?= h($r['name']) ?>&quot; ออกจากรอบนี้?"><?= csrf_field() ?>
             <input type="hidden" name="action" value="delete"><input type="hidden" name="unit_id" value="<?= (int)$r['id'] ?>">
             <button class="btn btn-sm btn-light text-danger" title="ลบ"><i class="bi bi-trash"></i></button></form></td>
-          <?php else: ?>
-          <td class="small"><?= $au ? h($names[$au] ?? '') : '<span class="text-muted">-</span>' ?></td>
-          <td><?= ea_status_badge($r['status']) ?></td>
           <?php endif; ?>
         </tr>
       <?php endforeach; ?>
@@ -217,7 +228,7 @@ require __DIR__ . '/header.php';
     </table>
   </div>
 </div>
-<?php if ($canEdit): ?>
+<?php if ($canStatus): ?>
 <style>
   .unit-set { min-width: 150px; }
   .unit-set.is-saving { opacity: .6; }

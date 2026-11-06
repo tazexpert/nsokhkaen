@@ -21,6 +21,15 @@ function ea_can(string $role): bool
     return user_can(EA_MODULE, $role);
 }
 
+/**
+ * เจ้าหน้าที่โครงการ (editor ที่ไม่ใช่ผู้ดูแล): เห็นเฉพาะโครงการ/EA/สถานประกอบการที่ตนรับผิดชอบ และอัปเดตสถานะได้
+ * คืน id ผู้ใช้ (ใช้กรองข้อมูล) หรือ null = เห็นทั้งหมด (ผู้ดูข้อมูล / ผู้ดูแล)
+ */
+function ea_mine_only(): ?int
+{
+    return ea_can('editor') && !ea_can('admin') ? (int)current_user()['id'] : null;
+}
+
 function ea_require(string $role): void
 {
     if (!ea_can($role)) {

@@ -7,7 +7,7 @@
  * ผู้ได้รับมอบหมายเห็นการแจ้งเตือน (modules/ea/notifications.php)
  */
 require_once __DIR__ . '/bootstrap.php';
-$me = require_module(EA_MODULE, 'editor');
+$me = require_module(EA_MODULE, 'admin');
 $pdo = db();
 $projects = array_filter(projects_all(), fn($p) => $p['is_active']);
 $pid = int_param('project');

@@ -110,13 +110,19 @@ $staff = array_values(sort_staff($pdo->query("SELECT id, username, sort_order, f
 $names = array_column($pdo->query('SELECT id, full_name FROM core_users')->fetchAll(), 'full_name', 'id');
 $usage = array_column($pdo->query('SELECT project_id, COUNT(*) n FROM cal_plan_work GROUP BY project_id')->fetchAll(), 'n', 'project_id');
 // ความก้าวหน้า EA / สถานประกอบการของแต่ละโครงการ
+// เจ้าหน้าที่โครงการ: เฉพาะโครงการและ EA/สถานประกอบการที่ตนรับผิดชอบ
+$mine = ea_mine_only();
+$mineSql = $mine ? ' WHERE assigned_user_id = ' . (int)$mine : '';
 $eaStat = $pdo->query("SELECT project_id, COUNT(*) n, SUM(status = 'done') done, SUM(status = 'in_progress') doing, COUNT(DISTINCT round_label) rounds
-                       FROM ea_project_eas GROUP BY project_id")->fetchAll(PDO::FETCH_UNIQUE);
-$unitStat = $pdo->query("SELECT project_id, COUNT(*) n, SUM(status = 'done') done FROM ea_project_units GROUP BY project_id")->fetchAll(PDO::FETCH_UNIQUE);
+                       FROM ea_project_eas" . $mineSql . " GROUP BY project_id")->fetchAll(PDO::FETCH_UNIQUE);
+$unitStat = $pdo->query("SELECT project_id, COUNT(*) n, SUM(status = 'done') done FROM ea_project_units" . $mineSql . " GROUP BY project_id")->fetchAll(PDO::FETCH_UNIQUE);
 $eaUsage = array_map(fn($r) => (int)$r['n'], $eaStat);
 $years = array_values(array_unique(array_filter(array_column(projects_all(), 'fiscal_year'))));
 rsort($years);
-$rows = array_filter(projects_all(), function ($p) use ($fy, $status, $q) {
+$rows = array_filter(projects_all(), function ($p) use ($fy, $status, $q, $mine, $eaStat, $unitStat) {
+    if ($mine && !isset($eaStat[(int)$p['id']]) && !isset($unitStat[(int)$p['id']])) {
+        return false;
+    }
     if ($fy !== '' && (string)$p['fiscal_year'] !== $fy) {
         return false;
     }
@@ -159,7 +165,7 @@ require __DIR__ . '/header.php';
       </div>
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
-          <thead><tr><th>ตัวย่อ</th><th>ชื่อโครงการ</th><th class="text-center">ปีงบฯ</th><th>คาบการสำรวจ</th><th>ช่วงปฏิบัติงาน</th><th>ผู้รับผิดชอบ</th><th>สถานะ</th><th style="min-width:180px">EA ของโครงการ</th>
+          <thead><tr><th>ตัวย่อ</th><th>ชื่อโครงการ</th><th class="text-center">ปีงบฯ</th><th>คาบการสำรวจ</th><th>ช่วงปฏิบัติงาน</th><th>ผู้รับผิดชอบ</th><th>สถานะ</th><th style="min-width:180px"><?= $mine ? 'EA ที่ฉันรับผิดชอบ' : 'EA ของโครงการ' ?></th>
             <?php if ($canManage): ?><th class="text-center" title="จำนวนช่อง (คน-วัน) ในแผนการปฏิบัติงาน">ใช้ในแผน</th><?php endif; ?><th></th></tr></thead>
           <tbody>
           <?php foreach ($rows as $p): [$st, $sc] = project_status($p); ?>

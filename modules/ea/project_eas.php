@@ -20,10 +20,15 @@ $fStatus = isset(EA_STATUSES[$_GET['status'] ?? '']) ? $_GET['status'] : '';
 $fy = ctype_digit((string)($_GET['fy'] ?? '')) ? (int)$_GET['fy'] : '';      // ปีงบประมาณ
 $fUser = ($_GET['user'] ?? '') === 'none' ? 'none' : (ctype_digit((string)($_GET['user'] ?? '')) ? (int)$_GET['user'] : '');
 
+$mine = ea_mine_only();                        // เจ้าหน้าที่โครงการ: เฉพาะ EA ที่ตนรับผิดชอบ
 // เงื่อนไขรายการตามตัวกรองปัจจุบัน
 [$where, $params] = ea_filter_sql($f);
 array_unshift($where, 'pe.project_id = ?');
 array_unshift($params, $pid);
+if ($mine) {
+    $where[] = 'pe.assigned_user_id = ?';
+    $params[] = $mine;
+}
 if ($round !== null) {
     $where[] = 'pe.round_label = ?';
     $params[] = $round;
@@ -49,8 +54,23 @@ $back = 'project_eas.php?' . http_build_query($keep($query));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
-    ea_require('editor');
     $action = post('action');
+    // อัปเดตสถานะจากตาราง (AJAX): ผู้ดูแล หรือเจ้าหน้าที่โครงการที่รับผิดชอบ EA นั้น
+    if ($action === 'set_status') {
+        ea_require('editor');
+        $s = post('status');
+        $st = $pdo->prepare('SELECT pe.assigned_user_id, a.ea_code FROM ea_project_eas pe JOIN ea_areas a ON a.id = pe.ea_id WHERE pe.id = ? AND pe.project_id = ?');
+        $st->execute([int_param('pe_id'), $pid]);
+        $row = $st->fetch();
+        if (!$row || !isset(EA_STATUSES[$s]) || ($mine && (int)$row['assigned_user_id'] !== $mine)) {
+            json_out(['ok' => false, 'error' => 'ไม่มีสิทธิ์อัปเดตสถานะ EA นี้'], 403);
+        }
+        $pdo->prepare("UPDATE ea_project_eas SET status = ?, done_at = IF(? = 'done', COALESCE(done_at, NOW()), NULL) WHERE id = ?")
+            ->execute([$s, $s, int_param('pe_id')]);
+        audit_log('ea_project_status', 'สถานะ EA ' . $row['ea_code'] . ' โครงการ ' . $project['code'] . ': ' . EA_STATUSES[$s][0], EA_MODULE);
+        json_out(['ok' => true, 'done_at' => $s === 'done' ? thai_date(date('Y-m-d')) : '']);
+    }
+    ea_require('admin');                           // กำหนด EA / ผู้รับผิดชอบ / นำออก = ผู้ดูแลระบบบริหารโครงการ
     $staff = ea_staff();
     $userOrNull = fn(string $v) => ctype_digit($v) && isset($staff[(int)$v]) ? (int)$v : null;
 
@@ -194,7 +214,7 @@ if (($_GET['export'] ?? '') === 'csv') {
 
 // รอบ/งวดของโครงการ
 $st = $pdo->prepare('SELECT pe.round_label, COUNT(*) n, GROUP_CONCAT(DISTINCT NULLIF(pe.enum_type, \'\') ORDER BY pe.enum_type) types
-                     FROM ea_project_eas pe WHERE pe.project_id = ?' . ($fy !== '' ? ' AND pe.fiscal_year = ' . (int)$fy : '') . '
+                     FROM ea_project_eas pe WHERE pe.project_id = ?' . ($fy !== '' ? ' AND pe.fiscal_year = ' . (int)$fy : '') . ($mine ? ' AND pe.assigned_user_id = ' . (int)$mine : '') . '
                      GROUP BY pe.round_label ORDER BY MIN(pe.enum_year) IS NULL, MIN(pe.enum_year), MIN(pe.enum_month) IS NULL, MIN(pe.enum_month), pe.round_label');
 $st->execute([$pid]);
 $rounds = [];
@@ -203,7 +223,7 @@ foreach ($st as $r) {
     $rounds[(string)$r['round_label']] = (int)$r['n'];
     $roundTypes[(string)$r['round_label']] = (string)$r['types'];
 }
-$st = $pdo->prepare('SELECT DISTINCT fiscal_year FROM ea_project_eas WHERE project_id = ? AND fiscal_year IS NOT NULL ORDER BY fiscal_year');
+$st = $pdo->prepare('SELECT DISTINCT fiscal_year FROM ea_project_eas WHERE project_id = ? AND fiscal_year IS NOT NULL' . ($mine ? ' AND assigned_user_id = ' . (int)$mine : '') . ' ORDER BY fiscal_year');
 $st->execute([$pid]);
 $fiscalYears = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
 // สรุปตามตัวกรอง
@@ -238,7 +258,8 @@ $names = [];
 foreach ($pdo->query('SELECT id, full_name FROM core_users') as $u) {
     $names[(int)$u['id']] = $u['full_name'];
 }
-$canEdit = ea_can('editor');
+$canEdit = ea_can('admin');                    // จัดการ EA ของโครงการ
+$canStatus = ea_can('editor');                 // อัปเดตสถานะ (เจ้าหน้าที่โครงการ: เฉพาะ EA ของตน)
 $addF = ['district' => '', 'tambon' => '', 'area' => '', 'q' => ''];
 
 $pageTitle = 'EA โครงการ ' . $project['code'];
@@ -247,9 +268,19 @@ $st = $pdo->prepare('SELECT COUNT(*) FROM ea_project_units WHERE project_id = ?'
 $st->execute([$pid]);
 $unitCount = (int)$st->fetchColumn();
 // โครงการแบบสถานประกอบการ (ยังไม่มี EA) → แสดงตารางสถานประกอบการ · ?ea=1 = เปิดหน้า EA (เช่น จะเพิ่ม EA)
-$st = $pdo->prepare('SELECT COUNT(*) FROM ea_project_eas WHERE project_id = ?');
+$st = $pdo->prepare('SELECT COUNT(*) FROM ea_project_eas WHERE project_id = ?' . ($mine ? ' AND assigned_user_id = ' . (int)$mine : ''));
 $st->execute([$pid]);
-if ($unitCount && !(int)$st->fetchColumn() && !isset($_GET['ea']) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+$eaTotal = (int)$st->fetchColumn();
+if ($mine) {                                   // เจ้าหน้าที่โครงการ: สถานประกอบการของตน
+    $st = $pdo->prepare('SELECT COUNT(*) FROM ea_project_units WHERE project_id = ? AND assigned_user_id = ?');
+    $st->execute([$pid, $mine]);
+    $unitCount = (int)$st->fetchColumn();
+    if (!$eaTotal && !$unitCount) {
+        flash('คุณยังไม่ได้รับมอบหมาย EA ในโครงการ ' . $project['code'], 'warning');
+        redirect('projects.php');
+    }
+}
+if ($unitCount && !$eaTotal && (!isset($_GET['ea']) || $mine) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
     redirect('project_units.php?id=' . $pid);
 }
 $pageActions = '<a href="projects.php" class="btn btn-light"><i class="bi bi-arrow-left"></i> ทุกโครงการ</a>'
@@ -367,7 +398,13 @@ $roundName = fn(string $rl) => ($rl === '' ? 'ไม่ระบุรอบ' : 
             <?php else: ?>
             <td><?= $r['assigned_user_id'] ? h($names[(int)$r['assigned_user_id']] ?? '') : '<span class="text-muted">-</span>' ?></td>
             <?php endif; ?>
+            <?php if ($canStatus): ?>
+            <td class="text-nowrap"><select class="form-select form-select-sm pe-status" data-pe="<?= (int)$r['pe_id'] ?>" aria-label="สถานะ EA <?= h($r['ea_code']) ?>">
+              <?php foreach (EA_STATUSES as $k => [$l]): ?><option value="<?= $k ?>" <?= $r['status'] === $k ? 'selected' : '' ?>><?= h($l) ?></option><?php endforeach; ?></select>
+              <div class="small text-muted pe-done"><?= $r['done_at'] ? thai_date(substr($r['done_at'], 0, 10)) : '' ?></div></td>
+            <?php else: ?>
             <td class="text-nowrap"><?= ea_status_badge($r['status']) ?><?= $r['done_at'] ? '<div class="small text-muted">' . thai_date(substr($r['done_at'], 0, 10)) . '</div>' : '' ?></td>
+            <?php endif; ?>
             <td class="note"><?= h($r['pe_note']) ?></td>
           </tr>
         <?php endforeach; ?>
@@ -512,6 +549,45 @@ $roundName = fn(string $rl) => ($rl === '' ? 'ไม่ระบุรอบ' : 
       if ((op.value === 'delete' || scope.value === 'filtered') && !confirm(label + ' ' + n.toLocaleString() + ' EA?')) { e.preventDefault(); }
     });
   }
+})();
+</script>
+<?php endif; ?>
+<?php if ($canStatus): ?>
+<style>
+  .pe-status { min-width: 140px; }
+  .pe-status.is-saving { opacity: .6; }
+  .pe-status.is-saved { border-color: #22c55e; box-shadow: 0 0 0 .2rem rgba(34, 197, 94, .2); }
+</style>
+<script>
+(() => {
+  // อัปเดตสถานะจากตาราง → บันทึกทันที (ไม่สำเร็จ = คืนค่าเดิม)
+  const csrf = document.querySelector('#bulkForm input[name="csrf"]');
+  document.querySelectorAll('.pe-status').forEach(sel => {
+    let prev = sel.value;
+    sel.addEventListener('change', async () => {
+      sel.classList.add('is-saving');
+      const fd = new FormData();
+      fd.set('csrf', csrf ? csrf.value : '');
+      fd.set('action', 'set_status');
+      fd.set('pe_id', sel.dataset.pe);
+      fd.set('status', sel.value);
+      try {
+        const r = await fetch(location.href, { method: 'POST', body: fd, credentials: 'same-origin', headers: { Accept: 'application/json' } });
+        const j = await r.json();
+        if (!j.ok) { throw new Error(j.error || 'บันทึกไม่สำเร็จ'); }
+        prev = sel.value;
+        const d = sel.parentElement.querySelector('.pe-done');
+        if (d) { d.textContent = j.done_at || ''; }
+        sel.classList.add('is-saved');
+        setTimeout(() => sel.classList.remove('is-saved'), 1500);
+      } catch (e) {
+        alert('อัปเดตสถานะไม่สำเร็จ: ' + e.message);
+        sel.value = prev;
+      } finally {
+        sel.classList.remove('is-saving');
+      }
+    });
+  });
 })();
 </script>
 <?php endif; ?>

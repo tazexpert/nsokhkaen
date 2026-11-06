@@ -8,7 +8,7 @@
  * นำเข้าซ้ำได้: ปรับปรุง PSU/ประเภท/ปีงบประมาณ/พิกัด ของรายการเดิม — ผู้รับผิดชอบและสถานะคงเดิม
  */
 require_once __DIR__ . '/bootstrap.php';
-$me = require_module(EA_MODULE, 'editor');
+$me = require_module(EA_MODULE, 'admin');
 $pdo = db();
 $sessKey = 'ea_project_import';
 $tmpDir = APP_ROOT . '/storage/tmp';
