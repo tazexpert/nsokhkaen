@@ -15,7 +15,7 @@ $projects = array_filter(projects_all(), fn($p) => $showAll || $p['is_active'] |
 
 $pageTitle = 'EA ของโครงการ';
 $active = 'projects';
-$pageActions = (projects_can_manage() ? '<a href="' . h(url('projects.php')) . '" class="btn btn-light"><i class="bi bi-kanban"></i> จัดการโครงการ</a>' : '');
+$pageActions = (projects_can_manage() ? '<a href="' . h(module_url('ea', 'manage_projects.php')) . '" class="btn btn-light"><i class="bi bi-kanban"></i> จัดการโครงการ</a>' : '');
 require __DIR__ . '/header.php';
 ?>
 <p class="text-muted small">เลือกโครงการเพื่อกำหนด EA ที่ใช้สำรวจ ผู้รับผิดชอบ และติดตามสถานะ — แยกรอบ/งวดการสำรวจได้ (เช่น รายเดือน รายไตรมาส)
@@ -47,6 +47,6 @@ require __DIR__ . '/header.php';
     </a>
   </div>
 <?php endforeach; ?>
-<?php if (!$projects): ?><div class="col-12 text-muted">ยังไม่มีโครงการ<?= projects_can_manage() ? ' — <a href="' . h(url('projects.php')) . '">เพิ่มโครงการ</a>' : '' ?></div><?php endif; ?>
+<?php if (!$projects): ?><div class="col-12 text-muted">ยังไม่มีโครงการ<?= projects_can_manage() ? ' — <a href="' . h(module_url('ea', 'manage_projects.php')) . '">เพิ่มโครงการ</a>' : '' ?></div><?php endif; ?>
 </div>
 <?php require __DIR__ . '/footer.php'; ?>

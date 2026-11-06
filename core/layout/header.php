@@ -156,7 +156,6 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
             <a class="nav-link dropdown-toggle<?= $navActive($__isAdm) ?>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-shield-lock"></i> ผู้ดูแลระบบ</a>
             <ul class="dropdown-menu shadow">
               <li><a class="dropdown-item<?= $navActive(!$module && $active === 'users') ?>" href="<?= h(url('admin/users.php')) ?>"><i class="bi bi-people"></i> ผู้ใช้งานและสิทธิ์</a></li>
-              <li><a class="dropdown-item<?= $navActive(!$module && $active === 'projects') ?>" href="<?= h(url('projects.php')) ?>"><i class="bi bi-kanban"></i> โครงการที่รับผิดชอบ</a></li>
               <li><a class="dropdown-item<?= $navActive(!$module && $active === 'links') ?>" href="<?= h(url('admin/links.php')) ?>"><i class="bi bi-link-45deg"></i> ลิงก์และเครื่องมือ</a></li>
               <li><a class="dropdown-item<?= $navActive(!$module && $active === 'settings') ?>" href="<?= h(url('admin/settings.php')) ?>"><i class="bi bi-sliders"></i> ตั้งค่าระบบ</a></li>
               <li><a class="dropdown-item<?= $navActive(!$module && $active === 'audit') ?>" href="<?= h(url('admin/audit.php')) ?>"><i class="bi bi-journal-text"></i> บันทึกการใช้งาน</a></li>

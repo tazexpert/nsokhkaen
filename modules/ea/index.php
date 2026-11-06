@@ -1,5 +1,5 @@
 <?php
-/** ภาพรวมระบบบริหารจัดการ EA — จำนวน EA ครัวเรือน ประชากร · EA ตามอำเภอ · ความก้าวหน้าการสำรวจของโครงการ */
+/** ภาพรวมระบบบริหารโครงการ — จำนวน EA ครัวเรือน ประชากร · EA ตามอำเภอ · ความก้าวหน้าการสำรวจของโครงการ */
 require_once __DIR__ . '/bootstrap.php';
 require_module(EA_MODULE, 'viewer');
 $pdo = db();
@@ -27,7 +27,7 @@ $active = 'dashboard';
 require __DIR__ . '/header.php';
 ?>
 <?php if (!(int)$s['n']): ?>
-  <div class="alert alert-info"><i class="bi bi-info-circle"></i> ยังไม่มีบัญชี EA<?= ea_can('admin') ? ' — <a href="import.php" class="alert-link">นำเข้าจากไฟล์ Excel "บัญชีเขตแจงนับ"</a>' : ' (รอผู้ดูแลระบบ EA นำเข้า)' ?></div>
+  <div class="alert alert-info"><i class="bi bi-info-circle"></i> ยังไม่มีบัญชี EA<?= ea_can('admin') ? ' — <a href="import.php" class="alert-link">นำเข้าจากไฟล์ Excel "บัญชีเขตแจงนับ"</a>' : ' (รอผู้ดูแลระบบบริหารโครงการนำเข้า)' ?></div>
 <?php endif; ?>
 <div class="row g-3 mb-4" data-reveal>
   <?php $areaTotal = max(1, (int)$s['muni'] + (int)$s['rural']);

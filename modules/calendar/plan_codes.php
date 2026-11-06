@@ -1,4 +1,4 @@
 <?php
-/** (เดิม) รหัสงานในแผน — ย้ายไปเป็น "โครงการที่รับผิดชอบ" (projects.php) */
+/** (เดิม) รหัสงานในแผน — ย้ายไปเป็น "โครงการที่รับผิดชอบ" (ระบบบริหารโครงการ) */
 require_once __DIR__ . '/bootstrap.php';
-redirect(url('projects.php'));
+redirect(module_url('ea', 'manage_projects.php'));

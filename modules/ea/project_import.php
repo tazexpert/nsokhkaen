@@ -309,7 +309,7 @@ require __DIR__ . '/header.php';
               <option value="">— ข้าม ไม่นำเข้า —</option>
               <?php foreach ($projects as $p): ?><option value="<?= (int)$p['id'] ?>" <?= $map[$k] === (int)$p['id'] ? 'selected' : '' ?>><?= h($p['code'] . ' — ' . $p['name']) ?></option><?php endforeach; ?>
             </select>
-            <?php if (!$map[$k]): ?><div class="small text-danger">ไม่พบโครงการรหัสนี้ — เลือกโครงการ หรือ<?= projects_can_manage() ? ' <a href="' . h(url('projects.php')) . '" target="_blank">เพิ่มโครงการ</a> แล้วอัปโหลดใหม่' : 'แจ้งผู้ดูแลเพิ่มโครงการ' ?></div><?php endif; ?></td>
+            <?php if (!$map[$k]): ?><div class="small text-danger">ไม่พบโครงการรหัสนี้ — เลือกโครงการ หรือ<?= projects_can_manage() ? ' <a href="' . h(module_url('ea', 'manage_projects.php')) . '" target="_blank">เพิ่มโครงการ</a> แล้วอัปโหลดใหม่' : 'แจ้งผู้ดูแลเพิ่มโครงการ' ?></div><?php endif; ?></td>
             <td class="small"><?php foreach ($sum[$k] as $rl => $s): ?>
               <span class="d-inline-block me-3 text-nowrap"><strong><?= h($rl ?: 'ไม่ระบุรอบ') ?></strong>
                 <span class="text-muted"><?= h(implode('/', array_filter(array_keys($s['type'])))) ?></span>

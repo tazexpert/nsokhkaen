@@ -1,14 +1,14 @@
 <?php
 /**
- * โครงการที่รับผิดชอบของสำนักงาน (core_projects) — จัดการที่ projects.php
+ * โครงการที่รับผิดชอบของสำนักงาน (core_projects) — จัดการที่ระบบบริหารโครงการ (modules/ea/manage_projects.php)
  * ตัวย่อ (code) ใช้เป็นรหัสงานในแผนการปฏิบัติงาน (modules/calendar/plan*.php)
- * ผู้จัดการโครงการได้: ผู้ดูแลระบบกลาง และผู้ดูแลปฏิทิน (ผู้จัดทำแผนการปฏิบัติงาน)
+ * ผู้จัดการโครงการได้: ผู้ดูแลระบบกลาง ผู้ดูแลปฏิทิน (ผู้จัดทำแผนการปฏิบัติงาน) และผู้ดูแลระบบบริหารโครงการ
  */
 
 function projects_can_manage(?array $user = null): bool
 {
     $user = $user ?? current_user();
-    return $user && (!empty($user['is_superadmin']) || user_can('calendar', 'admin', $user));
+    return $user && (!empty($user['is_superadmin']) || user_can('calendar', 'admin', $user) || user_can('ea', 'admin', $user));
 }
 
 /** โครงการทั้งหมด [id => row] เรียงตามลำดับ */
