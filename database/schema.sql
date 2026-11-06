@@ -723,8 +723,9 @@ CREATE TABLE IF NOT EXISTS ea_areas (
   advance_ea     VARCHAR(20)  NOT NULL DEFAULT '',      -- EA สำหรับเสนอผลล่วงหน้า
   village_code   VARCHAR(3)   NOT NULL DEFAULT '',      -- หมู่บ้าน/ชุมชน (นอกเขตเทศบาล)
   village_name   VARCHAR(150) NOT NULL DEFAULT '',
-  houses         INT UNSIGNED NOT NULL DEFAULT 0,       -- จำนวนบ้าน/อาคาร/สิ่งปลูกสร้าง
+  houses         INT UNSIGNED NOT NULL DEFAULT 0,       -- จำนวนบ้าน (บ้าน/อาคาร/สิ่งปลูกสร้าง)
   households     INT UNSIGNED NOT NULL DEFAULT 0,
+  vacant_houses  INT UNSIGNED NOT NULL DEFAULT 0,       -- จำนวนบ้านว่าง
   population     INT UNSIGNED NOT NULL DEFAULT 0,
   note           TEXT         NULL,
   source         VARCHAR(255) NOT NULL DEFAULT '',      -- ที่มาของบัญชี เช่น "โครงการสำมะโนประชากรและเคหะ พ.ศ.2568"

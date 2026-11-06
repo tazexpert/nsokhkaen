@@ -265,7 +265,8 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 | `20261119_ea_project_import.sql` | ระบบ EA: เลข PSU ประเภทการแจงนับ (Q1–Q4/Month) เดือน/ปีที่แจงนับ ปีงบประมาณ และพิกัด ของ EA โครงการ (นำเข้าจากไฟล์ EA_Report.csv) |
 | `20261120_ea_assign.sql` | ระบบ EA: เวลา/ผู้มอบหมายผู้ปฏิบัติงาน (`assigned_at`, `assigned_by`) — ใช้กับหน้าสุ่มผู้ปฏิบัติงานและการแจ้งเตือน |
 | `20261121_ea_code15.sql` | ระบบ EA: รหัส EA 15 หลัก (ภาค+จังหวัด+อำเภอ+ตำบล+เขตการปกครอง+หมู่บ้าน 3 หลัก/999+EA) เช่น 640010119990001 — แปลงรหัสเดิมให้อัตโนมัติ |
-| `20261122_ea_local_org.sql` | ระบบ EA: เทศบาล / อบต. ของ EA (`local_code`, `local_name`) — หลังรันให้นำเข้าไฟล์ SurveyEaHome.xlsx ที่ EA → นำเข้าบัญชี EA เพื่อปรับรหัส EA 15 หลักให้ถูกต้อง |
+| `20261122_ea_local_org.sql` | ระบบ EA: เทศบาล / อบต. ของ EA (`local_code`, `local_name`) — หลังรันให้นำเข้าไฟล์ SurveyEaHome.xlsx ที่ EA → นำเข้าบัญชี EA เพื่อปรับรหัส EA 15 หลักให้ถูกต้อง (ปัจจุบันใช้ไฟล์ EaDetail.xlsx) |
+| `20261123_ea_vacant.sql` | ระบบ EA: จำนวนบ้านว่าง (`vacant_houses`) — นำเข้าไฟล์ EaDetail.xlsx ที่ EA → นำเข้าบัญชี EA |
 
 > ระบบเบิกวัสดุเดิมยังเปิดใช้อยู่? ก่อนเปิดใช้ระบบใหม่ให้ "ดึงข้อมูลรอบสุดท้าย" ตามหัวข้อด้านบน (`--resync-inventory`)
 
@@ -296,6 +297,7 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261120_ea_assign.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261121_ea_code15.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261122_ea_local_org.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261123_ea_vacant.sql
 ```
 
 หลังอัปเดต:

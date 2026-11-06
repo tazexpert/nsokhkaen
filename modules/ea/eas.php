@@ -72,13 +72,13 @@ require __DIR__ . '/header.php';
     </form>
   </div>
   <div class="px-3 py-2 small bg-light border-bottom">
-    พบ <strong><?= number_format((int)$tot['n']) ?></strong> EA · บ้าน/อาคาร <?= number_format((int)$tot['houses']) ?> ·
+    พบ <strong><?= number_format((int)$tot['n']) ?></strong> EA · บ้าน <?= number_format((int)$tot['houses']) ?> ·
     ครัวเรือน <?= number_format((int)$tot['households']) ?> · ประชากร <?= number_format((int)$tot['population']) ?> คน
   </div>
   <div class="table-responsive">
     <table class="table table-hover mb-0 ea-table">
       <thead><tr><th>รหัส EA</th><th>อำเภอ</th><th>ตำบล / อปท.</th><th>เขตการปกครอง</th><th>หมู่บ้าน/ชุมชน</th>
-        <th class="ea-num">บ้าน/อาคาร</th><th class="ea-num">ครัวเรือน</th><th class="ea-num">ประชากร</th><th>หมายเหตุ</th><th class="text-center">โครงการ</th></tr></thead>
+        <th class="ea-num">บ้าน</th><th class="ea-num">ครัวเรือน</th><th class="ea-num">ประชากร</th><th>หมายเหตุ</th><th class="text-center">โครงการ</th></tr></thead>
       <tbody>
       <?php foreach ($rows as $r): ?>
         <tr class="<?= $r['is_active'] ? '' : 'text-muted' ?>">

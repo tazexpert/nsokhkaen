@@ -138,7 +138,16 @@ function ea_resolve_codes(array &$rows, array $existingByKey): void
         arsort($c);
         $tl[$k] = explode('|', (string)array_key_first($c), 2);
     }
+    $lname = [];                                    // อำเภอ+รหัสเทศบาล/อบต. => ชื่อ (เติมชื่อให้ EA ใหม่จากไฟล์ที่ไม่มีคอลัมน์ชื่อ)
+    foreach ($existingByKey as $o) {
+        if ($o['local_code'] !== '' && $o['local_name'] !== '') {
+            $lname[$o['province_code'] . $o['district_code'] . $o['local_code']] = $o['local_name'];
+        }
+    }
     foreach ($rows as &$r) {
+        if (($r['local_code'] ?? '') !== '' && !isset($r['local_name']) && !isset($existingByKey[$r['ea_key']])) {
+            $r['local_name'] = $lname[$r['province_code'] . $r['district_code'] . $r['local_code']] ?? '';
+        }
         if (!array_key_exists('local_code', $r) || $r['local_code'] === null) {
             $old = $existingByKey[$r['ea_key']] ?? null;
             $k = $r['province_code'] . $r['district_code'] . $r['tambon_code'] . $r['area_type'];
@@ -288,7 +297,7 @@ function ea_csv_start(string $filename)
 /** หัวคอลัมน์ CSV ของบัญชี EA (รูปแบบเดียวกับไฟล์ "บัญชีเขตแจงนับ") */
 const EA_CSV_HEAD = ['รหัส EA', 'รหัสภาค', 'ภาค', 'รหัสจังหวัด', 'จังหวัด', 'รหัสอำเภอ', 'อำเภอ', 'รหัสตำบล', 'ตำบล', 'เขตการปกครอง',
                      'รหัสเทศบาล/อบต.', 'เทศบาล / อบต.', 'EA',
-                     'EA สำหรับเสนอผลล่วงหน้า', 'รหัสหมู่บ้าน', 'หมู่บ้าน/ชุมชน', 'จำนวนบ้าน/อาคาร/สิ่งปลูกสร้าง', 'จำนวนครัวเรือน', 'จำนวนประชากร', 'หมายเหตุ'];
+                     'EA สำหรับเสนอผลล่วงหน้า', 'รหัสหมู่บ้าน', 'หมู่บ้าน/ชุมชน', 'จำนวนบ้าน', 'จำนวนครัวเรือน', 'บ้านว่าง', 'จำนวนประชากร', 'หมายเหตุ'];
 
 function ea_csv_row(array $r): array
 {
@@ -296,7 +305,7 @@ function ea_csv_row(array $r): array
     $t = fn($v) => $v === '' ? '' : '="' . $v . '"';
     return [$t($r['ea_code']), $r['region_code'], $r['region_name'], $t($r['province_code']), $r['province_name'], $t($r['district_code']), $r['district_name'],
             $t($r['tambon_code']), $r['tambon_name'], $r['area_type'], $t($r['local_code']), $r['local_name'], $t($r['ea_no']), $r['advance_ea'], $t($r['village_code']), $r['village_name'],
-            (int)$r['houses'], (int)$r['households'], (int)$r['population'], (string)$r['note']];
+            (int)$r['houses'], (int)$r['households'], (int)$r['vacant_houses'], (int)$r['population'], (string)$r['note']];
 }
 
 /* ------------------------------------------------------------------------
@@ -315,9 +324,10 @@ function ea_parse_xlsx(string $path): array
     }
     $rows = $x->rows(0);
     $norm = fn($v) => preg_replace('/\s+/u', '', (string)$v);
-    // ไฟล์ SurveyEaHome (มีคอลัมน์ "รหัส EA" 15 หลัก)
+    // ไฟล์ EaDetail / SurveyEaHome (มีคอลัมน์ "EA CODE" / "รหัส EA" 15 หลัก)
     foreach (array_slice($rows, 0, 10, true) as $ri => $r) {
-        if (in_array('รหัสEA', array_map($norm, array_values($r)), true)) {
+        $cells = array_map(fn($v) => mb_strtoupper($norm($v)), array_values($r));
+        if (in_array('EACODE', $cells, true) || in_array('รหัสEA', $cells, true)) {
             return ea_parse_survey_rows($rows, $ri);
         }
     }
@@ -444,7 +454,8 @@ function ea_parse_xlsx(string $path): array
 
 /** คอลัมน์ข้อมูลที่นำเข้า (ใช้เทียบว่ามีการเปลี่ยนแปลง) */
 const EA_IMPORT_COLS = ['seq', 'region_code', 'region_name', 'province_code', 'province_name', 'district_code', 'district_name', 'tambon_code', 'tambon_name',
-                        'area_type', 'local_code', 'local_name', 'ea_no', 'advance_ea', 'village_code', 'village_name', 'houses', 'households', 'population', 'note'];
+                        'area_type', 'local_code', 'local_name', 'ea_no', 'advance_ea', 'village_code', 'village_name', 'houses', 'households', 'vacant_houses',
+                        'population', 'note'];
 
 /** คอลัมน์ที่แถวนำเข้ามีค่า (ไม่รวม null) ตามลำดับ ea_code + EA_IMPORT_COLS + source */
 function ea_row_cols(array $r): array
@@ -453,16 +464,19 @@ function ea_row_cols(array $r): array
 }
 
 /* ------------------------------------------------------------------------
- * ไฟล์ SurveyEaHome (บัญชี EA ล่าสุด): ลำดับที่ | ภูมิภาค | จังหวัด | เขต/อำเภอ | แขวง/ตำบล | เทศบาล / อบต. | รหัส EA |
- *   จำนวนบ้าน/อาคารฯ | จำนวนอาคาร/สิ่งปลูกสร้าง
- * รหัส ภาค จังหวัด อำเภอ ตำบล เขตการปกครอง เทศบาล/อบต. EA เติมจากรหัส EA 15 หลัก
- * "จำนวนบ้าน/อาคารฯ" = จำนวนครัวเรือน (ตรงกับคอลัมน์ครัวเรือนในบัญชีเขตแจงนับ) · "จำนวนอาคาร/สิ่งปลูกสร้าง" = บ้าน/อาคาร (ใช้เมื่อมากกว่า 0)
- * ข้อมูลที่ไฟล์ไม่มี (หมู่บ้าน ประชากร หมายเหตุ) คงค่าเดิมในระบบ
+ * ไฟล์บัญชี EA ล่าสุด (รหัส EA 15 หลัก) — รหัส ภาค จังหวัด อำเภอ ตำบล เขตการปกครอง เทศบาล/อบต. EA เติมจากรหัส EA
+ * 1) EaDetail.xlsx (รูปแบบหลัก): ลำดับที่ | EA CODE | ภูมิภาค | จังหวัด | เขต/อำเภอ | แขวง/ตำบล | จำนวนบ้าน |
+ *    ครัวเรือนนับจดได้ | บ้านว่าง | จำนวนประชากร
+ * 2) SurveyEaHome.xlsx: ลำดับที่ | ภูมิภาค | จังหวัด | เขต/อำเภอ | แขวง/ตำบล | เทศบาล / อบต. | รหัส EA |
+ *    จำนวนบ้าน/อาคารฯ (= ครัวเรือน) | จำนวนอาคาร/สิ่งปลูกสร้าง (= บ้าน ใช้เมื่อมากกว่า 0)
+ * ช่องว่าง / คอลัมน์ที่ไฟล์ไม่มี (หมู่บ้าน เทศบาล/อบต. หมายเหตุ ฯลฯ) คงค่าเดิมในระบบ
  * ------------------------------------------------------------------------ */
 function ea_parse_survey_rows(array $rows, int $head): array
 {
-    $res = ['format' => 'survey', 'source' => 'บัญชี EA ล่าสุด (SurveyEaHome)', 'rows' => [], 'errors' => [], 'skipped' => 0];
     $norm = fn($v) => preg_replace('/\s+/u', '', (string)$v);
+    $isDetail = in_array('EACODE', array_map(fn($v) => mb_strtoupper($norm($v)), array_values($rows[$head])), true);
+    $res = ['format' => $isDetail ? 'detail' : 'survey', 'source' => 'บัญชี EA ล่าสุด (' . ($isDetail ? 'EaDetail' : 'SurveyEaHome') . ')',
+            'rows' => [], 'errors' => [], 'skipped' => 0];
     $col = [];
     foreach (array_values($rows[$head]) as $i => $c) {
         $c = $norm($c);
@@ -473,9 +487,13 @@ function ea_parse_survey_rows(array $rows, int $head): array
             str_contains($c, 'อำเภอ') => 'district_name',
             str_contains($c, 'ตำบล') => 'tambon_name',
             str_contains($c, 'เทศบาล') || str_contains($c, 'อบต') => 'local_name',
-            $c === 'รหัสEA' => 'ea_code',
-            str_starts_with($c, 'จำนวนอาคาร') => 'houses',
-            str_starts_with($c, 'จำนวนบ้าน') || str_contains($c, 'ครัวเรือน') => 'households',
+            $c === 'รหัสEA' || mb_strtoupper($c) === 'EACODE' => 'ea_code',
+            str_starts_with($c, 'บ้านว่าง') => 'vacant_houses',
+            str_contains($c, 'ประชากร') => 'population',
+            str_contains($c, 'ครัวเรือน') => 'households',
+            $c === 'จำนวนบ้าน' => 'houses',                       // EaDetail
+            str_starts_with($c, 'จำนวนอาคาร') => 'houses_opt',      // SurveyEaHome: 0 = ไม่มีข้อมูล
+            str_starts_with($c, 'จำนวนบ้าน') => 'households',       // SurveyEaHome: จำนวนบ้าน/อาคารฯ
             default => null,
         };
         if ($k !== null && !isset($col[$k])) {
@@ -511,14 +529,17 @@ function ea_parse_survey_rows(array $rows, int $head): array
         $seen[$key] = $line;
         $row = $p + ['ea_key' => $key, 'ea_code' => $code, 'seq' => (int)$get($r, 'seq'),
             'region_name' => mb_substr($get($r, 'region_name'), 0, 50), 'province_name' => mb_substr($get($r, 'province_name'), 0, 50),
-            'district_name' => mb_substr($get($r, 'district_name'), 0, 100), 'tambon_name' => mb_substr($get($r, 'tambon_name'), 0, 100),
-            'local_name' => mb_substr($get($r, 'local_name'), 0, 150)];
-        $hh = $num($get($r, 'households'));
-        if ($hh !== null) {
-            $row['households'] = $hh;
+            'district_name' => mb_substr($get($r, 'district_name'), 0, 100), 'tambon_name' => mb_substr($get($r, 'tambon_name'), 0, 100)];
+        if (isset($col['local_name'])) {
+            $row['local_name'] = mb_substr($get($r, 'local_name'), 0, 150);
         }
-        $bld = $num($get($r, 'houses'));
-        if ($bld) {                                 // 0 / ว่าง = ไม่มีข้อมูล คงค่าเดิม
+        foreach (['houses', 'households', 'vacant_houses', 'population'] as $k) {
+            $v = $num($get($r, $k));
+            if ($v !== null) {                      // ว่าง = ไม่มีข้อมูล คงค่าเดิม
+                $row[$k] = $v;
+            }
+        }
+        if (!isset($row['houses']) && ($bld = $num($get($r, 'houses_opt')))) {
             $row['houses'] = $bld;
         }
         $res['rows'][] = $row;

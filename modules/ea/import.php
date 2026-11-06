@@ -237,13 +237,13 @@ require __DIR__ . '/header.php';
     <div class="card">
       <div class="card-header"><strong>รูปแบบไฟล์ที่รองรับ</strong></div>
       <div class="card-body small">
-        <p class="mb-1"><strong>1) SurveyEaHome.xlsx</strong> (บัญชี EA ล่าสุด — แนะนำ) แถวแรกเป็นหัวคอลัมน์:</p>
-        <p class="mb-2">ลำดับที่ · ภูมิภาค · จังหวัด · เขต/อำเภอ · แขวง/ตำบล · เทศบาล / อบต. · รหัส EA (15 หลัก) · จำนวนบ้าน/อาคารฯ · จำนวนอาคาร/สิ่งปลูกสร้าง
-          <br><span class="text-muted">รหัสภาค จังหวัด อำเภอ ตำบล เขต เทศบาล/อบต. EA เติมจากรหัส EA อัตโนมัติ</span></p>
-        <p class="mb-1"><strong>2) บัญชีเขตแจงนับ</strong> (ชุดตรวจสอบ) หัวตาราง 2 แถว:</p>
-        <p class="mb-2">ลำดับที่ · ภาค (รหัส, ชื่อ) · จังหวัด (รหัส, ชื่อ) · อำเภอ/เขต (รหัส, ชื่อ) · ตำบล/แขวง (รหัส, ชื่อ) · เขตการปกครอง ·
-          EA · EA สำหรับเสนอผลล่วงหน้า · หมู่บ้าน/ชุมชน (รหัส, ชื่อ) · ข้อมูลเบื้องต้น (จำนวนบ้าน/อาคาร, ครัวเรือน, ประชากร) · หมายเหตุ
-          <br><span class="text-muted">ไม่มีรหัสเทศบาล/อบต. — ใช้รหัสเดิมในระบบ (จาก SurveyEaHome)</span></p>
+        <p class="mb-1"><strong>ไฟล์ EaDetail.xlsx</strong> (บัญชี EA ล่าสุด) แถวแรกเป็นหัวคอลัมน์:</p>
+        <div class="table-responsive mb-2"><table class="table table-sm table-bordered mb-0 small">
+          <tr><?php foreach (['ลำดับที่', 'EA CODE', 'ภูมิภาค', 'จังหวัด', 'เขต/อำเภอ', 'แขวง/ตำบล', 'จำนวนบ้าน', 'ครัวเรือนนับจดได้', 'บ้านว่าง', 'จำนวนประชากร'] as $c): ?><th class="text-nowrap"><?= h($c) ?></th><?php endforeach; ?></tr>
+          <tr><?php foreach (['1', '640210119720010', 'ตะวันออกเฉียงเหนือ', 'ขอนแก่น', 'ซำสูง', 'กระนวน', '188', '186', '', ''] as $v): ?><td class="text-nowrap"><?= h($v) ?></td><?php endforeach; ?></tr>
+        </table></div>
+        <p class="mb-2 text-muted">รหัสภาค จังหวัด อำเภอ ตำบล เขตการปกครอง เทศบาล/อบต. และ EA เติมจาก EA CODE อัตโนมัติ · ช่องว่าง = คงค่าเดิม
+          · ยังรับไฟล์รูปแบบเดิม (SurveyEaHome, บัญชีเขตแจงนับ) ได้</p>
         <ul class="mb-0">
           <li>รหัส EA 15 หลัก = ภาค (1) + จังหวัด (2) + อำเภอ (2) + ตำบล (2) + เขตการปกครอง (1) + เทศบาล/อบต. (3) + EA (4)
             เช่น <span class="ea-code">6 40 01 01 1 999 0001</span> = <span class="ea-code">640010119990001</span> (999 = เทศบาลนครขอนแก่น)</li>
@@ -304,12 +304,15 @@ require __DIR__ . '/header.php';
   <div class="card-body">
     <div class="row small g-2">
       <div class="col-md-6">ไฟล์: <strong><?= h($_SESSION[$sessKey]['file'] ?? '') ?></strong>
-        <span class="text-muted">· รูปแบบ <?= ($res['format'] ?? '') === 'survey' ? 'SurveyEaHome (บัญชี EA ล่าสุด)' : 'บัญชีเขตแจงนับ' ?></span></div>
+        <span class="text-muted">· รูปแบบ <?= ['detail' => 'EaDetail (บัญชี EA ล่าสุด)', 'survey' => 'SurveyEaHome', 'census' => 'บัญชีเขตแจงนับ'][$res['format'] ?? 'census'] ?? '' ?></span></div>
       <div class="col-md-6"><?= count($districts) ?> อำเภอ · <?= count($tambons) ?> ตำบล ·
         ในเขตเทศบาล <?= number_format($sum['area1']) ?> EA · นอกเขตเทศบาล <?= number_format($sum['area2']) ?> EA</div>
-      <div class="col-md-6">บ้าน/อาคาร <?= number_format($sum['houses']) ?> · ครัวเรือน <?= number_format($sum['households']) ?> · ประชากร <?= number_format($sum['population']) ?> คน</div>
+      <div class="col-md-6">บ้าน <?= number_format($sum['houses']) ?> · ครัวเรือน <?= number_format($sum['households']) ?> · ประชากร <?= number_format($sum['population']) ?> คน</div>
       <div class="col-md-6"><?= $sum['code'] ? 'รหัส EA เปลี่ยน ' . number_format($sum['code']) . ' EA (ตามรหัสเทศบาล/อบต.) · ' : '' ?><?= $res['skipped'] ? 'ข้ามแถวว่าง ' . number_format($res['skipped']) . ' แถว' : '' ?></div>
-      <?php if (($res['format'] ?? '') === 'survey'): ?>
+      <?php if (($res['format'] ?? '') === 'detail'): ?>
+      <div class="col-12 text-muted">เติมรหัส ภาค จังหวัด อำเภอ ตำบล เขตการปกครอง เทศบาล/อบต. และ EA จากรหัส EA 15 หลัก ·
+        ช่องว่างในไฟล์ (เช่น ประชากร) และข้อมูลที่ไฟล์ไม่มี (ชื่อเทศบาล/อบต. หมู่บ้าน หมายเหตุ) คงค่าเดิมในระบบ</div>
+      <?php elseif (($res['format'] ?? '') === 'survey'): ?>
       <div class="col-12 text-muted">เติมรหัส ภาค จังหวัด อำเภอ ตำบล เขตการปกครอง เทศบาล/อบต. และ EA จากรหัส EA 15 หลัก ·
         "จำนวนบ้าน/อาคารฯ" → จำนวนครัวเรือน · หมู่บ้าน ประชากร หมายเหตุ คงค่าเดิมในระบบ</div>
       <?php endif; ?>

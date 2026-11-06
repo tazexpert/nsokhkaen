@@ -34,7 +34,7 @@ require __DIR__ . '/header.php';
       ['EA ทั้งหมด', (int)$s['n'], 'bi-map', 'primary', $s['districts'] . ' อำเภอ · ' . $s['tambons'] . ' ตำบล'],
       ['EA ในเขตเทศบาล', (int)$s['muni'], 'bi-buildings', 'info', ''],
       ['EA นอกเขตเทศบาล', (int)$s['rural'], 'bi-tree', 'success', ''],
-      ['บ้าน/อาคาร', (int)$s['houses'], 'bi-house-door', 'secondary', ''],
+      ['จำนวนบ้าน', (int)$s['houses'], 'bi-house-door', 'secondary', ''],
       ['ครัวเรือน', (int)$s['households'], 'bi-house-heart', 'warning', ''],
       ['ประชากร (คน)', (int)$s['population'], 'bi-people', 'danger', ''],
   ] as [$label, $v, $icon, $color, $sub]): ?>

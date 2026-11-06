@@ -27,9 +27,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'save') {
         flash('รหัส EA ' . $newCode . ' ซ้ำกับ EA อื่น — ตรวจรหัสเทศบาล/อบต.', 'danger');
         redirect('ea_view.php?id=' . $id . '&edit=1');
     }
-    $pdo->prepare('UPDATE ea_areas SET ea_code = ?, local_code = ?, local_name = ?, village_code = ?, village_name = ?, advance_ea = ?, houses = ?, households = ?, population = ?, note = ?, is_active = ? WHERE id = ?')
+    $pdo->prepare('UPDATE ea_areas SET ea_code = ?, local_code = ?, local_name = ?, village_code = ?, village_name = ?, advance_ea = ?, houses = ?, households = ?, vacant_houses = ?, population = ?, note = ?, is_active = ? WHERE id = ?')
         ->execute([$newCode, $lcode, mb_substr(trim(post('local_name')), 0, 150), $vcode, mb_substr(trim(post('village_name')), 0, 150), mb_substr(trim(post('advance_ea')), 0, 20),
-                   $num('houses'), $num('households'), $num('population'), mb_substr(trim(post('note')), 0, 2000), post('is_active') === '1' ? 1 : 0, $id]);
+                   $num('houses'), $num('households'), $num('vacant_houses'), $num('population'), mb_substr(trim(post('note')), 0, 2000), post('is_active') === '1' ? 1 : 0, $id]);
     audit_log('ea_edit', 'แก้ไขข้อมูล EA ' . $ea['ea_code'], EA_MODULE);
     flash('บันทึกข้อมูล EA ' . $ea['ea_code'] . ' แล้ว');
     redirect('ea_view.php?id=' . $id);
@@ -69,7 +69,8 @@ $c = $ea['ea_code'];
           <div class="col-3"><label class="form-label small">รหัสหมู่บ้าน</label><input name="village_code" class="form-control" maxlength="3" value="<?= h($ea['village_code']) ?>"></div>
           <div class="col-9"><label class="form-label small">หมู่บ้าน/ชุมชน</label><input name="village_name" class="form-control" maxlength="150" value="<?= h($ea['village_name']) ?>"></div>
           <div class="col-md-3 col-6"><label class="form-label small">EA เสนอผลล่วงหน้า</label><input name="advance_ea" class="form-control" maxlength="20" value="<?= h($ea['advance_ea']) ?>"></div>
-          <div class="col-md-3 col-6"><label class="form-label small">บ้าน/อาคาร</label><input name="houses" type="number" min="0" class="form-control" value="<?= (int)$ea['houses'] ?>"></div>
+          <div class="col-md-3 col-6"><label class="form-label small">จำนวนบ้าน</label><input name="houses" type="number" min="0" class="form-control" value="<?= (int)$ea['houses'] ?>"></div>
+          <div class="col-md-3 col-6"><label class="form-label small">บ้านว่าง</label><input name="vacant_houses" type="number" min="0" class="form-control" value="<?= (int)$ea['vacant_houses'] ?>"></div>
           <div class="col-md-3 col-6"><label class="form-label small">ครัวเรือน</label><input name="households" type="number" min="0" class="form-control" value="<?= (int)$ea['households'] ?>"></div>
           <div class="col-md-3 col-6"><label class="form-label small">ประชากร</label><input name="population" type="number" min="0" class="form-control" value="<?= (int)$ea['population'] ?>"></div>
           <div class="col-12"><label class="form-label small">หมายเหตุ</label><textarea name="note" class="form-control" rows="3" maxlength="2000"><?= h($ea['note']) ?></textarea></div>
@@ -90,8 +91,9 @@ $c = $ea['ea_code'];
           <dt class="col-5">EA</dt><dd class="col-7 ea-code"><?= h($ea['ea_no']) ?></dd>
           <?php if ($ea['advance_ea'] !== ''): ?><dt class="col-5">EA สำหรับเสนอผลล่วงหน้า</dt><dd class="col-7"><?= h($ea['advance_ea']) ?></dd><?php endif; ?>
           <dt class="col-5">หมู่บ้าน/ชุมชน</dt><dd class="col-7"><?= $ea['village_name'] !== '' ? h(($ea['village_code'] !== '' ? $ea['village_code'] . ' ' : '') . $ea['village_name']) : '-' ?></dd>
-          <dt class="col-5">จำนวนบ้าน/อาคาร/สิ่งปลูกสร้าง</dt><dd class="col-7"><?= number_format((int)$ea['houses']) ?></dd>
+          <dt class="col-5">จำนวนบ้าน</dt><dd class="col-7"><?= number_format((int)$ea['houses']) ?></dd>
           <dt class="col-5">จำนวนครัวเรือน</dt><dd class="col-7"><?= number_format((int)$ea['households']) ?></dd>
+          <dt class="col-5">บ้านว่าง</dt><dd class="col-7"><?= number_format((int)$ea['vacant_houses']) ?></dd>
           <dt class="col-5">จำนวนประชากร</dt><dd class="col-7"><?= number_format((int)$ea['population']) ?> คน</dd>
           <dt class="col-5">หมายเหตุ</dt><dd class="col-7"><?= nl2br(h($ea['note'] ?: '-')) ?></dd>
           <dt class="col-5">ที่มาของบัญชี</dt><dd class="col-7 small"><?= h($ea['source'] ?: '-') ?></dd>
