@@ -11,7 +11,9 @@ foreach ($pdo->query("SELECT project_id, round_label, COUNT(*) n, SUM(status = '
                       ORDER BY project_id, MIN(enum_year) IS NULL, MIN(enum_year), MIN(enum_month) IS NULL, MIN(enum_month), round_label") as $r) {
     $stats[(int)$r['project_id']][] = $r;
 }
-$projects = array_filter(projects_all(), fn($p) => $showAll || $p['is_active'] || isset($stats[(int)$p['id']]));
+// สถานประกอบการของโครงการ (เช่น สำรวจยอดขาย)
+$units = $pdo->query("SELECT project_id, COUNT(*) n, SUM(status = 'done') done FROM ea_project_units GROUP BY project_id")->fetchAll(PDO::FETCH_UNIQUE);
+$projects = array_filter(projects_all(), fn($p) => $showAll || $p['is_active'] || isset($stats[(int)$p['id']]) || isset($units[(int)$p['id']]));
 
 $pageTitle = 'EA ของโครงการ';
 $active = 'projects';
@@ -42,6 +44,10 @@ require __DIR__ . '/header.php';
         <div class="small text-muted mt-2"><?= count($rounds) ?> รอบ: <?= h(implode(', ', array_map(fn($r) => ($r['round_label'] ?: 'ไม่ระบุรอบ') . ' (' . $r['n'] . ')', array_slice($rounds, 0, 6)))) ?><?= count($rounds) > 6 ? ' …' : '' ?></div>
         <?php endif; ?>
         <?php else: ?><div class="small text-muted mt-1">ยังไม่ได้กำหนด EA</div><?php endif; ?>
+        <?php if (isset($units[(int)$p['id']])): $un = $units[(int)$p['id']]; ?>
+        <div class="small mt-2"><span class="text-primary" data-href="project_units.php?id=<?= (int)$p['id'] ?>"><i class="bi bi-shop"></i> สถานประกอบการ <?= number_format((int)$un['n']) ?> แห่ง</span>
+          <span class="text-muted">· สำรวจเสร็จ <?= number_format((int)$un['done']) ?></span></div>
+        <?php endif; ?>
         <div class="small text-muted mt-2"><?php if (($p['survey_period'] ?? '') !== ''): ?><i class="bi bi-arrow-repeat"></i> <?= h(project_period_label($p['survey_period'])) ?> · <?php endif; ?><i class="bi bi-calendar3"></i> <?= h(project_period_text($p)) ?><?= $p['fiscal_year'] ? ' · ปีงบประมาณ ' . (int)$p['fiscal_year'] : '' ?></div>
       </div>
     </a>
@@ -49,4 +55,8 @@ require __DIR__ . '/header.php';
 <?php endforeach; ?>
 <?php if (!$projects): ?><div class="col-12 text-muted">ยังไม่มีโครงการ<?= projects_can_manage() ? ' — <a href="' . h(module_url('ea', 'manage_projects.php')) . '">เพิ่มโครงการ</a>' : '' ?></div><?php endif; ?>
 </div>
+<script>
+// ลิงก์สถานประกอบการในการ์ด (การ์ดทั้งใบเป็นลิงก์ไป EA ของโครงการ)
+document.querySelectorAll('[data-href]').forEach(el => el.addEventListener('click', e => { e.preventDefault(); location.href = el.dataset.href; }));
+</script>
 <?php require __DIR__ . '/footer.php'; ?>

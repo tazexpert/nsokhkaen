@@ -243,7 +243,11 @@ $addF = ['district' => '', 'tambon' => '', 'area' => '', 'q' => ''];
 
 $pageTitle = 'EA โครงการ ' . $project['code'];
 $active = 'projects';
+$st = $pdo->prepare('SELECT COUNT(*) FROM ea_project_units WHERE project_id = ?');
+$st->execute([$pid]);
+$unitCount = (int)$st->fetchColumn();
 $pageActions = '<a href="projects.php" class="btn btn-light"><i class="bi bi-arrow-left"></i> ทุกโครงการ</a>'
+    . ($unitCount ? ' <a href="project_units.php?id=' . $pid . '" class="btn btn-outline-primary"><i class="bi bi-shop"></i> สถานประกอบการ (' . number_format($unitCount) . ')</a>' : '')
     . ' <a href="?' . h(http_build_query($keep($query) + ['export' => 'csv'])) . '" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> Export CSV</a>'
     . ($canEdit ? ' <a href="assign.php?project=' . $pid . '" class="btn btn-outline-primary"><i class="bi bi-shuffle"></i> มอบหมายผู้ปฏิบัติงาน</a>' : '')
     . ($canEdit ? ' <a href="project_import.php" class="btn btn-outline-primary"><i class="bi bi-file-earmark-arrow-up"></i> นำเข้าไฟล์</a>' : '')

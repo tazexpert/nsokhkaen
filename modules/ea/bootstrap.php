@@ -647,6 +647,12 @@ function ea_parse_project_file(string $path, string $ext, string $province = '40
         return $res;
     }
     $norm = fn($v) => mb_strtolower(preg_replace('/\s+/u', '', (string)$v));
+    // บัญชีมอบหมายแบบสถานประกอบการ (มีคอลัมน์ ชื่อสถานประกอบการ) เช่น โครงการสำรวจยอดขายรายไตรมาส
+    foreach (array_slice($rows, 0, 15, true) as $i => $r) {
+        if (array_filter(array_map($norm, $r), fn($c) => str_contains($c, 'สถานประกอบการ'))) {
+            return ea_parse_units_sheet($rows, $i, (string)$sheetName);
+        }
+    }
     // แบบฟอร์ม "บัญชีมอบหมายการปฏิบัติงาน" (มีคอลัมน์ PSU-No และ ชื่อผู้ตรวจงาน/ปฏิบัติงาน)
     foreach (array_slice($rows, 0, 15, true) as $i => $r) {
         $cells = array_map($norm, $r);
@@ -955,4 +961,166 @@ function ea_resolve_area_rows(array &$rows, array $map): void
         $r['ea_key'] = $r['province_code'] . $r['district_code'] . $r['tambon_code'] . $r['area_type'] . $r['ea_no'];
     }
     unset($r);
+}
+
+/* ------------------------------------------------------------------------
+ * บัญชีมอบหมายแบบสถานประกอบการ (เช่น "บัญชีมอบหมายการปฏิบัติงานโครงการสำรวจยอดขายรายไตรมาส ๓/2569")
+ *   หัวตาราง 2 แถว: ที่ | ชื่อผู้ตรวจงาน/ปฏิบัติงาน | ชื่อสถานประกอบการ (คำนำหน้า, ชื่อ) |
+ *   สถานที่ติดต่อได้ในปัจจุบัน (EA, หมู่ที่, เลขที่, ถนน, ตำบล, อำเภอ) | ยานพาหนะ
+ *   แถวที่ไม่มีชื่อผู้ปฏิบัติงาน = สถานประกอบการของคนก่อนหน้า · นำเข้าเฉพาะแถวที่มีชื่อสถานประกอบการ
+ * รอบ: "ไตรมาส n/ปี" → "ไตรมาส n/ปี" (Q n) หรือ "ประจำเดือน ..." → เดือน ปี
+ * ------------------------------------------------------------------------ */
+function ea_parse_units_sheet(array $rows, int $head, string $sheet): array
+{
+    $res = ['format' => 'units', 'rows' => [], 'units' => [], 'errors' => [], 'projects' => [], 'project_titles' => [], 'people' => [],
+            'skipped' => 0, 'round' => ''];
+    $norm = fn($v) => mb_strtolower(preg_replace('/\s+/u', '', (string)$v));
+    $title = '';
+    $month = $year = $quarter = null;
+    foreach (array_slice($rows, 0, $head) as $r) {
+        foreach ($r as $v) {
+            $v = ea_thai_digits(trim(preg_replace('/\s+/u', ' ', (string)$v)));
+            if ($v === '') {
+                continue;
+            }
+            if (preg_match('/ประจำเดือน\s*(\S+)\s*(?:พ\.ศ\.)?\s*(\d{4})/u', $v, $m)) {
+                $month = ea_month_num($m[1]);
+                $year = ea_year($m[2]);
+            } elseif (str_contains($v, 'บัญชีมอบหมาย')) {
+                $title = $v;
+                if (preg_match('/ไตรมาส\s*(?:ที่)?\s*([1-4])\s*\/\s*(\d{4})/u', $v, $m)) {
+                    $quarter = (int)$m[1];
+                    $year = ea_year($m[2]);
+                } elseif (!$year && preg_match('/พ\.ศ\.\s*(\d{4})/u', $v, $m)) {
+                    $year = ea_year($m[1]);
+                }
+            }
+        }
+    }
+    $projName = trim(preg_replace(['/^บัญชีมอบหมายการปฏิบัติงาน\s*/u', '/\s*[1-4]\s*\/\s*\d{4}.*$/u', '/\s*พ\.ศ\..*$/u'], '', $title));
+    $codes = array_map(fn($p) => ea_project_key($p['code']), projects_all());
+    $raw = in_array(ea_project_key($sheet), $codes, true) ? trim($sheet) : ($projName !== '' ? $projName : trim($sheet));
+    $pk = ea_project_key($raw);
+    if ($pk === '') {
+        $res['errors'][] = 'ไม่พบชื่อโครงการในหัวเรื่อง "บัญชีมอบหมายการปฏิบัติงานโครงการ..."';
+        return $res;
+    }
+    $res['projects'][$pk] = $raw;
+    $res['project_titles'][$pk] = $projName;
+    if ($quarter && $year) {
+        $label = 'ไตรมาส ' . $quarter . '/' . $year;
+        $enumType = 'Q' . $quarter;
+    } else {
+        $label = ea_round_label($month, $year);
+        $enumType = $month ? 'Month' : '';
+    }
+    $res['round'] = $label;
+    // คอลัมน์: หัวแถวแรก (ชื่อผู้ปฏิบัติงาน, ชื่อสถานประกอบการ) + หัวแถวที่สอง (EA หมู่ที่ เลขที่ ถนน ตำบล อำเภอ)
+    $col = [];
+    foreach ($rows[$head] as $i => $c) {
+        $c = $norm($c);
+        if (!isset($col['person']) && (str_contains($c, 'ชื่อผู้') || str_contains($c, 'ปฏิบัติงาน'))) {
+            $col['person'] = $i;
+        } elseif (!isset($col['unit']) && str_contains($c, 'สถานประกอบการ')) {
+            $col['unit'] = $i;
+        }
+    }
+    foreach ($rows[$head + 1] ?? [] as $i => $c) {
+        $c = $norm($c);
+        $k = match (true) {
+            $c === 'ea' => 'ea',
+            str_contains($c, 'หมู่') => 'moo',
+            str_contains($c, 'เลขที่') => 'house',
+            str_contains($c, 'ถนน') => 'road',
+            str_contains($c, 'ตำบล') || str_contains($c, 'แขวง') => 'tambon',
+            str_contains($c, 'อำเภอ') || str_contains($c, 'เขต') => 'district',
+            default => null,
+        };
+        if ($k !== null && !isset($col[$k])) {
+            $col[$k] = $i;
+        }
+    }
+    foreach (['person' => 'ชื่อผู้ตรวจงาน/ปฏิบัติงาน', 'unit' => 'ชื่อสถานประกอบการ', 'tambon' => 'ตำบล', 'district' => 'อำเภอ'] as $k => $l) {
+        if (!isset($col[$k])) {
+            $res['errors'][] = 'ไม่พบคอลัมน์ "' . $l . '" ในบัญชีมอบหมายสถานประกอบการ';
+        }
+    }
+    if ($res['errors']) {
+        return $res;
+    }
+    // ชื่อสถานประกอบการ: คอลัมน์แรก = คำนำหน้า (บจก. หจก.) คอลัมน์ถัดไป = ชื่อ
+    $nameCol = $col['unit'] + 1;
+    $get = fn(array $r, ?int $i) => $i === null ? '' : ea_thai_digits(trim(preg_replace('/\s+/u', ' ', (string)($r[$i] ?? ''))));
+    $person = '';
+    $seq = 0;
+    foreach (array_slice($rows, $head + 2, null, true) as $i => $r) {
+        $name = ea_norm_name($get($r, $col['person']));
+        if ($name !== '' && !in_array($name, ['ผู้ตรวจงาน', 'ผู้ปฏิบัติงาน'], true)) {
+            $person = $name;
+        }
+        $prefix = $get($r, $col['unit']);
+        $unit = $get($r, $nameCol);
+        if ($unit === '' && $prefix !== '' && !preg_match('/^(บจก|หจก|บมจ|หสม)\.?$/u', $prefix)) {
+            [$unit, $prefix] = [$prefix, ''];       // ชื่ออยู่คอลัมน์เดียว
+        }
+        if ($unit === '') {
+            $res['skipped']++;                       // ผู้ตรวจงาน / แถวว่าง
+            continue;
+        }
+        $ea = preg_replace('/\D/', '', $get($r, $col['ea'] ?? null));
+        $res['units'][] = [
+            'seq' => ++$seq, 'line' => $i + 1, 'assignee' => $person,
+            'prefix' => mb_substr($prefix, 0, 30), 'name' => mb_substr($unit, 0, 255),
+            'ea_no' => $ea === '' ? '' : str_pad(substr($ea, -4), 4, '0', STR_PAD_LEFT),
+            'moo' => mb_substr($get($r, $col['moo'] ?? null), 0, 10), 'house_no' => mb_substr($get($r, $col['house'] ?? null), 0, 50),
+            'road' => mb_substr($get($r, $col['road'] ?? null), 0, 150),
+            'tambon_name' => mb_substr($get($r, $col['tambon']), 0, 100), 'district_name' => mb_substr($get($r, $col['district']), 0, 100),
+            'round_label' => $label, 'enum_type' => $enumType, 'enum_month' => $quarter ? null : $month, 'enum_year' => $year, 'project_key' => $pk,
+        ];
+        if ($person !== '') {
+            $res['people'][$person] = true;
+        }
+    }
+    $res['people'] = array_keys($res['people']);
+    if (!$res['units']) {
+        $res['errors'][] = 'ไม่พบรายชื่อสถานประกอบการในไฟล์';
+    }
+    return $res;
+}
+
+/** เติมรหัสอำเภอ/ตำบลจากชื่อ และจับคู่ EA ในบัญชี (ถ้าไฟล์ระบุ EA ที่ไม่ใช่ 0000) */
+function ea_resolve_units(array &$units): void
+{
+    $dist = [];
+    $tamb = [];
+    $eas = [];
+    foreach (db()->query('SELECT id, district_code, district_name, tambon_code, tambon_name, area_type, ea_no FROM ea_areas') as $a) {
+        $dist[$a['district_name']] = $a['district_code'];
+        $tamb[$a['district_code'] . '|' . $a['tambon_name']] = $a['tambon_code'];
+        $eas[$a['district_code'] . $a['tambon_code'] . $a['ea_no']][(int)$a['area_type']] = (int)$a['id'];
+    }
+    foreach ($units as &$u) {
+        $d = $dist[$u['district_name']] ?? '';
+        $t = $d !== '' ? ($tamb[$d . '|' . $u['tambon_name']] ?? '') : '';
+        $u['district_code'] = $d;
+        $u['tambon_code'] = $t;
+        $u['ea_id'] = null;
+        if ($t !== '' && $u['ea_no'] !== '' && $u['ea_no'] !== '0000' && isset($eas[$d . $t . $u['ea_no']])) {
+            $c = $eas[$d . $t . $u['ea_no']];
+            $u['ea_id'] = count($c) === 1 ? reset($c) : ($c[$u['moo'] !== '' ? 2 : 1] ?? reset($c));
+        }
+    }
+    unset($u);
+}
+
+/** ที่ตั้งสถานประกอบการแบบย่อ เช่น "59 ถ.รอบเมือง ม.3 ต.ในเมือง อ.เมืองขอนแก่น" */
+function ea_unit_address(array $u): string
+{
+    return trim(implode(' ', array_filter([
+        $u['house_no'] !== '' ? $u['house_no'] : '',
+        $u['road'] !== '' ? 'ถ.' . $u['road'] : '',
+        $u['moo'] !== '' ? 'ม.' . (int)$u['moo'] : '',
+        $u['tambon_name'] !== '' ? 'ต.' . $u['tambon_name'] : '',
+        $u['district_name'] !== '' ? 'อ.' . $u['district_name'] : '',
+    ])));
 }
