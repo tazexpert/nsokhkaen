@@ -109,12 +109,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         redirect('eas.php');
     } elseif ($action === 'clear') {
         // ล้างบัญชี EA (ยืนยันด้วย PIN — ผิด 5 ครั้ง พัก 15 นาที)
-        $scope = post('scope') === 'all' ? 'all' : 'list';
+        $scope = in_array(post('scope'), ['all', 'projects'], true) ? post('scope') : 'list';
+        // ล้างเฉพาะ EA ของโครงการ: โครงการที่เลือก
+        $pids = array_values(array_intersect(array_map('intval', (array)($_POST['proj'] ?? [])), array_keys(projects_all())));
+        if ($scope === 'projects' && !$pids) {
+            $errors[] = 'กรุณาเลือกโครงการที่ต้องการล้าง EA อย่างน้อย 1 โครงการ';
+        }
         $st = $pdo->prepare('SELECT pin_hash FROM core_users WHERE id = ?');
         $st->execute([(int)$me['id']]);
         $hash = (string)$st->fetchColumn();
         $lock = $_SESSION['ea_clear_lock'] ?? ['n' => 0, 'until' => 0];
-        if ($lock['until'] > time()) {
+        if ($errors) {
+            // เลือกโครงการไม่ครบ — ไม่ตรวจ PIN
+        } elseif ($lock['until'] > time()) {
             $errors[] = 'ใส่ PIN ผิดหลายครั้ง กรุณารอ ' . ceil(($lock['until'] - time()) / 60) . ' นาทีแล้วลองใหม่';
         } elseif ($hash === '') {
             $errors[] = 'บัญชีของคุณยังไม่ได้ตั้ง PIN — กรุณาตั้ง PIN ที่ "บัญชีของฉัน" ก่อน';
@@ -129,7 +136,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$errors) {
             unset($_SESSION['ea_clear_lock']);
             $pdo->beginTransaction();
-            if ($scope === 'all') {
+            if ($scope === 'projects') {
+                // ล้างเฉพาะ EA ของโครงการที่เลือก (รวมผู้รับผิดชอบ/สถานะ) — บัญชี EA คงเดิม
+                $st = $pdo->prepare('DELETE FROM ea_project_eas WHERE project_id IN (' . implode(',', array_fill(0, count($pids), '?')) . ')');
+                $st->execute($pids);
+                $codes = array_map(fn($id) => projects_all()[$id]['code'], $pids);
+                $msg = 'ล้าง EA ของโครงการ ' . implode(', ', $codes) . ' แล้ว ' . number_format($st->rowCount()) . ' รายการ (บัญชี EA คงเดิม)';
+            } elseif ($scope === 'all') {
                 $pe = $pdo->exec('DELETE FROM ea_project_eas');
                 $n = $pdo->exec('DELETE FROM ea_areas');
                 $msg = 'ล้างบัญชี EA ทั้งหมดแล้ว: EA ' . number_format($n) . ' · EA ของโครงการและการมอบหมาย ' . number_format($pe) . ' รายการ';
@@ -145,6 +158,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->exec('ALTER TABLE ea_areas AUTO_INCREMENT = 1');
             }
             audit_log('ea_clear', $msg, EA_MODULE);
+            if ($scope === 'projects') {
+                flash($msg . ' — นำเข้า EA ของโครงการใหม่ได้เลย');
+                redirect('project_import.php');
+            }
             flash($msg . ' — นำเข้าบัญชี EA ใหม่ได้เลย');
             redirect('import.php');
         }
@@ -261,7 +278,7 @@ require __DIR__ . '/header.php';
   ?>
   <?php if ((int)$cnt['n']): ?>
   <div class="col-lg-6" id="clear">
-    <form method="post" class="card border-danger" data-confirm="ยืนยันล้างบัญชี EA?">
+    <form method="post" class="card border-danger" id="clearForm">
       <?= csrf_field() ?><input type="hidden" name="action" value="clear">
       <div class="card-header text-danger"><strong><i class="bi bi-trash3"></i> ล้างบัญชี EA เพื่อนำเข้าใหม่</strong></div>
       <div class="card-body">
@@ -269,19 +286,56 @@ require __DIR__ . '/header.php';
         <div class="form-check mb-1"><input class="form-check-input" type="radio" name="scope" value="list" id="cl1" checked>
           <label class="form-check-label" for="cl1">ล้างบัญชี EA — <strong>เก็บ EA ของโครงการและการมอบหมายไว้</strong>
             <div class="small text-muted">ลบ EA ที่ไม่มีโครงการใช้ · EA ที่โครงการใช้อยู่ทำเครื่องหมายเลิกใช้ แล้วกลับมาใช้งานเมื่อนำเข้าไฟล์ใหม่ที่มี EA นั้น</div></label></div>
+        <?php $peByProject = $pdo->query('SELECT project_id, COUNT(*) n FROM ea_project_eas GROUP BY project_id')->fetchAll(PDO::FETCH_KEY_PAIR); ?>
+        <?php if ($peByProject): ?>
+        <div class="form-check mb-1"><input class="form-check-input" type="radio" name="scope" value="projects" id="cl3" <?= post('scope') === 'projects' ? 'checked' : '' ?>>
+          <label class="form-check-label" for="cl3">ล้างเฉพาะ EA ของโครงการ — <strong>บัญชี EA คงเดิม</strong>
+            <div class="small text-muted">ลบ EA ที่โครงการใช้ รวมรอบ/งวด ผู้รับผิดชอบ และสถานะการสำรวจ ของโครงการที่เลือก แล้วนำเข้า EA ของโครงการใหม่</div></label>
+          <div class="ea-clear-projects border rounded p-2 mt-1 mb-1 small" id="clearProjects">
+            <div class="form-check mb-1"><input class="form-check-input" type="checkbox" id="clAllProj" data-check-all=".cl-proj" <?= isset($_POST['proj']) ? '' : 'checked' ?>><label class="form-check-label fw-semibold" for="clAllProj">ทุกโครงการ</label></div>
+            <?php foreach (projects_all() as $pidx => $p): if (empty($peByProject[$pidx])) { continue; } ?>
+            <div class="form-check"><input class="form-check-input cl-proj" type="checkbox" name="proj[]" value="<?= (int)$pidx ?>" id="clp<?= (int)$pidx ?>"
+              <?= !isset($_POST['proj']) || in_array((string)$pidx, (array)$_POST['proj'], true) ? 'checked' : '' ?>>
+              <label class="form-check-label" for="clp<?= (int)$pidx ?>"><strong style="color:<?= h($p['color']) ?>"><?= h($p['code']) ?></strong> <?= h($p['name'] !== $p['code'] ? $p['name'] : '') ?>
+                <span class="text-muted">· <?= number_format((int)$peByProject[$pidx]) ?> รายการ</span></label></div>
+            <?php endforeach; ?>
+          </div>
+        </div>
+        <?php endif; ?>
         <div class="form-check mb-3"><input class="form-check-input" type="radio" name="scope" value="all" id="cl2">
           <label class="form-check-label" for="cl2">ล้างทั้งหมด — <strong class="text-danger">บัญชี EA + EA ของโครงการ + ผู้รับผิดชอบ/สถานะการสำรวจ</strong>
             <div class="small text-muted">เริ่มต้นใหม่ทั้งหมด กู้คืนไม่ได้</div></label></div>
         <?php if ($hasPin): ?>
         <div class="d-flex gap-2 align-items-center">
           <input type="password" name="pin" class="form-control" style="max-width:160px" inputmode="numeric" pattern="\d{6}" maxlength="6" placeholder="PIN 6 หลัก" required autocomplete="off">
-          <button class="btn btn-danger"><i class="bi bi-trash3"></i> ล้างบัญชี EA</button>
+          <button class="btn btn-danger"><i class="bi bi-trash3"></i> ล้างข้อมูล</button>
         </div>
         <?php else: ?>
         <div class="alert alert-warning py-2 mb-0 small">ต้องตั้ง PIN ที่ <a href="<?= h(url('account.php')) ?>">บัญชีของฉัน</a> ก่อน จึงจะล้างบัญชี EA ได้</div>
         <?php endif; ?>
       </div>
     </form>
+    <script>
+    (() => {
+      // แสดงรายการโครงการเมื่อเลือก "ล้างเฉพาะ EA ของโครงการ" · ยืนยันตามขอบเขตที่เลือก
+      const form = document.getElementById('clearForm'), box = document.getElementById('clearProjects');
+      const scope = () => (form.querySelector('input[name=scope]:checked') || {}).value;
+      const sync = () => { if (box) { box.hidden = scope() !== 'projects'; } };
+      form.querySelectorAll('input[name=scope]').forEach(r => r.addEventListener('change', sync));
+      sync();
+      form.addEventListener('submit', e => {
+        const sc = scope();
+        let msg = 'ยืนยันล้างบัญชี EA (เก็บ EA ของโครงการไว้)?';
+        if (sc === 'all') { msg = 'ยืนยันล้างทั้งหมด: บัญชี EA + EA ของโครงการ + ผู้รับผิดชอบ/สถานะ — กู้คืนไม่ได้?'; }
+        if (sc === 'projects') {
+          const names = [...form.querySelectorAll('.cl-proj:checked')].map(c => c.nextElementSibling.querySelector('strong').textContent);
+          if (!names.length) { e.preventDefault(); alert('กรุณาเลือกโครงการอย่างน้อย 1 โครงการ'); return; }
+          msg = 'ยืนยันล้าง EA ของโครงการ ' + names.join(', ') + ' (รวมผู้รับผิดชอบ/สถานะ)?';
+        }
+        if (!confirm(msg)) { e.preventDefault(); }
+      });
+    })();
+    </script>
   </div>
   <?php endif; ?>
 </div>
