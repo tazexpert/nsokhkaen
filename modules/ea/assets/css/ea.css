@@ -87,3 +87,4 @@
 .wheel-overlay:fullscreen { background: #fff; }
 @media (max-width: 767.98px) { .wheel-overlay.wheel-max .wheel-wrap { flex: none; width: min(92vw, 60vh); } }
 @media (prefers-reduced-motion: reduce) { .wheel-start:not([disabled]) { animation: none; } }
+.ea-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: 0; }

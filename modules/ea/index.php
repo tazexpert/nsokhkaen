@@ -30,17 +30,28 @@ require __DIR__ . '/header.php';
   <div class="alert alert-info"><i class="bi bi-info-circle"></i> ยังไม่มีบัญชี EA<?= ea_can('admin') ? ' — <a href="import.php" class="alert-link">นำเข้าจากไฟล์ Excel "บัญชีเขตแจงนับ"</a>' : ' (รอผู้ดูแลระบบ EA นำเข้า)' ?></div>
 <?php endif; ?>
 <div class="row g-3 mb-4" data-reveal>
-  <?php foreach ([
+  <?php $areaTotal = max(1, (int)$s['muni'] + (int)$s['rural']);
+  foreach ([
       ['EA ทั้งหมด', (int)$s['n'], 'bi-map', 'primary', $s['districts'] . ' อำเภอ · ' . $s['tambons'] . ' ตำบล'],
-      ['EA ในเขตเทศบาล', (int)$s['muni'], 'bi-buildings', 'info', ''],
-      ['EA นอกเขตเทศบาล', (int)$s['rural'], 'bi-tree', 'success', ''],
+      'area',
       ['จำนวนบ้าน', (int)$s['houses'], 'bi-house-door', 'secondary', ''],
       ['ครัวเรือน', (int)$s['households'], 'bi-house-heart', 'warning', ''],
       ['ประชากร (คน)', (int)$s['population'], 'bi-people', 'danger', ''],
-  ] as [$label, $v, $icon, $color, $sub]): ?>
-  <div class="col-6 col-md-4 col-xl-2 reveal-item">
+  ] as $card): ?>
+  <div class="col-6 col-md-4 col-xl reveal-item">
+    <?php if ($card === 'area'): ?>
+    <!-- EA ตามเขตการปกครอง: ในเขต / นอกเขตเทศบาล ในกล่องเดียว -->
+    <div class="stat-card h-100"><span class="stat-icon text-bg-info"><i class="bi bi-buildings"></i></span>
+      <div class="flex-grow-1 min-w-0">
+        <div class="stat-label mb-1">EA ตามเขตการปกครอง</div>
+        <div class="d-flex justify-content-between gap-2 text-nowrap"><span><i class="ea-dot" style="background:#1d4ed8"></i>ในเขตเทศบาล</span><strong><?= number_format((int)$s['muni']) ?> EA</strong></div>
+        <div class="d-flex justify-content-between gap-2 text-nowrap"><span><i class="ea-dot" style="background:#0f766e"></i>นอกเขตเทศบาล</span><strong><?= number_format((int)$s['rural']) ?> EA</strong></div>
+        <div class="ea-progress mt-1"><span style="width:<?= $s['muni'] / $areaTotal * 100 ?>%;background:#1d4ed8"></span><span style="width:<?= $s['rural'] / $areaTotal * 100 ?>%;background:#0f766e"></span></div>
+      </div></div>
+    <?php else: [$label, $v, $icon, $color, $sub] = $card; ?>
     <div class="stat-card h-100"><span class="stat-icon text-bg-<?= $color ?>"><i class="bi <?= $icon ?>"></i></span>
       <div><div class="stat-num"><?= number_format($v) ?></div><div class="stat-label"><?= h($label) ?></div><?php if ($sub !== ''): ?><div class="small text-muted"><?= h($sub) ?></div><?php endif; ?></div></div>
+    <?php endif; ?>
   </div>
   <?php endforeach; ?>
 </div>
