@@ -30,10 +30,17 @@ foreach ($bySrc as $k => $a) {
     $byType[$t]['receive'] += $a['receive'] ?? 0;
     $byType[$t]['spend'] += $a['spend'] ?? 0;
     $byType[$t]['src'][$k] = $a;
+    // งบประมาณ → ค่าใช้จ่าย (รวมทุกกิจกรรม)
+    $e = $srcInfo($k)['expense'] ?? '';
+    $byType[$t]['exp'][$e]['receive'] = ($byType[$t]['exp'][$e]['receive'] ?? 0) + ($a['receive'] ?? 0);
+    $byType[$t]['exp'][$e]['spend'] = ($byType[$t]['exp'][$e]['spend'] ?? 0) + ($a['spend'] ?? 0);
+    $byType[$t]['exp'][$e]['n'] = ($byType[$t]['exp'][$e]['n'] ?? 0) + 1;
 }
 uasort($byType, fn($a, $b) => $a['rank'] <=> $b['rank']);
 foreach ($byType as &$tt) {
     uasort($tt['src'], fn($a, $b) => max($b['receive'] ?? 0, $b['spend'] ?? 0) <=> max($a['receive'] ?? 0, $a['spend'] ?? 0));
+    // ค่าใช้จ่าย: ยอดมาก → น้อย · (ไม่ระบุ) ไว้ท้าย
+    uksort($tt['exp'], fn($x, $y) => [(string)$x === '', -max($tt['exp'][$x]['receive'], $tt['exp'][$x]['spend'])] <=> [(string)$y === '', -max($tt['exp'][$y]['receive'], $tt['exp'][$y]['spend'])]);
 }
 unset($tt);
 $typeColors = ['#2563eb', '#7c3aed', '#0891b2', '#16a34a', '#db2777', '#ca8a04', '#64748b'];
@@ -109,6 +116,43 @@ require __DIR__ . '/header.php';
     </div>
   </div>
 </div>
+
+<?php if ($byType): ?>
+<!-- สรุปตาม งบประมาณ → ค่าใช้จ่าย -->
+<div class="row g-3 mt-1" data-reveal>
+  <div class="col-12 reveal-item">
+    <div class="card">
+      <div class="card-header d-flex align-items-center flex-wrap gap-2"><strong>สรุปตามงบประมาณ → ค่าใช้จ่าย</strong>
+        <span class="bud-legend small ms-auto"><i style="background:<?= BUD_COLORS['spend'] ?>"></i>เบิกจ่าย (เทียบกับที่ได้รับ)</span></div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0 bud-exp-table">
+          <thead class="table-light"><tr><th>งบประมาณ / ค่าใช้จ่าย</th><th class="text-end">ได้รับ</th><th class="text-end">เบิกจ่าย</th><th class="text-end">คงเหลือ</th><th style="width:22%">ร้อยละเบิกจ่าย</th></tr></thead>
+          <tbody>
+          <?php $ti = 0; foreach ($byType as $t => $ta): $c = $typeColors[min($ti++, count($typeColors) - 1)]; $tr = $ta['receive']; $ts = $ta['spend']; ?>
+            <tr class="bud-exp-type" style="--c:<?= $c ?>">
+              <td><span class="bud-dot" style="background:<?= $c ?>"></span><?= h($t) ?></td>
+              <td class="text-end"><?= bud_money($tr) ?></td><td class="text-end"><?= bud_money($ts) ?></td>
+              <td class="text-end<?= $tr - $ts < 0 ? ' text-danger' : '' ?>"><?= bud_money($tr - $ts) ?></td>
+              <td><div class="d-flex align-items-center gap-2"><span class="bar-track"><span class="bar-fill" style="width:<?= $tr > 0 ? min(100, round($ts / $tr * 100, 1)) : 0 ?>%;background:var(--c)"></span></span><span class="small text-nowrap"><?= $tr > 0 ? number_format($ts / $tr * 100, 1) . '%' : '-' ?></span></div></td>
+            </tr>
+            <?php foreach ($ta['exp'] as $e => $ea): $er = $ea['receive']; $es = $ea['spend']; ?>
+            <tr>
+              <td class="ps-4"><?= $e !== '' ? h($e) : '<span class="text-muted">(ไม่ระบุค่าใช้จ่าย)</span>' ?><?= $ea['n'] > 1 ? ' <span class="small text-muted">· ' . (int)$ea['n'] . ' หมวด</span>' : '' ?></td>
+              <td class="text-end"><?= bud_money($er) ?></td><td class="text-end"><?= bud_money($es) ?></td>
+              <td class="text-end<?= $er - $es < 0 ? ' text-danger' : '' ?>"><?= bud_money($er - $es) ?></td>
+              <td><div class="d-flex align-items-center gap-2"><span class="bar-track"><span class="bar-fill bud-fill<?= $es > $er ? ' over' : '' ?>" style="width:<?= $er > 0 ? min(100, round($es / $er * 100, 1)) : ($es > 0 ? 100 : 0) ?>%"></span></span><span class="small text-nowrap"><?= $er > 0 ? number_format($es / $er * 100, 1) . '%' : '-' ?></span></div></td>
+            </tr>
+            <?php endforeach; ?>
+          <?php endforeach; ?>
+          </tbody>
+          <tfoot><tr class="table-light fw-bold"><td>รวมทั้งสิ้น</td><td class="text-end"><?= bud_money($rec) ?></td><td class="text-end"><?= bud_money($spd) ?></td>
+            <td class="text-end<?= $rec - $spd < 0 ? ' text-danger' : '' ?>"><?= bud_money($rec - $spd) ?></td><td class="small"><?= number_format($pct, 1) ?>%</td></tr></tfoot>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
 
 <div class="row g-3 mt-1" data-reveal>
   <div class="col-12 reveal-item">

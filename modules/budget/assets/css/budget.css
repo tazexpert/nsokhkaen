@@ -74,3 +74,8 @@
 .bud-type-name { font-weight: 700; color: var(--c); }
 .bud-type-head { display: flex; gap: .5rem; font-weight: 700; font-size: .9rem; padding: .35rem .4rem; margin: .6rem 0 .25rem; border-bottom: 1px solid #e2e8f0; }
 .bud-type-head:first-child { margin-top: 0; }
+/* แดชบอร์ด: สรุปตามงบประมาณ → ค่าใช้จ่าย */
+.bud-exp-table td, .bud-exp-table th { white-space: nowrap; }
+.bud-exp-table td:first-child { white-space: normal; min-width: 220px; }
+.bud-exp-table tr.bud-exp-type td { font-weight: 700; background: color-mix(in srgb, var(--c) 7%, white); }
+.bud-exp-table .bar-track { min-width: 80px; }

@@ -116,7 +116,7 @@ $suggest = [];
 foreach (['budget_name', 'expense_name', 'activity_name'] as $f) {
     $suggest[$f] = array_values(array_unique(array_filter(array_column($items, $f))));
 }
-$suggest['budget_name'] = array_values(array_unique(array_merge(BUD_BUDGET_TYPES, ['งบบุคลากร', 'งบลงทุน'], $suggest['budget_name'])));
+$suggest['budget_name'] = array_values(array_unique(array_merge(BUD_BUDGET_TYPES, ['งบลงทุน'], $suggest['budget_name'])));
 $projects = projects_all();
 $linked = array_filter(array_column($items, 'project_id'));
 $survey = array_filter($projects, fn($p) => $p['is_active'] && !in_array($p['id'], $linked));
