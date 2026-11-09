@@ -905,7 +905,7 @@ CREATE TABLE IF NOT EXISTS cal_attendance (
 CREATE TABLE IF NOT EXISTS bud_items (
   id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   name         VARCHAR(150) NOT NULL,
-  is_other     TINYINT(1)   NOT NULL DEFAULT 0,            -- รายจ่ายอื่น (โครงการนอกสำนักงานสถิติแห่งชาติ เช่น โพล)
+  is_other     TINYINT(1)   NOT NULL DEFAULT 0,            -- (ไม่ใช้แล้ว — เดิม: รายจ่ายอื่น)
   project_id   INT UNSIGNED NULL,                           -- โครงการสำรวจที่นับเป็นรายการนี้แทน (เช่น โพล → รายจ่ายอื่น)
   sort_order   INT          NOT NULL DEFAULT 0,
   is_active    TINYINT(1)   NOT NULL DEFAULT 1,

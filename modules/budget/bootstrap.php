@@ -5,7 +5,7 @@
  * ตาราง: bud_items (หมวด) · bud_plans (แผนงาน) → bud_works (งานและโครงการ) · bud_txns (รับเข้า = เพิ่ม/ได้รับ · เบิกจ่าย = เบิก)
  * ตัวคลุมของรายการ: แผนงาน → งานและโครงการ → หมวด (ทะเบียนคุมเงินประจำงวดส่วนจังหวัด แยกตาม งานและโครงการ × หมวด)
  * "หมวด" = โครงการสำรวจ (core_projects ในหน้าโครงการที่รับผิดชอบ) + รายการงบประมาณ (bud_items)
- *   รายการงบประมาณที่ผูกกับโครงการ (เช่น รายจ่ายอื่น (โพล)) ใช้แทนโครงการนั้น — โครงการนั้นจะไม่แสดงในกลุ่มโครงการสำรวจ
+ *   หมวดที่ผูกกับโครงการ (เช่น หมวดของโครงการโพล) ใช้แทนโครงการนั้น — โครงการนั้นจะไม่แสดงในกลุ่มโครงการสำรวจ
  */
 require_once __DIR__ . '/../../core/bootstrap.php';
 
@@ -75,8 +75,8 @@ function bud_money($n): string
 }
 
 /**
- * หมวด ['p:<id>' | 'i:<id>' => ['key', 'label', 'group', 'color', 'is_other', 'active']]
- * เรียง: โครงการสำรวจ → รายการงบประมาณ → รายจ่ายอื่น · $all = รวมที่ปิดใช้งาน (สำหรับแสดงข้อมูลเดิม)
+ * หมวด ['p:<id>' | 'i:<id>' => ['key', 'label', 'group', 'color', 'active']]
+ * เรียง: โครงการสำรวจ → หมวดรายจ่าย · $all = รวมที่ปิดใช้งาน (สำหรับแสดงข้อมูลเดิม)
  */
 function bud_sources(bool $all = false): array
 {
@@ -84,7 +84,7 @@ function bud_sources(bool $all = false): array
     if (isset($cache[$all])) {
         return $cache[$all];
     }
-    $items = db()->query('SELECT * FROM bud_items ORDER BY is_other, sort_order, id')->fetchAll();
+    $items = db()->query('SELECT * FROM bud_items ORDER BY sort_order, id')->fetchAll();
     $linked = array_filter(array_map(fn($i) => (int)$i['project_id'], $items));
     $out = [];
     foreach (projects_all() as $p) {
@@ -93,14 +93,14 @@ function bud_sources(bool $all = false): array
         }
         $out['p:' . $p['id']] = ['key' => 'p:' . $p['id'], 'label' => trim($p['name']) !== '' ? $p['name'] : $p['code'],   // หมวดแสดงชื่อโครงการเต็ม (ไม่ใส่ตัวย่อ)
                                  'code' => $p['code'],
-                                 'group' => 'โครงการสำรวจ', 'color' => $p['color'], 'is_other' => false, 'active' => (bool)$p['is_active']];
+                                 'group' => 'โครงการสำรวจ', 'color' => $p['color'], 'active' => (bool)$p['is_active']];
     }
     foreach ($items as $i) {
         if (!$all && !$i['is_active']) {
             continue;
         }
-        $out['i:' . $i['id']] = ['key' => 'i:' . $i['id'], 'label' => $i['name'], 'group' => $i['is_other'] ? 'รายจ่ายอื่น' : 'หมวดรายจ่าย',
-                                 'color' => $i['is_other'] ? '#64748b' : '#15803d', 'is_other' => (bool)$i['is_other'], 'active' => (bool)$i['is_active'],
+        $out['i:' . $i['id']] = ['key' => 'i:' . $i['id'], 'label' => $i['name'], 'group' => 'หมวดรายจ่าย',
+                                 'color' => '#15803d', 'active' => (bool)$i['is_active'],
                                  'project_id' => $i['project_id'] ? (int)$i['project_id'] : null];
     }
     return $cache[$all] = $out;
