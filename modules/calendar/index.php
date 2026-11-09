@@ -1,6 +1,7 @@
 <?php
 /** ปฏิทินรายเดือน: กิจกรรมของทุกคนในสำนักงาน (กิจกรรมที่ตนรับผิดชอบเน้นสี) */
 require_once __DIR__ . '/bootstrap.php';
+require_once __DIR__ . '/att_lib.php';
 $me = require_module_or_guest(CAL_MODULE);
 $m = $_GET['m'] ?? date('Y-m');
 if (!preg_match('/^\d{4}-\d{2}$/', $m) || !checkdate((int)substr($m, 5, 2), 1, (int)substr($m, 0, 4))) {
@@ -20,6 +21,15 @@ foreach ($events as $e) {
     $end = min($e['end_date'] ?: $e['event_date'], $gridEnd);
     for (; $d <= $end; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
         $byDay[$d][] = $e;
+    }
+}
+// เวลาปฏิบัติราชการของตนเอง (ส่วนตัว): ขาดราชการ / ลงเวลาไม่ครบ / รับรองแล้ว
+$attItems = [];
+if (!$guest) {
+    try {
+        $attItems = array_filter(att_user_statuses((int)$me['id'], $gridStart, $gridEnd), 'att_is_certify_item');
+    } catch (PDOException $e) {
+        // ยังไม่ได้รัน migration cal_attendance
     }
 }
 $ts = strtotime($first);
@@ -56,10 +66,13 @@ require __DIR__ . '/header.php';
           <a href="event_view.php?id=<?= (int)$e['id'] ?>" class="cal-ev<?= cal_is_duty($e) ? ' duty' : '' ?><?= cal_is_guard($e) ? ' guard' : '' ?><?= $isMine ? ' mine' : '' ?>" title="<?= h(cal_time_text($e) . ' ' . $e['title'] . ($e['location'] ? ' @ ' . $e['location'] : '')) ?>">
             <?php if ($e['start_time'] && $d === $e['event_date']): ?><span class="t"><?= cal_time_thai($e['start_time']) ?></span><?php endif; ?><?= cal_is_private($e) ? '<i class="bi bi-lock-fill me-1" title="ส่วนตัว"></i>' : '' ?><?= h($e['title']) ?></a>
         <?php endforeach; ?>
+        <?php if (isset($attItems[$d])): $ai = $attItems[$d]; ?>
+          <a href="att_view.php?date=<?= $d ?>" class="cal-ev att-ev<?= $ai['cls'] === 'att-cert' ? ' done' : '' ?>" title="<?= h($ai['title']) ?> (เห็นเฉพาะคุณ)"><i class="bi bi-lock-fill me-1"></i><?= h(att_item_title($ai)) ?></a>
+        <?php endif; ?>
       </div>
     <?php endfor; ?>
   </div>
-  <div class="card-footer small text-muted"><?php if (!$guest): ?><span class="cal-ev mine d-inline-block px-2">งานของคุณ</span> <?php endif; ?><span class="cal-ev d-inline-block px-2">งานของผู้อื่น</span> <span class="cal-ev duty d-inline-block px-2">เวรสำนักงาน</span> <span class="cal-ev guard d-inline-block px-2">เวรศาลากลาง</span> · คลิกกิจกรรมเพื่อดูรายละเอียด</div>
+  <div class="card-footer small text-muted"><?php if (!$guest): ?><span class="cal-ev mine d-inline-block px-2">งานของคุณ</span> <?php endif; ?><span class="cal-ev d-inline-block px-2">งานของผู้อื่น</span> <span class="cal-ev duty d-inline-block px-2">เวรสำนักงาน</span> <span class="cal-ev guard d-inline-block px-2">เวรศาลากลาง</span><?php if (!$guest): ?> <span class="cal-ev att-ev d-inline-block px-2"><i class="bi bi-lock-fill me-1"></i>ขาดราชการ/ลงเวลาไม่ครบ (เห็นเฉพาะคุณ)</span> <span class="cal-ev att-ev done d-inline-block px-2">รับรองการมาปฏิบัติราชการ</span><?php endif; ?> · คลิกกิจกรรมเพื่อดูรายละเอียด</div>
 </div>
 <?= cal_modal_script() ?>
 <?php require __DIR__ . '/footer.php'; ?>

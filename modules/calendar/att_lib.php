@@ -292,3 +292,71 @@ function att_status(?array $a, bool $hasWork, ?string $trip): ?array
     }
     return ['code' => 'ข', 'cls' => 'att-absent', 'title' => 'ขาดราชการ (ไม่มีการลงเวลา ไม่มีงานในแผน และไม่มีกิจกรรมไปราชการ)', 'certifiable' => true];
 }
+
+/**
+ * สถานะเวลาปฏิบัติราชการของผู้ใช้ 1 คนในช่วงวันที่ [work_date => status + ['row']] (เฉพาะวันที่มีรหัสแสดง)
+ * ใช้กับปฏิทินส่วนตัว / หน้ารายละเอียด / การแจ้งเตือน
+ */
+function att_user_statuses(int $uid, string $from, string $to): array
+{
+    $st = db()->prepare('SELECT * FROM cal_attendance WHERE user_id = ? AND work_date BETWEEN ? AND ? ORDER BY work_date');
+    $st->execute([$uid, $from, $to]);
+    $rows = $st->fetchAll();
+    if (!$rows) {
+        return [];
+    }
+    // วันที่มีรหัสโครงการในแผน
+    $work = [];
+    $st = db()->prepare('SELECT p.plan_year, p.plan_month, w.day FROM cal_plan_work w JOIN cal_plan_people pp ON pp.id = w.person_id
+                         JOIN cal_plans p ON p.id = pp.plan_id WHERE pp.user_id = ?');
+    $st->execute([$uid]);
+    foreach ($st as $r) {
+        $work[sprintf('%04d-%02d-%02d', $r['plan_year'], $r['plan_month'], $r['day'])] = true;
+    }
+    $trips = [];
+    $out = [];
+    foreach ($rows as $r) {
+        $ym = substr($r['work_date'], 0, 7);
+        $trips[$ym] ??= att_trip_map((int)substr($ym, 0, 4), (int)substr($ym, 5, 2))[$uid] ?? [];
+        $s = att_status($r, isset($work[$r['work_date']]), $trips[$ym][(int)substr($r['work_date'], 8, 2)] ?? null);
+        if ($s) {
+            $out[$r['work_date']] = $s + ['row' => $r];
+        }
+    }
+    return $out;
+}
+
+/** รายการที่ต้องแสดงในปฏิทินส่วนตัว / แจ้งเตือน: ข (ขาดราชการ) · ล สีแดง (ลงเวลาไม่ครบ) · ล (รับรองแล้ว) */
+function att_is_certify_item(array $s): bool
+{
+    return in_array($s['cls'], ['att-absent', 'att-pending', 'att-cert'], true);
+}
+
+/** ข้อความรายการในปฏิทินส่วนตัว */
+function att_item_title(array $s): string
+{
+    return match ($s['cls']) {
+        'att-absent' => 'ขาดราชการ — ต้องทำใบรับรองการมาปฏิบัติราชการ',
+        'att-pending' => 'ลงเวลาไม่ครบ — ต้องทำใบรับรองการมาปฏิบัติราชการ',
+        default => 'รับรองการมาปฏิบัติราชการ',
+    };
+}
+
+/**
+ * เจ้าของรายการเปลี่ยน "ข" (ขาดราชการ) → "ล" (รับรองการมาปฏิบัติราชการ) หลังทำใบรับรองแล้ว
+ * คืน true เมื่อบันทึกสำเร็จ (ตรวจสถานะใหม่ทุกครั้ง แก้ได้เฉพาะวันที่เป็น ข)
+ */
+function att_certify(int $uid, string $date): bool
+{
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        return false;
+    }
+    $s = att_user_statuses($uid, $date, $date)[$date] ?? null;
+    if (!$s || empty($s['certifiable'])) {
+        return false;
+    }
+    db()->prepare("UPDATE cal_attendance SET override_code = 'ล', override_by = ?, override_at = NOW() WHERE id = ?")
+        ->execute([$uid, $s['row']['id']]);
+    audit_log('cal_att_certify', 'เปลี่ยนขาดราชการเป็นรับรองการมาปฏิบัติราชการ วันที่ ' . thai_date($date), CAL_MODULE);
+    return true;
+}

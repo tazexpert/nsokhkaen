@@ -2,7 +2,7 @@
 /**
  * นำเข้าเวลาปฏิบัติราชการจาก PDF "รายงานข้อมูลเวลาปฏิบัติราชการ" (ทุกคนในไฟล์เดียว) — ผู้ดูแลปฏิทิน · แนะนำนำเข้าทุกวันจันทร์
  * 1) เลือกไฟล์ → อ่านข้อความด้วย pdf.js ในเบราว์เซอร์ (ไม่ต้องติดตั้งโปรแกรมบนเซิร์ฟเวอร์) → ส่งข้อความ + ตำแหน่งมาแยกข้อมูล
- * 2) ตรวจการจับคู่ชื่อกับบัญชีผู้ใช้ → บันทึก (นำเข้าซ้ำได้: ปรับปรุงตามไฟล์ล่าสุด · การรับรองที่ผู้ดูแลแก้ไว้คงเดิม)
+ * 2) ตรวจการจับคู่ชื่อกับบัญชีผู้ใช้ → บันทึก (นำเข้าซ้ำได้: ปรับปรุงตามไฟล์ล่าสุด · การรับรองที่เจ้าของบันทึกไว้คงเดิม)
  * แสดงผลในแผนการปฏิบัติงาน (ดู att_lib.php)
  */
 require_once __DIR__ . '/bootstrap.php';
@@ -95,12 +95,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash($msg);
         ksort($months);
         redirect('plan.php?m=' . (array_key_last($months) ?? date('Y-m')));
+    } elseif ($action === 'delete') {
+        // ลบข้อมูลเวลาปฏิบัติราชการเพื่อนำเข้าใหม่: ทั้งหมด หรือเฉพาะเดือน (การรับรองของเจ้าของในช่วงที่ลบหายด้วย)
+        $scope = (string)post('scope');
+        if ($scope === 'all') {
+            $n = $pdo->exec('DELETE FROM cal_attendance');
+            $label = 'ทั้งหมด';
+        } elseif (preg_match('/^(\d{4})-(\d{2})$/', $scope, $mm) && checkdate((int)$mm[2], 1, (int)$mm[1])) {
+            $st = $pdo->prepare('DELETE FROM cal_attendance WHERE work_date BETWEEN ? AND ?');
+            $st->execute([$scope . '-01', date('Y-m-t', strtotime($scope . '-01'))]);
+            $n = $st->rowCount();
+            $label = 'เดือน' . thai_month_long((int)$mm[2]) . ' ' . ((int)$mm[1] + 543);
+        } else {
+            flash('กรุณาเลือกช่วงข้อมูลที่จะลบ', 'warning');
+            redirect('att_import.php');
+        }
+        audit_log('cal_att_delete', 'ลบข้อมูลเวลาปฏิบัติราชการ' . $label . ' ' . $n . ' รายการ', CAL_MODULE);
+        flash('ลบข้อมูลเวลาปฏิบัติราชการ' . $label . ' ' . number_format($n) . ' รายการแล้ว — นำเข้าไฟล์ใหม่ได้');
+        redirect('att_import.php');
     } elseif ($action === 'cancel') {
         $clear();
         redirect('att_import.php');
     }
 }
 
+// เดือนที่มีข้อมูลแล้ว (สำหรับลบเพื่อนำเข้าใหม่)
+$attMonths = $pdo->query("SELECT DATE_FORMAT(work_date, '%Y-%m') ym, COUNT(*) n, COUNT(DISTINCT user_id) p FROM cal_attendance GROUP BY ym ORDER BY ym DESC")->fetchAll();
 $res = ($_GET['step'] ?? '') === 'preview' || ($errors && isset($_SESSION[$sessKey])) ? $load() : null;
 $pageTitle = 'นำเข้าเวลาปฏิบัติราชการ';
 $active = 'att';
@@ -122,6 +142,30 @@ require __DIR__ . '/header.php';
         <span class="small text-muted ms-2" id="attStatus">ยังไม่บันทึกจนกว่าจะกดยืนยัน</span>
       </div>
     </form>
+    <?php if ($attMonths): ?>
+    <form method="post" class="card mt-3 border-danger-subtle" id="attDelForm">
+      <?= csrf_field() ?><input type="hidden" name="action" value="delete">
+      <div class="card-header"><strong><i class="bi bi-trash text-danger"></i> ลบข้อมูลเวลาปฏิบัติราชการเพื่อนำเข้าใหม่</strong></div>
+      <div class="card-body">
+        <div class="input-group">
+          <select name="scope" class="form-select" required>
+            <option value="all">ทั้งหมด (<?= number_format(array_sum(array_column($attMonths, 'n'))) ?> รายการ)</option>
+            <?php foreach ($attMonths as $am): $amTs = strtotime($am['ym'] . '-01'); ?>
+              <option value="<?= h($am['ym']) ?>">เฉพาะเดือน<?= h(thai_month_long((int)date('n', $amTs))) ?> <?= (int)date('Y', $amTs) + 543 ?> (<?= (int)$am['p'] ?> คน · <?= number_format($am['n']) ?> รายการ)</option>
+            <?php endforeach; ?>
+          </select>
+          <button class="btn btn-outline-danger"><i class="bi bi-trash"></i> ลบ</button>
+        </div>
+        <div class="form-text">การรับรองการมาปฏิบัติราชการที่เจ้าของบันทึกไว้ในช่วงที่ลบจะหายไปด้วย</div>
+      </div>
+    </form>
+    <script>
+    document.getElementById('attDelForm').addEventListener('submit', e => {
+      const o = e.target.scope.selectedOptions[0];
+      if (!confirm('ลบข้อมูลเวลาปฏิบัติราชการ ' + o.textContent.trim() + '?\nการรับรองการมาปฏิบัติราชการที่เจ้าของบันทึกไว้จะหายไปด้วย และย้อนกลับไม่ได้')) { e.preventDefault(); }
+    });
+    </script>
+    <?php endif; ?>
   </div>
   <div class="col-lg-7">
     <div class="card">
@@ -130,6 +174,7 @@ require __DIR__ . '/header.php';
         <ul class="mb-2">
           <li>นำเข้าทุกวันจันทร์: พิมพ์ "รายงานข้อมูลเวลาปฏิบัติราชการ" ของทุกคนเป็น PDF ไฟล์เดียวจากระบบลงเวลา แล้วเลือกไฟล์ที่นี่ (นำเข้าซ้ำได้ ข้อมูลปรับตามไฟล์ล่าสุด)</li>
           <li>ตัดสินเฉพาะวันทำงานก่อนวันที่พิมพ์รายงาน · วันหยุดราชการไม่แสดง</li>
+          <li>รหัสเวลาปฏิบัติราชการในแผนเห็นเฉพาะแถวของตนเอง (ผู้ดูแลปฏิทินเห็นทุกคน) · ขาดราชการ/ลงเวลาไม่ครบแสดงในปฏิทินส่วนตัวของเจ้าของ</li>
         </ul>
         <table class="table table-sm mb-0">
           <tr><td class="text-nowrap"><span class="att-chip">—</span></td><td>เข้าไม่เกิน 08:30 และออกตั้งแต่ 16:30 — ไม่แสดง</td></tr>
@@ -139,7 +184,7 @@ require __DIR__ . '/header.php';
           <tr><td><span class="att-chip att-pending">ล</span></td><td>ลงเวลาไม่ครบ (มีเข้าหรือออกอย่างเดียว) — รับรองการมาปฏิบัติราชการ + แจ้งเตือนเจ้าตัว</td></tr>
           <tr><td class="text-nowrap"><span class="att-chip">สรง</span></td><td>ไม่ลงเวลา แต่มีรหัสโครงการในแผน</td></tr>
           <tr><td><span class="att-chip att-trip">ร</span></td><td>ไม่ลงเวลา มีกิจกรรมในปฏิทินที่สถานที่ไม่ใช่ Zoom / ศาลากลางจังหวัดขอนแก่น / ห้องประชุมสำนักงานสถิติจังหวัดขอนแก่น</td></tr>
-          <tr><td><span class="att-chip att-absent">ข</span></td><td>ขาดราชการ — ผู้ดูแลปฏิทินแก้เป็น <span class="att-chip att-cert">ล</span> รับรองการมาปฏิบัติราชการ ได้ (คลิกที่ ข ในแผน)</td></tr>
+          <tr><td><span class="att-chip att-absent">ข</span></td><td>ขาดราชการ — แจ้งเตือนเจ้าตัวให้ทำใบรับรอง แล้ว<b>เจ้าของ</b>เปลี่ยนเป็น <span class="att-chip att-cert">ล</span> รับรองการมาปฏิบัติราชการ เอง (ในปฏิทิน/แผนของตน)</td></tr>
           <tr><td><span class="att-chip att-leave">ป</span></td><td>การลาตามไฟล์ (ก ป พ ...)</td></tr>
         </table>
       </div>

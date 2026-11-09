@@ -170,3 +170,8 @@
 button.att-chip { border: 0; cursor: pointer; }
 button.att-chip:hover { outline: 2px solid #1d4ed8; }
 @media print { .att-chip { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+/* รายการเวลาปฏิบัติราชการส่วนตัวในปฏิทิน (เห็นเฉพาะเจ้าของ) */
+.cal-ev.att-ev { background: #fee2e2; color: #b91c1c; font-weight: 600; box-shadow: inset 3px 0 0 #dc2626; }
+.cal-ev.att-ev:hover { background: #fecaca; color: #991b1b; }
+.cal-ev.att-ev.done { background: #dbeafe; color: #1d4ed8; box-shadow: inset 3px 0 0 #1d4ed8; font-weight: 500; }
+.cal-ev.att-ev.done:hover { background: #bfdbfe; }
