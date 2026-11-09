@@ -71,7 +71,7 @@ $split = fn(float $n) => [number_format(floor($n)), str_pad((string)(int)round((
   .annex tr.top td { border-top: 1px solid #000; }
   .annex tr.blank td { border-top: 1px solid #000; }
   .annex tr:last-child td { border-bottom: 1px solid #000; }
-  .annex td.c { text-align: center; }
+  .annex td.c { text-align: center; padding: 0 1px; }
   .receipt td.n { text-align: right; }
   .sig { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid #000; border-bottom: 1px solid #000; }
   .sig > div { padding: 6px 8px 10px; }
@@ -283,11 +283,21 @@ foreach ($receipt as $pi => $blocks): $pageNo++; $isLast = $pi === count($receip
 </div>
 <?php endforeach; ?>
 <script>
-// ย่อขนาดตัวอักษรของช่องที่ข้อความยาวเกินช่อง (แต่ละแถว = 1 บรรทัดตามแบบฟอร์ม)
+// ย่อขนาดตัวอักษรเมื่อข้อความยาวเกินช่อง (แต่ละแถว = 1 บรรทัดตามแบบฟอร์ม)
+// ถ้าช่องใดต้องย่อ ให้ทุกช่องของตารางชนิดเดียวกัน (ทุกหน้า) ใช้ขนาดเดียวกัน = ขนาดเล็กที่สุดที่ทุกช่องพอดี
 (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => {
-  document.querySelectorAll('table.lines td').forEach(td => {
-    let fs = parseFloat(getComputedStyle(td).fontSize);
-    while (td.scrollWidth > td.clientWidth + 1 && fs > 9) { fs -= 0.5; td.style.fontSize = fs + 'px'; }
+  const groups = {};
+  document.querySelectorAll('table.lines').forEach(t => { (groups[t.className] ??= []).push(...t.querySelectorAll('td')); });
+  Object.values(groups).forEach(tds => {
+    const base = Math.max(...tds.map(td => parseFloat(getComputedStyle(td).fontSize)));
+    let min = base;
+    tds.forEach(td => {
+      let fs = base;
+      td.style.fontSize = fs + 'px';
+      while (td.scrollWidth > td.clientWidth + 1 && fs > 9) { fs -= 0.5; td.style.fontSize = fs + 'px'; }
+      min = Math.min(min, fs);
+    });
+    tds.forEach(td => { td.style.fontSize = min + 'px'; });
   });
 });
 </script>
