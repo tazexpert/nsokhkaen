@@ -26,7 +26,10 @@ $sources = bud_sources(true);
 $src = isset($sources[$_GET['src'] ?? '']) ? $_GET['src'] : '';
 $q = trim((string)($_GET['q'] ?? ''));
 $works = bud_works(true);
-$work = isset($works[(int)($_GET['work'] ?? 0)]) ? (int)$_GET['work'] : 0;
+$plans = bud_plans();
+$scope = (string)($_GET['scope'] ?? '');
+$scopeWhere = bud_scope_where($scope);
+$scope = $scopeWhere ? $scope : '';
 
 $where = ['t.txn_type = ?', 't.fiscal_year = ?'];
 $args = [$type, $fy];
@@ -41,9 +44,9 @@ if ($src) {
     $where[] = '(t.item_id = ? OR t.project_id = ?)';
     array_push($args, $iid, $pid);
 }
-if ($work) {
-    $where[] = 't.work_id = ?';
-    $args[] = $work;
+if ($scopeWhere) {
+    $where[] = $scopeWhere[0];
+    array_push($args, ...$scopeWhere[1]);
 }
 if ($q !== '') {
     $where[] = '(t.description LIKE ? OR t.detail LIKE ? OR t.doc_no LIKE ? OR t.note LIKE ?)';
@@ -59,11 +62,11 @@ if (($_GET['export'] ?? '') === 'csv') {
     bud_csv('budget_' . $type . '_' . $fy . ($month ? '_' . $month : '') . '.csv',
         ['วันที่', 'ปีงบประมาณ', 'ที่เอกสาร', 'รายการ', 'รายละเอียด', 'แผนงาน', 'งานและโครงการ', 'หมวด', BUD_TYPES[$type] . ' (บาท)', 'หมายเหตุ'],
         array_merge(array_map(fn($t) => [thai_date($t['txn_date']), $t['fiscal_year'], $t['doc_no'], $t['description'], $t['detail'],
-            $works[(int)$t['work_id']]['plan_name'] ?? '', $works[(int)$t['work_id']]['name'] ?? '', $sources[bud_source_key($t)]['label'] ?? '-', number_format((float)$t['amount'], 2, '.', ''), $t['note']], array_reverse($rows)),
+            $plans[bud_txn_plan($t)]['name'] ?? '', $works[(int)$t['work_id']]['name'] ?? '', $sources[bud_source_key($t)]['label'] ?? '-', number_format((float)$t['amount'], 2, '.', ''), $t['note']], array_reverse($rows)),
             [['', '', '', 'รวม', '', '', '', '', number_format($total, 2, '.', ''), '']]));
 }
 
-$qs = fn(array $p) => '?' . http_build_query(array_filter($p + ['type' => $type, 'fy' => $fy, 'month' => $month, 'src' => $src, 'work' => $work ?: null, 'q' => $q], fn($v) => $v !== '' && $v !== null));
+$qs = fn(array $p) => '?' . http_build_query(array_filter($p + ['type' => $type, 'fy' => $fy, 'month' => $month, 'src' => $src, 'scope' => $scope, 'q' => $q], fn($v) => $v !== '' && $v !== null));
 $pageTitle = BUD_TYPE_PAGES[$type];
 $active = $type;
 $pageActions = (bud_can('editor') ? '<a href="txn_form.php?type=' . $type . '" class="btn btn-' . ($type === 'spend' ? 'warning' : 'primary') . '"><i class="bi bi-plus-lg"></i> บันทึก' . BUD_TYPE_PAGES[$type] . '</a>' : '')
@@ -81,8 +84,8 @@ require __DIR__ . '/header.php';
       <select name="month" class="form-select form-select-sm" onchange="this.form.submit()"><option value="">ทั้งปีงบ</option>
         <?php foreach ($months as $ym): ?><option value="<?= $ym ?>"<?= $ym === $month ? ' selected' : '' ?>><?= h(bud_month_label($ym)) ?></option><?php endforeach; ?>
       </select></div>
-    <div class="col-md-3"><label class="form-label small mb-0">งานและโครงการ</label>
-      <select name="work" class="form-select form-select-sm" onchange="this.form.submit()"><?= bud_work_options($works, $work ?: null, 'ทั้งหมด') ?></select></div>
+    <div class="col-md-3"><label class="form-label small mb-0">แผนงาน / งานและโครงการ</label>
+      <select name="scope" class="form-select form-select-sm" onchange="this.form.submit()"><?= bud_scope_options($scope) ?></select></div>
     <div class="col-md-3"><label class="form-label small mb-0">หมวด</label>
       <select name="src" class="form-select form-select-sm" onchange="this.form.submit()"><option value="">ทั้งหมด</option>
         <?php $g = null; foreach ($sources as $k => $s): if ($s['group'] !== $g): ?><?= $g !== null ? '</optgroup>' : '' ?><optgroup label="<?= h($s['group']) ?>"><?php $g = $s['group']; endif; ?>
@@ -112,7 +115,7 @@ require __DIR__ . '/header.php';
           <td class="text-nowrap"><?= h($t['doc_no']) ?></td>
           <td><?= h($t['description']) ?><?php if ($t['detail'] !== ''): ?><div class="small"><?= nl2br(h($t['detail'])) ?></div><?php endif; ?><?php if ($t['note'] !== ''): ?><div class="small text-muted"><?= h($t['note']) ?></div><?php endif; ?></td>
           <td><?php if ($s): ?><span class="bud-src" style="--c:<?= h($s['color']) ?>"><?= h($s['label']) ?></span><?php endif; ?>
-            <?php if ($w = $works[(int)$t['work_id']] ?? null): ?><div class="small text-muted"><?= h($w['name']) ?></div><?php endif; ?></td>
+            <?php $pl = $plans[bud_txn_plan($t)] ?? null; $w = $works[(int)$t['work_id']] ?? null; if ($pl): ?><div class="small text-muted"><?= h($pl['name']) ?><?= $w ? ' › ' . h($w['name']) : '' ?></div><?php endif; ?></td>
           <td class="text-end fw-semibold text-nowrap"><?= bud_money($t['amount']) ?></td>
           <?php if (bud_can('editor')): ?>
           <td class="text-end text-nowrap">

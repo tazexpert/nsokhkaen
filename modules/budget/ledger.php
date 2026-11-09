@@ -1,6 +1,6 @@
 <?php
 /**
- * ทะเบียนคุมเงินประจำงวดส่วนจังหวัด — 1 ทะเบียนต่อ (งานและโครงการ × หมวด) ของปีงบประมาณ
+ * ทะเบียนคุมเงินประจำงวดส่วนจังหวัด — 1 ทะเบียนต่อ (แผนงาน × งานและโครงการ (ถ้ามี) × หมวด) ของปีงบประมาณ
  *   หัว: ซ้ายบน แผนงาน / งานและโครงการ · กลาง ทะเบียนคุมเงินประจำงวดส่วนจังหวัด ปีงบประมาณ / หมวด
  *   ตาราง: วันที่ เดือน ปี | ที่เอกสาร | รายการ (+ รายละเอียด) | เพิ่ม (รับเข้า) | เบิก | คงเหลือ
  *   ท้ายแต่ละเดือน: รวมเดือนนี้ (เพิ่ม/เบิกของเดือน) · รวมตั้งแต่ต้นปี — คงเหลือ = ยอดคงเหลือ ณ สิ้นเดือน
@@ -10,24 +10,31 @@ require_module(BUD_MODULE, 'viewer');
 $fy = bud_fy_param();
 $works = bud_works(true);
 $sources = bud_sources(true);
-$work = (string)($_GET['work'] ?? '');                     // '' = ทั้งหมด · 'none' = ไม่ระบุ · id
-$work = $work === 'none' || isset($works[(int)$work]) ? $work : '';
+$plans = bud_plans();
+$scope = (string)($_GET['scope'] ?? '');                   // '' = ทั้งหมด · 'p<id>' = ทั้งแผนงาน · 'w<id>' = งานและโครงการ
+$scope = bud_scope_where($scope) ? $scope : '';
 $src = isset($sources[$_GET['src'] ?? '']) ? $_GET['src'] : '';
 
 $st = db()->prepare('SELECT * FROM bud_txns WHERE fiscal_year = ? ORDER BY txn_date, id');
 $st->execute([$fy]);
-$books = [];                                                // [work_id|0][source_key] => rows
+$books = [];                                                // ['<plan_id>:<work_id>'][source_key] => rows (0 = ไม่ระบุ)
 foreach ($st as $t) {
+    $pid = bud_txn_plan($t);
     $wid = (int)$t['work_id'];
     $k = bud_source_key($t);
-    if (($work === 'none' && $wid) || ($work !== '' && $work !== 'none' && $wid !== (int)$work) || ($src !== '' && $k !== $src)) {
+    if (($scope !== '' && $scope !== 'p' . $pid && $scope !== 'w' . $wid) || ($src !== '' && $k !== $src)) {
         continue;
     }
-    $books[$wid][$k][] = $t;
+    $books[$pid . ':' . $wid][$k][] = $t;
 }
-// เรียงตามลำดับแผนงาน/งานและโครงการ (ไม่ระบุไว้ท้าย) แล้วตามลำดับหมวด
-$order = array_flip(array_keys($works));
-uksort($books, fn($a, $b) => ($a ? $order[$a] ?? PHP_INT_MAX - 1 : PHP_INT_MAX) <=> ($b ? $order[$b] ?? PHP_INT_MAX - 1 : PHP_INT_MAX));
+// เรียงตามลำดับแผนงาน → (ไม่ระบุงานก่อน) งานและโครงการ → หมวด · แผนงานไม่ระบุไว้ท้าย
+$planOrder = array_flip(array_keys($plans));
+$workOrder = array_flip(array_keys($works));
+$rank = function (string $key) use ($planOrder, $workOrder): array {
+    [$pid, $wid] = array_map('intval', explode(':', $key));
+    return [$pid ? $planOrder[$pid] ?? PHP_INT_MAX - 1 : PHP_INT_MAX, $wid ? ($workOrder[$wid] ?? PHP_INT_MAX) + 1 : 0];
+};
+uksort($books, fn($a, $b) => $rank((string)$a) <=> $rank((string)$b));
 $srcOrder = array_flip(array_keys($sources));
 foreach ($books as &$bySrc) {
     uksort($bySrc, fn($a, $b) => ($srcOrder[$a] ?? PHP_INT_MAX) <=> ($srcOrder[$b] ?? PHP_INT_MAX));
@@ -47,26 +54,24 @@ require __DIR__ . '/header.php';
       <select name="fy" class="form-select form-select-sm" onchange="this.form.submit()">
         <?php foreach (bud_fy_list() as $y): ?><option value="<?= $y ?>"<?= $y === $fy ? ' selected' : '' ?>><?= $y ?></option><?php endforeach; ?></select></div>
     <div class="col-md-5"><label class="form-label small mb-0">แผนงาน / งานและโครงการ</label>
-      <select name="work" class="form-select form-select-sm" onchange="this.form.submit()">
-        <?= bud_work_options($works, $work !== '' && $work !== 'none' ? (int)$work : null, 'ทั้งหมด') ?>
-        <option value="none"<?= $work === 'none' ? ' selected' : '' ?>>(ไม่ระบุงานและโครงการ)</option></select></div>
+      <select name="scope" class="form-select form-select-sm" onchange="this.form.submit()"><?= bud_scope_options($scope) ?></select></div>
     <div class="col-md-5"><label class="form-label small mb-0">หมวด</label>
       <select name="src" class="form-select form-select-sm" onchange="this.form.submit()"><option value="">ทั้งหมด</option>
         <?php $g = null; foreach ($sources as $k => $s): if ($s['group'] !== $g): ?><?= $g !== null ? '</optgroup>' : '' ?><optgroup label="<?= h($s['group']) ?>"><?php $g = $s['group']; endif; ?>
           <option value="<?= h($k) ?>"<?= $k === $src ? ' selected' : '' ?>><?= h($s['label']) ?></option>
         <?php endforeach; ?><?= $g !== null ? '</optgroup>' : '' ?></select></div>
   </div>
-  <div class="small text-muted mt-1">ทะเบียนแยกตามงานและโครงการ × หมวด · <?= number_format($count) ?> ทะเบียน · พิมพ์แล้วขึ้นหน้าใหม่ทุกทะเบียน</div>
+  <div class="small text-muted mt-1">ทะเบียนแยกตามแผนงาน / งานและโครงการ (ถ้ามี) × หมวด · <?= number_format($count) ?> ทะเบียน · พิมพ์แล้วขึ้นหน้าใหม่ทุกทะเบียน</div>
 </form>
 
-<?php foreach ($books as $wid => $bySrc): $w = $works[$wid] ?? null; ?>
+<?php foreach ($books as $bk => $bySrc): [$pid, $wid] = array_map('intval', explode(':', (string)$bk)); $pl = $plans[$pid] ?? null; $w = $works[$wid] ?? null; ?>
   <?php foreach ($bySrc as $k => $rows): $s = $sources[$k] ?? ['label' => '-']; ?>
   <div class="card mb-4 bud-ledger">
     <div class="card-body">
       <div class="bud-ledger-head">
         <div class="bud-ledger-left">
-          <div><b>แผนงาน</b> <?= h($w['plan_name'] ?? '-') ?></div>
-          <div><b>งานและโครงการ</b> <?= h($w['name'] ?? '-') ?></div>
+          <div><b>แผนงาน</b> <?= h($pl['name'] ?? '-') ?></div>
+          <?php if ($w): ?><div><b>งานและโครงการ</b> <?= h($w['name']) ?></div><?php endif; ?>
         </div>
         <div class="bud-ledger-center">
           <div class="bud-ledger-title">ทะเบียนคุมเงินประจำงวดส่วนจังหวัด ปีงบประมาณ <?= $fy ?></div>
@@ -110,5 +115,5 @@ require __DIR__ . '/header.php';
   </div>
   <?php endforeach; ?>
 <?php endforeach; ?>
-<?php if (!$books): ?><div class="card card-body text-center text-muted py-5">ไม่มีรายการรับเข้า/เบิกจ่ายในปีงบประมาณ <?= $fy ?><?= $work !== '' || $src !== '' ? ' ตามที่เลือก' : '' ?></div><?php endif; ?>
+<?php if (!$books): ?><div class="card card-body text-center text-muted py-5">ไม่มีรายการรับเข้า/เบิกจ่ายในปีงบประมาณ <?= $fy ?><?= $scope !== '' || $src !== '' ? ' ตามที่เลือก' : '' ?></div><?php endif; ?>
 <?php require __DIR__ . '/footer.php'; ?>

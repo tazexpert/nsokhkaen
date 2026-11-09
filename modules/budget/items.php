@@ -23,10 +23,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             redirect('items.php');
         }
         if (str_ends_with($action, '_delete')) {
-            $used = $pdo->prepare($isPlan ? 'SELECT COUNT(*) FROM bud_works WHERE plan_id = ?' : 'SELECT COUNT(*) FROM bud_txns WHERE work_id = ?');
-            $used->execute([$id]);
+            $used = $pdo->prepare($isPlan ? 'SELECT (SELECT COUNT(*) FROM bud_works WHERE plan_id = ?) + (SELECT COUNT(*) FROM bud_txns WHERE plan_id = ?)' : 'SELECT COUNT(*) FROM bud_txns WHERE work_id = ?');
+            $used->execute($isPlan ? [$id, $id] : [$id]);
             if ($used->fetchColumn()) {
-                flash($isPlan ? 'แผนงานนี้ยังมีงานและโครงการอยู่ ลบไม่ได้' : 'งานและโครงการนี้มีรายการรับเข้า/เบิกจ่ายแล้ว ลบไม่ได้ — ใช้ "ปิดใช้งาน" แทน', 'warning');
+                flash($isPlan ? 'แผนงานนี้ยังมีงานและโครงการ หรือมีรายการรับเข้า/เบิกจ่ายแล้ว ลบไม่ได้ — ใช้ "ปิดใช้งาน" แทน' : 'งานและโครงการนี้มีรายการรับเข้า/เบิกจ่ายแล้ว ลบไม่ได้ — ใช้ "ปิดใช้งาน" แทน', 'warning');
             } else {
                 $pdo->prepare('DELETE FROM ' . ($isPlan ? 'bud_plans' : 'bud_works') . ' WHERE id = ?')->execute([$id]);
                 audit_log('bud_' . $action, 'ลบ' . $label . ' #' . $id, BUD_MODULE);
@@ -53,6 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare('INSERT INTO bud_works (plan_id, name, sort_order) SELECT ?, ?, COALESCE(MAX(sort_order), 0) + 10 FROM bud_works WHERE plan_id = ?')->execute([$planId, $name, $planId]);
         } else {
             $pdo->prepare('UPDATE bud_works SET plan_id = ?, name = ?, sort_order = ?, is_active = ? WHERE id = ?')->execute([$planId, $name, (int)post('sort_order'), post('is_active') ? 1 : 0, $id]);
+            $pdo->prepare('UPDATE bud_txns SET plan_id = ? WHERE work_id = ?')->execute([$planId, $id]);   // ย้ายแผนงาน → รายการตามไปด้วย
         }
         audit_log('bud_' . $action, (str_ends_with($action, '_add') ? 'เพิ่ม' : 'แก้ไข') . $label . ': ' . $name, BUD_MODULE);
         flash((str_ends_with($action, '_add') ? 'เพิ่ม' : 'บันทึก') . $label . ' "' . $name . '" แล้ว');
@@ -120,6 +121,10 @@ $planOptions = function (?int $sel) use ($plans): string {
     }
     return $o;
 };
+$planUsed = [];
+foreach ($pdo->query('SELECT plan_id, COUNT(*) n FROM bud_txns WHERE plan_id IS NOT NULL GROUP BY plan_id') as $r) {
+    $planUsed[(int)$r['plan_id']] = (int)$r['n'];
+}
 $workUsed = [];
 foreach ($pdo->query('SELECT work_id, COUNT(*) n FROM bud_txns WHERE work_id IS NOT NULL GROUP BY work_id') as $r) {
     $workUsed[(int)$r['work_id']] = (int)$r['n'];
@@ -141,11 +146,11 @@ require __DIR__ . '/header.php';
               <td><input form="<?= $f ?>" type="number" name="sort_order" value="<?= (int)$p['sort_order'] ?>" class="form-control form-control-sm"></td>
               <td colspan="2"><div class="input-group input-group-sm"><span class="input-group-text">แผนงาน</span><input form="<?= $f ?>" type="text" name="name" value="<?= h($p['name']) ?>" class="form-control fw-semibold" maxlength="255" required></div></td>
               <td class="text-center"><input form="<?= $f ?>" type="checkbox" name="is_active" value="1" class="form-check-input"<?= $p['is_active'] ? ' checked' : '' ?>></td>
-              <td class="text-end small"><?= count($pw) ?> งาน</td>
+              <td class="text-end small"><?= count($pw) ?> งาน<?= !empty($planUsed[(int)$p['id']]) ? ' · ' . number_format($planUsed[(int)$p['id']]) . ' รายการ' : '' ?></td>
               <td class="text-end text-nowrap">
                 <form method="post" id="<?= $f ?>" class="d-inline"><?= csrf_field() ?><input type="hidden" name="action" value="plan_save"><input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
                   <button class="btn btn-sm btn-primary" title="บันทึก"><i class="bi bi-check-lg"></i></button></form>
-                <?php if (!$pw): ?><form method="post" class="d-inline" data-confirm="<?= h('ลบแผนงาน "' . $p['name'] . '"?') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="plan_delete"><input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
+                <?php if (!$pw && empty($planUsed[(int)$p['id']])): ?><form method="post" class="d-inline" data-confirm="<?= h('ลบแผนงาน "' . $p['name'] . '"?') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="plan_delete"><input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
                   <button class="btn btn-sm btn-light text-danger" title="ลบ"><i class="bi bi-trash"></i></button></form><?php endif; ?>
               </td>
             </tr>

@@ -197,6 +197,46 @@ function bud_works(bool $all = true): array
     return $out;
 }
 
+/** แผนงานของรายการ: plan_id หรือจากงานและโครงการ (รายการเดิม) */
+function bud_txn_plan(array $t): int
+{
+    if (!empty($t['plan_id'])) {
+        return (int)$t['plan_id'];
+    }
+    return (int)(bud_works(true)[(int)($t['work_id'] ?? 0)]['plan_id'] ?? 0);
+}
+
+/**
+ * ตัวกรอง แผนงาน / งานและโครงการ: ค่า 'p<id>' = ทั้งแผนงาน · 'w<id>' = งานและโครงการ
+ * คืน [sql, args] สำหรับ WHERE (ตาราง t) หรือ null ถ้าไม่กรอง
+ */
+function bud_scope_where(string $scope): ?array
+{
+    if (preg_match('/^p(\d+)$/', $scope, $m) && isset(bud_plans()[(int)$m[1]])) {
+        return ['(t.plan_id = ? OR t.work_id IN (SELECT id FROM bud_works WHERE plan_id = ?))', [(int)$m[1], (int)$m[1]]];
+    }
+    if (preg_match('/^w(\d+)$/', $scope, $m) && isset(bud_works(true)[(int)$m[1]])) {
+        return ['t.work_id = ?', [(int)$m[1]]];
+    }
+    return null;
+}
+
+/** <option> ตัวกรองแผนงาน (ทั้งแผนงาน) และงานและโครงการภายใต้แผนงาน */
+function bud_scope_options(string $sel, string $empty = 'ทั้งหมด'): string
+{
+    $o = '<option value="">' . h($empty) . '</option>';
+    $works = bud_works(true);
+    foreach (bud_plans() as $pid => $p) {
+        $o .= '<option value="p' . $pid . '"' . ($sel === 'p' . $pid ? ' selected' : '') . '>แผนงาน: ' . h($p['name']) . '</option>';
+        foreach ($works as $wid => $w) {
+            if ((int)$w['plan_id'] === $pid) {
+                $o .= '<option value="w' . $wid . '"' . ($sel === 'w' . $wid ? ' selected' : '') . '>&nbsp;&nbsp;&nbsp;└ ' . h($w['name']) . '</option>';
+            }
+        }
+    }
+    return $o;
+}
+
 /** <option> งานและโครงการ จัดกลุ่มตามแผนงาน */
 function bud_work_options(array $works, ?int $sel, string $empty = '— เลือก —'): string
 {

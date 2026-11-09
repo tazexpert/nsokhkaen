@@ -955,7 +955,8 @@ CREATE TABLE IF NOT EXISTS bud_txns (
   detail       VARCHAR(1000) NOT NULL DEFAULT '',           -- รายละเอียด (แสดงต่อจากรายการในทะเบียนคุมเงิน)
   project_id   INT UNSIGNED  NULL,                          -- หมวด: โครงการสำรวจ
   item_id      INT UNSIGNED  NULL,                          --   หรือ หมวดรายจ่าย bud_items (อย่างใดอย่างหนึ่ง)
-  work_id      INT UNSIGNED  NULL,                          -- งานและโครงการ (→ แผนงาน)
+  plan_id      INT UNSIGNED  NULL,                          -- แผนงาน
+  work_id      INT UNSIGNED  NULL,                          -- งานและโครงการ ภายใต้แผนงาน (ไม่บังคับ)
   amount       DECIMAL(14,2) NOT NULL,
   note         VARCHAR(500)  NOT NULL DEFAULT '',
   created_by   INT UNSIGNED  NULL,
@@ -966,6 +967,7 @@ CREATE TABLE IF NOT EXISTS bud_txns (
   KEY idx_bud_date (txn_date),
   CONSTRAINT fk_bud_txn_project FOREIGN KEY (project_id) REFERENCES core_projects(id) ON DELETE RESTRICT,
   CONSTRAINT fk_bud_txn_item FOREIGN KEY (item_id) REFERENCES bud_items(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_bud_txn_plan FOREIGN KEY (plan_id) REFERENCES bud_plans(id) ON DELETE RESTRICT,
   CONSTRAINT fk_bud_txn_work FOREIGN KEY (work_id) REFERENCES bud_works(id) ON DELETE RESTRICT,
   CONSTRAINT fk_bud_txn_cby FOREIGN KEY (created_by) REFERENCES core_users(id) ON DELETE SET NULL,
   CONSTRAINT fk_bud_txn_uby FOREIGN KEY (updated_by) REFERENCES core_users(id) ON DELETE SET NULL

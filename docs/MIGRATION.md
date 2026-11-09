@@ -274,6 +274,7 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 | `20261128_cal_attendance.sql` | ปฏิทิน: เวลาปฏิบัติราชการ (`cal_attendance`) นำเข้าจาก PDF รายงานข้อมูลเวลาปฏิบัติราชการ แสดงในแผนการปฏิบัติงาน |
 | `20261129_budget.sql` | ระบบงบประมาณ: รายการงบประมาณ (`bud_items`) และรับเข้า/เบิกจ่าย (`bud_txns`) — หลังรันกำหนดสิทธิ์ผู้ดูรายงานงบ / ผู้จัดทำงบประมาณ / ผู้ดูแลระบบงบประมาณ ที่ผู้ใช้งานและสิทธิ์ |
 | `20261130_budget_plan.sql` | ระบบงบประมาณ: แผนงาน (`bud_plans`) → งานและโครงการ (`bud_works`) และรายละเอียดของรายการ (`bud_txns.detail`, `work_id`) — ใช้กับทะเบียนคุมเงินประจำงวดส่วนจังหวัด · หลังรันเพิ่มแผนงาน/งานและโครงการที่เมนูแผนงานและหมวด |
+| `20261201_budget_txn_plan.sql` | ระบบงบประมาณ: รายการรับเข้า/เบิกจ่ายเลือกแผนงานได้โดยตรง (`bud_txns.plan_id`) งานและโครงการไม่บังคับ — เติมแผนงานของรายการเดิมให้อัตโนมัติ |
 
 > ระบบเบิกวัสดุเดิมยังเปิดใช้อยู่? ก่อนเปิดใช้ระบบใหม่ให้ "ดึงข้อมูลรอบสุดท้าย" ตามหัวข้อด้านบน (`--resync-inventory`)
 
@@ -312,6 +313,7 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261128_cal_attendance.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261129_budget.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261130_budget_plan.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261201_budget_txn_plan.sql
 ```
 
 หลังอัปเดต:
