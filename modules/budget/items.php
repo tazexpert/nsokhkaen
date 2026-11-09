@@ -135,7 +135,7 @@ require __DIR__ . '/header.php';
 <div class="row g-3 mb-3">
   <div class="col-xl-8">
     <div class="card">
-      <div class="card-header"><strong>1. แผนงาน → 2. งานและโครงการ</strong> <span class="small text-muted">— ตัวคลุมของหมวด ใช้ในทะเบียนคุมเงินประจำงวดส่วนจังหวัด</span></div>
+      <div class="card-header"><strong>แผนงาน → งานและโครงการ</strong> <span class="small text-muted">— ตัวคลุมของหมวด ใช้ในทะเบียนคุมเงินประจำงวดส่วนจังหวัด</span></div>
       <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
           <thead class="table-light"><tr><th style="width:5rem">ลำดับ</th><th>ชื่อ</th><th style="width:14rem">อยู่ในแผนงาน</th><th class="text-center">ใช้งาน</th><th class="text-end">ข้อมูล</th><th></th></tr></thead>
