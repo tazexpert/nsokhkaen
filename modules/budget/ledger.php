@@ -36,8 +36,9 @@ $rank = function (string $key) use ($planOrder, $workOrder): array {
 };
 uksort($books, fn($a, $b) => $rank((string)$a) <=> $rank((string)$b));
 $srcOrder = array_flip(array_keys($sources));
+$srcRank = fn(string $k) => array_merge(isset($sources[$k]) ? bud_budget_rank($sources[$k]) : [999, ''], [$srcOrder[$k] ?? PHP_INT_MAX]);
 foreach ($books as &$bySrc) {
-    uksort($bySrc, fn($a, $b) => ($srcOrder[$a] ?? PHP_INT_MAX) <=> ($srcOrder[$b] ?? PHP_INT_MAX));
+    uksort($bySrc, fn($a, $b) => $srcRank((string)$a) <=> $srcRank((string)$b));       // ตามประเภทงบเหมือนรายงาน
 }
 unset($bySrc);
 $count = array_sum(array_map('count', $books));

@@ -14,6 +14,8 @@ const BUD_TYPES = ['receive' => 'ได้รับ', 'spend' => 'เบิก�
 const BUD_TYPE_PAGES = ['receive' => 'รับเข้างบประมาณ', 'spend' => 'เบิกจ่ายงบประมาณ'];
 const BUD_COLORS = ['receive' => '#2563eb', 'spend' => '#ea580c'];
 const BUD_PER_PAGE = 100;
+/** ลำดับประเภทงบในรายงาน (อ่านจากคำขึ้นต้นของชื่อหมวด เช่น "งบดำเนินงาน (ค่าตอบแทนใช้สอยฯ) ค่าน้ำมันเชื้อเพลิง") — ประเภทอื่นต่อท้าย */
+const BUD_BUDGET_TYPES = ['งบดำเนินงาน', 'งบรายจ่ายอื่น', 'เงินนอกงบประมาณ'];
 
 function bud_can(string $role): bool
 {
@@ -195,6 +197,23 @@ function bud_works(bool $all = true): array
         }
     }
     return $out;
+}
+
+/** ประเภทงบของหมวด จากคำขึ้นต้นชื่อ: งบดำเนินงาน / งบบุคลากร / งบรายจ่ายอื่น / เงินนอกงบประมาณ ... — ไม่มีคำขึ้นต้น = 'อื่น ๆ' */
+function bud_budget_type(array $s): string
+{
+    if (!empty($s['legacy'])) {
+        return 'โครงการ (ข้อมูลเดิม)';
+    }
+    return preg_match('/^\s*(เงินนอกงบประมาณ|งบ[^\s(]+)/u', (string)$s['label'], $m) ? $m[1] : 'อื่น ๆ';
+}
+
+/** ลำดับสำหรับเรียง [อันดับประเภทงบ, ชื่อประเภท] — ตาม BUD_BUDGET_TYPES ก่อน แล้วประเภทอื่น · อื่น ๆ · ข้อมูลเดิม */
+function bud_budget_rank(array $s): array
+{
+    $t = bud_budget_type($s);
+    $i = array_search($t, BUD_BUDGET_TYPES, true);
+    return [$i !== false ? $i : (!empty($s['legacy']) ? 300 : ($t === 'อื่น ๆ' ? 200 : 100)), $t];
 }
 
 /** แผนงานของรายการ: plan_id หรือจากงานและโครงการ (รายการเดิม) */

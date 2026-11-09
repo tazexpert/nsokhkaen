@@ -27,6 +27,14 @@ foreach ($sources as $k => $s) {
 foreach (array_keys($totals) as $k) {
     $rows[$k] ??= ['key' => $k, 'label' => '(ไม่ทราบ)', 'group' => 'อื่น ๆ', 'color' => '#64748b'];
 }
+// จัดกลุ่ม/เรียงตามประเภทงบจากชื่อหมวด: งบดำเนินงาน → งบรายจ่ายอื่น → เงินนอกงบประมาณ → ประเภทอื่น (ภายในกลุ่มตามลำดับหมวด)
+$srcOrder = array_flip(array_keys($sources));
+foreach ($rows as $k => &$r) {
+    $r['group'] = bud_budget_type($r);
+    $r['rank'] = array_merge(bud_budget_rank($r), [$srcOrder[$k] ?? PHP_INT_MAX]);
+}
+unset($r);
+uasort($rows, fn($a, $b) => $a['rank'] <=> $b['rank']);
 $sum = function (string $k, string $type, ?string $from = null, ?string $to = null) use ($totals): float {
     $t = 0.0;
     foreach ($totals[$k] ?? [] as $ym => $a) {
