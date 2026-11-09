@@ -91,7 +91,8 @@ function bud_sources(bool $all = false): array
         if (in_array((int)$p['id'], $linked, true) || (!$all && !$p['is_active'])) {
             continue;
         }
-        $out['p:' . $p['id']] = ['key' => 'p:' . $p['id'], 'label' => $p['name'] !== $p['code'] ? $p['code'] . ' ' . $p['name'] : $p['code'],
+        $out['p:' . $p['id']] = ['key' => 'p:' . $p['id'], 'label' => trim($p['name']) !== '' ? $p['name'] : $p['code'],   // หมวดแสดงชื่อโครงการเต็ม (ไม่ใส่ตัวย่อ)
+                                 'code' => $p['code'],
                                  'group' => 'โครงการสำรวจ', 'color' => $p['color'], 'is_other' => false, 'active' => (bool)$p['is_active']];
     }
     foreach ($items as $i) {
