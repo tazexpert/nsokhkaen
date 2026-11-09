@@ -1,5 +1,5 @@
 <?php
-/** ภาพรวมระบบงบประมาณ — ได้รับ / เบิกจ่าย / คงเหลือ ของปีงบประมาณ · กราฟรายเดือน · แยกตามหมวด */
+/** ภาพรวมระบบงบประมาณ — ได้รับ / เบิกจ่าย / คงเหลือ ของปีงบประมาณ · กราฟรายเดือน · แยกตามประเภทงบ (จากชื่อหมวด) และหมวด */
 require_once __DIR__ . '/bootstrap.php';
 require_module(BUD_MODULE, 'viewer');
 $fy = bud_fy_param();
@@ -21,7 +21,22 @@ foreach ($totals as $k => $ms) {
 $rec = array_sum(array_column($byMonth, 'receive'));
 $spd = array_sum(array_column($byMonth, 'spend'));
 $pct = $rec > 0 ? $spd / $rec * 100 : 0;
-uasort($bySrc, fn($a, $b) => max($b['receive'] ?? 0, $b['spend'] ?? 0) <=> max($a['receive'] ?? 0, $a['spend'] ?? 0));
+// แยกตามประเภทงบ (จากชื่อหมวด) เรียงเหมือนรายงาน · หมวดในกลุ่มเรียงตามยอดมาก → น้อย
+$srcInfo = fn($k) => $sources[$k] ?? ['label' => '-', 'color' => '#64748b'];
+$byType = [];
+foreach ($bySrc as $k => $a) {
+    $t = bud_budget_type($srcInfo($k));
+    $byType[$t] ??= ['rank' => bud_budget_rank($srcInfo($k)), 'receive' => 0, 'spend' => 0, 'src' => []];
+    $byType[$t]['receive'] += $a['receive'] ?? 0;
+    $byType[$t]['spend'] += $a['spend'] ?? 0;
+    $byType[$t]['src'][$k] = $a;
+}
+uasort($byType, fn($a, $b) => $a['rank'] <=> $b['rank']);
+foreach ($byType as &$tt) {
+    uasort($tt['src'], fn($a, $b) => max($b['receive'] ?? 0, $b['spend'] ?? 0) <=> max($a['receive'] ?? 0, $a['spend'] ?? 0));
+}
+unset($tt);
+$typeColors = ['#2563eb', '#7c3aed', '#0891b2', '#16a34a', '#db2777', '#ca8a04', '#64748b'];
 $st = db()->prepare('SELECT * FROM bud_txns WHERE fiscal_year = ? ORDER BY txn_date DESC, id DESC LIMIT 8');
 $st->execute([$fy]);
 $recent = $st->fetchAll();
@@ -52,6 +67,27 @@ require __DIR__ . '/header.php';
         <div class="bud-progress mt-1"><span style="width:<?= min(100, $pct) ?>%"></span></div></div></div>
   </div>
 </div>
+
+<?php if ($byType): ?>
+<!-- แยกตามประเภทงบ: กล่องละประเภท -->
+<div class="row g-3 mb-4" data-reveal>
+  <?php $ti = 0; foreach ($byType as $t => $a): $c = $typeColors[min($ti++, count($typeColors) - 1)];
+    $tp = $a['receive'] > 0 ? $a['spend'] / $a['receive'] * 100 : 0; ?>
+  <div class="col-sm-6 col-xl reveal-item">
+    <a href="report.php?fy=<?= $fy ?>" class="card h-100 text-decoration-none text-body bud-type" style="--c:<?= $c ?>">
+      <div class="card-body">
+        <div class="bud-type-name"><?= h($t) ?></div>
+        <div class="d-flex justify-content-between small mt-2"><span>ได้รับ</span><b class="bud-receive"><?= bud_money($a['receive']) ?></b></div>
+        <div class="d-flex justify-content-between small"><span>เบิกจ่าย</span><b class="bud-spend"><?= bud_money($a['spend']) ?></b></div>
+        <div class="d-flex justify-content-between small"><span>คงเหลือ</span><b class="<?= $a['receive'] - $a['spend'] < 0 ? 'text-danger' : '' ?>"><?= bud_money($a['receive'] - $a['spend']) ?></b></div>
+        <div class="bud-progress mt-2"><span style="width:<?= min(100, $tp) ?>%;background:var(--c)"></span></div>
+        <div class="small text-muted text-end mt-1">เบิกจ่าย <?= number_format($tp, 1) ?>%</div>
+      </div>
+    </a>
+  </div>
+  <?php endforeach; ?>
+</div>
+<?php endif; ?>
 
 <div class="row g-3" data-reveal>
   <div class="col-xl-8 reveal-item">
@@ -96,17 +132,19 @@ require __DIR__ . '/header.php';
 <div class="row g-3 mt-1" data-reveal>
   <div class="col-12 reveal-item">
     <div class="card">
-      <div class="card-header d-flex align-items-center flex-wrap gap-2"><strong>แยกตามหมวด</strong>
+      <div class="card-header d-flex align-items-center flex-wrap gap-2"><strong>แยกตามงบ / หมวด</strong>
         <span class="bud-legend small ms-auto"><i style="background:<?= BUD_COLORS['spend'] ?>"></i>เบิกจ่าย (เทียบกับที่ได้รับ)</span></div>
       <div class="card-body">
-        <?php foreach ($bySrc as $k => $a): $s = $sources[$k] ?? ['label' => '-', 'color' => '#64748b'];
+        <?php foreach ($byType as $t => $ta): ?>
+          <div class="bud-type-head"><?= h($t) ?><span class="ms-auto text-nowrap"><b><?= bud_money($ta['spend']) ?></b> / <?= bud_money($ta['receive']) ?></span></div>
+        <?php foreach ($ta['src'] as $k => $a): $s = $srcInfo($k);
           $r = $a['receive'] ?? 0; $sp = $a['spend'] ?? 0; $base = max($r, $sp, 0.01); ?>
           <a class="bud-src-row text-decoration-none text-body" href="txns.php?<?= h(http_build_query(['type' => $sp > 0 ? 'spend' : 'receive', 'fy' => $fy, 'src' => $k])) ?>">
-            <span class="bud-src-name"><span class="bud-dot" style="background:<?= h($s['color']) ?>"></span><?= h($s['label']) ?></span>
+            <span class="bud-src-name" title="<?= h($s['label']) ?>"><span class="bud-dot" style="background:<?= h($s['color']) ?>"></span><?= h(bud_label_in_type($s)) ?></span>
             <span class="bar-track"><span class="bar-fill bud-fill<?= $sp > $r ? ' over' : '' ?>" style="width:<?= round($sp / $base * 100, 1) ?>%"></span></span>
             <span class="bud-src-val text-nowrap"><b><?= bud_money($sp) ?></b> / <?= bud_money($r) ?><span class="text-muted small ms-1"><?= $r > 0 ? number_format($sp / $r * 100, 1) . '%' : '' ?></span></span>
           </a>
-        <?php endforeach; ?>
+        <?php endforeach; endforeach; ?>
         <?php if (!$bySrc): ?><p class="text-muted mb-0">ยังไม่มีข้อมูล<?= bud_can('editor') ? ' — <a href="txn_form.php?type=receive">บันทึกรับเข้างบประมาณ</a>' : '' ?></p><?php endif; ?>
       </div>
     </div>

@@ -208,6 +208,15 @@ function bud_budget_type(array $s): string
     return preg_match('/^\s*(เงินนอกงบประมาณ|งบ[^\s(]+)/u', (string)$s['label'], $m) ? $m[1] : 'อื่น ๆ';
 }
 
+/** ชื่อหมวดเมื่อแสดงใต้หัวข้อประเภทงบ: ตัดประเภทงบที่ขึ้นต้นออก (เหลือชื่อเต็มถ้าตัดแล้วว่าง) */
+function bud_label_in_type(array $s): string
+{
+    $t = bud_budget_type($s);
+    $label = trim((string)$s['label']);
+    $rest = str_starts_with($label, $t) ? trim(mb_substr($label, mb_strlen($t))) : '';
+    return $rest !== '' ? $rest : $label;
+}
+
 /** ลำดับสำหรับเรียง [อันดับประเภทงบ, ชื่อประเภท] — ตาม BUD_BUDGET_TYPES ก่อน แล้วประเภทอื่น · อื่น ๆ · ข้อมูลเดิม */
 function bud_budget_rank(array $s): array
 {

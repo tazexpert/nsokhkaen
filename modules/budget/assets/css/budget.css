@@ -24,7 +24,7 @@
 /* แยกตามชื่อโครงการที่ได้รับ */
 .bud-src-row { display: flex; align-items: center; gap: 10px; padding: 4px 6px; border-radius: 6px; }
 .bud-src-row:hover { background: #f8fafc; }
-.bud-src-name { width: 240px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .92rem; }
+.bud-src-name { width: 320px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .92rem; }
 .bud-src-val { width: 230px; text-align: right; font-size: .9rem; }
 .bud-fill { background: linear-gradient(90deg, #fb923c, #ea580c); }
 .bud-fill.over { background: linear-gradient(90deg, #f87171, #dc2626); }
@@ -68,3 +68,9 @@
   .bud-ledger-center { white-space: nowrap; }
   .bud-ledger-detail { color: #000; }
 }
+/* แดชบอร์ด: แยกตามประเภทงบ */
+.bud-type { border-top: 4px solid var(--c); transition: transform .15s, box-shadow .15s; }
+.bud-type:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(15, 23, 42, .1); }
+.bud-type-name { font-weight: 700; color: var(--c); }
+.bud-type-head { display: flex; gap: .5rem; font-weight: 700; font-size: .9rem; padding: .35rem .4rem; margin: .6rem 0 .25rem; border-bottom: 1px solid #e2e8f0; }
+.bud-type-head:first-child { margin-top: 0; }
