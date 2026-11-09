@@ -64,12 +64,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pid = null;
     }
     if ($action === 'add' || $action === 'save') {
-        // หมวด = งบประมาณ (ค่าใช้จ่าย) กิจกรรม
+        // หมวด = งบรายจ่าย (รายการ) ค่าใช้จ่าย
         $parts = array_map(fn($f) => trim(preg_replace('/\s+/u', ' ', (string)post($f))), ['budget_name', 'expense_name', 'activity_name']);
         $parts = [mb_substr($parts[0], 0, 100), mb_substr($parts[1], 0, 150), mb_substr($parts[2], 0, 150)];
         $name = bud_item_name(...$parts);
         if ($parts[0] === '') {
-            flash('กรุณาระบุงบประมาณ', 'warning');
+            flash('กรุณาระบุงบรายจ่าย', 'warning');
             redirect('items.php');
         }
         if (mb_strlen($name) > 255) {
@@ -214,10 +214,10 @@ require __DIR__ . '/header.php';
 <div class="row g-3">
   <div class="col-12">
     <div class="card">
-      <div class="card-header"><strong>หมวด = งบประมาณ · ค่าใช้จ่าย · กิจกรรม</strong> <span class="small text-muted">— ในทะเบียนคุมเงินและรายงานรวมเป็น "งบประมาณ (ค่าใช้จ่าย) กิจกรรม" · ผูกกับโครงการสำรวจได้ที่ช่อง "ผูกโครงการ"</span></div>
+      <div class="card-header"><strong>หมวด = งบรายจ่าย · รายการ · ค่าใช้จ่าย</strong> <span class="small text-muted">— ในทะเบียนคุมเงินและรายงานรวมเป็น "งบรายจ่าย (รายการ) ค่าใช้จ่าย" · ผูกกับโครงการสำรวจได้ที่ช่อง "ผูกโครงการ"</span></div>
       <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
-          <thead class="table-light"><tr><th style="width:5rem">ลำดับ</th><th style="width:12rem">งบประมาณ</th><th>ค่าใช้จ่าย</th><th>กิจกรรม</th><th>ผูกโครงการ</th><th class="text-center">ใช้งาน</th><th class="text-end">ข้อมูล</th><th></th></tr></thead>
+          <thead class="table-light"><tr><th style="width:5rem">ลำดับ</th><th style="width:12rem">งบรายจ่าย</th><th>รายการ</th><th>ค่าใช้จ่าย</th><th>ผูกโครงการ</th><th class="text-center">ใช้งาน</th><th class="text-end">ข้อมูล</th><th></th></tr></thead>
           <tbody>
           <?php foreach ($items as $i): $f = 'f' . $i['id']; ?>
             <tr class="<?= $i['is_active'] ? '' : 'text-muted' ?>">
@@ -241,7 +241,7 @@ require __DIR__ . '/header.php';
           </tbody>
         </table>
       </div>
-      <div class="card-footer small text-muted">ค่าใช้จ่ายและกิจกรรมเว้นว่างได้ · "ผูกโครงการ" = หมวดนี้เป็นของโครงการสำรวจนั้น (1 โครงการมีได้หลายหมวด) · รายการที่มีข้อมูลแล้วลบไม่ได้ ให้ปิดใช้งานแทน</div>
+      <div class="card-footer small text-muted">รายการและค่าใช้จ่ายเว้นว่างได้ · "ผูกโครงการ" = หมวดนี้เป็นของโครงการสำรวจนั้น (1 โครงการมีได้หลายหมวด) · รายการที่มีข้อมูลแล้วลบไม่ได้ ให้ปิดใช้งานแทน</div>
     </div>
   </div>
   <div class="col-xl-7">
@@ -249,11 +249,11 @@ require __DIR__ . '/header.php';
       <?= csrf_field() ?><input type="hidden" name="action" value="add">
       <div class="card-header"><strong><i class="bi bi-plus-lg"></i> เพิ่มหมวด</strong></div>
       <div class="card-body row g-2">
-        <div class="col-md-4"><label class="form-label small mb-0">งบประมาณ <span class="text-danger">*</span></label>
+        <div class="col-md-4"><label class="form-label small mb-0">งบรายจ่าย <span class="text-danger">*</span></label>
           <input type="text" name="budget_name" list="dl_budget_name" class="form-control" placeholder="เช่น งบดำเนินงาน" maxlength="100" required></div>
-        <div class="col-md-4"><label class="form-label small mb-0">ค่าใช้จ่าย</label>
+        <div class="col-md-4"><label class="form-label small mb-0">รายการ</label>
           <input type="text" name="expense_name" list="dl_expense_name" class="form-control" placeholder="เช่น ค่าตอบแทนใช้สอยฯ" maxlength="150"></div>
-        <div class="col-md-4"><label class="form-label small mb-0">กิจกรรม</label>
+        <div class="col-md-4"><label class="form-label small mb-0">ค่าใช้จ่าย</label>
           <input type="text" name="activity_name" list="dl_activity_name" class="form-control" placeholder="เช่น ค่าน้ำมันเชื้อเพลิง" maxlength="150"></div>
         <div class="col-md-8"><label class="form-label small mb-0">ผูกกับโครงการสำรวจ (ไม่บังคับ)</label>
           <select name="project_id" class="form-select"><?= $projOptions(null) ?></select></div>

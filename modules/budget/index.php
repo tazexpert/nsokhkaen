@@ -30,7 +30,7 @@ foreach ($bySrc as $k => $a) {
     $byType[$t]['receive'] += $a['receive'] ?? 0;
     $byType[$t]['spend'] += $a['spend'] ?? 0;
     $byType[$t]['src'][$k] = $a;
-    // งบประมาณ → ค่าใช้จ่าย (รวมทุกกิจกรรม)
+    // งบรายจ่าย → รายการ (รวมทุกค่าใช้จ่าย)
     $e = $srcInfo($k)['expense'] ?? '';
     $byType[$t]['exp'][$e]['receive'] = ($byType[$t]['exp'][$e]['receive'] ?? 0) + ($a['receive'] ?? 0);
     $byType[$t]['exp'][$e]['spend'] = ($byType[$t]['exp'][$e]['spend'] ?? 0) + ($a['spend'] ?? 0);
@@ -39,7 +39,7 @@ foreach ($bySrc as $k => $a) {
 uasort($byType, fn($a, $b) => $a['rank'] <=> $b['rank']);
 foreach ($byType as &$tt) {
     uasort($tt['src'], fn($a, $b) => max($b['receive'] ?? 0, $b['spend'] ?? 0) <=> max($a['receive'] ?? 0, $a['spend'] ?? 0));
-    // ค่าใช้จ่าย: ยอดมาก → น้อย · (ไม่ระบุ) ไว้ท้าย
+    // รายการ: ยอดมาก → น้อย · (ไม่ระบุ) ไว้ท้าย
     uksort($tt['exp'], fn($x, $y) => [(string)$x === '', -max($tt['exp'][$x]['receive'], $tt['exp'][$x]['spend'])] <=> [(string)$y === '', -max($tt['exp'][$y]['receive'], $tt['exp'][$y]['spend'])]);
 }
 unset($tt);
@@ -73,7 +73,7 @@ require __DIR__ . '/header.php';
 </div>
 
 <?php if ($byType): ?>
-<!-- สรุปตามงบประมาณ → ค่าใช้จ่าย: การ์ดละงบ (อยู่เหนือกราฟ) -->
+<!-- สรุปตามงบรายจ่าย → รายการ: การ์ดละงบ (อยู่เหนือกราฟ) -->
 <div class="row g-3 mb-4" data-reveal>
   <?php $ti = 0; foreach ($byType as $t => $a): $c = $typeColors[min($ti++, count($typeColors) - 1)];
     $tp = $a['receive'] > 0 ? $a['spend'] / $a['receive'] * 100 : 0; ?>
@@ -86,11 +86,11 @@ require __DIR__ . '/header.php';
         <div class="d-flex justify-content-between small"><span>คงเหลือ</span><b class="<?= $a['receive'] - $a['spend'] < 0 ? 'text-danger' : '' ?>"><?= bud_money($a['receive'] - $a['spend']) ?></b></div>
         <div class="bud-progress mt-2"><span style="width:<?= min(100, $tp) ?>%;background:var(--c)"></span></div>
         <div class="small text-muted text-end mt-1">เบิกจ่าย <?= number_format($tp, 1) ?>%</div>
-        <!-- ค่าใช้จ่ายของงบนี้ (รวมทุกกิจกรรม): เบิกจ่าย / ได้รับ -->
+        <!-- รายการของงบนี้ (รวมทุกค่าใช้จ่าย): เบิกจ่าย / ได้รับ -->
         <div class="bud-type-exp">
           <?php foreach ($a['exp'] as $e => $ea): $er = $ea['receive']; $es = $ea['spend']; $ep = $er > 0 ? $es / $er * 100 : ($es > 0 ? 100 : 0); ?>
-          <div class="bud-type-exp-row" title="<?= h(($e !== '' ? $e : 'ไม่ระบุค่าใช้จ่าย') . ' · ได้รับ ' . bud_money($er) . ' · เบิกจ่าย ' . bud_money($es) . ' · คงเหลือ ' . bud_money($er - $es) . ($ea['n'] > 1 ? ' · ' . $ea['n'] . ' หมวด' : '')) ?>">
-            <div class="small"><?= $e !== '' ? h($e) : '<span class="text-muted">(ไม่ระบุค่าใช้จ่าย)</span>' ?><?= $ea['n'] > 1 ? ' <span class="text-muted">· ' . (int)$ea['n'] . ' หมวด</span>' : '' ?></div>
+          <div class="bud-type-exp-row" title="<?= h(($e !== '' ? $e : 'ไม่ระบุรายการ') . ' · ได้รับ ' . bud_money($er) . ' · เบิกจ่าย ' . bud_money($es) . ' · คงเหลือ ' . bud_money($er - $es) . ($ea['n'] > 1 ? ' · ' . $ea['n'] . ' หมวด' : '')) ?>">
+            <div class="small"><?= $e !== '' ? h($e) : '<span class="text-muted">(ไม่ระบุรายการ)</span>' ?><?= $ea['n'] > 1 ? ' <span class="text-muted">· ' . (int)$ea['n'] . ' หมวด</span>' : '' ?></div>
             <div class="d-flex align-items-center gap-2">
               <span class="bar-track bud-mini"><span class="bar-fill bud-fill<?= $es > $er ? ' over' : '' ?>" style="width:<?= min(100, round($ep, 1)) ?>%"></span></span>
               <span class="small text-nowrap"><b><?= bud_money($es) ?></b><span class="text-muted"> / <?= bud_money($er) ?></span></span></div>

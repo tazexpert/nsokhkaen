@@ -905,10 +905,10 @@ CREATE TABLE IF NOT EXISTS cal_attendance (
 -- รายการงบประมาณนอกจากโครงการสำรวจ (ผู้ดูแลระบบงบประมาณเพิ่ม/แก้ไขได้)
 CREATE TABLE IF NOT EXISTS bud_items (
   id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  name          VARCHAR(255) NOT NULL,                      -- หมวด (รวม) = งบประมาณ (ค่าใช้จ่าย) กิจกรรม — ใช้ในทะเบียนคุมเงิน/รายงาน
-  budget_name   VARCHAR(100) NOT NULL DEFAULT '',           -- งบประมาณ เช่น งบดำเนินงาน / งบบุคลากร / งบรายจ่ายอื่น / เงินนอกงบประมาณ
-  expense_name  VARCHAR(150) NOT NULL DEFAULT '',           -- ค่าใช้จ่าย เช่น ค่าตอบแทนใช้สอยฯ (ไม่บังคับ)
-  activity_name VARCHAR(150) NOT NULL DEFAULT '',           -- กิจกรรม เช่น ค่าน้ำมันเชื้อเพลิง (ไม่บังคับ)
+  name          VARCHAR(255) NOT NULL,                      -- หมวด (รวม) = งบรายจ่าย (รายการ) ค่าใช้จ่าย — ใช้ในทะเบียนคุมเงิน/รายงาน
+  budget_name   VARCHAR(100) NOT NULL DEFAULT '',           -- งบรายจ่าย เช่น งบดำเนินงาน / งบบุคลากร / งบรายจ่ายอื่น / เงินนอกงบประมาณ
+  expense_name  VARCHAR(150) NOT NULL DEFAULT '',           -- รายการ เช่น ค่าตอบแทนใช้สอยฯ (ไม่บังคับ)
+  activity_name VARCHAR(150) NOT NULL DEFAULT '',           -- ค่าใช้จ่าย เช่น ค่าน้ำมันเชื้อเพลิง (ไม่บังคับ)
   is_other      TINYINT(1)   NOT NULL DEFAULT 0,            -- (ไม่ใช้แล้ว — เดิม: รายจ่ายอื่น)
   project_id    INT UNSIGNED NULL,                          -- โครงการสำรวจที่หมวดนี้สังกัด (1 โครงการมีได้หลายหมวด)
   sort_order    INT          NOT NULL DEFAULT 0,
