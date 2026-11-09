@@ -73,10 +73,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('มีหมวดชื่อ "' . $name . '" แล้ว', 'warning');
             redirect('items.php');
         }
-        if ($pid) {
-            // โครงการหนึ่งผูกได้กับรายการเดียว
-            $pdo->prepare('UPDATE bud_items SET project_id = NULL WHERE project_id = ? AND id <> ?')->execute([$pid, $action === 'save' ? int_param('id') : 0]);
-        }
     }
     if ($action === 'add') {
         $sort = (int)$pdo->query('SELECT COALESCE(MAX(sort_order), 0) + 10 FROM bud_items')->fetchColumn();
@@ -197,7 +193,7 @@ require __DIR__ . '/header.php';
 <div class="row g-3">
   <div class="col-xl-8">
     <div class="card">
-      <div class="card-header"><strong>หมวด</strong> <span class="small text-muted">— หมวดรายจ่าย ใช้ร่วมกับหมวดโครงการสำรวจ</span></div>
+      <div class="card-header"><strong>หมวด</strong> <span class="small text-muted">— ใช้เลือกในหน้าบันทึก · ผูกกับโครงการสำรวจได้ที่ช่อง "ผูกโครงการ"</span></div>
       <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
           <thead class="table-light"><tr><th style="width:5rem">ลำดับ</th><th>ชื่อหมวด</th><th>ผูกโครงการ</th><th class="text-center">ใช้งาน</th><th class="text-end">ข้อมูล</th><th></th></tr></thead>
@@ -222,7 +218,7 @@ require __DIR__ . '/header.php';
           </tbody>
         </table>
       </div>
-      <div class="card-footer small text-muted">"ผูกโครงการ" = โครงการสำรวจนั้นนับเป็นรายการนี้แทน และไม่แสดงในกลุ่มโครงการสำรวจ · รายการที่มีข้อมูลแล้วลบไม่ได้ ให้ปิดใช้งานแทน</div>
+      <div class="card-footer small text-muted">"ผูกโครงการ" = หมวดนี้เป็นของโครงการสำรวจนั้น (1 โครงการมีได้หลายหมวด) · รายการที่มีข้อมูลแล้วลบไม่ได้ ให้ปิดใช้งานแทน</div>
     </div>
   </div>
   <div class="col-xl-4">
@@ -237,10 +233,10 @@ require __DIR__ . '/header.php';
       </div>
     </form>
     <div class="card">
-      <div class="card-header"><strong>หมวดโครงการสำรวจ</strong> <span class="small text-muted">(จากหน้าโครงการที่รับผิดชอบ)</span></div>
+      <div class="card-header"><strong>โครงการที่ยังไม่ผูกกับหมวด</strong> <span class="small text-muted">(จากหน้าโครงการที่รับผิดชอบ)</span></div>
       <ul class="list-group list-group-flush small">
         <?php foreach ($survey as $p): ?><li class="list-group-item"><span class="bud-dot" style="background:<?= h($p['color']) ?>"></span><b><?= h($p['code']) ?></b> <?= h($p['name'] !== $p['code'] ? $p['name'] : '') ?></li><?php endforeach; ?>
-        <?php if (!$survey): ?><li class="list-group-item text-muted">ยังไม่มีโครงการ</li><?php endif; ?>
+        <?php if (!$survey): ?><li class="list-group-item text-muted">ทุกโครงการผูกกับหมวดแล้ว</li><?php endif; ?>
       </ul>
       <div class="card-footer small"><a href="<?= h(module_url('ea', 'projects.php')) ?>">จัดการโครงการที่รับผิดชอบ <i class="bi bi-box-arrow-up-right"></i></a></div>
     </div>

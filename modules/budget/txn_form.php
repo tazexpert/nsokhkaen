@@ -13,7 +13,7 @@ if ($id) {
     }
 }
 $type = $t['txn_type'] ?? (($_GET['type'] ?? $_POST['type'] ?? '') === 'spend' ? 'spend' : 'receive');
-$sources = bud_sources();
+$sources = array_filter(bud_sources(), fn($s) => empty($s['legacy']));   // เลือกได้เฉพาะหมวด
 $allSources = bud_sources(true);
 $works = bud_works(false);
 $allWorks = bud_works(true);

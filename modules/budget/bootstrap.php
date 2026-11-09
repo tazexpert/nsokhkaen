@@ -75,8 +75,9 @@ function bud_money($n): string
 }
 
 /**
- * หมวด ['p:<id>' | 'i:<id>' => ['key', 'label', 'group', 'color', 'active']]
- * เรียง: โครงการสำรวจ → หมวดรายจ่าย · $all = รวมที่ปิดใช้งาน (สำหรับแสดงข้อมูลเดิม)
+ * หมวด ['i:<id>' | 'p:<id>' => ['key', 'label', 'group', 'color', 'active']] · $all = รวมที่ปิดใช้งาน (สำหรับแสดงข้อมูลเดิม)
+ * เลือกได้เฉพาะหมวด (bud_items) — หมวดผูกกับโครงการสำรวจได้ (สีตามโครงการ)
+ * 'p:<id>' = รายการเดิมที่บันทึกด้วยโครงการโดยตรง (ก่อนเลือกเฉพาะหมวด) มีเฉพาะเมื่อมีข้อมูล และไม่แสดงให้เลือกในหน้าบันทึก
  */
 function bud_sources(bool $all = false): array
 {
@@ -86,22 +87,25 @@ function bud_sources(bool $all = false): array
     }
     $items = db()->query('SELECT * FROM bud_items ORDER BY sort_order, id')->fetchAll();
     $linked = array_filter(array_map(fn($i) => (int)$i['project_id'], $items));
+    $projects = projects_all();
     $out = [];
-    foreach (projects_all() as $p) {
-        if (in_array((int)$p['id'], $linked, true) || (!$all && !$p['is_active'])) {
-            continue;
-        }
-        $out['p:' . $p['id']] = ['key' => 'p:' . $p['id'], 'label' => trim($p['name']) !== '' ? $p['name'] : $p['code'],   // หมวดแสดงชื่อโครงการเต็ม (ไม่ใส่ตัวย่อ)
-                                 'code' => $p['code'],
-                                 'group' => 'โครงการสำรวจ', 'color' => $p['color'], 'active' => (bool)$p['is_active']];
-    }
     foreach ($items as $i) {
         if (!$all && !$i['is_active']) {
             continue;
         }
-        $out['i:' . $i['id']] = ['key' => 'i:' . $i['id'], 'label' => $i['name'], 'group' => 'หมวดรายจ่าย',
-                                 'color' => '#15803d', 'active' => (bool)$i['is_active'],
+        $p = $i['project_id'] ? $projects[(int)$i['project_id']] ?? null : null;
+        $out['i:' . $i['id']] = ['key' => 'i:' . $i['id'], 'label' => $i['name'], 'group' => 'หมวด',
+                                 'color' => $p['color'] ?? '#15803d', 'active' => (bool)$i['is_active'],
                                  'project_id' => $i['project_id'] ? (int)$i['project_id'] : null];
+    }
+    $used = db()->query('SELECT DISTINCT project_id FROM bud_txns WHERE item_id IS NULL AND project_id IS NOT NULL')->fetchAll(PDO::FETCH_COLUMN);
+    foreach ($used as $pid) {
+        $p = $projects[(int)$pid] ?? null;
+        if (!$p || in_array((int)$pid, $linked, true)) {
+            continue;
+        }
+        $out['p:' . $pid] = ['key' => 'p:' . $pid, 'label' => trim($p['name']) !== '' ? $p['name'] : $p['code'],
+                             'group' => 'โครงการ (ข้อมูลเดิม)', 'color' => $p['color'], 'active' => false, 'legacy' => true];
     }
     return $cache[$all] = $out;
 }
@@ -117,7 +121,7 @@ function bud_source_key(array $t): string
         $map = [];
         foreach (bud_sources(true) as $k => $s) {
             if (!empty($s['project_id'])) {
-                $map[$s['project_id']] = $k;
+                $map[$s['project_id']] ??= $k;          // ข้อมูลเดิมที่บันทึกด้วยโครงการ → หมวดแรกของโครงการนั้น
             }
         }
     }
