@@ -37,9 +37,6 @@ foreach ($byType as &$tt) {
 }
 unset($tt);
 $typeColors = ['#2563eb', '#7c3aed', '#0891b2', '#16a34a', '#db2777', '#ca8a04', '#64748b'];
-$st = db()->prepare('SELECT * FROM bud_txns WHERE fiscal_year = ? ORDER BY txn_date DESC, id DESC LIMIT 8');
-$st->execute([$fy]);
-$recent = $st->fetchAll();
 
 $pageTitle = 'ภาพรวมงบประมาณ ปีงบประมาณ ' . $fy;
 $active = 'dashboard';
@@ -90,7 +87,7 @@ require __DIR__ . '/header.php';
 <?php endif; ?>
 
 <div class="row g-3" data-reveal>
-  <div class="col-xl-8 reveal-item">
+  <div class="col-12 reveal-item">
     <div class="card h-100">
       <div class="card-header d-flex align-items-center flex-wrap gap-2"><strong>ได้รับ / เบิกจ่าย รายเดือน</strong>
         <span class="bud-legend small ms-auto"><i style="background:<?= BUD_COLORS['receive'] ?>"></i>ได้รับ <i style="background:<?= BUD_COLORS['spend'] ?>" class="ms-2"></i>เบิกจ่าย</span></div>
@@ -108,22 +105,6 @@ require __DIR__ . '/header.php';
         </div>
         <div class="bud-vlabels"><?php foreach ($months as $ym): ?><span><?= h(bud_month_label($ym, true)) ?></span><?php endforeach; ?></div>
         <div class="small text-muted mt-2">สูงสุด <?= bud_money($max) ?> บาท/เดือน · คลิกแท่งเพื่อดูรายงานเดือนนั้น</div>
-      </div>
-    </div>
-  </div>
-  <div class="col-xl-4 reveal-item">
-    <div class="card h-100">
-      <div class="card-header d-flex align-items-center"><strong>รายการล่าสุด</strong><a href="report.php?fy=<?= $fy ?>" class="btn btn-sm btn-light ms-auto">รายงาน <i class="bi bi-chevron-right"></i></a></div>
-      <div class="list-group list-group-flush">
-        <?php foreach ($recent as $t): $s = $sources[bud_source_key($t)] ?? null; ?>
-          <div class="list-group-item d-flex gap-2">
-            <i class="bi <?= $t['txn_type'] === 'spend' ? 'bi-arrow-up-right-circle-fill bud-spend' : 'bi-arrow-down-left-circle-fill bud-receive' ?> fs-5"></i>
-            <div class="min-w-0 flex-grow-1"><div class="text-truncate"><?= h($t['description']) ?></div>
-              <div class="small text-muted text-truncate"><?= h(thai_date($t['txn_date'])) ?><?= $s ? ' · ' . h($s['label']) : '' ?></div></div>
-            <div class="text-end text-nowrap fw-semibold bud-<?= $t['txn_type'] ?>"><?= bud_money($t['amount']) ?></div>
-          </div>
-        <?php endforeach; ?>
-        <?php if (!$recent): ?><div class="list-group-item text-muted">ยังไม่มีรายการในปีงบประมาณนี้</div><?php endif; ?>
       </div>
     </div>
   </div>
