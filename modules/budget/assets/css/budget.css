@@ -85,3 +85,8 @@
 .bud-src-row2:hover { background: #f8fafc; }
 .bud-src-row2 + .bud-src-row2 { margin-top: 2px; }
 @media print { .bud-src-list { max-height: none; overflow: visible; } }
+/* รายงาน: งบรายจ่าย → 1. รายการ → 1.1 ค่าใช้จ่าย */
+.bud-report td.bud-lv1 { padding-left: 1rem; }
+.bud-report td.bud-lv2 { padding-left: 2.6rem; }
+.bud-report .bud-num { display: inline-block; min-width: 2.2rem; color: #475569; }
+.bud-report tr.bud-exp-head td { font-weight: 600; }

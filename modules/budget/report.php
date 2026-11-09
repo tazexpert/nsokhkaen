@@ -59,17 +59,45 @@ if ($mode === 'year') {
     $cols[] = ['รวม', fn($k) => $sum($k, $mtype)];
     $title = 'รายงาน' . BUD_TYPES[$mtype] . 'รายเดือน ปีงบประมาณ ' . $fy;
 }
-// คำนวณตาราง + รวมกลุ่ม + รวมทั้งสิ้น
-$table = [];
-$groupSum = [];
-$grand = array_fill(0, count($cols), 0.0);
+// โครงสร้างรายงาน: งบรายจ่าย (กลุ่ม) → 1. รายการ → 1.1 ค่าใช้จ่าย
+//   รายการที่มีหมวดเดียวและไม่มีค่าใช้จ่าย = แถวเดียว "1. รายการ" · หมวดที่ไม่มีรายการ = แถว "n. ค่าใช้จ่าย" (หรือชื่องบรายจ่าย)
+$zero = array_fill(0, count($cols), 0.0);
+$add = fn(array $a, array $b) => array_map(fn($x, $y) => $x + $y, $a, $b);
+$buckets = [];                                              // [กลุ่ม][รายการ] => [keys] (ตามลำดับที่พบ)
 foreach ($rows as $k => $s) {
-    $vals = array_map(fn($c) => $c[1]($k), $cols);
-    $table[$s['group']][$k] = $vals;
-    foreach ($vals as $i => $v) {
-        $groupSum[$s['group']][$i] = ($groupSum[$s['group']][$i] ?? 0) + $v;
-        $grand[$i] += $v;
+    $e = isset($s['budget']) && $s['expense'] !== '' ? $s['expense'] : "\0" . $k;   // ไม่มีรายการ = แถวเดี่ยว
+    $buckets[$s['group']][$e][] = $k;
+}
+$table = [];                                                // [กลุ่ม] => [node: num, label, level, vals, key|null, head]
+$groupSum = [];
+$grand = $zero;
+foreach ($buckets as $g => $exps) {
+    $n = 0;
+    $groupSum[$g] = $zero;
+    foreach ($exps as $e => $keys) {
+        $n++;
+        $vals = [];
+        foreach ($keys as $k) {
+            $vals[$k] = array_map(fn($c) => $c[1]($k), $cols);
+        }
+        $sumE = array_reduce($vals, $add, $zero);
+        $groupSum[$g] = $add($groupSum[$g], $sumE);
+        $first = $rows[$keys[0]];
+        if (str_starts_with((string)$e, "\0")) {
+            $label = isset($first['budget']) ? ($first['activity'] !== '' ? $first['activity'] : $first['budget']) : $first['label'];
+            $table[$g][] = ['num' => $n . '.', 'label' => $label, 'level' => 1, 'vals' => $sumE, 'key' => $keys[0], 'head' => false];
+        } elseif (count($keys) === 1 && $first['activity'] === '') {
+            $table[$g][] = ['num' => $n . '.', 'label' => $e, 'level' => 1, 'vals' => $sumE, 'key' => $keys[0], 'head' => false];
+        } else {
+            $table[$g][] = ['num' => $n . '.', 'label' => $e, 'level' => 1, 'vals' => $sumE, 'key' => null, 'head' => true];
+            $m = 0;
+            foreach ($keys as $k) {
+                $act = $rows[$k]['activity'];
+                $table[$g][] = ['num' => $n . '.' . ++$m, 'label' => $act !== '' ? $act : '(ไม่ระบุค่าใช้จ่าย)', 'level' => 2, 'vals' => $vals[$k], 'key' => $k, 'head' => false];
+            }
+        }
     }
+    $grand = $add($grand, $groupSum[$g]);
 }
 $withPct = $mode !== 'matrix';
 $pctOf = fn(array $v) => $mode === 'year' ? [$v[0], $v[1]] : [$v[2], $v[3]];   // ร้อยละเบิกจ่าย = เบิกจ่าย / ได้รับ
@@ -87,13 +115,14 @@ if ($mode === 'month') {
 }
 
 if (($_GET['export'] ?? '') === 'csv') {
-    $head = array_merge(['หมวด'], array_column($cols, 0), $withPct ? ['ร้อยละเบิกจ่าย'] : []);
+    $head = array_merge(['งบรายจ่าย / รายการ / ค่าใช้จ่าย'], array_column($cols, 0), $withPct ? ['ร้อยละเบิกจ่าย'] : []);
     $out = [];
     foreach ($table as $g => $list) {
         $out[] = [$g];
-        foreach ($list as $k => $vals) {
-            $out[] = array_merge([$rows[$k]['label']], array_map(fn($v) => number_format($v, 2, '.', ''), $vals), $withPct ? [$pctText($vals)] : []);
+        foreach ($list as $nd) {
+            $out[] = array_merge([str_repeat('    ', $nd['level']) . $nd['num'] . ' ' . $nd['label']], array_map(fn($v) => number_format($v, 2, '.', ''), $nd['vals']), $withPct ? [$pctText($nd['vals'])] : []);
         }
+        $out[] = array_merge(['รวม' . $g], array_map(fn($v) => number_format($v, 2, '.', ''), $groupSum[$g]), $withPct ? [$pctText($groupSum[$g])] : []);
     }
     $out[] = array_merge(['รวมทั้งสิ้น'], array_map(fn($v) => number_format($v, 2, '.', ''), $grand), $withPct ? [$pctText($grand)] : []);
     bud_csv('budget_report_' . $mode . '_' . $fy . ($mode === 'month' ? '_' . $month : '') . '.csv', $head, $out);
@@ -137,31 +166,32 @@ require __DIR__ . '/header.php';
   <div class="table-responsive">
     <table class="table table-sm table-bordered align-middle mb-0 bud-report">
       <thead class="table-light"><tr>
-        <th class="text-center" style="width:3rem">ลำดับ</th><th>หมวด</th>
+        <th>งบรายจ่าย / รายการ / ค่าใช้จ่าย</th>
         <?php foreach ($cols as $c): ?><th class="text-end"><?= h($c[0]) ?></th><?php endforeach; ?>
         <?php if ($withPct): ?><th class="text-end">ร้อยละเบิกจ่าย</th><?php endif; ?>
       </tr></thead>
       <tbody>
-      <?php $n = 0; foreach ($table as $g => $list): ?>
-        <tr class="bud-group"><td colspan="<?= count($cols) + 2 + ($withPct ? 1 : 0) ?>"><?= h($g) ?></td></tr>
-        <?php foreach ($list as $k => $vals): ?>
-          <tr>
-            <td class="text-center"><?= ++$n ?></td>
-            <td class="bud-name"><a class="text-body text-decoration-none" href="txns.php?<?= h(http_build_query(['type' => $mode === 'matrix' ? $mtype : 'spend', 'fy' => $fy, 'src' => $k, 'month' => $mode === 'month' ? $month : null])) ?>"><span class="bud-dot" style="background:<?= h($rows[$k]['color']) ?>"></span><?= h($rows[$k]['label']) ?></a></td>
-            <?php foreach ($vals as $v): ?><td class="text-end"><?= $money($v) ?></td><?php endforeach; ?>
-            <?php if ($withPct): ?><td class="text-end"><?= $pctText($vals) ?></td><?php endif; ?>
+      <?php foreach ($table as $g => $list): ?>
+        <tr class="bud-group"><td colspan="<?= count($cols) + 1 + ($withPct ? 1 : 0) ?>"><?= h($g) ?></td></tr>
+        <?php foreach ($list as $nd): ?>
+          <tr class="<?= $nd['head'] ? 'bud-exp-head' : '' ?>">
+            <td class="bud-name bud-lv<?= $nd['level'] ?>"><span class="bud-num"><?= h($nd['num']) ?></span>
+              <?php if ($nd['key'] !== null): ?><a class="text-body text-decoration-none" href="txns.php?<?= h(http_build_query(['type' => $mode === 'matrix' ? $mtype : 'spend', 'fy' => $fy, 'src' => $nd['key'], 'month' => $mode === 'month' ? $month : null])) ?>" title="<?= h($rows[$nd['key']]['label']) ?>"><?= h($nd['label']) ?></a>
+              <?php else: ?><?= h($nd['label']) ?><?php endif; ?></td>
+            <?php foreach ($nd['vals'] as $v): ?><td class="text-end"><?= $money($v) ?></td><?php endforeach; ?>
+            <?php if ($withPct): ?><td class="text-end"><?= $pctText($nd['vals']) ?></td><?php endif; ?>
           </tr>
         <?php endforeach; ?>
         <?php if (count($table) > 1): ?>
-          <tr class="bud-sub"><td></td><td class="text-end">รวม<?= h($g) ?></td>
+          <tr class="bud-sub"><td class="text-end">รวม<?= h($g) ?></td>
             <?php foreach ($groupSum[$g] as $v): ?><td class="text-end"><?= $money($v) ?></td><?php endforeach; ?>
             <?php if ($withPct): ?><td class="text-end"><?= $pctText($groupSum[$g]) ?></td><?php endif; ?></tr>
         <?php endif; ?>
       <?php endforeach; ?>
-      <?php if (!$table): ?><tr><td colspan="<?= count($cols) + 3 ?>" class="text-center text-muted py-4">ยังไม่มีข้อมูลในปีงบประมาณนี้</td></tr><?php endif; ?>
+      <?php if (!$table): ?><tr><td colspan="<?= count($cols) + 2 ?>" class="text-center text-muted py-4">ยังไม่มีข้อมูลในปีงบประมาณนี้</td></tr><?php endif; ?>
       </tbody>
       <?php if ($table): ?>
-      <tfoot><tr class="table-light fw-bold"><td></td><td class="text-end">รวมทั้งสิ้น</td>
+      <tfoot><tr class="table-light fw-bold"><td class="text-end">รวมทั้งสิ้น</td>
         <?php foreach ($grand as $v): ?><td class="text-end"><?= $money($v) ?></td><?php endforeach; ?>
         <?php if ($withPct): ?><td class="text-end"><?= $pctText($grand) ?></td><?php endif; ?></tr></tfoot>
       <?php endif; ?>

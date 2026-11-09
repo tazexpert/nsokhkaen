@@ -96,9 +96,8 @@ function bud_sources(bool $all = false): array
             continue;
         }
         $p = $i['project_id'] ? $projects[(int)$i['project_id']] ?? null : null;
-        $out['i:' . $i['id']] = ['key' => 'i:' . $i['id'], 'label' => $i['name'], 'group' => 'หมวด',
-                                 'budget' => (string)($i['budget_name'] ?? ''), 'expense' => (string)($i['expense_name'] ?? ''),
-                                 'activity' => (string)($i['activity_name'] ?? ''),
+        $out['i:' . $i['id']] = ['key' => 'i:' . $i['id'], 'label' => bud_item_name($i['budget_name'], $i['expense_name'], $i['activity_name']), 'group' => 'หมวด',
+                                 'budget' => $i['budget_name'], 'expense' => $i['expense_name'], 'activity' => $i['activity_name'],
                                  'color' => $p['color'] ?? '#15803d', 'active' => (bool)$i['is_active'],
                                  'project_id' => $i['project_id'] ? (int)$i['project_id'] : null];
     }

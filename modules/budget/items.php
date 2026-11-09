@@ -76,8 +76,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('ชื่อหมวดรวมยาวเกิน 255 ตัวอักษร', 'warning');
             redirect('items.php');
         }
-        $dup = $pdo->prepare('SELECT id FROM bud_items WHERE name = ? AND id <> ?');
-        $dup->execute([$name, $action === 'save' ? int_param('id') : 0]);
+        $dup = $pdo->prepare('SELECT id FROM bud_items WHERE budget_name = ? AND expense_name = ? AND activity_name = ? AND id <> ?');
+        $dup->execute([...$parts, $action === 'save' ? int_param('id') : 0]);
         if ($dup->fetch()) {
             flash('มีหมวดชื่อ "' . $name . '" แล้ว', 'warning');
             redirect('items.php');
@@ -85,13 +85,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if ($action === 'add') {
         $sort = (int)$pdo->query('SELECT COALESCE(MAX(sort_order), 0) + 10 FROM bud_items')->fetchColumn();
-        $pdo->prepare('INSERT INTO bud_items (name, budget_name, expense_name, activity_name, project_id, sort_order) VALUES (?, ?, ?, ?, ?, ?)')
-            ->execute([$name, ...$parts, $pid, $sort]);
+        $pdo->prepare('INSERT INTO bud_items (budget_name, expense_name, activity_name, project_id, sort_order) VALUES (?, ?, ?, ?, ?)')
+            ->execute([...$parts, $pid, $sort]);
         audit_log('bud_item_add', 'เพิ่มหมวด: ' . $name, BUD_MODULE);
         flash('เพิ่มหมวด "' . $name . '" แล้ว');
     } elseif ($action === 'save') {
-        $pdo->prepare('UPDATE bud_items SET name = ?, budget_name = ?, expense_name = ?, activity_name = ?, is_other = 0, project_id = ?, sort_order = ?, is_active = ? WHERE id = ?')
-            ->execute([$name, ...$parts, $pid, (int)post('sort_order'), post('is_active') ? 1 : 0, int_param('id')]);
+        $pdo->prepare('UPDATE bud_items SET budget_name = ?, expense_name = ?, activity_name = ?, is_other = 0, project_id = ?, sort_order = ?, is_active = ? WHERE id = ?')
+            ->execute([...$parts, $pid, (int)post('sort_order'), post('is_active') ? 1 : 0, int_param('id')]);
         audit_log('bud_item_save', 'แก้ไขหมวด: ' . $name, BUD_MODULE);
         flash('บันทึก "' . $name . '" แล้ว');
     } elseif ($action === 'delete') {
@@ -110,7 +110,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $items = $pdo->query('SELECT i.*, (SELECT COUNT(*) FROM bud_txns t WHERE t.item_id = i.id) used FROM bud_items i ORDER BY sort_order, id')->fetchAll();
-usort($items, fn($a, $b) => bud_budget_rank(['label' => $a['name'], 'budget' => $a['budget_name']]) <=> bud_budget_rank(['label' => $b['name'], 'budget' => $b['budget_name']]));
+foreach ($items as &$it) {
+    $it['label'] = bud_item_name($it['budget_name'], $it['expense_name'], $it['activity_name']);   // ชื่อหมวดเต็ม
+}
+unset($it);
+usort($items, fn($a, $b) => bud_budget_rank(['label' => $a['label'], 'budget' => $a['budget_name']]) <=> bud_budget_rank(['label' => $b['label'], 'budget' => $b['budget_name']]));
 // ค่าที่เคยใช้ (ช่วยพิมพ์)
 $suggest = [];
 foreach (['budget_name', 'expense_name', 'activity_name'] as $f) {
@@ -224,7 +228,7 @@ require __DIR__ . '/header.php';
               <td><input form="<?= $f ?>" type="number" name="sort_order" value="<?= (int)$i['sort_order'] ?>" class="form-control form-control-sm"></td>
               <td><input form="<?= $f ?>" type="text" name="budget_name" value="<?= h($i['budget_name']) ?>" list="dl_budget_name" class="form-control form-control-sm" maxlength="100" required></td>
               <td><input form="<?= $f ?>" type="text" name="expense_name" value="<?= h($i['expense_name']) ?>" list="dl_expense_name" class="form-control form-control-sm" maxlength="150"></td>
-              <td><input form="<?= $f ?>" type="text" name="activity_name" value="<?= h($i['activity_name']) ?>" list="dl_activity_name" class="form-control form-control-sm" maxlength="150" title="<?= h($i['name']) ?>"></td>
+              <td><input form="<?= $f ?>" type="text" name="activity_name" value="<?= h($i['activity_name']) ?>" list="dl_activity_name" class="form-control form-control-sm" maxlength="150" title="<?= h($i['label']) ?>"></td>
               <td><select form="<?= $f ?>" name="project_id" class="form-select form-select-sm" style="min-width:8rem"><?= $projOptions($i['project_id'] ? (int)$i['project_id'] : null) ?></select></td>
               <td class="text-center"><input form="<?= $f ?>" type="checkbox" name="is_active" value="1" class="form-check-input"<?= $i['is_active'] ? ' checked' : '' ?>></td>
               <td class="text-end small"><?= (int)$i['used'] ? number_format($i['used']) . ' รายการ' : '-' ?></td>
@@ -232,7 +236,7 @@ require __DIR__ . '/header.php';
                 <form method="post" id="<?= $f ?>" class="d-inline"><?= csrf_field() ?><input type="hidden" name="action" value="save"><input type="hidden" name="id" value="<?= (int)$i['id'] ?>">
                   <button class="btn btn-sm btn-primary" title="บันทึก"><i class="bi bi-check-lg"></i></button></form>
                 <?php if (!(int)$i['used']): ?>
-                <form method="post" class="d-inline" data-confirm="<?= h('ลบรายการ "' . $i['name'] . '"?') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$i['id'] ?>">
+                <form method="post" class="d-inline" data-confirm="<?= h('ลบหมวด "' . $i['label'] . '"?') ?>"><?= csrf_field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$i['id'] ?>">
                   <button class="btn btn-sm btn-light text-danger" title="ลบ"><i class="bi bi-trash"></i></button></form>
                 <?php endif; ?>
               </td>
