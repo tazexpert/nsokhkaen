@@ -6,8 +6,42 @@
  */
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/plan_lib.php';
+require_once __DIR__ . '/att_lib.php';
 $me = require_module(CAL_MODULE);
 [$y, $m] = plan_ym($_GET['m'] ?? null);
+
+// ผู้ดูแลปฏิทินแก้ "ข" (ขาดราชการ) → "ล" (รับรองการมาปฏิบัติราชการ) ได้อย่างเดียว
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'att_certify') {
+    check_csrf();
+    if (!cal_can('admin')) {
+        forbidden(CAL_MODULE, 'admin');
+    }
+    $uid = int_param('user_id');
+    $date = preg_match('/^\d{4}-\d{2}-\d{2}$/', post('date')) ? post('date') : '';
+    $st = db()->prepare('SELECT * FROM cal_attendance WHERE user_id = ? AND work_date = ?');
+    $st->execute([$uid, $date]);
+    $row = $st->fetch();
+    [$py, $pm] = [(int)substr($date, 0, 4), (int)substr($date, 5, 2)];
+    $day = (int)substr($date, 8, 2);
+    $hasWork = false;
+    if ($row && ($pl = plan_get($py, $pm))) {
+        $st = db()->prepare('SELECT COUNT(*) FROM cal_plan_work w JOIN cal_plan_people pp ON pp.id = w.person_id WHERE pp.plan_id = ? AND pp.user_id = ? AND w.day = ?');
+        $st->execute([$pl['id'], $uid, $day]);
+        $hasWork = (bool)$st->fetchColumn();
+    }
+    $status = $row ? att_status($row, $hasWork, att_trip_map($py, $pm)[$uid][$day] ?? null) : null;
+    if (!$status || empty($status['certifiable'])) {
+        flash('แก้ได้เฉพาะวันที่เป็น "ขาดราชการ" เท่านั้น', 'warning');
+    } else {
+        db()->prepare("UPDATE cal_attendance SET override_code = 'ล', override_by = ?, override_at = NOW() WHERE id = ?")->execute([(int)$me['id'], $row['id']]);
+        $st = db()->prepare('SELECT full_name FROM core_users WHERE id = ?');
+        $st->execute([$uid]);
+        $who = (string)$st->fetchColumn();
+        audit_log('cal_att_certify', 'แก้ขาดราชการเป็นรับรองการมาปฏิบัติราชการ: ' . $who . ' วันที่ ' . thai_date($date), CAL_MODULE);
+        flash('บันทึกรับรองการมาปฏิบัติราชการ ' . preg_replace('/\s+/u', ' ', $who) . ' วันที่ ' . thai_date($date) . ' แล้ว');
+    }
+    redirect('plan.php?m=' . substr($date, 0, 7));
+}
 $ym = sprintf('%04d-%02d', $y, $m);
 $prev = date('Y-m', strtotime($ym . '-01 -1 month'));
 $next = date('Y-m', strtotime($ym . '-01 +1 month'));
@@ -19,6 +53,11 @@ $codes = plan_codes();
 $people = $plan ? plan_people((int)$plan['id']) : [];
 $cells = $plan ? plan_cells((int)$plan['id']) : [];
 $duty = plan_duty_map($y, $m);
+$att = att_month($y, $m);                 // เวลาปฏิบัติราชการ [user_id][day]
+$trips = att_trip_map($y, $m);           // กิจกรรมไปราชการ [user_id][day]
+$attAt = db()->prepare('SELECT MAX(report_at) FROM cal_attendance WHERE work_date BETWEEN ? AND ?');
+$attAt->execute([sprintf('%04d-%02d-01', $y, $m), date('Y-m-t', strtotime(sprintf('%04d-%02d-01', $y, $m)))]);
+$attAt = $attAt->fetchColumn();
 $guardId = plan_guard_code_id($codes);
 
 // คอลัมน์สรุป: โครงการที่ดำเนินการในเดือนนี้ + โครงการที่มีในแผนเดือนนี้
@@ -38,6 +77,7 @@ $active = 'plan';
 $pageActions = '<button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> พิมพ์</button>'
     . ($isAdmin ? '<a href="plan_edit.php?m=' . $ym . '" class="btn btn-primary"><i class="bi bi-pencil-square"></i> ' . ($plan ? 'แก้ไขแผน' : 'สร้างแผน') . '</a>'
         . '<a href="plan_import.php?m=' . $ym . '" class="btn btn-outline-primary"><i class="bi bi-file-earmark-excel"></i> นำเข้า Excel</a>'
+        . '<a href="att_import.php" class="btn btn-outline-primary"><i class="bi bi-clock-history"></i> นำเข้าเวลาปฏิบัติราชการ</a>'
         . '<a href="' . h(module_url('ea', 'projects.php')) . '" class="btn btn-outline-secondary"><i class="bi bi-kanban"></i> โครงการ</a>' : '');
 $wd = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
 $today = date('Y-m-d');
@@ -70,7 +110,7 @@ require __DIR__ . '/header.php';
           <?php for ($d = 1; $d <= $days; $d++): $date = sprintf('%s-%02d', $ym, $d); $w = (int)date('w', strtotime($date)); ?>
             <th class="text-center plan-day<?= $w === 0 || $w === 6 ? ' we' : '' ?><?= $date === $today ? ' today' : '' ?>"><?= $d ?></th>
           <?php endfor; ?>
-          <th colspan="<?= count($fieldCodes) + 2 ?>" class="text-center plan-sum-head">สรุปจำนวนวัน</th>
+          <th colspan="<?= count($fieldCodes) + 4 ?>" class="text-center plan-sum-head">สรุปจำนวนวัน</th>
         </tr>
         <tr>
           <?php for ($d = 1; $d <= $days; $d++): $date = sprintf('%s-%02d', $ym, $d); $w = (int)date('w', strtotime($date)); ?>
@@ -79,6 +119,8 @@ require __DIR__ . '/header.php';
           <?php foreach ($fieldCodes as $c): ?><th class="text-center plan-sum" style="--c:<?= h($c['color']) ?>" title="<?= h($c['name']) ?>"><?= h($c['code']) ?></th><?php endforeach; ?>
           <th class="text-center plan-sum" style="--c:#16a34a" title="เวรสำนักงาน (จากปฏิทิน)">เวร</th>
           <th class="text-center plan-sum" style="--c:#dc2626" title="เวรศาลากลาง">*</th>
+          <th class="text-center plan-sum" style="--c:#b45309" title="สาย (จากเวลาปฏิบัติราชการ)">ส</th>
+          <th class="text-center plan-sum" style="--c:#dc2626" title="ขาดราชการ">ข</th>
         </tr>
       </thead>
       <tbody>
@@ -88,6 +130,9 @@ require __DIR__ . '/header.php';
         $sum = [];
         $dutyN = 0;
         $guardN = 0;
+        $lateN = 0;
+        $absentN = 0;
+        $uid = (int)$p['user_id'];
         $mine = (int)$p['user_id'] === (int)$me['id']; ?>
         <tr class="<?= $mine ? 'plan-me' : '' ?>">
           <td class="text-center text-muted"><?= $i + 1 ?></td>
@@ -108,24 +153,32 @@ require __DIR__ . '/header.php';
                 }
             }
             if ($field) { $dayField[$d]++; }
+            // เวลาปฏิบัติราชการ: ส / ลาเช้า / ลาบ่าย / ล / ร / ข / การลา
+            $as = $uid ? att_status($att[$uid][$d] ?? null, $field, $trips[$uid][$d] ?? null) : null;
+            if ($as && $as['code'] === 'ส') { $lateN++; }
+            if ($as && $as['code'] === 'ข') { $absentN++; }
             if ($hasDuty) { $dutyN++; }
             if ($hasGuard) { $guardN++; }
             $title = implode(' + ', array_filter(array_merge(
                 array_map(fn($cid) => $codes[$cid]['kind'] === 'field' ? $codes[$cid]['code'] . ($codes[$cid]['name'] !== $codes[$cid]['code'] ? ' (' . $codes[$cid]['name'] . ')' : '') : '', $ids),
-                [$hasDuty ? 'เวรสำนักงาน' : '', $hasGuard ? 'เวรศาลากลาง' : '']))); ?>
+                [$hasDuty ? 'เวรสำนักงาน' : '', $hasGuard ? 'เวรศาลากลาง' : '', $as ? $as['title'] : '']))); ?>
             <td class="text-center plan-cell<?= $w === 0 || $w === 6 ? ' we' : '' ?><?= $date === $today ? ' today' : '' ?><?= $first ? ' has' : '' ?>"
                 <?= $first ? 'style="--c:' . h($first['color']) . '"' : '' ?><?= $title !== '' ? ' title="' . h($d . ' ' . thai_month_long($m) . ': ' . $title) . '"' : '' ?>>
               <?php foreach ($ids as $cid): if (($codes[$cid]['kind'] ?? '') === 'field'): ?><span class="pc"><?= h($codes[$cid]['code']) ?></span><?php endif; endforeach; ?>
               <?php if ($hasDuty): ?><span class="pc-duty">เวร</span><?php endif; ?>
               <?php if ($hasGuard): ?><span class="pc-guard">*</span><?php endif; ?>
+              <?php if ($as): if (!empty($as['certifiable']) && $isAdmin): ?><button type="button" class="att-chip <?= $as['cls'] ?>" data-att-certify data-user="<?= $uid ?>" data-date="<?= $date ?>" data-name="<?= h(preg_replace('/\s+/u', ' ', $p['name'])) ?>"><?= h($as['code']) ?></button>
+              <?php else: ?><span class="att-chip <?= $as['cls'] ?>"><?= h($as['code']) ?></span><?php endif; endif; ?>
             </td>
           <?php endfor; ?>
           <?php foreach ($fieldCodes as $cid => $c): ?><td class="text-center plan-sumv"><?= !empty($sum[$cid]) ? $sum[$cid] : '' ?></td><?php endforeach; ?>
           <td class="text-center plan-sumv"><?= $dutyN ?: '' ?></td>
           <td class="text-center plan-sumv"><?= $guardN ?: '' ?></td>
+          <td class="text-center plan-sumv" style="color:#b45309"><?= $lateN ?: '' ?></td>
+          <td class="text-center plan-sumv" style="color:#dc2626"><?= $absentN ?: '' ?></td>
         </tr>
       <?php endforeach; ?>
-      <?php if (!$people): ?><tr><td colspan="<?= $days + count($fieldCodes) + 4 ?>" class="text-center text-muted py-4">ยังไม่มีรายชื่อในแผน</td></tr><?php endif; ?>
+      <?php if (!$people): ?><tr><td colspan="<?= $days + count($fieldCodes) + 6 ?>" class="text-center text-muted py-4">ยังไม่มีรายชื่อในแผน</td></tr><?php endif; ?>
       </tbody>
       <?php if ($people): ?>
       <tfoot>
@@ -134,7 +187,7 @@ require __DIR__ . '/header.php';
           <?php for ($d = 1; $d <= $days; $d++): $w = (int)date('w', strtotime(sprintf('%s-%02d', $ym, $d))); ?>
             <td class="text-center<?= $w === 0 || $w === 6 ? ' we' : '' ?>"><?= $dayField[$d] ?: '' ?></td>
           <?php endfor; ?>
-          <td colspan="<?= count($fieldCodes) + 2 ?>"></td>
+          <td colspan="<?= count($fieldCodes) + 4 ?>"></td>
         </tr>
       </tfoot>
       <?php endif; ?>
@@ -144,6 +197,14 @@ require __DIR__ . '/header.php';
     <?php foreach ($fieldCodes as $c): ?><span class="me-3 text-nowrap"><span class="plan-chip" style="--c:<?= h($c['color']) ?>"><?= h($c['code']) ?></span> <?= h($c['name'] !== $c['code'] ? $c['name'] : '') ?></span><?php endforeach; ?>
     <span class="me-3 text-nowrap"><span class="pc-duty">เวร</span> เวรสำนักงาน (จากปฏิทิน)</span>
     <span class="me-3 text-nowrap"><span class="pc-guard">*</span> <?= h($codes[$guardId]['name'] ?? 'เวรศาลากลาง') ?></span>
+    <div class="mt-1">เวลาปฏิบัติราชการ<?= $attAt ? ' (ข้อมูล ณ ' . h(thai_date(substr($attAt, 0, 10)) . ' ' . substr($attAt, 11, 5)) . ' น.)' : ' (ยังไม่ได้นำเข้า)' ?>:
+      <span class="me-2 text-nowrap"><span class="att-chip att-late">ส</span> สาย</span>
+      <span class="me-2 text-nowrap"><span class="att-chip att-half">ลาเช้า</span>/<span class="att-chip att-half">ลาบ่าย</span></span>
+      <span class="me-2 text-nowrap"><span class="att-chip att-pending">ล</span> ลงเวลาไม่ครบ</span>
+      <span class="me-2 text-nowrap"><span class="att-chip att-cert">ล</span> รับรองการมาปฏิบัติราชการ</span>
+      <span class="me-2 text-nowrap"><span class="att-chip att-trip">ร</span> ไปราชการ</span>
+      <span class="me-2 text-nowrap"><span class="att-chip att-absent">ข</span> ขาดราชการ<?= $isAdmin ? ' (คลิกเพื่อรับรอง)' : '' ?></span>
+      <span class="me-2 text-nowrap"><span class="att-chip att-leave">ป</span> การลาตามไฟล์</span></div>
     <?php if ($plan['note']): ?><div class="mt-2"><b>หมายเหตุ:</b> <?= nl2br(h($plan['note'])) ?></div><?php endif; ?>
   </div>
   <?php endif; ?>
@@ -185,4 +246,17 @@ require __DIR__ . '/header.php';
     tr.plan-me td, tr.plan-me .plan-name { background: transparent; font-weight: normal; }
   }
 </style>
+<?php if ($isAdmin): ?>
+<form method="post" id="attCertForm" class="d-none"><?= csrf_field() ?><input type="hidden" name="action" value="att_certify"><input type="hidden" name="user_id"><input type="hidden" name="date"></form>
+<script>
+// คลิก "ข" → ยืนยันเปลี่ยนเป็น "ล" รับรองการมาปฏิบัติราชการ
+document.querySelectorAll('[data-att-certify]').forEach(b => b.addEventListener('click', () => {
+  if (!confirm('เปลี่ยน "ขาดราชการ" ของ ' + b.dataset.name + ' วันที่ ' + b.dataset.date.split('-').reverse().join('/') + ' เป็น "รับรองการมาปฏิบัติราชการ (ล)"?')) { return; }
+  const f = document.getElementById('attCertForm');
+  f.user_id.value = b.dataset.user;
+  f.date.value = b.dataset.date;
+  f.submit();
+}));
+</script>
+<?php endif; ?>
 <?php require __DIR__ . '/footer.php'; ?>

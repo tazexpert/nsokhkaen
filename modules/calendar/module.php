@@ -26,5 +26,6 @@ return [
         ['id' => 'add',   'label' => 'เพิ่มกิจกรรม',       'href' => 'event_form.php',     'icon' => 'bi-plus-circle',    'role' => 'editor'],
         ['id' => 'import', 'label' => 'นำเข้า CSV',        'href' => 'import.php',         'icon' => 'bi-filetype-csv',   'role' => 'admin'],
         ['id' => 'duty',  'label' => 'นำเข้าเวรสำนักงาน',  'href' => 'duty_import.php',    'icon' => 'bi-shield-check',   'role' => 'admin'],
+        ['id' => 'att',   'label' => 'นำเข้าเวลาปฏิบัติราชการ', 'href' => 'att_import.php', 'icon' => 'bi-clock-history', 'role' => 'admin'],
     ],
 ];
