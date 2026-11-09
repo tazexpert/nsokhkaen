@@ -64,8 +64,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pid = null;
     }
     if ($action === 'add' || $action === 'save') {
-        if ($name === '') {
-            flash('กรุณาระบุชื่อหมวด', 'warning');
+        // หมวด = งบประมาณ (ค่าใช้จ่าย) กิจกรรม
+        $parts = array_map(fn($f) => trim(preg_replace('/\s+/u', ' ', (string)post($f))), ['budget_name', 'expense_name', 'activity_name']);
+        $parts = [mb_substr($parts[0], 0, 100), mb_substr($parts[1], 0, 150), mb_substr($parts[2], 0, 150)];
+        $name = bud_item_name(...$parts);
+        if ($parts[0] === '') {
+            flash('กรุณาระบุงบประมาณ', 'warning');
+            redirect('items.php');
+        }
+        if (mb_strlen($name) > 255) {
+            flash('ชื่อหมวดรวมยาวเกิน 255 ตัวอักษร', 'warning');
             redirect('items.php');
         }
         $dup = $pdo->prepare('SELECT id FROM bud_items WHERE name = ? AND id <> ?');
@@ -77,13 +85,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if ($action === 'add') {
         $sort = (int)$pdo->query('SELECT COALESCE(MAX(sort_order), 0) + 10 FROM bud_items')->fetchColumn();
-        $pdo->prepare('INSERT INTO bud_items (name, project_id, sort_order) VALUES (?, ?, ?)')
-            ->execute([mb_substr($name, 0, 150), $pid, $sort]);
+        $pdo->prepare('INSERT INTO bud_items (name, budget_name, expense_name, activity_name, project_id, sort_order) VALUES (?, ?, ?, ?, ?, ?)')
+            ->execute([$name, ...$parts, $pid, $sort]);
         audit_log('bud_item_add', 'เพิ่มหมวด: ' . $name, BUD_MODULE);
-        flash('เพิ่มรายการ "' . $name . '" แล้ว');
+        flash('เพิ่มหมวด "' . $name . '" แล้ว');
     } elseif ($action === 'save') {
-        $pdo->prepare('UPDATE bud_items SET name = ?, is_other = 0, project_id = ?, sort_order = ?, is_active = ? WHERE id = ?')
-            ->execute([mb_substr($name, 0, 150), $pid, (int)post('sort_order'), post('is_active') ? 1 : 0, int_param('id')]);
+        $pdo->prepare('UPDATE bud_items SET name = ?, budget_name = ?, expense_name = ?, activity_name = ?, is_other = 0, project_id = ?, sort_order = ?, is_active = ? WHERE id = ?')
+            ->execute([$name, ...$parts, $pid, (int)post('sort_order'), post('is_active') ? 1 : 0, int_param('id')]);
         audit_log('bud_item_save', 'แก้ไขหมวด: ' . $name, BUD_MODULE);
         flash('บันทึก "' . $name . '" แล้ว');
     } elseif ($action === 'delete') {
@@ -102,6 +110,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $items = $pdo->query('SELECT i.*, (SELECT COUNT(*) FROM bud_txns t WHERE t.item_id = i.id) used FROM bud_items i ORDER BY sort_order, id')->fetchAll();
+usort($items, fn($a, $b) => bud_budget_rank(['label' => $a['name'], 'budget' => $a['budget_name']]) <=> bud_budget_rank(['label' => $b['name'], 'budget' => $b['budget_name']]));
+// ค่าที่เคยใช้ (ช่วยพิมพ์)
+$suggest = [];
+foreach (['budget_name', 'expense_name', 'activity_name'] as $f) {
+    $suggest[$f] = array_values(array_unique(array_filter(array_column($items, $f))));
+}
+$suggest['budget_name'] = array_values(array_unique(array_merge(BUD_BUDGET_TYPES, ['งบบุคลากร', 'งบลงทุน'], $suggest['budget_name'])));
 $projects = projects_all();
 $linked = array_filter(array_column($items, 'project_id'));
 $survey = array_filter($projects, fn($p) => $p['is_active'] && !in_array($p['id'], $linked));
@@ -195,18 +210,21 @@ require __DIR__ . '/header.php';
     <?php endif; ?>
   </div>
 </div>
+<?php foreach ($suggest as $f => $vals): ?><datalist id="dl_<?= $f ?>"><?php foreach ($vals as $sv): ?><option value="<?= h($sv) ?>"><?php endforeach; ?></datalist><?php endforeach; ?>
 <div class="row g-3">
-  <div class="col-xl-8">
+  <div class="col-12">
     <div class="card">
-      <div class="card-header"><strong>หมวด</strong> <span class="small text-muted">— ใช้เลือกในหน้าบันทึก · ผูกกับโครงการสำรวจได้ที่ช่อง "ผูกโครงการ"</span></div>
+      <div class="card-header"><strong>หมวด = งบประมาณ · ค่าใช้จ่าย · กิจกรรม</strong> <span class="small text-muted">— ในทะเบียนคุมเงินและรายงานรวมเป็น "งบประมาณ (ค่าใช้จ่าย) กิจกรรม" · ผูกกับโครงการสำรวจได้ที่ช่อง "ผูกโครงการ"</span></div>
       <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
-          <thead class="table-light"><tr><th style="width:5rem">ลำดับ</th><th>ชื่อหมวด</th><th>ผูกโครงการ</th><th class="text-center">ใช้งาน</th><th class="text-end">ข้อมูล</th><th></th></tr></thead>
+          <thead class="table-light"><tr><th style="width:5rem">ลำดับ</th><th style="width:12rem">งบประมาณ</th><th>ค่าใช้จ่าย</th><th>กิจกรรม</th><th>ผูกโครงการ</th><th class="text-center">ใช้งาน</th><th class="text-end">ข้อมูล</th><th></th></tr></thead>
           <tbody>
           <?php foreach ($items as $i): $f = 'f' . $i['id']; ?>
             <tr class="<?= $i['is_active'] ? '' : 'text-muted' ?>">
               <td><input form="<?= $f ?>" type="number" name="sort_order" value="<?= (int)$i['sort_order'] ?>" class="form-control form-control-sm"></td>
-              <td><input form="<?= $f ?>" type="text" name="name" value="<?= h($i['name']) ?>" class="form-control form-control-sm" maxlength="150" required></td>
+              <td><input form="<?= $f ?>" type="text" name="budget_name" value="<?= h($i['budget_name']) ?>" list="dl_budget_name" class="form-control form-control-sm" maxlength="100" required></td>
+              <td><input form="<?= $f ?>" type="text" name="expense_name" value="<?= h($i['expense_name']) ?>" list="dl_expense_name" class="form-control form-control-sm" maxlength="150"></td>
+              <td><input form="<?= $f ?>" type="text" name="activity_name" value="<?= h($i['activity_name']) ?>" list="dl_activity_name" class="form-control form-control-sm" maxlength="150" title="<?= h($i['name']) ?>"></td>
               <td><select form="<?= $f ?>" name="project_id" class="form-select form-select-sm" style="min-width:8rem"><?= $projOptions($i['project_id'] ? (int)$i['project_id'] : null) ?></select></td>
               <td class="text-center"><input form="<?= $f ?>" type="checkbox" name="is_active" value="1" class="form-check-input"<?= $i['is_active'] ? ' checked' : '' ?>></td>
               <td class="text-end small"><?= (int)$i['used'] ? number_format($i['used']) . ' รายการ' : '-' ?></td>
@@ -223,21 +241,28 @@ require __DIR__ . '/header.php';
           </tbody>
         </table>
       </div>
-      <div class="card-footer small text-muted">"ผูกโครงการ" = หมวดนี้เป็นของโครงการสำรวจนั้น (1 โครงการมีได้หลายหมวด) · รายการที่มีข้อมูลแล้วลบไม่ได้ ให้ปิดใช้งานแทน</div>
+      <div class="card-footer small text-muted">ค่าใช้จ่ายและกิจกรรมเว้นว่างได้ · "ผูกโครงการ" = หมวดนี้เป็นของโครงการสำรวจนั้น (1 โครงการมีได้หลายหมวด) · รายการที่มีข้อมูลแล้วลบไม่ได้ ให้ปิดใช้งานแทน</div>
     </div>
   </div>
-  <div class="col-xl-4">
-    <form method="post" class="card mb-3">
+  <div class="col-xl-7">
+    <form method="post" class="card h-100">
       <?= csrf_field() ?><input type="hidden" name="action" value="add">
       <div class="card-header"><strong><i class="bi bi-plus-lg"></i> เพิ่มหมวด</strong></div>
-      <div class="card-body">
-        <input type="text" name="name" class="form-control mb-2" placeholder="ชื่อหมวด เช่น ค่าซ่อมแซมครุภัณฑ์" maxlength="150" required>
-        <label class="form-label small mb-0">ผูกกับโครงการสำรวจ (ไม่บังคับ)</label>
-        <select name="project_id" class="form-select mb-3"><?= $projOptions(null) ?></select>
-        <button class="btn btn-primary"><i class="bi bi-plus-lg"></i> เพิ่ม</button>
+      <div class="card-body row g-2">
+        <div class="col-md-4"><label class="form-label small mb-0">งบประมาณ <span class="text-danger">*</span></label>
+          <input type="text" name="budget_name" list="dl_budget_name" class="form-control" placeholder="เช่น งบดำเนินงาน" maxlength="100" required></div>
+        <div class="col-md-4"><label class="form-label small mb-0">ค่าใช้จ่าย</label>
+          <input type="text" name="expense_name" list="dl_expense_name" class="form-control" placeholder="เช่น ค่าตอบแทนใช้สอยฯ" maxlength="150"></div>
+        <div class="col-md-4"><label class="form-label small mb-0">กิจกรรม</label>
+          <input type="text" name="activity_name" list="dl_activity_name" class="form-control" placeholder="เช่น ค่าน้ำมันเชื้อเพลิง" maxlength="150"></div>
+        <div class="col-md-8"><label class="form-label small mb-0">ผูกกับโครงการสำรวจ (ไม่บังคับ)</label>
+          <select name="project_id" class="form-select"><?= $projOptions(null) ?></select></div>
+        <div class="col-md-4 d-grid align-items-end"><button class="btn btn-primary"><i class="bi bi-plus-lg"></i> เพิ่ม</button></div>
       </div>
     </form>
-    <div class="card">
+  </div>
+  <div class="col-xl-5">
+    <div class="card h-100">
       <div class="card-header"><strong>โครงการที่ยังไม่ผูกกับหมวด</strong> <span class="small text-muted">(จากหน้าโครงการที่รับผิดชอบ)</span></div>
       <ul class="list-group list-group-flush small">
         <?php foreach ($survey as $p): ?><li class="list-group-item"><span class="bud-dot" style="background:<?= h($p['color']) ?>"></span><b><?= h($p['code']) ?></b> <?= h($p['name'] !== $p['code'] ? $p['name'] : '') ?></li><?php endforeach; ?>

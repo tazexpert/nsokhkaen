@@ -87,11 +87,7 @@ require __DIR__ . '/header.php';
     <div class="col-md-3"><label class="form-label small mb-0">แผนงาน / งานและโครงการ</label>
       <select name="scope" class="form-select form-select-sm" onchange="this.form.submit()"><?= bud_scope_options($scope) ?></select></div>
     <div class="col-md-3"><label class="form-label small mb-0">หมวด</label>
-      <select name="src" class="form-select form-select-sm" onchange="this.form.submit()"><option value="">ทั้งหมด</option>
-        <?php $g = null; foreach ($sources as $k => $s): if ($s['group'] !== $g): ?><?= $g !== null ? '</optgroup>' : '' ?><optgroup label="<?= h($s['group']) ?>"><?php $g = $s['group']; endif; ?>
-          <option value="<?= h($k) ?>"<?= $k === $src ? ' selected' : '' ?>><?= h($s['label']) ?></option>
-        <?php endforeach; ?><?= $g !== null ? '</optgroup>' : '' ?>
-      </select></div>
+      <select name="src" class="form-select form-select-sm" onchange="this.form.submit()"><?= bud_source_options($sources, $src) ?></select></div>
     <div class="col-md-2"><label class="form-label small mb-0">ค้นหา</label><input type="search" name="q" value="<?= h($q) ?>" class="form-control form-control-sm" placeholder="รายการ / ที่เอกสาร / หมายเหตุ"></div>
     <div class="col-md-1 d-grid"><button class="btn btn-sm btn-secondary"><i class="bi bi-search"></i></button></div>
   </div>

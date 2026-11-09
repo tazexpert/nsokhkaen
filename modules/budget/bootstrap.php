@@ -2,7 +2,7 @@
 /**
  * จุดเริ่มต้นของระบบงบประมาณ (budget)
  * สิทธิ์: viewer = ผู้ดูรายงานงบ · editor = ผู้จัดทำงบประมาณ · admin = ผู้ดูแลระบบงบประมาณ
- * ตาราง: bud_items (หมวด) · bud_plans (แผนงาน) → bud_works (งานและโครงการ) · bud_txns (รับเข้า = เพิ่ม/ได้รับ · เบิกจ่าย = เบิก)
+ * ตาราง: bud_items (หมวด = งบประมาณ · ค่าใช้จ่าย · กิจกรรม) · bud_plans (แผนงาน) → bud_works (งานและโครงการ) · bud_txns (รับเข้า = เพิ่ม/ได้รับ · เบิกจ่าย = เบิก)
  * ตัวคลุมของรายการ: แผนงาน → งานและโครงการ → หมวด (ทะเบียนคุมเงินประจำงวดส่วนจังหวัด แยกตาม งานและโครงการ × หมวด)
  * "หมวด" = โครงการสำรวจ (core_projects ในหน้าโครงการที่รับผิดชอบ) + รายการงบประมาณ (bud_items)
  *   หมวดที่ผูกกับโครงการ (เช่น หมวดของโครงการโพล) ใช้แทนโครงการนั้น — โครงการนั้นจะไม่แสดงในกลุ่มโครงการสำรวจ
@@ -97,6 +97,8 @@ function bud_sources(bool $all = false): array
         }
         $p = $i['project_id'] ? $projects[(int)$i['project_id']] ?? null : null;
         $out['i:' . $i['id']] = ['key' => 'i:' . $i['id'], 'label' => $i['name'], 'group' => 'หมวด',
+                                 'budget' => (string)($i['budget_name'] ?? ''), 'expense' => (string)($i['expense_name'] ?? ''),
+                                 'activity' => (string)($i['activity_name'] ?? ''),
                                  'color' => $p['color'] ?? '#15803d', 'active' => (bool)$i['is_active'],
                                  'project_id' => $i['project_id'] ? (int)$i['project_id'] : null];
     }
@@ -205,12 +207,42 @@ function bud_budget_type(array $s): string
     if (!empty($s['legacy'])) {
         return 'โครงการ (ข้อมูลเดิม)';
     }
+    if (($s['budget'] ?? '') !== '') {
+        return $s['budget'];
+    }
     return preg_match('/^\s*(เงินนอกงบประมาณ|งบ[^\s(]+)/u', (string)$s['label'], $m) ? $m[1] : 'อื่น ๆ';
+}
+
+/** <option> หมวด จัดกลุ่มตามงบประมาณ (เรียงเหมือนรายงาน) — ชื่อในกลุ่มตัดงบประมาณออก */
+function bud_source_options(array $sources, string $sel, string $empty = 'ทั้งหมด'): string
+{
+    uasort($sources, fn($a, $b) => bud_budget_rank($a) <=> bud_budget_rank($b));
+    $o = '<option value="">' . h($empty) . '</option>';
+    $g = null;
+    foreach ($sources as $k => $s) {
+        $t = bud_budget_type($s);
+        if ($t !== $g) {
+            $o .= ($g !== null ? '</optgroup>' : '') . '<optgroup label="' . h($t) . '">';
+            $g = $t;
+        }
+        $o .= '<option value="' . h($k) . '"' . ($k === $sel ? ' selected' : '') . ' title="' . h($s['label']) . '">' . h(bud_label_in_type($s)) . '</option>';
+    }
+    return $o . ($g !== null ? '</optgroup>' : '');
+}
+
+/** ชื่อหมวด (รวม 3 ส่วน) = งบประมาณ (ค่าใช้จ่าย) กิจกรรม — ใช้ในทะเบียนคุมเงินและรายงาน */
+function bud_item_name(string $budget, string $expense, string $activity): string
+{
+    return trim($budget . ($expense !== '' ? ' (' . $expense . ')' : '') . ($activity !== '' ? ' ' . $activity : ''));
 }
 
 /** ชื่อหมวดเมื่อแสดงใต้หัวข้อประเภทงบ: ตัดประเภทงบที่ขึ้นต้นออก (เหลือชื่อเต็มถ้าตัดแล้วว่าง) */
 function bud_label_in_type(array $s): string
 {
+    if (($s['budget'] ?? '') !== '') {
+        $rest = trim(($s['expense'] !== '' ? '(' . $s['expense'] . ') ' : '') . $s['activity']);
+        return $rest !== '' ? $rest : $s['label'];
+    }
     $t = bud_budget_type($s);
     $label = trim((string)$s['label']);
     $rest = str_starts_with($label, $t) ? trim(mb_substr($label, mb_strlen($t))) : '';

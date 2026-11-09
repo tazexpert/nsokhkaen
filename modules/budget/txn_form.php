@@ -96,6 +96,16 @@ foreach (db()->query('SELECT project_id, item_id, plan_id, work_id FROM bud_txns
 if ($v['src'] !== '' && !isset($sources[$v['src']]) && isset($allSources[$v['src']])) {
     $sources[$v['src']] = $allSources[$v['src']];
 }
+// หมวดสำหรับตัวเลือก 3 ชั้น เรียงตามประเภทงบ (เหมือนรายงาน) แล้วตามลำดับหมวด
+$catItems = [];
+foreach ($sources as $k => $x) {
+    if (!empty($x['legacy'])) {
+        continue;
+    }
+    $catItems[] = ['k' => $k, 'b' => bud_budget_type($x), 'e' => $x['expense'] ?? '',
+                   'a' => ($x['budget'] ?? '') !== '' ? $x['activity'] : $x['label'], 'n' => $x['label'], 'r' => bud_budget_rank($x)];
+}
+usort($catItems, fn($p, $q) => $p['r'] <=> $q['r']);   // usort คงลำดับเดิมเมื่อเท่ากัน (PHP 8)
 
 $pageTitle = ($t ? 'แก้ไข' : 'บันทึก') . BUD_TYPE_PAGES[$type];
 $active = $type;
@@ -123,12 +133,15 @@ require __DIR__ . '/header.php';
     <div class="col-md-6"><label class="form-label">งานและโครงการ <span class="text-muted small">(ถ้ามี)</span></label>
       <select name="work_id" id="txnWork" class="form-select"><option value="">— ไม่ระบุ —</option>
         <?php foreach ($works as $wid => $w): ?><option value="<?= $wid ?>" data-plan="<?= (int)$w['plan_id'] ?>"<?= $wid === $v['work_id'] ? ' selected' : '' ?>><?= h($w['name']) ?></option><?php endforeach; ?></select></div>
-    <div class="col-md-6"><label class="form-label">หมวด <span class="text-danger">*</span></label>
-      <select name="src" id="txnSrc" class="form-select" required><option value="">— เลือก —</option>
-        <?php $g = null; foreach ($sources as $k => $s): if ($s['group'] !== $g): ?><?= $g !== null ? '</optgroup>' : '' ?><optgroup label="<?= h($s['group']) ?>"><?php $g = $s['group']; endif; ?>
-          <option value="<?= h($k) ?>"<?= $k === $v['src'] ? ' selected' : '' ?>><?= h($s['label']) ?></option>
-        <?php endforeach; ?><?= $g !== null ? '</optgroup>' : '' ?>
-      </select></div>
+    <!-- หมวด = งบประมาณ → ค่าใช้จ่าย → กิจกรรม (เลือกครบแล้วได้หมวดเดียว ส่งเป็น src) -->
+    <input type="hidden" name="src" id="txnSrc" value="<?= h($v['src']) ?>">
+    <div class="col-md-4"><label class="form-label">งบประมาณ <span class="text-danger">*</span></label>
+      <select id="bBudget" class="form-select" required></select></div>
+    <div class="col-md-4"><label class="form-label">ค่าใช้จ่าย</label>
+      <select id="bExpense" class="form-select"></select></div>
+    <div class="col-md-4"><label class="form-label">กิจกรรม</label>
+      <select id="bActivity" class="form-select"></select></div>
+    <div class="col-12 small mt-1" id="bPreview"><?php if (str_starts_with($v['src'], 'p:') && isset($allSources[$v['src']])): ?><span class="text-warning">หมวดเดิม: <?= h($allSources[$v['src']]['label']) ?> — เลือกใหม่เพื่อเปลี่ยน</span><?php endif; ?></div>
     <div class="col-12"><label class="form-label">รายการ <span class="text-danger">*</span></label>
       <input type="text" name="description" class="form-control" value="<?= h($v['description']) ?>" maxlength="500" required></div>
     <div class="col-12"><label class="form-label">รายละเอียด</label>
@@ -155,6 +168,37 @@ require __DIR__ . '/header.php';
   d.addEventListener('change', calc);
   // งานและโครงการ: แสดงเฉพาะของแผนงานที่เลือก
   const plan = document.getElementById('txnPlan'), work = document.getElementById('txnWork'), src = document.getElementById('txnSrc');
+  // หมวด: งบประมาณ → ค่าใช้จ่าย → กิจกรรม (ค่าที่ว่างแสดงเป็น "— ไม่มี —") · ค่าใน select นำหน้าด้วย "=" แยกจาก "ยังไม่เลือก"
+  const items = <?= json_encode($catItems, JSON_UNESCAPED_UNICODE) ?>;
+  const selB = document.getElementById('bBudget'), selE = document.getElementById('bExpense'), selA = document.getElementById('bActivity'), preview = document.getElementById('bPreview');
+  const val = sel => sel.value === '' ? null : sel.value.slice(1);
+  const fill = (sel, values, keep) => {
+    const cur = keep ? sel.value : '';
+    sel.innerHTML = '';
+    const ph = new Option(values.length ? '— เลือก —' : '—', ''); sel.add(ph);
+    values.forEach(v => sel.add(new Option(v === '' ? '— ไม่มี —' : v, '=' + v)));
+    if (values.length === 1) sel.value = '=' + values[0];
+    else if (cur && values.includes(cur.slice(1))) sel.value = cur;
+    sel.disabled = !values.length;
+  };
+  const uniq = arr => [...new Set(arr)];
+  const pick = () => items.filter(x => (val(selB) === null || x.b === val(selB)) && (val(selE) === null || x.e === val(selE)) && (val(selA) === null || x.a === val(selA)));
+  const resolve = () => {
+    const m = val(selB) !== null && val(selE) !== null && val(selA) !== null ? pick() : [];
+    const before = src.value;
+    if (m.length === 1) { src.value = m[0].k; preview.innerHTML = ''; preview.append('หมวด: ', Object.assign(document.createElement('b'), { textContent: m[0].n })); }
+    else if (!src.value.startsWith('p:') || val(selB) !== null) { src.value = ''; preview.textContent = ''; }
+    if (src.value !== before) src.dispatchEvent(new Event('change'));
+  };
+  const onB = () => { fill(selE, val(selB) === null ? [] : uniq(items.filter(x => x.b === val(selB)).map(x => x.e))); onE(); };
+  const onE = () => { fill(selA, val(selE) === null ? [] : uniq(items.filter(x => x.b === val(selB) && x.e === val(selE)).map(x => x.a))); resolve(); };
+  selB.addEventListener('change', onB); selE.addEventListener('change', onE); selA.addEventListener('change', resolve);
+  fill(selB, uniq(items.map(x => x.b)));
+  const init = items.find(x => x.k === src.value);
+  if (init) { selB.value = '=' + init.b; onB(); selE.value = '=' + init.e; onE(); selA.value = '=' + init.a; resolve(); } else { onB(); }
+  document.querySelector('form.card').addEventListener('submit', e => {
+    if (!src.value) { e.preventDefault(); (selB.value ? (selE.value ? selA : selE) : selB).focus(); alert('กรุณาเลือกหมวด (งบประมาณ / ค่าใช้จ่าย / กิจกรรม) ให้ครบ'); }
+  });
   const filterWork = () => {
     work.querySelectorAll('option[data-plan]').forEach(o => { o.hidden = o.disabled = o.dataset.plan !== plan.value; });
     if (work.selectedOptions[0] && work.selectedOptions[0].disabled) work.value = '';

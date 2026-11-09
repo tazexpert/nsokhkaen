@@ -57,10 +57,7 @@ require __DIR__ . '/header.php';
     <div class="col-md-5"><label class="form-label small mb-0">แผนงาน / งานและโครงการ</label>
       <select name="scope" class="form-select form-select-sm" onchange="this.form.submit()"><?= bud_scope_options($scope) ?></select></div>
     <div class="col-md-5"><label class="form-label small mb-0">หมวด</label>
-      <select name="src" class="form-select form-select-sm" onchange="this.form.submit()"><option value="">ทั้งหมด</option>
-        <?php $g = null; foreach ($sources as $k => $s): if ($s['group'] !== $g): ?><?= $g !== null ? '</optgroup>' : '' ?><optgroup label="<?= h($s['group']) ?>"><?php $g = $s['group']; endif; ?>
-          <option value="<?= h($k) ?>"<?= $k === $src ? ' selected' : '' ?>><?= h($s['label']) ?></option>
-        <?php endforeach; ?><?= $g !== null ? '</optgroup>' : '' ?></select></div>
+      <select name="src" class="form-select form-select-sm" onchange="this.form.submit()"><?= bud_source_options($sources, $src) ?></select></div>
   </div>
   <div class="small text-muted mt-1">ทะเบียนแยกตามแผนงาน / งานและโครงการ (ถ้ามี) × หมวด · <?= number_format($count) ?> ทะเบียน · พิมพ์แล้วขึ้นหน้าใหม่ทุกทะเบียน</div>
 </form>

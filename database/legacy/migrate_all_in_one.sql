@@ -903,24 +903,33 @@ CREATE TABLE IF NOT EXISTS cal_attendance (
 -- ----------------------------------------------------------------------------
 -- รายการงบประมาณนอกจากโครงการสำรวจ (ผู้ดูแลระบบงบประมาณเพิ่ม/แก้ไขได้)
 CREATE TABLE IF NOT EXISTS bud_items (
-  id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  name         VARCHAR(150) NOT NULL,
-  is_other     TINYINT(1)   NOT NULL DEFAULT 0,            -- (ไม่ใช้แล้ว — เดิม: รายจ่ายอื่น)
-  project_id   INT UNSIGNED NULL,                           -- โครงการสำรวจที่นับเป็นรายการนี้แทน (เช่น โพล → รายจ่ายอื่น)
-  sort_order   INT          NOT NULL DEFAULT 0,
-  is_active    TINYINT(1)   NOT NULL DEFAULT 1,
-  created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name          VARCHAR(255) NOT NULL,                      -- หมวด (รวม) = งบประมาณ (ค่าใช้จ่าย) กิจกรรม — ใช้ในทะเบียนคุมเงิน/รายงาน
+  budget_name   VARCHAR(100) NOT NULL DEFAULT '',           -- งบประมาณ เช่น งบดำเนินงาน / งบบุคลากร / งบรายจ่ายอื่น / เงินนอกงบประมาณ
+  expense_name  VARCHAR(150) NOT NULL DEFAULT '',           -- ค่าใช้จ่าย เช่น ค่าตอบแทนใช้สอยฯ (ไม่บังคับ)
+  activity_name VARCHAR(150) NOT NULL DEFAULT '',           -- กิจกรรม เช่น ค่าน้ำมันเชื้อเพลิง (ไม่บังคับ)
+  is_other      TINYINT(1)   NOT NULL DEFAULT 0,            -- (ไม่ใช้แล้ว — เดิม: รายจ่ายอื่น)
+  project_id    INT UNSIGNED NULL,                          -- โครงการสำรวจที่หมวดนี้สังกัด (1 โครงการมีได้หลายหมวด)
+  sort_order    INT          NOT NULL DEFAULT 0,
+  is_active     TINYINT(1)   NOT NULL DEFAULT 1,
+  created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_bud_item_name (name),
   CONSTRAINT fk_bud_item_project FOREIGN KEY (project_id) REFERENCES core_projects(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-INSERT IGNORE INTO bud_items (name, sort_order) VALUES
-  ('เงินนอกงบประมาณ', 10), ('ค่าน้ำมันเชื้อเพลิง', 20), ('ค่าพานพุ่ม', 30), ('ค่าวัสดุ', 40),
-  ('ค่าเช่าเครื่องถ่ายเอกสาร', 50), ('ค่าตอบแทนพนักงานราชการ', 60), ('ประกันสังคมพนักงานราชการ', 70),
-  ('ค่าเช่าบ้านข้าราชการ', 80), ('ค่าสาธารณูปโภค', 90), ('จ้างเหมา จนท เก็บรวบรวมข้อมูล', 100),
-  ('จ้างเหมา จนท บริหารจัดการข้อมูล', 110), ('คนขับรถยนต์', 120), ('คนทำความสะอาด', 130), ('เน็ต NT', 140);
-INSERT IGNORE INTO bud_items (name, is_other, project_id, sort_order)
-  SELECT 'รายจ่ายอื่น (โพล)', 1, (SELECT id FROM core_projects WHERE code = 'โพล' LIMIT 1), 900;
+INSERT IGNORE INTO bud_items (name, budget_name, expense_name, activity_name, sort_order) VALUES
+  ('เงินนอกงบประมาณ', 'เงินนอกงบประมาณ', '', '', 10),
+  ('งบดำเนินงาน (ค่าตอบแทนใช้สอยฯ) ค่าน้ำมันเชื้อเพลิง', 'งบดำเนินงาน', 'ค่าตอบแทนใช้สอยฯ', 'ค่าน้ำมันเชื้อเพลิง', 20),
+  ('งบดำเนินงาน (ค่าตอบแทนใช้สอยฯ) ค่าพานพุ่ม ค่าวัสดุ', 'งบดำเนินงาน', 'ค่าตอบแทนใช้สอยฯ', 'ค่าพานพุ่ม ค่าวัสดุ', 30),
+  ('งบดำเนินงาน (ค่าตอบแทนใช้สอยฯ) ค่าเช่าเครื่องถ่ายเอกสาร', 'งบดำเนินงาน', 'ค่าตอบแทนใช้สอยฯ', 'ค่าเช่าเครื่องถ่ายเอกสาร', 40),
+  ('งบบุคลากร (ค่าตอบแทนพนักงานราชการ)', 'งบบุคลากร', 'ค่าตอบแทนพนักงานราชการ', '', 50),
+  ('งบดำเนินงาน (ประกันสังคมพนักงานราชการ)', 'งบดำเนินงาน', 'ประกันสังคมพนักงานราชการ', '', 60),
+  ('งบดำเนินงาน (ค่าตอบแทน) ค่าเช่าบ้านข้าราชการ', 'งบดำเนินงาน', 'ค่าตอบแทน', 'ค่าเช่าบ้านข้าราชการ', 70),
+  ('งบดำเนินงาน (ค่าสาธารณูปโภค)', 'งบดำเนินงาน', 'ค่าสาธารณูปโภค', '', 80),
+  ('งบรายจ่ายอื่น (จ้างเหมา จนท เก็บรวบรวมข้อมูล)', 'งบรายจ่ายอื่น', 'จ้างเหมา จนท เก็บรวบรวมข้อมูล', '', 90),
+  ('งบดำเนินงาน (ค่าใช้สอย) คนขับรถยนต์', 'งบดำเนินงาน', 'ค่าใช้สอย', 'คนขับรถยนต์', 100),
+  ('งบดำเนินงาน (ค่าใช้สอย) คนทำความสะอาด', 'งบดำเนินงาน', 'ค่าใช้สอย', 'คนทำความสะอาด', 110),
+  ('งบดำเนินงาน (ค่าสาธารณูปโภค) ค่าบริการเน็ต NT', 'งบดำเนินงาน', 'ค่าสาธารณูปโภค', 'ค่าบริการเน็ต NT', 120);
 
 -- แผนงาน
 CREATE TABLE IF NOT EXISTS bud_plans (
