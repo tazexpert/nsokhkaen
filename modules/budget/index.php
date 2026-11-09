@@ -105,9 +105,9 @@ require __DIR__ . '/header.php';
 <?php endif; ?>
 
 <div class="row g-3" data-reveal>
-  <div class="col-12 reveal-item">
+  <div class="col-lg-6 reveal-item">
     <div class="card h-100">
-      <div class="card-header d-flex align-items-center flex-wrap gap-2"><strong>ได้รับ / เบิกจ่าย รายเดือน</strong>
+      <div class="card-header d-flex align-items-center flex-wrap gap-2"><strong>สรุปการรับเข้า-เบิกจ่าย งบประมาณรายเดือน</strong>
         <span class="bud-legend small ms-auto"><i style="background:<?= BUD_COLORS['receive'] ?>"></i>ได้รับ <i style="background:<?= BUD_COLORS['spend'] ?>" class="ms-2"></i>เบิกจ่าย</span></div>
       <div class="card-body">
         <?php $max = max(1, ...array_map(fn($m) => max($m['receive'], $m['spend']), array_values($byMonth))); $i = 0; ?>
@@ -122,26 +122,24 @@ require __DIR__ . '/header.php';
           <?php endforeach; ?>
         </div>
         <div class="bud-vlabels"><?php foreach ($months as $ym): ?><span><?= h(bud_month_label($ym, true)) ?></span><?php endforeach; ?></div>
-        <div class="small text-muted mt-2">สูงสุด <?= bud_money($max) ?> บาท/เดือน · คลิกแท่งเพื่อดูรายงานเดือนนั้น</div>
       </div>
     </div>
   </div>
-</div>
-
-<div class="row g-3 mt-1" data-reveal>
-  <div class="col-12 reveal-item">
-    <div class="card">
+  <div class="col-lg-6 reveal-item">
+    <div class="card h-100">
       <div class="card-header d-flex align-items-center flex-wrap gap-2"><strong>แยกตามงบ / หมวด</strong>
-        <span class="bud-legend small ms-auto"><i style="background:<?= BUD_COLORS['spend'] ?>"></i>เบิกจ่าย (เทียบกับที่ได้รับ)</span></div>
-      <div class="card-body">
+        <span class="bud-legend small ms-auto"><i style="background:<?= BUD_COLORS['spend'] ?>"></i>เบิกจ่าย / ได้รับ</span></div>
+      <div class="card-body bud-src-list">
         <?php foreach ($byType as $t => $ta): ?>
           <div class="bud-type-head"><?= h($t) ?><span class="ms-auto text-nowrap"><b><?= bud_money($ta['spend']) ?></b> / <?= bud_money($ta['receive']) ?></span></div>
         <?php foreach ($ta['src'] as $k => $a): $s = $srcInfo($k);
           $r = $a['receive'] ?? 0; $sp = $a['spend'] ?? 0; $base = max($r, $sp, 0.01); ?>
-          <a class="bud-src-row text-decoration-none text-body" href="txns.php?<?= h(http_build_query(['type' => $sp > 0 ? 'spend' : 'receive', 'fy' => $fy, 'src' => $k])) ?>">
-            <span class="bud-src-name" title="<?= h($s['label']) ?>"><span class="bud-dot" style="background:<?= h($s['color']) ?>"></span><?= h(bud_label_in_type($s)) ?></span>
-            <span class="bar-track"><span class="bar-fill bud-fill<?= $sp > $r ? ' over' : '' ?>" style="width:<?= round($sp / $base * 100, 1) ?>%"></span></span>
-            <span class="bud-src-val text-nowrap"><b><?= bud_money($sp) ?></b> / <?= bud_money($r) ?><span class="text-muted small ms-1"><?= $r > 0 ? number_format($sp / $r * 100, 1) . '%' : '' ?></span></span>
+          <a class="bud-src-row2 text-decoration-none text-body" href="txns.php?<?= h(http_build_query(['type' => $sp > 0 ? 'spend' : 'receive', 'fy' => $fy, 'src' => $k])) ?>" title="<?= h($s['label']) ?>">
+            <div class="small"><span class="bud-dot" style="background:<?= h($s['color']) ?>"></span><?= h(bud_label_in_type($s)) ?></div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="bar-track bud-mini"><span class="bar-fill bud-fill<?= $sp > $r ? ' over' : '' ?>" style="width:<?= round($sp / $base * 100, 1) ?>%"></span></span>
+              <span class="small text-nowrap"><b><?= bud_money($sp) ?></b> / <?= bud_money($r) ?><span class="text-muted ms-1"><?= $r > 0 ? number_format($sp / $r * 100, 1) . '%' : '' ?></span></span>
+            </div>
           </a>
         <?php endforeach; endforeach; ?>
         <?php if (!$bySrc): ?><p class="text-muted mb-0">ยังไม่มีข้อมูล<?= bud_can('editor') ? ' — <a href="txn_form.php?type=receive">บันทึกรับเข้างบประมาณ</a>' : '' ?></p><?php endif; ?>

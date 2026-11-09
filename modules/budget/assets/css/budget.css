@@ -79,3 +79,9 @@
 .bud-type-exp-row + .bud-type-exp-row { margin-top: .45rem; }
 .bud-type-exp-row .text-truncate { min-width: 0; }
 .bar-track.bud-mini { height: 6px; flex: 1 1 auto; min-width: 30px; }
+/* แดชบอร์ด: แยกตามงบ / หมวด (ครึ่งจอ ด้านขวากราฟ) */
+.bud-src-list { max-height: 360px; overflow: auto; }
+.bud-src-row2 { display: block; padding: 3px 6px; border-radius: 6px; }
+.bud-src-row2:hover { background: #f8fafc; }
+.bud-src-row2 + .bud-src-row2 { margin-top: 2px; }
+@media print { .bud-src-list { max-height: none; overflow: visible; } }
