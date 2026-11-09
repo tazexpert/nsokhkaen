@@ -73,11 +73,11 @@ require __DIR__ . '/header.php';
 </div>
 
 <?php if ($byType): ?>
-<!-- แยกตามประเภทงบ: กล่องละประเภท -->
+<!-- สรุปตามงบประมาณ → ค่าใช้จ่าย: การ์ดละงบ (อยู่เหนือกราฟ) -->
 <div class="row g-3 mb-4" data-reveal>
   <?php $ti = 0; foreach ($byType as $t => $a): $c = $typeColors[min($ti++, count($typeColors) - 1)];
     $tp = $a['receive'] > 0 ? $a['spend'] / $a['receive'] * 100 : 0; ?>
-  <div class="col-sm-6 col-xl reveal-item">
+  <div class="col-md-6 col-xl-3 reveal-item">
     <a href="report.php?fy=<?= $fy ?>" class="card h-100 text-decoration-none text-body bud-type" style="--c:<?= $c ?>">
       <div class="card-body">
         <div class="bud-type-name"><?= h($t) ?></div>
@@ -86,6 +86,17 @@ require __DIR__ . '/header.php';
         <div class="d-flex justify-content-between small"><span>คงเหลือ</span><b class="<?= $a['receive'] - $a['spend'] < 0 ? 'text-danger' : '' ?>"><?= bud_money($a['receive'] - $a['spend']) ?></b></div>
         <div class="bud-progress mt-2"><span style="width:<?= min(100, $tp) ?>%;background:var(--c)"></span></div>
         <div class="small text-muted text-end mt-1">เบิกจ่าย <?= number_format($tp, 1) ?>%</div>
+        <!-- ค่าใช้จ่ายของงบนี้ (รวมทุกกิจกรรม): เบิกจ่าย / ได้รับ -->
+        <div class="bud-type-exp">
+          <?php foreach ($a['exp'] as $e => $ea): $er = $ea['receive']; $es = $ea['spend']; $ep = $er > 0 ? $es / $er * 100 : ($es > 0 ? 100 : 0); ?>
+          <div class="bud-type-exp-row" title="<?= h(($e !== '' ? $e : 'ไม่ระบุค่าใช้จ่าย') . ' · ได้รับ ' . bud_money($er) . ' · เบิกจ่าย ' . bud_money($es) . ' · คงเหลือ ' . bud_money($er - $es) . ($ea['n'] > 1 ? ' · ' . $ea['n'] . ' หมวด' : '')) ?>">
+            <div class="small"><?= $e !== '' ? h($e) : '<span class="text-muted">(ไม่ระบุค่าใช้จ่าย)</span>' ?><?= $ea['n'] > 1 ? ' <span class="text-muted">· ' . (int)$ea['n'] . ' หมวด</span>' : '' ?></div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="bar-track bud-mini"><span class="bar-fill bud-fill<?= $es > $er ? ' over' : '' ?>" style="width:<?= min(100, round($ep, 1)) ?>%"></span></span>
+              <span class="small text-nowrap"><b><?= bud_money($es) ?></b><span class="text-muted"> / <?= bud_money($er) ?></span></span></div>
+          </div>
+          <?php endforeach; ?>
+        </div>
       </div>
     </a>
   </div>
@@ -116,43 +127,6 @@ require __DIR__ . '/header.php';
     </div>
   </div>
 </div>
-
-<?php if ($byType): ?>
-<!-- สรุปตาม งบประมาณ → ค่าใช้จ่าย -->
-<div class="row g-3 mt-1" data-reveal>
-  <div class="col-12 reveal-item">
-    <div class="card">
-      <div class="card-header d-flex align-items-center flex-wrap gap-2"><strong>สรุปตามงบประมาณ → ค่าใช้จ่าย</strong>
-        <span class="bud-legend small ms-auto"><i style="background:<?= BUD_COLORS['spend'] ?>"></i>เบิกจ่าย (เทียบกับที่ได้รับ)</span></div>
-      <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0 bud-exp-table">
-          <thead class="table-light"><tr><th>งบประมาณ / ค่าใช้จ่าย</th><th class="text-end">ได้รับ</th><th class="text-end">เบิกจ่าย</th><th class="text-end">คงเหลือ</th><th style="width:22%">ร้อยละเบิกจ่าย</th></tr></thead>
-          <tbody>
-          <?php $ti = 0; foreach ($byType as $t => $ta): $c = $typeColors[min($ti++, count($typeColors) - 1)]; $tr = $ta['receive']; $ts = $ta['spend']; ?>
-            <tr class="bud-exp-type" style="--c:<?= $c ?>">
-              <td><span class="bud-dot" style="background:<?= $c ?>"></span><?= h($t) ?></td>
-              <td class="text-end"><?= bud_money($tr) ?></td><td class="text-end"><?= bud_money($ts) ?></td>
-              <td class="text-end<?= $tr - $ts < 0 ? ' text-danger' : '' ?>"><?= bud_money($tr - $ts) ?></td>
-              <td><div class="d-flex align-items-center gap-2"><span class="bar-track"><span class="bar-fill" style="width:<?= $tr > 0 ? min(100, round($ts / $tr * 100, 1)) : 0 ?>%;background:var(--c)"></span></span><span class="small text-nowrap"><?= $tr > 0 ? number_format($ts / $tr * 100, 1) . '%' : '-' ?></span></div></td>
-            </tr>
-            <?php foreach ($ta['exp'] as $e => $ea): $er = $ea['receive']; $es = $ea['spend']; ?>
-            <tr>
-              <td class="ps-4"><?= $e !== '' ? h($e) : '<span class="text-muted">(ไม่ระบุค่าใช้จ่าย)</span>' ?><?= $ea['n'] > 1 ? ' <span class="small text-muted">· ' . (int)$ea['n'] . ' หมวด</span>' : '' ?></td>
-              <td class="text-end"><?= bud_money($er) ?></td><td class="text-end"><?= bud_money($es) ?></td>
-              <td class="text-end<?= $er - $es < 0 ? ' text-danger' : '' ?>"><?= bud_money($er - $es) ?></td>
-              <td><div class="d-flex align-items-center gap-2"><span class="bar-track"><span class="bar-fill bud-fill<?= $es > $er ? ' over' : '' ?>" style="width:<?= $er > 0 ? min(100, round($es / $er * 100, 1)) : ($es > 0 ? 100 : 0) ?>%"></span></span><span class="small text-nowrap"><?= $er > 0 ? number_format($es / $er * 100, 1) . '%' : '-' ?></span></div></td>
-            </tr>
-            <?php endforeach; ?>
-          <?php endforeach; ?>
-          </tbody>
-          <tfoot><tr class="table-light fw-bold"><td>รวมทั้งสิ้น</td><td class="text-end"><?= bud_money($rec) ?></td><td class="text-end"><?= bud_money($spd) ?></td>
-            <td class="text-end<?= $rec - $spd < 0 ? ' text-danger' : '' ?>"><?= bud_money($rec - $spd) ?></td><td class="small"><?= number_format($pct, 1) ?>%</td></tr></tfoot>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
-<?php endif; ?>
 
 <div class="row g-3 mt-1" data-reveal>
   <div class="col-12 reveal-item">
