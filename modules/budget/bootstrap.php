@@ -2,8 +2,9 @@
 /**
  * จุดเริ่มต้นของระบบงบประมาณ (budget)
  * สิทธิ์: viewer = ผู้ดูรายงานงบ · editor = ผู้จัดทำงบประมาณ · admin = ผู้ดูแลระบบงบประมาณ
- * ตาราง: bud_items (รายการงบประมาณ) · bud_txns (รับเข้า = ได้รับ / เบิกจ่าย)
- * "ชื่อโครงการที่ได้รับ" = โครงการสำรวจ (core_projects ในหน้าโครงการที่รับผิดชอบ) + รายการงบประมาณ (bud_items)
+ * ตาราง: bud_items (หมวด) · bud_plans (แผนงาน) → bud_works (งานและโครงการ) · bud_txns (รับเข้า = เพิ่ม/ได้รับ · เบิกจ่าย = เบิก)
+ * ตัวคลุมของรายการ: 1. แผนงาน 2. งานและโครงการ → หมวด (ทะเบียนคุมเงินประจำงวดส่วนจังหวัด แยกตาม งานและโครงการ × หมวด)
+ * "หมวด" = โครงการสำรวจ (core_projects ในหน้าโครงการที่รับผิดชอบ) + รายการงบประมาณ (bud_items)
  *   รายการงบประมาณที่ผูกกับโครงการ (เช่น รายจ่ายอื่น (โพล)) ใช้แทนโครงการนั้น — โครงการนั้นจะไม่แสดงในกลุ่มโครงการสำรวจ
  */
 require_once __DIR__ . '/../../core/bootstrap.php';
@@ -74,7 +75,7 @@ function bud_money($n): string
 }
 
 /**
- * ชื่อโครงการที่ได้รับ ['p:<id>' | 'i:<id>' => ['key', 'label', 'group', 'color', 'is_other', 'active']]
+ * หมวด ['p:<id>' | 'i:<id>' => ['key', 'label', 'group', 'color', 'is_other', 'active']]
  * เรียง: โครงการสำรวจ → รายการงบประมาณ → รายจ่ายอื่น · $all = รวมที่ปิดใช้งาน (สำหรับแสดงข้อมูลเดิม)
  */
 function bud_sources(bool $all = false): array
@@ -97,14 +98,14 @@ function bud_sources(bool $all = false): array
         if (!$all && !$i['is_active']) {
             continue;
         }
-        $out['i:' . $i['id']] = ['key' => 'i:' . $i['id'], 'label' => $i['name'], 'group' => $i['is_other'] ? 'รายจ่ายอื่น' : 'รายการงบประมาณ',
+        $out['i:' . $i['id']] = ['key' => 'i:' . $i['id'], 'label' => $i['name'], 'group' => $i['is_other'] ? 'รายจ่ายอื่น' : 'หมวดรายจ่าย',
                                  'color' => $i['is_other'] ? '#64748b' : '#15803d', 'is_other' => (bool)$i['is_other'], 'active' => (bool)$i['is_active'],
                                  'project_id' => $i['project_id'] ? (int)$i['project_id'] : null];
     }
     return $cache[$all] = $out;
 }
 
-/** คีย์ชื่อโครงการที่ได้รับของรายการ (โครงการที่ผูกกับรายการงบประมาณ → รายการนั้น) */
+/** คีย์หมวดของรายการ (โครงการที่ผูกกับรายการงบประมาณ → รายการนั้น) */
 function bud_source_key(array $t): string
 {
     if ($t['item_id']) {
@@ -134,7 +135,7 @@ function bud_parse_source(string $key): ?array
 }
 
 /**
- * ยอดรวมตามชื่อโครงการที่ได้รับ × เดือน ของปีงบ: [source_key][ym][type] => amount
+ * ยอดรวมตามหมวด × เดือน ของปีงบ: [source_key][ym][type] => amount
  */
 function bud_totals(int $fy): array
 {
@@ -162,4 +163,46 @@ function bud_csv(string $filename, array $head, array $rows): void
     }
     fclose($f);
     exit;
+}
+
+/** แผนงาน [id => row] เรียงตามลำดับ · $all = รวมที่ปิดใช้งาน */
+function bud_plans(bool $all = true): array
+{
+    $out = [];
+    foreach (db()->query('SELECT * FROM bud_plans ORDER BY sort_order, id') as $r) {
+        if ($all || $r['is_active']) {
+            $out[(int)$r['id']] = $r;
+        }
+    }
+    return $out;
+}
+
+/** งานและโครงการ [id => row + plan_name] เรียงตามแผนงาน · $all = รวมที่ปิดใช้งาน */
+function bud_works(bool $all = true): array
+{
+    static $cache = null;
+    $cache ??= db()->query('SELECT w.*, p.name AS plan_name, p.is_active AS plan_active FROM bud_works w JOIN bud_plans p ON p.id = w.plan_id
+                            ORDER BY p.sort_order, p.id, w.sort_order, w.id')->fetchAll();
+    $out = [];
+    foreach ($cache as $r) {
+        if ($all || ($r['is_active'] && $r['plan_active'])) {
+            $out[(int)$r['id']] = $r;
+        }
+    }
+    return $out;
+}
+
+/** <option> งานและโครงการ จัดกลุ่มตามแผนงาน */
+function bud_work_options(array $works, ?int $sel, string $empty = '— เลือก —'): string
+{
+    $o = $empty !== '' ? '<option value="">' . h($empty) . '</option>' : '';
+    $g = null;
+    foreach ($works as $id => $w) {
+        if ($w['plan_id'] !== $g) {
+            $o .= ($g !== null ? '</optgroup>' : '') . '<optgroup label="แผนงาน: ' . h($w['plan_name']) . '">';
+            $g = $w['plan_id'];
+        }
+        $o .= '<option value="' . $id . '"' . ($id === $sel ? ' selected' : '') . '>' . h($w['name']) . '</option>';
+    }
+    return $o . ($g !== null ? '</optgroup>' : '');
 }

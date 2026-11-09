@@ -15,15 +15,19 @@ if ($id) {
 $type = $t['txn_type'] ?? (($_GET['type'] ?? $_POST['type'] ?? '') === 'spend' ? 'spend' : 'receive');
 $sources = bud_sources();
 $allSources = bud_sources(true);
+$works = bud_works(false);
+$allWorks = bud_works(true);
 $errors = [];
-$v = $t ? ['txn_date' => $t['txn_date'], 'fiscal_year' => $t['fiscal_year'], 'doc_no' => $t['doc_no'], 'description' => $t['description'],
-           'src' => bud_source_key($t), 'amount' => $t['amount'], 'note' => $t['note']]
-        : ['txn_date' => date('Y-m-d'), 'fiscal_year' => bud_fy(date('Y-m-d')), 'doc_no' => '', 'description' => '', 'src' => (string)($_GET['src'] ?? ''), 'amount' => '', 'note' => ''];
+$v = $t ? ['txn_date' => $t['txn_date'], 'fiscal_year' => $t['fiscal_year'], 'doc_no' => $t['doc_no'], 'description' => $t['description'], 'detail' => $t['detail'],
+           'work_id' => $t['work_id'] ? (int)$t['work_id'] : null, 'src' => bud_source_key($t), 'amount' => $t['amount'], 'note' => $t['note']]
+        : ['txn_date' => date('Y-m-d'), 'fiscal_year' => bud_fy(date('Y-m-d')), 'doc_no' => '', 'description' => '', 'detail' => '',
+           'work_id' => int_param('work') ?: null, 'src' => (string)($_GET['src'] ?? ''), 'amount' => '', 'note' => ''];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
     $v = ['txn_date' => (string)post('txn_date'), 'fiscal_year' => (int)post('fiscal_year'), 'doc_no' => trim((string)post('doc_no')),
-          'description' => trim((string)post('description')), 'src' => (string)post('src'),
+          'description' => trim((string)post('description')), 'detail' => trim((string)post('detail')),
+          'work_id' => int_param('work_id') ?: null, 'src' => (string)post('src'),
           'amount' => str_replace(',', '', trim((string)post('amount'))), 'note' => trim((string)post('note'))];
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $v['txn_date']) || !checkdate((int)substr($v['txn_date'], 5, 2), (int)substr($v['txn_date'], 8, 2), (int)substr($v['txn_date'], 0, 4))) {
         $errors[] = 'กรุณาระบุวันที่';
@@ -34,30 +38,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($v['description'] === '') {
         $errors[] = 'กรุณาระบุรายการ';
     }
+    if ($v['work_id'] !== null && !isset($allWorks[$v['work_id']])) {
+        $v['work_id'] = null;
+    }
+    if ($v['work_id'] === null && $works) {
+        $errors[] = 'กรุณาเลือกแผนงาน / งานและโครงการ';
+    }
     $ids = bud_parse_source($v['src']);
     if (!$ids) {
-        $errors[] = 'กรุณาเลือกชื่อโครงการที่ได้รับ';
+        $errors[] = 'กรุณาเลือกหมวด';
     }
     if (!is_numeric($v['amount']) || (float)$v['amount'] <= 0 || (float)$v['amount'] >= 1e12) {
         $errors[] = 'จำนวนเงินต้องมากกว่า 0';
     }
     if (!$errors) {
-        $data = [$type, $v['txn_date'], $v['fiscal_year'], mb_substr($v['doc_no'], 0, 100), mb_substr($v['description'], 0, 500),
-                 $ids[0], $ids[1], round((float)$v['amount'], 2), mb_substr($v['note'], 0, 500), (int)$me['id']];
+        $data = [$type, $v['txn_date'], $v['fiscal_year'], mb_substr($v['doc_no'], 0, 100), mb_substr($v['description'], 0, 500), mb_substr($v['detail'], 0, 1000),
+                 $ids[0], $ids[1], $v['work_id'], round((float)$v['amount'], 2), mb_substr($v['note'], 0, 500), (int)$me['id']];
         if ($t) {
-            db()->prepare('UPDATE bud_txns SET txn_type = ?, txn_date = ?, fiscal_year = ?, doc_no = ?, description = ?, project_id = ?, item_id = ?, amount = ?, note = ?, updated_by = ? WHERE id = ?')
+            db()->prepare('UPDATE bud_txns SET txn_type = ?, txn_date = ?, fiscal_year = ?, doc_no = ?, description = ?, detail = ?, project_id = ?, item_id = ?, work_id = ?, amount = ?, note = ?, updated_by = ? WHERE id = ?')
                 ->execute(array_merge($data, [$t['id']]));
         } else {
-            db()->prepare('INSERT INTO bud_txns (txn_type, txn_date, fiscal_year, doc_no, description, project_id, item_id, amount, note, created_by) VALUES (?,?,?,?,?,?,?,?,?,?)')
+            db()->prepare('INSERT INTO bud_txns (txn_type, txn_date, fiscal_year, doc_no, description, detail, project_id, item_id, work_id, amount, note, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)')
                 ->execute($data);
         }
         audit_log($t ? 'bud_update' : 'bud_create', ($t ? 'แก้ไข' : 'บันทึก') . 'รายการ' . BUD_TYPES[$type] . ': ' . $v['description'] . ' ' . bud_money($v['amount']) . ' บาท', BUD_MODULE);
         flash(($t ? 'แก้ไข' : 'บันทึก') . 'รายการ' . BUD_TYPES[$type] . ' ' . bud_money($v['amount']) . ' บาท แล้ว');
         if (!$t && post('again')) {
-            redirect('txn_form.php?' . http_build_query(['type' => $type, 'src' => $v['src']]));
+            redirect('txn_form.php?' . http_build_query(['type' => $type, 'src' => $v['src'], 'work' => $v['work_id']]));
         }
         redirect('txns.php?' . http_build_query(['type' => $type, 'fy' => $v['fiscal_year']]));
     }
+}
+if ($v['work_id'] !== null && !isset($works[$v['work_id']]) && isset($allWorks[$v['work_id']])) {
+    $works[$v['work_id']] = $allWorks[$v['work_id']];
+}
+// งานและโครงการที่ใช้ล่าสุดของแต่ละหมวด (เลือกหมวดแล้วเติมให้อัตโนมัติ)
+$lastWork = [];
+foreach (db()->query('SELECT project_id, item_id, work_id FROM bud_txns WHERE work_id IS NOT NULL ORDER BY id') as $r) {
+    $lastWork[bud_source_key($r)] = (int)$r['work_id'];
 }
 // รายการที่ปิดใช้งานแล้วแต่เป็นค่าเดิมของรายการนี้ ให้เลือกค้างไว้ได้
 if ($v['src'] !== '' && !isset($sources[$v['src']]) && isset($allSources[$v['src']])) {
@@ -83,14 +101,19 @@ require __DIR__ . '/header.php';
       <div class="form-text">คำนวณจากวันที่อัตโนมัติ (1 ต.ค. – 30 ก.ย.)</div></div>
     <div class="col-md-5"><label class="form-label">ที่เอกสาร (เลขที่เอกสาร)</label>
       <input type="text" name="doc_no" class="form-control" value="<?= h($v['doc_no']) ?>" maxlength="100" placeholder="เช่น นศ 0412/123"></div>
-    <div class="col-12"><label class="form-label">รายการ <span class="text-danger">*</span></label>
-      <input type="text" name="description" class="form-control" value="<?= h($v['description']) ?>" maxlength="500" required></div>
-    <div class="col-md-8"><label class="form-label">ชื่อโครงการที่ได้รับ <span class="text-danger">*</span></label>
-      <select name="src" class="form-select" required><option value="">— เลือก —</option>
+    <div class="col-md-6"><label class="form-label">แผนงาน / งานและโครงการ<?= $works ? ' <span class="text-danger">*</span>' : '' ?></label>
+      <select name="work_id" id="txnWork" class="form-select"<?= $works ? ' required' : '' ?>><?= bud_work_options($works, $v['work_id']) ?></select>
+      <?php if (!$works): ?><div class="form-text text-warning">ยังไม่มีแผนงาน / งานและโครงการ<?= bud_can('admin') ? ' — <a href="items.php">เพิ่มที่เมนูแผนงานและหมวด</a>' : ' (ผู้ดูแลระบบงบประมาณเพิ่มที่เมนูแผนงานและหมวด)' ?></div><?php endif; ?></div>
+    <div class="col-md-6"><label class="form-label">หมวด <span class="text-danger">*</span></label>
+      <select name="src" id="txnSrc" class="form-select" required><option value="">— เลือก —</option>
         <?php $g = null; foreach ($sources as $k => $s): if ($s['group'] !== $g): ?><?= $g !== null ? '</optgroup>' : '' ?><optgroup label="<?= h($s['group']) ?>"><?php $g = $s['group']; endif; ?>
           <option value="<?= h($k) ?>"<?= $k === $v['src'] ? ' selected' : '' ?>><?= h($s['label']) ?></option>
         <?php endforeach; ?><?= $g !== null ? '</optgroup>' : '' ?>
       </select></div>
+    <div class="col-12"><label class="form-label">รายการ <span class="text-danger">*</span></label>
+      <input type="text" name="description" class="form-control" value="<?= h($v['description']) ?>" maxlength="500" required></div>
+    <div class="col-12"><label class="form-label">รายละเอียด</label>
+      <textarea name="detail" class="form-control" rows="2" maxlength="1000" placeholder="รายละเอียดเพิ่มเติมของรายการ (แสดงต่อจากรายการในทะเบียนคุมเงิน)"><?= h($v['detail']) ?></textarea></div>
     <div class="col-md-4"><label class="form-label"><?= $type === 'spend' ? 'จำนวนเงินเบิกจ่าย' : 'จำนวนเงินที่ได้รับ' ?> (บาท) <span class="text-danger">*</span></label>
       <input type="text" name="amount" class="form-control text-end" value="<?= h($v['amount'] !== '' ? bud_money($v['amount']) : '') ?>" inputmode="decimal" required></div>
     <div class="col-12"><label class="form-label">หมายเหตุ</label>
@@ -111,6 +134,9 @@ require __DIR__ . '/header.php';
   const d = document.getElementById('txnDate'), fy = document.getElementById('txnFy');
   const calc = () => { const m = /^(\d{4})-(\d{2})/.exec(d.value); if (m) fy.value = +m[1] + 543 + (+m[2] >= 10 ? 1 : 0); };
   d.addEventListener('change', calc);
+  // เลือกหมวด → เติมงานและโครงการที่ใช้ล่าสุดของหมวดนั้น (ถ้ายังไม่ได้เลือก)
+  const last = <?= json_encode($lastWork) ?>, src = document.getElementById('txnSrc'), work = document.getElementById('txnWork');
+  src.addEventListener('change', () => { if (!work.value && last[src.value] && work.querySelector('option[value="' + last[src.value] + '"]')) work.value = last[src.value]; });
   const amt = document.querySelector('input[name=amount]');
   amt.addEventListener('blur', () => { const n = parseFloat(amt.value.replace(/,/g, '')); if (!isNaN(n)) amt.value = n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); });
 })();

@@ -1,7 +1,7 @@
 <?php
 /**
  * รายงานงบประมาณ (ได้รับ / เบิกจ่าย)
- *   year   = สรุปรายปีงบประมาณ แยกตามชื่อโครงการที่ได้รับ
+ *   year   = สรุปรายปีงบประมาณ แยกตามหมวด
  *   month  = รายเดือน: ได้รับ/เบิกจ่ายในเดือน + สะสมตั้งแต่ต้นปีงบ + รายละเอียดรายการในเดือน
  *   matrix = ตารางรายเดือน ต.ค. – ก.ย. (ได้รับ หรือ เบิกจ่าย)
  */
@@ -79,7 +79,7 @@ if ($mode === 'month') {
 }
 
 if (($_GET['export'] ?? '') === 'csv') {
-    $head = array_merge(['ชื่อโครงการที่ได้รับ'], array_column($cols, 0), $withPct ? ['ร้อยละเบิกจ่าย'] : []);
+    $head = array_merge(['หมวด'], array_column($cols, 0), $withPct ? ['ร้อยละเบิกจ่าย'] : []);
     $out = [];
     foreach ($table as $g => $list) {
         $out[] = [$g];
@@ -129,7 +129,7 @@ require __DIR__ . '/header.php';
   <div class="table-responsive">
     <table class="table table-sm table-bordered align-middle mb-0 bud-report">
       <thead class="table-light"><tr>
-        <th class="text-center" style="width:3rem">ลำดับ</th><th>ชื่อโครงการที่ได้รับ</th>
+        <th class="text-center" style="width:3rem">ลำดับ</th><th>หมวด</th>
         <?php foreach ($cols as $c): ?><th class="text-end"><?= h($c[0]) ?></th><?php endforeach; ?>
         <?php if ($withPct): ?><th class="text-end">ร้อยละเบิกจ่าย</th><?php endif; ?>
       </tr></thead>
@@ -166,10 +166,10 @@ require __DIR__ . '/header.php';
   <div class="card-header"><strong>รายละเอียดรายการ เดือน<?= h(bud_month_label($month)) ?></strong></div>
   <div class="table-responsive">
     <table class="table table-sm table-bordered align-middle mb-0 bud-report">
-      <thead class="table-light"><tr><th>วันที่</th><th>ที่เอกสาร</th><th>รายการ</th><th>ชื่อโครงการที่ได้รับ</th><th class="text-end">ได้รับ</th><th class="text-end">เบิกจ่าย</th></tr></thead>
+      <thead class="table-light"><tr><th>วันที่</th><th>ที่เอกสาร</th><th>รายการ</th><th>หมวด</th><th class="text-end">ได้รับ</th><th class="text-end">เบิกจ่าย</th></tr></thead>
       <tbody>
       <?php foreach ($detail as $t): ?>
-        <tr><td><?= h(thai_date($t['txn_date'])) ?></td><td><?= h($t['doc_no']) ?></td><td class="bud-name"><?= h($t['description']) ?></td>
+        <tr><td><?= h(thai_date($t['txn_date'])) ?></td><td><?= h($t['doc_no']) ?></td><td class="bud-name"><?= h($t['description']) ?><?php if ($t['detail'] !== ''): ?><div class="small text-muted"><?= nl2br(h($t['detail'])) ?></div><?php endif; ?></td>
           <td class="bud-name"><?= h($sources[bud_source_key($t)]['label'] ?? '-') ?></td>
           <td class="text-end"><?= $t['txn_type'] === 'receive' ? bud_money($t['amount']) : '' ?></td>
           <td class="text-end"><?= $t['txn_type'] === 'spend' ? bud_money($t['amount']) : '' ?></td></tr>

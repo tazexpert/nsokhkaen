@@ -922,6 +922,28 @@ INSERT IGNORE INTO bud_items (name, sort_order) VALUES
 INSERT IGNORE INTO bud_items (name, is_other, project_id, sort_order)
   SELECT 'รายจ่ายอื่น (โพล)', 1, (SELECT id FROM core_projects WHERE code = 'โพล' LIMIT 1), 900;
 
+-- แผนงาน
+CREATE TABLE IF NOT EXISTS bud_plans (
+  id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name         VARCHAR(255) NOT NULL,
+  sort_order   INT          NOT NULL DEFAULT 0,
+  is_active    TINYINT(1)   NOT NULL DEFAULT 1,
+  created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_bud_plan_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- งานและโครงการ (อยู่ภายใต้แผนงาน)
+CREATE TABLE IF NOT EXISTS bud_works (
+  id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  plan_id      INT UNSIGNED NOT NULL,
+  name         VARCHAR(255) NOT NULL,
+  sort_order   INT          NOT NULL DEFAULT 0,
+  is_active    TINYINT(1)   NOT NULL DEFAULT 1,
+  created_at   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_bud_work_name (plan_id, name),
+  CONSTRAINT fk_bud_work_plan FOREIGN KEY (plan_id) REFERENCES bud_plans(id) ON DELETE RESTRICT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- รับเข้างบประมาณ (ได้รับ) / เบิกจ่ายงบประมาณ (เบิกจ่าย)
 CREATE TABLE IF NOT EXISTS bud_txns (
   id           INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -930,8 +952,10 @@ CREATE TABLE IF NOT EXISTS bud_txns (
   fiscal_year  SMALLINT UNSIGNED NOT NULL,                  -- ปีงบประมาณ (พ.ศ.) 1 ต.ค. – 30 ก.ย.
   doc_no       VARCHAR(100)  NOT NULL DEFAULT '',           -- ที่เอกสาร (เลขที่เอกสาร)
   description  VARCHAR(500)  NOT NULL,                      -- รายการ
-  project_id   INT UNSIGNED  NULL,                          -- ชื่อโครงการที่ได้รับ: โครงการสำรวจ
-  item_id      INT UNSIGNED  NULL,                          --   หรือ รายการงบประมาณ (อย่างใดอย่างหนึ่ง)
+  detail       VARCHAR(1000) NOT NULL DEFAULT '',           -- รายละเอียด (แสดงต่อจากรายการในทะเบียนคุมเงิน)
+  project_id   INT UNSIGNED  NULL,                          -- หมวด: โครงการสำรวจ
+  item_id      INT UNSIGNED  NULL,                          --   หรือ หมวดรายจ่าย bud_items (อย่างใดอย่างหนึ่ง)
+  work_id      INT UNSIGNED  NULL,                          -- งานและโครงการ (→ แผนงาน)
   amount       DECIMAL(14,2) NOT NULL,
   note         VARCHAR(500)  NOT NULL DEFAULT '',
   created_by   INT UNSIGNED  NULL,
@@ -942,6 +966,7 @@ CREATE TABLE IF NOT EXISTS bud_txns (
   KEY idx_bud_date (txn_date),
   CONSTRAINT fk_bud_txn_project FOREIGN KEY (project_id) REFERENCES core_projects(id) ON DELETE RESTRICT,
   CONSTRAINT fk_bud_txn_item FOREIGN KEY (item_id) REFERENCES bud_items(id) ON DELETE RESTRICT,
+  CONSTRAINT fk_bud_txn_work FOREIGN KEY (work_id) REFERENCES bud_works(id) ON DELETE RESTRICT,
   CONSTRAINT fk_bud_txn_cby FOREIGN KEY (created_by) REFERENCES core_users(id) ON DELETE SET NULL,
   CONSTRAINT fk_bud_txn_uby FOREIGN KEY (updated_by) REFERENCES core_users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

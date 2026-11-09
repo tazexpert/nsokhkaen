@@ -1,5 +1,5 @@
 <?php
-/** ภาพรวมระบบงบประมาณ — ได้รับ / เบิกจ่าย / คงเหลือ ของปีงบประมาณ · กราฟรายเดือน · แยกตามชื่อโครงการที่ได้รับ */
+/** ภาพรวมระบบงบประมาณ — ได้รับ / เบิกจ่าย / คงเหลือ ของปีงบประมาณ · กราฟรายเดือน · แยกตามหมวด */
 require_once __DIR__ . '/bootstrap.php';
 require_module(BUD_MODULE, 'viewer');
 $fy = bud_fy_param();
@@ -96,7 +96,7 @@ require __DIR__ . '/header.php';
 <div class="row g-3 mt-1" data-reveal>
   <div class="col-12 reveal-item">
     <div class="card">
-      <div class="card-header d-flex align-items-center flex-wrap gap-2"><strong>แยกตามชื่อโครงการที่ได้รับ</strong>
+      <div class="card-header d-flex align-items-center flex-wrap gap-2"><strong>แยกตามหมวด</strong>
         <span class="bud-legend small ms-auto"><i style="background:<?= BUD_COLORS['spend'] ?>"></i>เบิกจ่าย (เทียบกับที่ได้รับ)</span></div>
       <div class="card-body">
         <?php foreach ($bySrc as $k => $a): $s = $sources[$k] ?? ['label' => '-', 'color' => '#64748b'];

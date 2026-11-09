@@ -47,3 +47,24 @@
   .bud-report tr.bud-group td, .bud-report tr.bud-sub td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .bud-noprint { display: none !important; }
 }
+/* ทะเบียนคุมเงินประจำงวดส่วนจังหวัด */
+.bud-ledger-head { display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: start; margin-bottom: .75rem; }
+.bud-ledger-head::after { content: ''; }
+.bud-ledger-left { font-size: .9rem; min-width: 0; }
+.bud-ledger-center { text-align: center; white-space: nowrap; }
+.bud-ledger-title { font-weight: 700; font-size: 1.05rem; }
+.bud-ledger-detail { font-size: .82rem; color: #475569; }
+.bud-ledger-table td.bud-name { min-width: 260px; }
+@media (max-width: 991px) {
+  .bud-ledger-head { grid-template-columns: 1fr; }
+  .bud-ledger-head::after { display: none; }
+  .bud-ledger-center { white-space: normal; }
+}
+@media print {
+  .bud-ledger { box-shadow: none !important; border: 0; break-after: page; page-break-after: always; }
+  .bud-ledger:last-of-type { break-after: auto; page-break-after: auto; }
+  .bud-ledger .card-body { padding: 0; }
+  .bud-ledger-head { grid-template-columns: 1fr auto 1fr; }
+  .bud-ledger-center { white-space: nowrap; }
+  .bud-ledger-detail { color: #000; }
+}
