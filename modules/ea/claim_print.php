@@ -41,32 +41,34 @@ $split = fn(float $n) => [number_format(floor($n)), str_pad((string)(int)round((
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ใบเบิกค่าเดินทาง <?= h($c['full_name']) ?> <?= h(thai_date($c['claim_date'])) ?></title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet">
 <style>
+  /* ฟอนต์ TH Sarabun New (ไฟล์ในโปรเจกต์ assets/fonts — ชุดเดียวกับใบเบิกวัสดุ) ไม่ต้องโหลดจากอินเทอร์เน็ต
+     ขนาดตัวอักษรตั้งให้ใกล้เคียงแบบฟอร์ม (TH Sarabun New ตัวเล็กกว่าฟอนต์ทั่วไปประมาณ 1.45 เท่า) */
+  @font-face { font-family: 'TH Sarabun New'; src: url('<?= BASE_URL ?>assets/fonts/THSarabunNew.ttf') format('truetype'); font-weight: normal; font-style: normal; }
+  @font-face { font-family: 'TH Sarabun New'; src: url('<?= BASE_URL ?>assets/fonts/THSarabunNew-Bold.ttf') format('truetype'); font-weight: bold; font-style: normal; }
   :root { --line: #000; }
   * { box-sizing: border-box; }
-  body { margin: 0; background: #e5e7eb; font-family: 'Sarabun', 'TH Sarabun New', sans-serif; font-size: 14.5px; color: #000; }
-  .toolbar { position: sticky; top: 0; z-index: 5; display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: #1f2937; color: #fff; font-size: 14px; }
+  body { margin: 0; background: #e5e7eb; font-family: 'TH Sarabun New', 'Tahoma', sans-serif; font-size: 21px; color: #000; }
+  .toolbar { position: sticky; top: 0; z-index: 5; display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: #1f2937; color: #fff; font-family: system-ui, 'Segoe UI', Tahoma, sans-serif; font-size: 14px; }
   .toolbar a, .toolbar button { color: #fff; background: #374151; border: 0; border-radius: 6px; padding: 6px 12px; text-decoration: none; font: inherit; cursor: pointer; }
   .toolbar .primary { background: #16a34a; }
   .page { width: 210mm; min-height: 297mm; margin: 12px auto; padding: 14mm 15mm 12mm 20mm; background: #fff; box-shadow: 0 2px 10px rgba(0, 0, 0, .15); position: relative; }
-  .pno { text-align: right; font-size: 13px; margin-bottom: 2px; }
+  .pno { text-align: right; font-size: 19px; margin-bottom: 2px; }
   .center { text-align: center; } .right { text-align: right; } .b { font-weight: 700; }
-  .title { text-align: center; font-weight: 700; font-size: 17px; margin: 6px 0 10px; }
-  .fill { display: inline-block; border-bottom: 1px dotted #000; min-width: 40px; padding: 0 4px; text-align: center; line-height: 1.25; vertical-align: bottom; }
+  .title { text-align: center; font-weight: 700; font-size: 25px; line-height: 1.1; margin: 6px 0 10px; }
+  .fill { display: inline-block; border-bottom: 1px dotted #000; min-width: 40px; padding: 0 4px; text-align: center; line-height: 1.15; vertical-align: bottom; }
   .fill.l { text-align: left; } .w40 { min-width: 38px; } .w60 { min-width: 60px; } .w70 { min-width: 70px; } .w90 { min-width: 90px; } .w120 { min-width: 120px; } .w160 { min-width: 160px; } .w200 { min-width: 200px; } .w260 { min-width: 260px; } .wfull { display: block; min-width: 0; text-align: left; }
-  .box { display: inline-block; width: 13px; height: 13px; border: 1px solid #000; line-height: 11px; font-size: 12px; text-align: center; margin-right: 3px; vertical-align: -1px; }
-  .line { margin: 3px 0; line-height: 1.7; }
+  .box { display: inline-block; width: 13px; height: 13px; border: 1px solid #000; line-height: 11px; font-size: 17px; text-align: center; margin-right: 3px; vertical-align: -1px; }
+  .line { margin: 3px 0; line-height: 1.17; }
   .indent { padding-left: 36px; }
   .tight { white-space: nowrap; letter-spacing: -.1px; }
   .row2 { display: flex; justify-content: space-between; gap: 10px; }
   table.form { width: 100%; border-collapse: collapse; }
-  table.form td, table.form th { border: 1px solid #000; padding: 1px 4px; vertical-align: top; line-height: 1.45; }
+  table.form td, table.form th { border: 1px solid #000; padding: 1px 4px; vertical-align: top; line-height: 1; }
   table.form th { font-weight: 400; text-align: center; vertical-align: middle; }
   /* ตารางแบบบรรทัด (เหมือนแบบฟอร์ม): 1 แถว = 1 บรรทัด ไม่ตัดคำ */
   table.lines { table-layout: fixed; }
-  table.lines td { height: 21px; padding: 0 3px; font-size: 13px; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: clip; }
+  table.lines td { height: 21px; padding: 0 3px; font-size: 19px; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: clip; }
   .annex td { border-top: 0; border-bottom: 0; }
   .annex tr.top td { border-top: 1px solid #000; }
   .annex tr.blank td { border-top: 1px solid #000; }
@@ -77,7 +79,7 @@ $split = fn(float $n) => [number_format(floor($n)), str_pad((string)(int)round((
   .sig > div { padding: 6px 8px 10px; }
   .sig > div + div { border-left: 1px solid #000; }
   .dots { border-bottom: 1px dotted #000; height: 26px; }
-  .explain td { vertical-align: top; padding: 1px 4px; font-size: 13.5px; }
+  .explain td { vertical-align: top; padding: 1px 4px; font-size: 20px; }
   @media print {
     body { background: #fff; }
     .toolbar { display: none; }
@@ -290,11 +292,11 @@ foreach ($receipt as $pi => $blocks): $pageNo++; $isLast = $pi === count($receip
   document.querySelectorAll('table.lines').forEach(t => { (groups[t.className] ??= []).push(...t.querySelectorAll('td')); });
   Object.values(groups).forEach(tds => {
     const base = Math.max(...tds.map(td => parseFloat(getComputedStyle(td).fontSize)));
-    let min = base;
+    let min = base;   // ย่อได้ต่ำสุด 13px (TH Sarabun New)
     tds.forEach(td => {
       let fs = base;
       td.style.fontSize = fs + 'px';
-      while (td.scrollWidth > td.clientWidth + 1 && fs > 9) { fs -= 0.5; td.style.fontSize = fs + 'px'; }
+      while (td.scrollWidth > td.clientWidth + 1 && fs > 13) { fs -= 0.5; td.style.fontSize = fs + 'px'; }
       min = Math.min(min, fs);
     });
     tds.forEach(td => { td.style.fontSize = min + 'px'; });
