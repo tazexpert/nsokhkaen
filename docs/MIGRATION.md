@@ -272,6 +272,7 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 | `20261126_ea_claims.sql` | ระบบบริหารโครงการ: ใบเบิกค่าใช้จ่ายในการเดินทางไปราชการ (`ea_claims`, `ea_claim_days`) — พิมพ์แบบ 8708 แบบประกอบ และ บก.111 |
 | `20261127_ea_claim_project_other.sql` | ใบเบิกค่าเดินทาง: โครงการ "อื่น ๆ" พิมพ์ชื่อเอง (`ea_claims.project_other`) |
 | `20261128_cal_attendance.sql` | ปฏิทิน: เวลาปฏิบัติราชการ (`cal_attendance`) นำเข้าจาก PDF รายงานข้อมูลเวลาปฏิบัติราชการ แสดงในแผนการปฏิบัติงาน |
+| `20261129_budget.sql` | ระบบงบประมาณ: รายการงบประมาณ (`bud_items`) และรับเข้า/เบิกจ่าย (`bud_txns`) — หลังรันกำหนดสิทธิ์ผู้ดูรายงานงบ / ผู้จัดทำงบประมาณ / ผู้ดูแลระบบงบประมาณ ที่ผู้ใช้งานและสิทธิ์ |
 
 > ระบบเบิกวัสดุเดิมยังเปิดใช้อยู่? ก่อนเปิดใช้ระบบใหม่ให้ "ดึงข้อมูลรอบสุดท้าย" ตามหัวข้อด้านบน (`--resync-inventory`)
 
@@ -308,6 +309,7 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261126_ea_claims.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261127_ea_claim_project_other.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261128_cal_attendance.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261129_budget.sql
 ```
 
 หลังอัปเดต:

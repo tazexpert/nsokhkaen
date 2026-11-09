@@ -175,3 +175,5 @@ button.att-chip:hover { outline: 2px solid #1d4ed8; }
 .cal-ev.att-ev:hover { background: #fecaca; color: #991b1b; }
 .cal-ev.att-ev.done { background: #dbeafe; color: #1d4ed8; box-shadow: inset 3px 0 0 #1d4ed8; font-weight: 500; }
 .cal-ev.att-ev.done:hover { background: #bfdbfe; }
+.cal-ev.att-ev.late { background: #fef3c7; color: #b45309; box-shadow: inset 3px 0 0 #f59e0b; }
+.cal-ev.att-ev.late:hover { background: #fde68a; }

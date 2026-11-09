@@ -279,6 +279,11 @@ function att_status(?array $a, bool $hasWork, ?string $trip): ?array
         if (trim((string)$a['late']) !== '') {
             return ['code' => 'ส', 'cls' => 'att-late', 'title' => 'สาย ' . $a['late'] . ' · ' . $times];
         }
+        // สำรอง: ช่อง "สาย" ว่าง (อ่านจากไฟล์ไม่ได้) แต่เข้าหลังเวลาเริ่มรอบ (ค่าเริ่มต้น 08:30) → สาย
+        $start = preg_match('/(\d{1,2})[:.](\d{2})/', (string)$a['shift'], $sm) ? sprintf('%02d:%02d', $sm[1], $sm[2]) : ATT_IN_LIMIT;
+        if ($in > $start) {
+            return ['code' => 'ส', 'cls' => 'att-late', 'title' => 'สาย (เข้าหลัง ' . $start . ') · ' . $times];
+        }
         return null;                                  // ปกติ — ไม่แสดง
     }
     if ($in || $out) {
@@ -326,10 +331,10 @@ function att_user_statuses(int $uid, string $from, string $to): array
     return $out;
 }
 
-/** รายการที่ต้องแสดงในปฏิทินส่วนตัว / แจ้งเตือน: ข (ขาดราชการ) · ล สีแดง (ลงเวลาไม่ครบ) · ล (รับรองแล้ว) */
+/** รายการที่แสดงในปฏิทินส่วนตัว: ส (มาสาย) · ข (ขาดราชการ) · ล สีแดง (ลงเวลาไม่ครบ) · ล (รับรองแล้ว) */
 function att_is_certify_item(array $s): bool
 {
-    return in_array($s['cls'], ['att-absent', 'att-pending', 'att-cert'], true);
+    return in_array($s['cls'], ['att-late', 'att-absent', 'att-pending', 'att-cert'], true);
 }
 
 /** ข้อความรายการในปฏิทินส่วนตัว */
@@ -338,6 +343,7 @@ function att_item_title(array $s): string
     return match ($s['cls']) {
         'att-absent' => 'ขาดราชการ — ต้องทำใบรับรองการมาปฏิบัติราชการ',
         'att-pending' => 'ลงเวลาไม่ครบ — ต้องทำใบรับรองการมาปฏิบัติราชการ',
+        'att-late' => 'มาสาย' . (!empty($s['row']['time_in']) ? ' (เข้า ' . substr($s['row']['time_in'], 0, 5) . ' น.)' : ''),
         default => 'รับรองการมาปฏิบัติราชการ',
     };
 }

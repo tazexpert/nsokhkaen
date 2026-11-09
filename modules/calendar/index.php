@@ -23,7 +23,7 @@ foreach ($events as $e) {
         $byDay[$d][] = $e;
     }
 }
-// เวลาปฏิบัติราชการของตนเอง (ส่วนตัว): ขาดราชการ / ลงเวลาไม่ครบ / รับรองแล้ว
+// เวลาปฏิบัติราชการของตนเอง (ส่วนตัว): มาสาย / ขาดราชการ / ลงเวลาไม่ครบ / รับรองแล้ว
 $attItems = [];
 if (!$guest) {
     try {
@@ -67,12 +67,12 @@ require __DIR__ . '/header.php';
             <?php if ($e['start_time'] && $d === $e['event_date']): ?><span class="t"><?= cal_time_thai($e['start_time']) ?></span><?php endif; ?><?= cal_is_private($e) ? '<i class="bi bi-lock-fill me-1" title="ส่วนตัว"></i>' : '' ?><?= h($e['title']) ?></a>
         <?php endforeach; ?>
         <?php if (isset($attItems[$d])): $ai = $attItems[$d]; ?>
-          <a href="att_view.php?date=<?= $d ?>" class="cal-ev att-ev<?= $ai['cls'] === 'att-cert' ? ' done' : '' ?>" title="<?= h($ai['title']) ?> (เห็นเฉพาะคุณ)"><i class="bi bi-lock-fill me-1"></i><?= h(att_item_title($ai)) ?></a>
+          <a href="att_view.php?date=<?= $d ?>" class="cal-ev att-ev<?= $ai['cls'] === 'att-cert' ? ' done' : ($ai['cls'] === 'att-late' ? ' late' : '') ?>" title="<?= h($ai['title']) ?> (เห็นเฉพาะคุณ)"><i class="bi bi-lock-fill me-1"></i><?= h(att_item_title($ai)) ?></a>
         <?php endif; ?>
       </div>
     <?php endfor; ?>
   </div>
-  <div class="card-footer small text-muted"><?php if (!$guest): ?><span class="cal-ev mine d-inline-block px-2">งานของคุณ</span> <?php endif; ?><span class="cal-ev d-inline-block px-2">งานของผู้อื่น</span> <span class="cal-ev duty d-inline-block px-2">เวรสำนักงาน</span> <span class="cal-ev guard d-inline-block px-2">เวรศาลากลาง</span><?php if (!$guest): ?> <span class="cal-ev att-ev d-inline-block px-2"><i class="bi bi-lock-fill me-1"></i>ขาดราชการ/ลงเวลาไม่ครบ (เห็นเฉพาะคุณ)</span> <span class="cal-ev att-ev done d-inline-block px-2">รับรองการมาปฏิบัติราชการ</span><?php endif; ?> · คลิกกิจกรรมเพื่อดูรายละเอียด</div>
+  <div class="card-footer small text-muted"><?php if (!$guest): ?><span class="cal-ev mine d-inline-block px-2">งานของคุณ</span> <?php endif; ?><span class="cal-ev d-inline-block px-2">งานของผู้อื่น</span> <span class="cal-ev duty d-inline-block px-2">เวรสำนักงาน</span> <span class="cal-ev guard d-inline-block px-2">เวรศาลากลาง</span><?php if (!$guest): ?> <span class="cal-ev att-ev d-inline-block px-2"><i class="bi bi-lock-fill me-1"></i>ขาดราชการ/ลงเวลาไม่ครบ (เห็นเฉพาะคุณ)</span> <span class="cal-ev att-ev late d-inline-block px-2">มาสาย</span> <span class="cal-ev att-ev done d-inline-block px-2">รับรองการมาปฏิบัติราชการ</span><?php endif; ?> · คลิกกิจกรรมเพื่อดูรายละเอียด</div>
 </div>
 <?= cal_modal_script() ?>
 <?php require __DIR__ . '/footer.php'; ?>
