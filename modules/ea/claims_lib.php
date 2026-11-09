@@ -220,14 +220,68 @@ function claim_time(?string $t): string
     return $t ? substr($t, 0, 2) . '.' . substr($t, 3, 2) . ' น.' : '';
 }
 
-/** ตำแหน่ง (ตัวอักษร) ที่ตัดบรรทัดได้: หลังช่องว่าง/จุลภาค และขอบคำภาษาไทย (IntlBreakIterator ถ้ามี extension intl) */
+/**
+ * คำไทยที่พบบ่อยในใบเบิก (สถานที่ ที่อยู่ รายการ) — ใช้หาขอบคำเมื่อเซิร์ฟเวอร์ไม่มี extension intl
+ * (มี intl ใช้ IntlBreakIterator ซึ่งแม่นกว่า) · คำที่ไม่อยู่ในรายการตัดตามกลุ่มอักษร (claim_tcc_ok)
+ */
+const CLAIM_THAI_WORDS = <<<'TXT'
+    ประชาสัมพันธ์ สถานประกอบการ เมืองขอนแก่น มหาวิทยาลัย หนองสองห้อง เจ้าหน้าที่ เบี้ยเลี้ยง โคกโพธิ์ไชย ท่องเที่ยว ปฏิบัติงาน อุตสาหกรรม เขาสวนกวาง
+    เชื้อเพลิง ข้าราชการ ครัวเรือน ฐานข้อมูล ประกอบการ ประสานงาน ภารดาเพลส มัญจาคีรี รายไตรมาส สถานศึกษา สวัสดิการ อุบลรัตน์
+    เทคโนโลยี เปือยน้อย เวียงเก่า แบบสอบถาม โรงพยาบาล ก่อสร้าง ตะวันออก ตัวอย่าง ปรับปรุง ภูผาม่าน วิทยาลัย ศาลากลาง
+    สนับสนุน สัมภาษณ์ สารสนเทศ สำนักงาน หนองนาคำ หนองเรือ หมู่บ้าน เศรษฐกิจ แห่งชาติ โรงเรียน กรุงเทพ ขอนแก่น
+    จังหวัด จัดเก็บ ดิจิทัล ตรวจสอบ ตะวันตก ทะเบียน บ้านฝาง บ้านแฮด บ้านไผ่ ปฏิบัติ ประชากร ประเมิน
+    พนักงาน พื้นที่ ภูเวียง ลูกจ้าง สมบูรณ์ สูงอายุ ส่วนตัว องค์การ เดินทาง แวงน้อย แวงใหญ่ โครงการ
+    โนนศิลา กระนวน การค้า ข้อมูล ควบคุม คุณภาพ ชี้แจง ติดตาม ที่พัก ธุรกิจ น้ำพอง น้ำมัน
+    บริการ บริษัท บริหาร ประกอบ ประชุม ประเทศ พระยืน มหานคร ยอดขาย รถยนต์ รวบรวม รับรู้
+    ราชการ ราษฎร์ สอบถาม สัมมนา สำมะโน สีชมพู สุขภาพ เขาสวน เทศบาล แรงงาน ไตรมาส จำกัด
+    ชุมชน ชุมแพ ซำสูง ตำรวจ ตําบล ทำงาน นิเทศ ประจำ พัฒนา พาหนะ มหาชน ระดับ
+    ศูนย์ สถานี สถิติ สร้าง สังคม สำรวจ อำเภอ เกษตร เดือน เพื่อ เมือง เหนือ
+    กลับ กลาง กวาง ชนบท ด้าน ตรวจ ตลาด ตำบล น้อย บ้าน ภาวะ ม่วง
+    ยนต์ ร่วม ร้าน สถาน ส่วน หนอง หมู่ ห้วย ห้าง อบรม เก็บ เก่า
+    เข้า เงิน แขวง ใหญ่ ใหม่ กับ การ ของ ค่า งาน จัด ซอย
+    ฐาน ดอน ถนน ที่ นคร บัว ผู้ มอบ ราย วัด ศรี สอบ
+    สุข ส่ง เขต แบบ และ โคก โนน ใต้ ให้ คำ ทำ นา
+    ปี ผล พบ พล มา รถ ใน ไป
+TXT;
+
+/**
+ * ตัดก่อนตัวอักษรที่ตำแหน่ง $i ได้หรือไม่ (ไม่แยกกลุ่มอักษรไทย):
+ * ห้ามขึ้นบรรทัดด้วยสระหลัง/สระบน-ล่าง/วรรณยุกต์ (ะ ั า ำ ิ-ฺ ็-๎ ๅ ฯ ๆ) · ห้ามจบบรรทัดด้วยสระหน้า (เ แ โ ใ ไ)
+ * ห้ามแยกตัวอักษรที่มีการันต์ตามหลัง (เช่น "ค์") ออกจากพยางค์ก่อนหน้า
+ */
+function claim_tcc_ok(array $chars, int $i): bool
+{
+    if ($i <= 0 || $i >= count($chars)) {
+        return false;
+    }
+    $cur = mb_ord($chars[$i]);
+    $prev = mb_ord($chars[$i - 1]);
+    if ($cur === 0x0E30 || ($cur >= 0x0E31 && $cur <= 0x0E3A) || ($cur >= 0x0E45 && $cur <= 0x0E4E) || $cur === 0x0E2F) {
+        return false;
+    }
+    if ($prev >= 0x0E40 && $prev <= 0x0E44) {
+        return false;
+    }
+    for ($j = $i + 1; $j < count($chars) && $j <= $i + 2; $j++) {      // ค์ / ตร์ (อักษร + วรรณยุกต์/สระ + การันต์)
+        $o = mb_ord($chars[$j]);
+        if ($o === 0x0E4C) {
+            return false;
+        }
+        if (!($o >= 0x0E34 && $o <= 0x0E3A) && !($o >= 0x0E47 && $o <= 0x0E4B)) {
+            break;
+        }
+    }
+    return true;
+}
+
+/** ตำแหน่ง (ตัวอักษร) ที่ตัดบรรทัดได้: หลังช่องว่าง/จุลภาค และขอบคำภาษาไทย (IntlBreakIterator หรือรายการคำ CLAIM_THAI_WORDS) */
 function claim_breaks(string $text): array
 {
     $pos = [];
-    $len = mb_strlen($text);
-    for ($i = 0; $i < $len; $i++) {
-        $ch = mb_substr($text, $i, 1);
-        if ($ch === ' ' || $ch === ',') {
+    $chars = mb_str_split($text);
+    $len = count($chars);
+    foreach ($chars as $i => $ch) {
+        if ($ch === ' ' || $ch === ',' || $ch === '/') {
             $pos[$i + 1] = true;
         }
     }
@@ -239,9 +293,46 @@ function claim_breaks(string $text): array
                 $pos[mb_strlen(substr($text, 0, $byte))] = true;
             }
         }
+    } else {
+        // ไม่มี intl: แบ่งคำแบบยาวที่สุดก่อนด้วยรายการคำ (ส่วนที่ไม่รู้จักไม่ตัดภายใน แต่ตัดที่ขอบได้)
+        static $dict = null, $maxLen = 0;
+        if ($dict === null) {
+            $dict = array_fill_keys(preg_split('/\s+/u', trim(CLAIM_THAI_WORDS)), true);
+            foreach (array_keys($dict) as $w) {
+                $maxLen = max($maxLen, mb_strlen((string)$w));
+            }
+        }
+        $isThai = fn($c) => ($o = mb_ord($c)) >= 0x0E01 && $o <= 0x0E5B;
+        $i = 0;
+        while ($i < $len) {
+            if (!$isThai($chars[$i])) {
+                $i++;
+                continue;
+            }
+            $found = 0;
+            for ($l = min($maxLen, $len - $i); $l >= 2; $l--) {
+                if (isset($dict[implode('', array_slice($chars, $i, $l))]) && ($i + $l >= $len || claim_tcc_ok($chars, $i + $l))) {
+                    $found = $l;
+                    break;
+                }
+            }
+            if ($found) {
+                if (claim_tcc_ok($chars, $i)) {
+                    $pos[$i] = true;
+                }
+                $pos[$i + $found] = true;
+                $i += $found;
+            } else {
+                $i++;                                 // ส่วนที่ไม่รู้จัก: เดินต่อจนเจอคำในรายการ
+            }
+        }
     }
     unset($pos[0], $pos[$len]);
-    $pos = array_keys($pos);
+    $pos = array_keys(array_filter($pos));
+    // ขอบคำระหว่างอักษรไทยต้องไม่แยกกลุ่มอักษร (กันกรณีรายการคำ/ICU ตัดผิด)
+    $pos = array_values(array_filter($pos, fn($p) => $p >= $len || mb_ord($chars[$p]) < 0x0E01 || mb_ord($chars[$p]) > 0x0E5B || claim_tcc_ok($chars, $p)));
+    // คำย่อ ต. อ. จ. ถ. ม. ให้อยู่กับคำถัดไป (ไม่ตัดหลังจุด)
+    $pos = array_values(array_filter($pos, fn($p) => !($chars[$p - 1] === '.' && $p >= 2 && ($p < 3 || $chars[$p - 3] === ' ' || $chars[$p - 3] === ','))));
     sort($pos);
     return $pos;
 }
@@ -272,9 +363,14 @@ function claim_wrap(string $text, float $width): array
                 $cum[$i + 1] = $cum[$i] + (CLAIM_GLYPH_W[mb_ord($ch)] ?? 7.5);
             }
             $breaks = claim_breaks($para);
+            $chars = mb_str_split($para);
             $before = array_values(array_filter($breaks, fn($p) => $cum[$p] <= $width));
+            // จุดตัดที่ช่องว่าง/จุลภาค (ขอบวลี) มาก่อนขอบคำ ถ้าได้ความยาวบรรทัด ≥ 60%
+            $spaces = array_values(array_filter($before, fn($p) => in_array($chars[$p - 1], [' ', ','], true) && $cum[$p] >= $width * 0.6));
             $after = array_values(array_filter($breaks, fn($p) => $cum[$p] > $width && $cum[$p] <= $width * 1.1));
-            if ($before && $cum[end($before)] >= $width * 0.6) {
+            if ($spaces) {
+                $cut = end($spaces);
+            } elseif ($before && $cum[end($before)] >= $width * 0.6) {
                 $cut = end($before);
             } elseif ($after) {
                 $cut = $after[0];
@@ -285,8 +381,12 @@ function claim_wrap(string $text, float $width): array
                 while ($cut < count($cum) - 1 && $cum[$cut + 1] <= $width) {
                     $cut++;
                 }
-                while ($cut > 1 && preg_match('/^[\x{0E31}\x{0E34}-\x{0E3A}\x{0E47}-\x{0E4E}]/u', mb_substr($para, $cut, 1))) {
-                    $cut--;                          // ไม่ตัดกลางสระ/วรรณยุกต์
+                $c0 = $cut;
+                while ($cut > 1 && !claim_tcc_ok($chars, $cut)) {
+                    $cut--;                          // ไม่แยกกลุ่มอักษรไทย (ต|ำ, เ|ก, ค|์ ...)
+                }
+                if ($cut <= 1) {
+                    $cut = $c0;
                 }
             }
             $out[] = trim(mb_substr($para, 0, $cut));
