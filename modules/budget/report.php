@@ -165,7 +165,7 @@ require __DIR__ . '/header.php';
   <div class="card-header bud-noprint"><strong><?= h($title) ?></strong></div>
   <div class="table-responsive">
     <table class="table table-sm table-bordered align-middle mb-0 bud-report">
-      <thead class="table-light"><tr>
+      <thead class="bud-report-head"><tr>
         <th>งบรายจ่าย / รายการ / ค่าใช้จ่าย</th>
         <?php foreach ($cols as $c): ?><th class="text-end"><?= h($c[0]) ?></th><?php endforeach; ?>
         <?php if ($withPct): ?><th class="text-end">ร้อยละเบิกจ่าย</th><?php endif; ?>
@@ -204,7 +204,7 @@ require __DIR__ . '/header.php';
   <div class="card-header"><strong>รายละเอียดรายการ เดือน<?= h(bud_month_label($month)) ?></strong></div>
   <div class="table-responsive">
     <table class="table table-sm table-bordered align-middle mb-0 bud-report">
-      <thead class="table-light"><tr><th>วันที่</th><th>ที่เอกสาร</th><th>รายการ</th><th>หมวด</th><th class="text-end">ได้รับ</th><th class="text-end">เบิกจ่าย</th></tr></thead>
+      <thead class="bud-report-head"><tr><th>วันที่</th><th>ที่เอกสาร</th><th>รายการ</th><th>หมวด</th><th class="text-end">ได้รับ</th><th class="text-end">เบิกจ่าย</th></tr></thead>
       <tbody>
       <?php foreach ($detail as $t): ?>
         <tr><td><?= h(thai_date($t['txn_date'])) ?></td><td><?= h($t['doc_no']) ?></td><td class="bud-name"><?= h($t['description']) ?><?php if ($t['detail'] !== ''): ?><div class="small text-muted"><?= nl2br(h($t['detail'])) ?></div><?php endif; ?></td>
@@ -221,4 +221,10 @@ require __DIR__ . '/header.php';
   </div>
 </div>
 <?php endif; ?>
+<style>
+  /* พิมพ์: เลขหน้ามุมขวาบน */
+  @media print {
+    @page { margin: 12mm 10mm 10mm; @top-right { content: "หน้า " counter(page) " / " counter(pages); font-size: 9pt; color: #334155; } }
+  }
+</style>
 <?php require __DIR__ . '/footer.php'; ?>

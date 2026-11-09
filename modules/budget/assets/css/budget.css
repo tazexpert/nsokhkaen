@@ -90,3 +90,8 @@
 .bud-report td.bud-lv2 { padding-left: 2.6rem; }
 .bud-report .bud-num { display: inline-block; min-width: 2.2rem; color: #475569; }
 .bud-report tr.bud-exp-head td { font-weight: 600; }
+/* หัวตารางรายงาน: สีเข้มกว่าแถวงบรายจ่าย (จอและพิมพ์) */
+.bud-report thead.bud-report-head th { background: #cbd5e1; color: #0f172a; border-color: #94a3b8; font-weight: 700; }
+@media print {
+  .bud-report thead.bud-report-head th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
