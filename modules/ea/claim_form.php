@@ -204,7 +204,7 @@ require __DIR__ . '/header.php';
           <div class="col-md-6 small"><div class="form-label small mb-1">กลับถึง</div>
             <?php foreach (CLAIM_PLACES as $k => $l): ?><label class="me-3"><input type="radio" name="return_to" value="<?= $k ?>" <?= $c['return_to'] === $k ? 'checked' : '' ?>> <?= h($l) ?></label><?php endforeach; ?></div>
           <div class="col-12"><label class="form-label small">ที่อยู่สถานที่ออกเดินทาง <span class="text-muted">(แสดงในแบบประกอบ "ออกจาก/ถึง" และ บก.111 — ขึ้นบรรทัดใหม่ได้)</span></label>
-            <textarea name="origin_address" class="form-control" rows="6" maxlength="1000" placeholder="13/14 ม.13&#10;ภารดาเพลส&#10;ซ.กสิกรทุ่งสร้าง&#10;17/1 ต.ในเมือง&#10;อ.เมืองขอนแก่น&#10;จ.ขอนแก่น"><?= h((string)$c['origin_address']) ?></textarea></div>
+            <textarea name="origin_address" class="form-control" rows="6" maxlength="1000"><?= h((string)$c['origin_address']) ?></textarea></div>
         </div>
       </div>
 
