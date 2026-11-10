@@ -68,14 +68,40 @@ foreach ($bySrc as $k => $a) {
 $projOrder = array_flip(array_keys($projects));
 uksort($byProject, fn($a, $b) => $projOrder[$a] <=> $projOrder[$b]);
 
+// ตัวเลือกหน้าตาแดชบอร์ด (ทดลอง): ?design=a | b | c — ว่าง = แบบปัจจุบัน
+$design = in_array($_GET['design'] ?? '', ['a', 'b', 'c'], true) ? $_GET['design'] : '';
+if ($design) {
+    $headExtra = '<link href="' . h(asset_v('modules/budget/assets/css/dash.css')) . '" rel="stylesheet">';
+}
+$typeHex = ['#2563eb', '#10b981', '#f59e0b', '#06b6d4', '#ef4444', '#475569'];       // สีของงบรายจ่ายตามลำดับ
+// วงแหวนร้อยละ (SVG) — animation วาดเส้นเมื่อเลื่อนมาเห็น
+$ring = fn(float $p, string $color, int $size = 72, string $label = '') => '<svg class="dz-ring" width="' . $size . '" height="' . $size . '" viewBox="0 0 36 36" style="--p:' . round(min(100, max(0, $p)), 1) . ';--rc:' . h($color) . '">'
+    . '<circle class="dz-ring-bg" cx="18" cy="18" r="15.9" pathLength="100"/><circle class="dz-ring-fg" cx="18" cy="18" r="15.9" pathLength="100"/>'
+    . '<text x="18" y="' . ($label !== '' ? '18' : '20.5') . '" text-anchor="middle" class="dz-ring-t">' . number_format($p, $p >= 100 ? 0 : 1) . '%</text>'
+    . ($label !== '' ? '<text x="18" y="24" text-anchor="middle" class="dz-ring-l">' . h($label) . '</text>' : '') . '</svg>';
+// กราฟแท่งจิ๋ว 12 เดือน (SVG)
+$spark = function (array $vals, string $color): string {
+    $max = max(1, ...$vals);
+    $w = 6; $gap = 2; $h = 28; $out = '';
+    foreach (array_values($vals) as $i => $v) {
+        $bh = max(1, round($v / $max * $h, 1));
+        $out .= '<rect x="' . ($i * ($w + $gap)) . '" y="' . ($h - $bh) . '" width="' . $w . '" height="' . $bh . '" rx="1.5" style="--d:' . ($i * 40) . 'ms"/>';
+    }
+    return '<svg class="dz-spark" width="' . (12 * ($w + $gap)) . '" height="' . $h . '" style="fill:' . h($color) . '">' . $out . '</svg>';
+};
 $pageTitle = 'ภาพรวมงบประมาณ ปีงบประมาณ ' . $fy;
 $active = 'dashboard';
 $pageActions = '<form method="get" class="d-flex align-items-center gap-2"><label class="small text-muted text-nowrap">ปีงบประมาณ</label><select name="fy" class="form-select form-select-sm" onchange="this.form.submit()">';
 foreach (bud_fy_list() as $y) {
     $pageActions .= '<option value="' . $y . '"' . ($y === $fy ? ' selected' : '') . '>' . $y . '</option>';
 }
-$pageActions .= '</select></form>' . (bud_can('editor') ? '<a href="txn_form?type=receive" class="btn btn-primary"><i class="bi bi-box-arrow-in-down"></i> รับเข้า</a><a href="txn_form?type=spend" class="btn btn-warning"><i class="bi bi-box-arrow-up"></i> เบิกจ่าย</a>' : '');
+$pageActions .= '</select>' . ($design ? '<input type="hidden" name="design" value="' . $design . '">' : '') . '</form>' . (bud_can('editor') ? '<a href="txn_form?type=receive" class="btn btn-primary"><i class="bi bi-box-arrow-in-down"></i> รับเข้า</a><a href="txn_form?type=spend" class="btn btn-warning"><i class="bi bi-box-arrow-up"></i> เบิกจ่าย</a>' : '');
 require __DIR__ . '/header.php';
+if ($design) {
+    require __DIR__ . '/dash_' . $design . '.php';
+    require __DIR__ . '/footer.php';
+    return;
+}
 ?>
 <div class="row g-2 mb-3 bud-compact" data-reveal>
   <?php foreach ([
