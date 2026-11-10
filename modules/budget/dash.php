@@ -1,19 +1,28 @@
 <?php
-/** แดชบอร์ดงบประมาณ แบบ C — Report: แถบตัวเลขเดียว · ตารางงบรายจ่าย → รายการ พร้อมแถบในตาราง · กราฟ + อันดับโครงการด้านขวา */
-require __DIR__ . '/dash_switch.php';
+/** เนื้อหาหน้าภาพรวมงบประมาณ (เรียกจาก index.php — ใช้ตัวแปรที่คำนวณไว้ที่นั่น) */
 $ti = 0;
 $pbar = fn(float $r, float $s, string $c) => '<div class="d-flex align-items-center gap-2"><div class="dz-bar thin flex-grow-1" style="--bc:' . $c . ';max-width:70px"><span class="bar-fill" style="width:' . ($r > 0 ? min(100, round($s / $r * 100, 1)) : 0) . '%"></span></div><span class="dz-num">' . ($r > 0 ? number_format($s / $r * 100, 1) : '-') . '</span></div>';
 $rank = $byProject;
 uasort($rank, fn($a, $b) => $b['receive'] <=> $a['receive']);
 ?>
-<div data-reveal class="mb-3">
-  <div class="dz-card reveal-item">
-    <div class="dz-strip">
-      <div><div class="s-label"><i class="bi bi-box-arrow-in-down text-primary"></i> ได้รับ (บาท)</div><div class="s-val dz-num"><?= bud_money($rec) ?></div></div>
-      <div><div class="s-label"><i class="bi bi-box-arrow-up text-warning"></i> เบิกจ่าย (บาท)</div><div class="s-val dz-num"><?= bud_money($spd) ?></div></div>
-      <div><div class="s-label"><i class="bi bi-wallet2 text-success"></i> คงเหลือ (บาท)</div><div class="s-val dz-num<?= $rec - $spd < 0 ? ' text-danger' : '' ?>"><?= bud_money($rec - $spd) ?></div></div>
-      <div><div class="s-label"><i class="bi bi-percent text-info"></i> ร้อยละการเบิกจ่าย</div><div class="s-val dz-num"><?= number_format($pct, 1) ?>%</div>
-        <div class="dz-bar thin mt-1" style="--bc:#06b6d4"><span class="bar-fill" style="width:<?= min(100, round($pct, 1)) ?>%"></span></div></div>
+<?php $tiles = [
+    ['ได้รับ', bud_money($rec), 'bi-box-arrow-in-down', '#2563eb', 'linear-gradient(135deg, #1d4ed8, #3b82f6)', 'รับเข้างบประมาณ', $spark(array_column($byMonth, 'receive'), '#fff'), 'txns?type=receive&fy=' . $fy],
+    ['เบิกจ่าย', bud_money($spd), 'bi-box-arrow-up', '#ea580c', 'linear-gradient(135deg, #c2410c, #f97316)', 'เบิกจ่ายงบประมาณ', $spark(array_column($byMonth, 'spend'), '#fff'), 'txns?type=spend&fy=' . $fy],
+    ['คงเหลือ', bud_money($rec - $spd), 'bi-wallet2', '#059669', 'linear-gradient(135deg, #047857, #10b981)', 'ได้รับ − เบิกจ่าย', '', 'report?fy=' . $fy],
+]; ?>
+<div class="row g-3 mb-3" data-reveal>
+  <?php foreach ($tiles as [$label, $v, $icon, $tc, $tg, $sub, $sp, $href]): ?>
+  <div class="col-sm-6 col-xl-3 reveal-item">
+    <a class="dz-tile dz-link dz-dark" href="<?= h($href) ?>" style="--tc:<?= $tc ?>;--tg:<?= $tg ?>">
+      <div class="t-label"><span class="t-ico"><i class="bi <?= $icon ?>"></i></span><?= $label ?> (บาท)<span class="ms-auto" title="รายเดือน ต.ค. – ก.ย."><?= $sp ?></span></div>
+      <div class="t-val dz-num text-nowrap"><?= $v ?></div><div class="t-sub"><?= h($sub) ?></div>
+    </a>
+  </div>
+  <?php endforeach; ?>
+  <div class="col-sm-6 col-xl-3 reveal-item">
+    <div class="dz-tile dz-dark d-flex align-items-center gap-3" style="--tc:#0891b2;--tg:linear-gradient(135deg, #0e7490, #06b6d4)">
+      <?= $ring($pct, '#fff', 78) ?>
+      <div><div class="t-label">ร้อยละการเบิกจ่าย</div><div class="t-sub mt-1 dz-num">เบิกจ่าย <?= bud_money($spd) ?><br>จากที่ได้รับ <?= bud_money($rec) ?></div></div>
     </div>
   </div>
 </div>

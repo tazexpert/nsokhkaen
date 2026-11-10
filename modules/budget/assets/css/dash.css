@@ -1,7 +1,4 @@
-/* แดชบอร์ดงบประมาณ — แบบให้เลือก (A / B / C) */
-.dz-switch { display: inline-flex; gap: 4px; background: #e2e8f0; border-radius: 999px; padding: 3px; font-size: .8rem; }
-.dz-switch a { padding: 3px 12px; border-radius: 999px; color: #334155; text-decoration: none; }
-.dz-switch a.on { background: #fff; color: #0f172a; font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+/* แดชบอร์ดงบประมาณ (หน้าภาพรวม) — ไทล์สีเข้มด้านบน · ตารางงบรายจ่าย → รายการ · กราฟรายเดือน · อันดับโครงการ */
 .dz-num { font-variant-numeric: tabular-nums; }
 .dz-muted { color: #64748b; }
 .dz-card { background: #fff; border: 0; border-radius: 14px; box-shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 4px 14px rgba(15, 23, 42, .05); }
@@ -15,8 +12,8 @@ a.dz-card:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(15, 2
 .dz-ring-fg { fill: none; stroke: var(--rc); stroke-width: 3.4; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; stroke-dasharray: var(--p) 100; }
 .dz-ring-t { font-size: 7.2px; font-weight: 700; fill: #0f172a; }
 .dz-ring-l { font-size: 3.6px; fill: #64748b; }
-.dz-hero .dz-ring-bg { stroke: rgba(255, 255, 255, .25); }
-.dz-hero .dz-ring-t { fill: #fff; } .dz-hero .dz-ring-l { fill: rgba(255, 255, 255, .8); }
+.dz-dark .dz-ring-bg { stroke: rgba(255, 255, 255, .28); }
+.dz-dark .dz-ring-t { fill: #fff; } .dz-dark .dz-ring-l { fill: rgba(255, 255, 255, .8); }
 .js-reveal [data-reveal] .dz-ring-fg { stroke-dasharray: 0 100; }
 .js-reveal .revealed-group .dz-ring-fg { stroke-dasharray: var(--p) 100; transition: stroke-dasharray 1s cubic-bezier(.2, .8, .2, 1) .3s; }
 /* กราฟแท่งจิ๋ว */
@@ -29,47 +26,15 @@ a.dz-card:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(15, 2
 .dz-bar.thin { height: 6px; }
 .dz-badge { display: inline-block; padding: 1px 8px; border-radius: 6px; font-size: .78rem; font-weight: 700; color: #fff; background: var(--bc); }
 
-/* ---------- แบบ A: Executive ---------- */
-.dz-hero { border-radius: 18px; padding: 1.4rem 1.6rem; color: #fff; background: radial-gradient(120% 140% at 100% 0%, #3b82f6 0%, #1e40af 45%, #172554 100%); box-shadow: 0 10px 30px rgba(30, 64, 175, .25); }
-.dz-hero .k-label { font-size: .85rem; color: rgba(255, 255, 255, .78); }
-.dz-hero .k-val { font-size: 1.9rem; font-weight: 800; line-height: 1.15; }
-.dz-hero .k-sub { font-size: .78rem; color: rgba(255, 255, 255, .7); }
-.dz-hero .k-sep { border-left: 1px solid rgba(255, 255, 255, .2); }
-.dz-row { display: grid; grid-template-columns: 210px 1fr 230px; gap: 1rem; align-items: center; padding: .7rem .4rem; border-radius: 10px; }
-.dz-row + .dz-row { border-top: 1px solid #f1f5f9; }
-a.dz-row:hover { background: #f8fafc; }
-.dz-row .nm { font-weight: 700; display: flex; align-items: center; gap: .5rem; }
-.dz-row .nm i { width: 10px; height: 10px; border-radius: 3px; background: var(--bc); flex-shrink: 0; }
-.dz-row .sub { font-size: .75rem; color: #64748b; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dz-row .vals { text-align: right; font-size: .85rem; }
-.dz-row .vals b { font-size: 1rem; }
-.dz-plist .it { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: .55rem .2rem; }
-.dz-plist .it + .it { border-top: 1px solid #f1f5f9; }
-@media (max-width: 767px) { .dz-row { grid-template-columns: 1fr; gap: .3rem; } .dz-row .vals { text-align: left; } .dz-hero .k-sep { border-left: 0; } }
-
-/* ---------- แบบ B: Tiles + rings ---------- */
-.dz-tile { border-radius: 16px; padding: 1rem 1.1rem; background: var(--tb); border: 1px solid var(--tl); height: 100%; }
-.dz-tile .t-label { font-size: .82rem; color: var(--tc); font-weight: 600; display: flex; align-items: center; gap: .4rem; }
-.dz-tile .t-val { font-size: 1.7rem; font-weight: 800; color: #0f172a; line-height: 1.2; margin-top: .2rem; }
-.dz-tile .t-ico { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; color: #fff; background: var(--tc); font-size: .95rem; }
-.dz-bt { display: flex; gap: 1rem; align-items: center; }
-.dz-bt .nm { font-weight: 800; font-size: 1.02rem; }
-.dz-kv { display: grid; grid-template-columns: auto 1fr; gap: 1px 12px; font-size: .82rem; }
-.dz-kv span { color: #64748b; } .dz-kv b { text-align: right; }
-.dz-mini { font-size: .76rem; }
-.dz-mini .r { display: flex; justify-content: space-between; gap: 8px; margin-top: .35rem; }
-.dz-mini .r span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #334155; }
-.dz-ptile { text-align: center; padding: .9rem .6rem; height: 100%; border-top: 4px solid var(--bc); }
-.dz-ptile .code { font-weight: 800; color: var(--bc); }
-.dz-ptile .nm { font-size: .72rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-/* ---------- แบบ C: Report-style ---------- */
-.dz-strip { display: grid; grid-template-columns: repeat(4, 1fr); }
-.dz-strip > div { padding: 1rem 1.2rem; }
-.dz-strip > div + div { border-left: 1px solid #eef2f7; }
-.dz-strip .s-label { font-size: .8rem; color: #64748b; display: flex; align-items: center; gap: .35rem; }
-.dz-strip .s-val { font-size: 1.55rem; font-weight: 800; line-height: 1.25; }
-@media (max-width: 991px) { .dz-strip { grid-template-columns: repeat(2, 1fr); } .dz-strip > div:nth-child(3) { border-left: 0; } }
+/* ---------- ไทล์สีเข้มด้านบน ---------- */
+.dz-tile { display: block; height: 100%; border-radius: 16px; padding: 1rem 1.15rem; color: #fff; background: var(--tg); box-shadow: 0 6px 18px color-mix(in srgb, var(--tc) 30%, transparent); }
+a.dz-tile:hover { transform: translateY(-2px); box-shadow: 0 10px 24px color-mix(in srgb, var(--tc) 40%, transparent); }
+.dz-tile .t-label { font-size: .85rem; color: rgba(255, 255, 255, .88); font-weight: 600; display: flex; align-items: center; gap: .45rem; }
+.dz-tile .t-ico { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: rgba(255, 255, 255, .2); font-size: 1rem; }
+.dz-tile .t-val { font-size: 1.75rem; font-weight: 800; line-height: 1.2; margin-top: .35rem; color: #fff; }
+.dz-tile .t-sub { font-size: .78rem; color: rgba(255, 255, 255, .82); }
+.dz-tile .dz-spark { opacity: .85; }
+/* ---------- แถบตัวเลข / ตาราง / อันดับ ---------- */
 .dz-tbl { width: 100%; font-size: .86rem; border-collapse: separate; border-spacing: 0; }
 .dz-tbl th { font-size: .74rem; font-weight: 600; color: #64748b; text-transform: none; padding: .4rem .6rem; border-bottom: 1px solid #e2e8f0; text-align: right; white-space: nowrap; }
 .dz-tbl th:first-child { text-align: left; }
@@ -92,6 +57,5 @@ a.dz-row:hover { background: #f8fafc; }
 @media print {
   .dz-ring-fg { stroke-dasharray: var(--p) 100 !important; transition: none !important; }
   .dz-spark rect { transform: none !important; animation: none !important; }
-  .dz-hero, .dz-tile, .dz-tbl tr.g td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .dz-switch { display: none; }
+  .dz-tile, .dz-tbl tr.g td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }

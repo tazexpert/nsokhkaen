@@ -21,14 +21,8 @@
 .js-reveal [data-reveal] .bud-anim { transform: scaleY(0); }
 .js-reveal .revealed-group .bud-anim { animation: budGrow .7s cubic-bezier(.2,.8,.2,1) var(--d, 0ms) both; transform: none; }
 @keyframes budGrow { from { transform: scaleY(0); } to { transform: none; } }
-/* แยกตามชื่อโครงการที่ได้รับ */
-.bud-src-row { display: flex; align-items: center; gap: 10px; padding: 4px 6px; border-radius: 6px; }
-.bud-src-row:hover { background: #f8fafc; }
-.bud-src-name { width: 320px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: .92rem; }
-.bud-src-val { width: 230px; text-align: right; font-size: .9rem; }
 .bud-fill { background: linear-gradient(90deg, #fb923c, #ea580c); }
 .bud-fill.over { background: linear-gradient(90deg, #f87171, #dc2626); }
-@media (max-width: 767px) { .bud-src-row { flex-wrap: wrap; } .bud-src-name { width: 100%; } .bud-src-val { width: auto; } }
 /* รายงาน */
 .bud-report th, .bud-report td { white-space: nowrap; }
 .bud-report td.bud-name { white-space: normal; min-width: 200px; }
@@ -68,16 +62,9 @@
   .bud-ledger-center { white-space: nowrap; }
   .bud-ledger-detail { color: #000; }
 }
-/* แดชบอร์ด: แยกตามประเภทงบ */
-.bud-type { border-top: 4px solid var(--c); transition: transform .15s, box-shadow .15s; }
-.bud-type:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(15, 23, 42, .1); }
-.bud-type-name { font-weight: 700; color: var(--c); }
+/* หัวกลุ่มในรายการ (หน้ารายละเอียดงบรายจ่าย/โครงการ) */
 .bud-type-head { display: flex; gap: .5rem; font-weight: 700; font-size: .9rem; padding: .35rem .4rem; margin: .6rem 0 .25rem; border-bottom: 1px solid #e2e8f0; }
 .bud-type-head:first-child { margin-top: 0; }
-/* แดชบอร์ด: การ์ดงบประมาณ → ค่าใช้จ่าย */
-.bud-type-exp { margin-top: .75rem; padding-top: .6rem; border-top: 1px dashed #e2e8f0; }
-.bud-type-exp-row + .bud-type-exp-row { margin-top: .45rem; }
-.bud-type-exp-row .text-truncate { min-width: 0; }
 .bar-track.bud-mini { height: 6px; flex: 1 1 auto; min-width: 30px; }
 /* แดชบอร์ด: แยกตามงบ / หมวด (ครึ่งจอ ด้านขวากราฟ) */
 .bud-src-list { max-height: 360px; overflow: auto; }
@@ -95,36 +82,3 @@
 @media print {
   .bud-report thead.bud-report-head th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
-/* แดชบอร์ดแบบกะทัดรัด */
-.bud-compact .stat-card.bud-stat { padding: 16px 20px; gap: 14px; }
-.bud-compact .bud-stat .stat-icon { width: 48px; height: 48px; font-size: 1.3rem; }
-.bud-compact .bud-stat .stat-num { font-size: 1.6rem; line-height: 1.2; }
-.bud-compact .bud-stat .stat-label { font-size: .9rem; }
-.bud-compact .bud-type .card-body { padding: .6rem .75rem; }
-.bud-compact .bud-type { border-top-width: 3px; }
-.bud-compact .bud-type-name { font-size: .95rem; margin-bottom: .2rem; }
-.bud-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; font-size: .78rem; line-height: 1.25; }
-.bud-sum span { display: block; color: #64748b; font-size: .7rem; }
-.bud-sum b { white-space: nowrap; }
-.bud-compact .bud-progress { height: 6px; }
-.bud-compact .bud-type-exp { margin-top: .4rem; padding-top: .35rem; }
-.bud-compact .bud-type-exp-row + .bud-type-exp-row { margin-top: .3rem; }
-.bud-line { display: flex; gap: 6px; font-size: .75rem; line-height: 1.25; }
-.bud-line .nm { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bud-line .am { white-space: nowrap; }
-.bar-track.bud-thin { display: block; height: 3px; margin-top: 1px; }
-.bud-compact .bud-vbars { height: 180px; }
-.bud-compact .bud-src-list { max-height: 260px; }
-.bud-compact .card-header { padding-top: .45rem; padding-bottom: .45rem; }
-/* การ์ดงบรายจ่าย: พื้นสีหลัก (primary / success / warning / info) ตัวอักษรสีดำ */
-.bud-solid { border: 0; }
-.card.bud-solid[class*="text-bg-"] { color: #0f172a !important; }
-.bud-solid .bud-type-name, .bud-solid b, .bud-solid .bud-receive, .bud-solid .bud-spend { color: #0f172a !important; }
-.bud-solid .text-danger { color: #991b1b !important; }
-.bud-solid .bud-sum span, .bud-solid .text-muted { color: rgba(15, 23, 42, .7) !important; }
-.bud-solid .bud-progress, .bud-solid .bar-track { background: rgba(255, 255, 255, .5); }
-.bud-solid .bud-progress > span, .bud-solid .bar-fill, .bud-solid .bud-fill { background: rgba(15, 23, 42, .65) !important; }
-.bud-solid .bud-fill.over { background: #b91c1c !important; }
-.bud-solid .bud-type-exp { border-top-color: rgba(15, 23, 42, .25); }
-.bud-solid:hover { box-shadow: 0 6px 18px rgba(15, 23, 42, .2); }
-@media print { .bud-solid { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
