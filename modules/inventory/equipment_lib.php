@@ -124,6 +124,70 @@ function equipment_types(): array
     return db()->query('SELECT id, name FROM inv_equipment_types ORDER BY sort_order, name')->fetchAll(PDO::FETCH_KEY_PAIR);
 }
 
+/**
+ * สรุปการยืม 4 กลุ่ม (หน้าครุภัณฑ์ / equipment_group)
+ *   Samsung Galaxy Tab · โน้ตบุ๊ค (ทุกยี่ห้อ) · แท็บเล็ต Lenovo · แท็บเล็ต Microsoft
+ * คืน [[label, filter (ตัวกรองรายการครุภัณฑ์), total, borrowed, available, other (เสีย/รอจำหน่าย),
+ *       models => [ชื่อรุ่น => [total, borrowed, available, other, fy]], loans => [...], free => [เลขครุภัณฑ์]], ...]
+ */
+function eq_loan_groups(?array $activeLoans = null): array
+{
+    $activeLoans ??= active_loans_by_equipment();
+    $types = equipment_types();
+    $isTablet = fn($t) => (bool)preg_match('/tablet|แท็บเล็ต/iu', (string)$t);
+    $isNotebook = fn($t) => (bool)preg_match('/notebook|โน้ตบุ๊[คก]/iu', (string)$t);
+    $typeIdOf = fn(callable $f) => array_key_first(array_filter($types, $f)) ?: null;
+    $defs = [   // [ชื่อการ์ด, เงื่อนไข, ตัวกรองลิงก์ "ดูรายการ"]
+        ['Samsung Galaxy Tab', fn($r) => $isTablet($r['type_name']) && stripos((string)$r['brand'], 'samsung') !== false && stripos((string)$r['model'], 'galaxy tab') !== false,
+            ['q' => 'Galaxy Tab', 'type' => $typeIdOf($isTablet)]],
+        ['โน้ตบุ๊ค', fn($r) => $isNotebook($r['type_name']), ['type' => $typeIdOf($isNotebook)]],
+        ['แท็บเล็ต Lenovo', fn($r) => $isTablet($r['type_name']) && stripos((string)$r['brand'], 'lenovo') !== false, ['q' => 'Lenovo', 'type' => $typeIdOf($isTablet)]],
+        ['แท็บเล็ต Microsoft', fn($r) => $isTablet($r['type_name']) && stripos((string)$r['brand'], 'microsoft') !== false, ['q' => 'Microsoft', 'type' => $typeIdOf($isTablet)]],
+    ];
+    $out = [];
+    foreach ($defs as $gi => [$label, , $f]) {
+        $out[$gi] = ['label' => $label, 'filter' => array_filter($f), 'models' => [], 'total' => 0, 'borrowed' => 0, 'available' => 0, 'other' => 0,
+                     'loans' => [], 'free' => []];
+    }
+    $today = date('Y-m-d');
+    foreach (db()->query('SELECT e.id, e.brand, e.model, e.status, e.asset_no, e.fiscal_year, t.name AS type_name
+        FROM inv_equipment e LEFT JOIN inv_equipment_types t ON t.id = e.type_id ORDER BY e.asset_no') as $r) {
+        foreach ($defs as $gi => [, $match]) {
+            if (!$match($r)) {
+                continue;
+            }
+            $g = &$out[$gi];
+            $mdl = trim($r['brand'] . ' ' . $r['model']) ?: '(ไม่ระบุรุ่น)';
+            $md = &$g['models'][$mdl];
+            $md ??= ['total' => 0, 'borrowed' => 0, 'available' => 0, 'other' => 0, 'fy' => 0];
+            $md['fy'] = max($md['fy'], (int)$r['fiscal_year']);
+            $g['total']++;
+            $md['total']++;
+            if ($loan = $activeLoans[(int)$r['id']] ?? null) {
+                $k = 'borrowed';
+                $g['loans'][] = ['name' => $loan['borrower_name'], 'ref' => loan_ref($loan), 'loan_id' => (int)$loan['loan_id'],
+                                 'due' => $loan['due_date'], 'over' => $loan['due_date'] < $today, 'asset' => $r['asset_no'] ?: '-',
+                                 'equipment_id' => (int)$r['id'], 'model' => $mdl];
+            } elseif ($r['status'] === 'normal') {
+                $k = 'available';
+                $g['free'][] = ['asset' => $r['asset_no'] ?: '(ยังไม่มีเลข)', 'equipment_id' => (int)$r['id'], 'model' => $mdl];
+            } else {
+                $k = 'other';
+            }
+            $g[$k]++;
+            $md[$k]++;
+            unset($g, $md);
+            break;
+        }
+    }
+    foreach ($out as &$g) {
+        uasort($g['models'], fn($a, $b) => [$b['fy'], $b['total']] <=> [$a['fy'], $a['total']]);   // รุ่นใหม่ก่อน
+        usort($g['loans'], fn($a, $b) => [$a['due'], $a['name']] <=> [$b['due'], $b['name']]);     // ใกล้ครบกำหนดก่อน
+    }
+    unset($g);
+    return $out;
+}
+
 /** หา/สร้างประเภทครุภัณฑ์ตามชื่อ */
 function equipment_type_id(PDO $pdo, string $name): ?int
 {

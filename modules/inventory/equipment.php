@@ -50,49 +50,8 @@ foreach ($summary as $s) {
 
 $link = fn(array $f) => 'equipment?' . http_build_query(array_filter($f)) . '#list';
 
-// ---------- สรุปการยืม 4 กลุ่ม: ยอดยืม / คงเหลือ / ใครยืม ----------
-$isTablet = fn($t) => (bool)preg_match('/tablet|แท็บเล็ต/iu', (string)$t);
-$isNotebook = fn($t) => (bool)preg_match('/notebook|โน้ตบุ๊[คก]/iu', (string)$t);
-$typeIdOf = fn(callable $f) => array_key_first(array_filter($types, $f)) ?: null;
-$groupDefs = [   // [ชื่อการ์ด, เงื่อนไข, ตัวกรองลิงก์ "ดูรายการ"]
-    ['Samsung Galaxy Tab', fn($r) => $isTablet($r['type_name']) && stripos((string)$r['brand'], 'samsung') !== false && stripos((string)$r['model'], 'galaxy tab') !== false,
-        ['q' => 'Galaxy Tab', 'type' => $typeIdOf($isTablet)]],
-    ['โน้ตบุ๊ค', fn($r) => $isNotebook($r['type_name']), ['type' => $typeIdOf($isNotebook)]],
-    ['แท็บเล็ต Lenovo', fn($r) => $isTablet($r['type_name']) && stripos((string)$r['brand'], 'lenovo') !== false, ['q' => 'Lenovo', 'type' => $typeIdOf($isTablet)]],
-    ['แท็บเล็ต Microsoft', fn($r) => $isTablet($r['type_name']) && stripos((string)$r['brand'], 'microsoft') !== false, ['q' => 'Microsoft', 'type' => $typeIdOf($isTablet)]],
-];
-$models = [];
-foreach ($groupDefs as $gi => [$label, , $f]) {
-    $models[$gi] = ['label' => $label, 'href' => $link($f), 'models' => [], 'total' => 0, 'borrowed' => 0, 'available' => 0, 'loans' => [], 'free' => []];
-}
-foreach ($pdo->query("SELECT e.id, e.brand, e.model, e.status, e.asset_no, t.name AS type_name
-    FROM inv_equipment e LEFT JOIN inv_equipment_types t ON t.id = e.type_id ORDER BY e.asset_no") as $r) {
-    foreach ($groupDefs as $gi => [, $match]) {
-        if (!$match($r)) {
-            continue;
-        }
-        $m = &$models[$gi];
-        $mdl = trim($r['brand'] . ' ' . $r['model']);
-        $m['models'][$mdl] = true;
-        $m['total']++;
-        if ($loan = $activeLoans[(int)$r['id']] ?? null) {
-            $m['borrowed']++;
-            $m['loans'][] = ['name' => $loan['borrower_name'], 'ref' => loan_ref($loan), 'loan_id' => (int)$loan['loan_id'],
-                             'due' => $loan['due_date'], 'due_th' => thai_date($loan['due_date']), 'over' => $loan['due_date'] < date('Y-m-d'),
-                             'asset' => $r['asset_no'] ?: '-', 'model' => $mdl];
-        } elseif ($r['status'] === 'normal') {
-            $m['available']++;
-            $m['free'][] = $r['asset_no'] ?: '(ยังไม่มีเลข)';
-        }
-        unset($m);
-        break;
-    }
-}
-foreach ($models as &$m) {
-    $m['models'] = array_keys($m['models']);
-    usort($m['loans'], fn($a, $b) => [$a['due'], $a['name']] <=> [$b['due'], $b['name']]);   // ใกล้ครบกำหนดก่อน
-}
-unset($m);
+// ---------- สรุปการยืม 4 กลุ่ม (คลิกการ์ด → equipment_group) ----------
+$models = eq_loan_groups($activeLoans);
 
 // ---------- รายการ ----------
 $q = trim($_GET['q'] ?? '');
@@ -137,14 +96,14 @@ require __DIR__ . '/header.php';
 ?>
 <?php if ($models): ?>
 <div class="d-flex align-items-center mb-2"><h2 class="h6 mb-0"><i class="bi bi-box-arrow-up-right text-primary"></i> สรุปการยืม</h2>
-  <span class="ms-auto small text-muted no-print">คลิกการ์ดเพื่อดูว่าใครยืมบ้าง</span></div>
+  <span class="ms-auto small text-muted no-print">คลิกการ์ดเพื่อดูรายละเอียดและผู้ยืม</span></div>
 <div class="row g-3 mb-4" data-reveal>
   <?php foreach ($models as $i => $m): $pct = $m['total'] ? round($m['borrowed'] / $m['total'] * 100) : 0; ?>
   <div class="col-sm-6 col-xl-3 reveal-item" style="--d:<?= $i * 70 ?>ms">
-    <button type="button" class="card eq-model h-100 w-100 text-start" data-model="<?= $i ?>">
+    <a href="equipment_group?g=<?= $i ?>" class="card eq-model h-100 text-decoration-none text-reset">
       <div class="card-body p-3">
         <div class="fw-semibold text-truncate fs-6"><?= h($m['label']) ?></div>
-        <div class="small text-muted text-truncate" title="<?= h(implode(', ', $m['models'])) ?>"><?= count($m['models']) ?> รุ่น</div>
+        <div class="small text-muted text-truncate" title="<?= h(implode(', ', array_keys($m['models']))) ?>"><?= count($m['models']) ?> รุ่น</div>
         <div class="d-flex gap-3 mt-2 eq-model-nums">
           <div><div class="n text-primary"><?= number_format($m['borrowed']) ?></div><div class="l">ยืมอยู่</div></div>
           <div><div class="n text-success"><?= number_format($m['available']) ?></div><div class="l">คงเหลือ</div></div>
@@ -153,15 +112,9 @@ require __DIR__ . '/header.php';
         </div>
         <span class="bar-track d-block mt-1"><span class="bar-fill" style="width:<?= $pct ?>%"></span></span>
       </div>
-    </button>
+    </a>
   </div>
   <?php endforeach; ?>
-</div>
-<div class="modal fade" id="eqModelModal" tabindex="-1">
-  <div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
-    <div class="modal-header"><h5 class="modal-title" id="eqmTitle"></h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
-    <div class="modal-body" id="eqmBody"></div>
-  </div></div>
 </div>
 <style>
 .eq-model{border:1px solid var(--bs-border-color);background:var(--bs-body-bg);transition:box-shadow .15s,transform .15s}
@@ -170,29 +123,6 @@ require __DIR__ . '/header.php';
 .eq-model-nums .l{font-size:.75rem;color:var(--bs-secondary-color)}
 @media print{.eq-model{transform:none!important;box-shadow:none!important}}
 </style>
-<script>
-(() => {
-  const models = <?= json_encode($models, JSON_UNESCAPED_UNICODE) ?>;
-  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  document.querySelectorAll('.eq-model').forEach(btn => btn.addEventListener('click', () => {
-    const m = models[+btn.dataset.model];
-    document.getElementById('eqmTitle').innerHTML = esc(m.label)
-      + '<div class="small text-muted fw-normal">ยืมอยู่ ' + m.borrowed + ' / คงเหลือ ' + m.available + ' / ทั้งหมด ' + m.total
-      + (m.models.length ? ' · ' + m.models.map(esc).join(', ') : '') + '</div>';
-    document.getElementById('eqmBody').innerHTML =
-      '<h6 class="mb-2"><i class="bi bi-person-fill text-primary"></i> ผู้ยืม (' + m.loans.length + ')</h6>'
-      + (m.loans.length ? '<div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th>#</th><th>ผู้ยืม</th><th>รุ่น</th><th>เลขครุภัณฑ์</th><th>เลขที่หนังสือ</th><th>กำหนดคืน</th></tr></thead><tbody>'
-        + m.loans.map((l, i) => `<tr><td>${i + 1}</td><td>${esc(l.name)}</td><td class="small">${esc(l.model)}</td><td class="font-monospace small">${esc(l.asset)}</td>
-            <td class="text-nowrap"><a href="loan_view?id=${l.loan_id}">${esc(l.ref)}</a></td>
-            <td class="text-nowrap">${esc(l.due_th)}${l.over ? ' <span class="badge text-bg-danger">เกินกำหนด</span>' : ''}</td></tr>`).join('')
-        + '</tbody></table></div>' : '<p class="text-muted">ยังไม่มีผู้ยืม</p>')
-      + '<h6 class="mb-2 mt-3"><i class="bi bi-check-circle text-success"></i> คงเหลือให้ยืม (' + m.free.length + ')</h6>'
-      + (m.free.length ? '<div class="d-flex flex-wrap gap-1">' + m.free.map(a => '<span class="badge text-bg-light border font-monospace fw-normal">' + esc(a) + '</span>').join('') + '</div>' : '<p class="text-muted mb-0">ไม่มี</p>')
-      + '<div class="mt-3"><a class="small" href="' + esc(m.href) + '"><i class="bi bi-list-ul"></i> ดูรายการครุภัณฑ์กลุ่มนี้ทั้งหมด</a></div>';
-    bootstrap.Modal.getOrCreateInstance(document.getElementById('eqModelModal')).show();
-  }));
-})();
-</script>
 <?php endif; ?>
 <div class="card mb-4">
   <div class="card-header d-flex align-items-center"><strong><i class="bi bi-pie-chart"></i> สรุปครุภัณฑ์ตามประเภท</strong>
