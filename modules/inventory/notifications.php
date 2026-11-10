@@ -1,9 +1,9 @@
 <?php
 /**
  * การแจ้งเตือนของระบบวัสดุและครุภัณฑ์ (เรียกจาก core/notifications.php)
- *   ผู้ดูแล: เกินกำหนดคืน, การยืมล่าสุด, ใบเบิกวัสดุล่าสุด/รออนุมัติ,
- *            วัสดุที่ถูกเบิกล่าสุดซึ่งหมดหรือใกล้หมด
- *   เจ้าหน้าที่: การยืมในชื่อตนเอง, ใกล้ถึง/เกินกำหนดคืน, ใบเบิกของตนที่อนุมัติแล้ว
+ *   ผู้ดูแล: เกินกำหนดคืน, ใบเบิกวัสดุล่าสุด/รออนุมัติ, วัสดุที่ถูกเบิกล่าสุดซึ่งหมดหรือใกล้หมด
+ *   เจ้าหน้าที่: ใกล้ถึง/เกินกำหนดคืน, ใบเบิกของตนที่อนุมัติแล้ว
+ *   ไม่แจ้งเตือนเมื่อบันทึกการยืม — ผู้ดูแลบันทึกเองหลังอนุมัติยืมใน e-office แล้ว
  */
 return function (array $user): array {
     require_once __DIR__ . '/equipment_lib.php';
@@ -21,12 +21,6 @@ return function (array $user): array {
             $out[] = ['title' => 'เกินกำหนดคืนครุภัณฑ์', 'icon' => 'bi-alarm', 'color' => 'danger',
                       'text' => $l['loan_no'] . ' · ' . $l['borrower_name'] . ' · กำหนดคืน ' . thai_date($l['due_date']),
                       'href' => $base . 'loan_view?id=' . $l['id'], 'time' => date('Y-m-d 08:00:00', strtotime($l['due_date'] . ' +1 day')), 'sticky' => true];
-        }
-        // บันทึกการยืมใน 7 วันล่าสุด
-        foreach ($pdo->query("SELECT l.*, ($itemCount) AS n FROM inv_loans l WHERE l.status = 'borrowed' AND l.created_at >= NOW() - INTERVAL 7 DAY ORDER BY l.created_at DESC LIMIT 10") as $l) {
-            $out[] = ['title' => 'มีการยืมครุภัณฑ์', 'icon' => 'bi-box-arrow-up-right', 'color' => 'primary',
-                      'text' => $l['borrower_name'] . ' ยืม ' . $l['n'] . ' รายการ ถึง ' . thai_date($l['due_date']),
-                      'href' => $base . 'loan_view?id=' . $l['id'], 'time' => $l['created_at']];
         }
         // ใบเบิกวัสดุ: รออนุมัติทั้งหมด + ที่อนุมัติแล้วใน 3 วันล่าสุด
         foreach ($pdo->query("SELECT r.*, u.full_name, (SELECT COUNT(*) FROM inv_requisition_items i WHERE i.requisition_id = r.id) AS n
@@ -71,10 +65,6 @@ return function (array $user): array {
             $out[] = ['title' => 'ใกล้ถึงกำหนดคืนครุภัณฑ์', 'icon' => 'bi-calendar-event', 'color' => 'warning',
                       'text' => $l['loan_no'] . ' · กำหนดคืน ' . thai_date($l['due_date']), 'href' => $href,
                       'time' => date('Y-m-d 08:00:00', strtotime($l['due_date'] . ' -2 days')), 'sticky' => true];
-        }
-        if (strtotime($l['created_at']) >= strtotime('-14 days')) {
-            $out[] = ['title' => 'บันทึกการยืมครุภัณฑ์ในชื่อของคุณ', 'icon' => 'bi-box-arrow-up-right', 'color' => 'primary',
-                      'text' => $l['loan_no'] . ' · กำหนดคืน ' . thai_date($l['due_date']), 'href' => $href, 'time' => $l['created_at']];
         }
     }
     $st = $pdo->prepare('SELECT * FROM inv_requisitions WHERE created_by = ? AND approved_at >= NOW() - INTERVAL 7 DAY ORDER BY id DESC LIMIT 10');
