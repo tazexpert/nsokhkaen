@@ -272,6 +272,38 @@ require __DIR__ . '/header.php';
   const thDate = d => { if (!d) return '<span class="text-danger">ไม่พบ</span>'; const [y, m, dd] = d.split('-').map(Number); return dd + ' ' + TH_M[m - 1] + ' ' + (y + 543); };
   const ok = t => `<i class="bi bi-check-circle-fill text-success"></i> ${t}`, warn = t => `<i class="bi bi-exclamation-triangle-fill text-warning"></i> ${t}`, bad = t => `<i class="bi bi-x-circle-fill text-danger"></i> ${t}`;
   let parsed = null;
+  // ข้อความในตราประทับ e-office (/Contents ของ annotation) อ่านจากไฟล์ตรง ๆ — ตราถูกตั้งเป็นซ่อน pdf.js จึงไม่ส่งให้
+  function stampTexts(bytes) {
+    let raw = '';
+    for (let i = 0; i < bytes.length; i += 32768) raw += String.fromCharCode.apply(null, bytes.subarray(i, i + 32768));
+    const out = [], re = /\/Contents\s*([(<])/g;
+    let m;
+    while ((m = re.exec(raw)) && out.length < 200) {
+      let i = re.lastIndex, b = '';
+      if (m[1] === '<') {
+        const end = raw.indexOf('>', i); if (end < 0) break;
+        const hex = raw.slice(i, end).replace(/\s/g, '');
+        for (let k = 0; k + 1 < hex.length; k += 2) b += String.fromCharCode(parseInt(hex.substr(k, 2), 16));
+      } else {
+        for (let depth = 1; i < raw.length; i++) {
+          const ch = raw[i];
+          if (ch === '\\') {
+            const n = raw[++i], esc = { n: '\n', r: '\r', t: '\t', b: '\b', f: '\f' };
+            if (esc[n]) b += esc[n];
+            else if (/[0-7]/.test(n)) { let o = n; while (o.length < 3 && /[0-7]/.test(raw[i + 1])) o += raw[++i]; b += String.fromCharCode(parseInt(o, 8) & 255); }
+            else if (n !== '\n' && n !== '\r') b += n;
+          } else if (ch === '(') { depth++; b += ch; }
+          else if (ch === ')') { if (--depth === 0) break; b += ch; }
+          else b += ch;
+        }
+      }
+      let t = '';
+      if (b.charCodeAt(0) === 0xFE && b.charCodeAt(1) === 0xFF) { for (let k = 2; k + 1 < b.length; k += 2) t += String.fromCharCode(b.charCodeAt(k) << 8 | b.charCodeAt(k + 1)); }
+      else { try { t = decodeURIComponent(escape(b)); } catch (e) { t = b; } }
+      if (/doc_no|add_date/i.test(t)) out.push(t);
+    }
+    return out;
+  }
   pdfFile.addEventListener('change', async () => {
     const file = pdfFile.files[0];
     pdfResult.classList.add('d-none');
@@ -280,7 +312,9 @@ require __DIR__ . '/header.php';
     try {
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
       pdfStatus.textContent = 'กำลังอ่านไฟล์…';
-      const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const annots = stampTexts(bytes);
+      const doc = await pdfjsLib.getDocument({ data: bytes.slice() }).promise;
       const pages = [];
       for (let i = 1; i <= Math.min(doc.numPages, 10); i++) {
         const pg = await doc.getPage(i), vp = pg.getViewport({ scale: 1 }), tc = await pg.getTextContent();
@@ -292,6 +326,7 @@ require __DIR__ . '/header.php';
       const fd = new FormData();
       fd.append('csrf', document.querySelector('#loanForm input[name=csrf]').value);
       fd.append('pages', JSON.stringify(pages));
+      fd.append('annots', JSON.stringify(annots.slice(0, 200)));
       fd.append('loan_id', <?= (int)$id ?>);
       const r = await fetch('loan_pdf', { method: 'POST', body: fd, credentials: 'same-origin' });
       const data = await r.json();
@@ -332,6 +367,7 @@ require __DIR__ . '/header.php';
       <table class="table table-sm mb-2 bg-transparent"><tbody>
         <tr><th class="text-nowrap" style="width:1%">ผู้ยืม</th><td>${esc(d.borrower || '-')}<br>${u ? ok('ตรงกับผู้ใช้ ' + esc(u.textContent)) : bad('ไม่พบในรายชื่อผู้ใช้ — เลือกผู้ยืมเอง')}</td></tr>
         <tr><th>ตำแหน่ง</th><td>${esc(d.position || '-')}${d.phone ? ' · โทร ' + esc(d.phone) : ''}</td></tr>
+        <tr><th class="text-nowrap">เลขที่หนังสือ</th><td>${d.doc_no ? esc(d.doc_no) : '<span class="text-muted">ไม่พบ</span>'}</td></tr>
         <tr><th>ระยะเวลา</th><td>${thDate(d.start_date)} – ${thDate(d.due_date)}${days > 0 ? ' (' + days + ' วัน)' : (days ? ' ' + bad('วันคืนก่อนวันยืม') : '')}</td></tr>
         ${d.purpose ? `<tr><th>วัตถุประสงค์</th><td>${esc(d.purpose)}</td></tr>` : ''}
       </tbody></table>

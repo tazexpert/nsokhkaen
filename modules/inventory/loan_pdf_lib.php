@@ -101,7 +101,7 @@ function loan_pdf_date(string $d, string $month, string $year): ?string
  * แยกข้อมูลจากใบยืม
  * คืน ['borrower', 'position', 'org', 'phone', 'purpose', 'doc_no', 'start_date', 'due_date', 'items' => [[seq, name, brand, serial, asset, qty]], 'errors']
  */
-function loan_pdf_parse(array $pages): array
+function loan_pdf_parse(array $pages, array $annots = []): array
 {
     $res = ['borrower' => '', 'position' => '', 'org' => '', 'phone' => '', 'purpose' => '', 'doc_no' => '',
             'start_date' => null, 'due_date' => null, 'items' => [], 'errors' => []];
@@ -126,6 +126,13 @@ function loan_pdf_parse(array $pages): array
     }
     if (preg_match('/^ที่\s+([^.\s].*?)\s+วันที่/mu', $all, $m) && preg_match('/\d/', $m[1])) {
         $res['doc_no'] = trim($m[1]);
+    }
+    // เลขที่หนังสือจากตราประทับ e-office: "doc_no: ขก ๐๐๑๓/๑๒๖๙"
+    foreach ($annots as $a) {
+        if (preg_match('/doc_no\s*:\s*([^\r\n]+)/iu', $a, $m)) {
+            $res['doc_no'] = trim(preg_replace('/\s+/u', ' ', loan_pdf_norm($m[1])));
+            break;
+        }
     }
     if (preg_match('/ตั้งแต่\s*วันที่\s*' . $dateRe . '.*?ถึง\s*วันที่\s*' . $dateRe . '/su', $all, $m)) {
         $res['start_date'] = loan_pdf_date($m[1], $m[2], $m[3]);

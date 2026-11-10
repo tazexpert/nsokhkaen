@@ -4,7 +4,7 @@
  *   คอลัมน์: เลขครุภัณฑ์ | ผู้ยืม | วันที่ยืม | กำหนดคืน | เลขที่หนังสือ | วัตถุประสงค์
  *   - 1 แถว = ครุภัณฑ์ 1 รายการ (หรือหลายเลขในช่องเดียว คั่นด้วย ,)
  *   - แถวที่ผู้ยืม + วันที่ยืม + กำหนดคืน + เลขที่หนังสือ เหมือนกัน รวมเป็นรายการยืมเดียวกัน
- * หลังนำเข้า → หน้าแนบไฟล์ใบยืมของรายการที่นำเข้าทันที (loan_attach.php)
+ * ไม่ต้องแนบไฟล์ใบยืม (ใบยืมใช้ตรวจสอบตอนบันทึกเท่านั้น)
  */
 require_once __DIR__ . '/bootstrap.php';
 $me = require_module(INV_MODULE, 'admin');
@@ -236,8 +236,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('ไม่มีรายการที่นำเข้าได้', 'warning');
             redirect('loan_import');
         }
-        flash('นำเข้ารายการยืม ' . count($created) . ' รายการ — สถานะครุภัณฑ์เป็น "กำลังยืม" แล้ว · แนบไฟล์ใบยืมด้านล่างได้เลย');
-        redirect('loan_attach?ids=' . implode(',', $created));
+        flash('นำเข้ารายการยืม ' . count($created) . ' รายการ — สถานะครุภัณฑ์เป็น "กำลังยืม" แล้ว');
+        redirect('loans');
     }
 }
 
@@ -268,7 +268,6 @@ require __DIR__ . '/header.php';
       <li>แถวที่ <strong>ผู้ยืม + วันที่ยืม + กำหนดคืน + เลขที่หนังสือ</strong> เหมือนกัน จะรวมเป็นรายการยืมเดียวกัน</li>
       <li><strong>ผู้ยืม</strong>: ชื่อ-นามสกุล (ไม่ใส่คำนำหน้าก็ได้) หรือชื่อผู้ใช้ · <strong>วันที่</strong>: 1/11/2569, 2026-11-01, 1 พ.ย. 2569</li>
       <li>ครุภัณฑ์ต้องมีในทะเบียน สภาพ "ใช้งานตามปกติ" และไม่ถูกยืมอยู่</li>
-      <li>หลังนำเข้า ระบบพาไปหน้า <strong>แนบไฟล์ใบยืม</strong> ของรายการที่นำเข้าทันที</li>
     </ul>
   </div></div></div>
 </div>
@@ -302,7 +301,7 @@ require __DIR__ . '/header.php';
     </div>
   </div>
   <div class="sticky-actions">
-    <button class="btn btn-primary btn-lg" <?= $ok ? '' : 'disabled' ?>><i class="bi bi-check2-circle"></i> ยืนยันนำเข้า แล้วแนบไฟล์ใบยืม</button>
+    <button class="btn btn-primary btn-lg" <?= $ok ? '' : 'disabled' ?>><i class="bi bi-check2-circle"></i> ยืนยันนำเข้า</button>
     <a href="loan_import" class="btn btn-light btn-lg">เลือกไฟล์ใหม่</a>
   </div>
 </form>

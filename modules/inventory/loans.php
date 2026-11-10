@@ -47,9 +47,7 @@ $st->execute($params);
 $loans = $st->fetchAll();
 
 $tabs = ['borrowed' => 'กำลังยืม', 'overdue' => 'เกินกำหนดคืน', 'returned' => 'คืนแล้ว', 'all' => 'ทั้งหมด'];
-$noFile = $isAdmin ? (int)$pdo->query("SELECT COUNT(*) FROM inv_loans WHERE status = 'borrowed' AND (file_path IS NULL OR file_path = '')")->fetchColumn() : 0;
-$pageActions = $isAdmin ? ($noFile ? '<a href="loan_attach" class="btn btn-warning"><i class="bi bi-paperclip"></i> แนบใบยืมที่ยังขาด (' . $noFile . ')</a>' : '')
-    . '<a href="loan_import" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> นำเข้า CSV</a>'
+$pageActions = $isAdmin ? '<a href="loan_import" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> นำเข้า CSV</a>'
     . '<a href="loan_form" class="btn btn-success"><i class="bi bi-plus-lg"></i> บันทึกการยืม</a>' : '';
 require __DIR__ . '/header.php';
 ?>

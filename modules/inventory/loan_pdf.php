@@ -1,7 +1,7 @@
 <?php
 /**
  * ตรวจสอบใบยืมจากไฟล์ PDF (เรียกจากหน้า loan_form) — ไม่บันทึกไฟล์และไม่แก้ข้อมูลใด ๆ
- *   รับ: pages = JSON ข้อความจาก pdf.js · loan_id = รายการยืมที่กำลังแก้ไข (ถ้ามี)
+ *   รับ: pages = JSON ข้อความจาก pdf.js · annots = ข้อความในตราประทับ e-office · loan_id = รายการยืมที่กำลังแก้ไข (ถ้ามี)
  *   คืน: ข้อมูลผู้ยืม ระยะเวลา และรายการพัสดุพร้อมผลจับคู่กับทะเบียนครุภัณฑ์
  */
 require_once __DIR__ . '/bootstrap.php';
@@ -16,7 +16,8 @@ if (!is_array($pages) || !$pages) {
 }
 $pdo = db();
 $loanId = int_param('loan_id');
-$res = loan_pdf_parse($pages);
+$annots = json_decode((string)($_POST['annots'] ?? '[]'), true);
+$res = loan_pdf_parse($pages, is_array($annots) ? array_filter($annots, 'is_string') : []);
 
 $users = $pdo->query('SELECT id, full_name FROM core_users')->fetchAll();
 $res['borrower_id'] = loan_pdf_match_user($res['borrower'], $users);

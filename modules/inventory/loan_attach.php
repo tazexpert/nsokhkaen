@@ -63,7 +63,6 @@ if ($ids) {
 } else {
     $loans = $pdo->query($sql . " WHERE l.status = 'borrowed' AND (l.file_path IS NULL OR l.file_path = '') ORDER BY l.id")->fetchAll();
 }
-$missing = count(array_filter($loans, fn($l) => !$l['file_path']));
 
 $pageTitle = $ids ? 'รายการที่นำเข้า — แนบไฟล์ใบยืม' : 'รายการยืมที่ยังไม่มีไฟล์ใบยืม';
 $pageActions = '<a href="loans" class="btn btn-light"><i class="bi bi-arrow-left"></i> รายการยืม-คืน</a>';
@@ -77,7 +76,6 @@ require __DIR__ . '/header.php';
   <div class="card">
     <div class="card-header d-flex align-items-center flex-wrap gap-2">
       <strong><?= count($loans) ?> รายการ</strong>
-      <?= $missing ? '<span class="badge text-bg-warning">ยังไม่มีไฟล์ใบยืม ' . $missing . '</span>' : '<span class="badge text-bg-success">แนบไฟล์ครบแล้ว</span>' ?>
       <span class="small text-muted ms-auto">เลือกไฟล์ (PDF/รูป ไม่เกิน 10 MB) ทีละแถว แล้วกดบันทึกครั้งเดียว</span>
     </div>
     <div class="table-responsive">
@@ -85,7 +83,7 @@ require __DIR__ . '/header.php';
         <thead><tr><th>เลขที่</th><th>ผู้ยืม</th><th>ครุภัณฑ์</th><th>ระยะเวลายืม</th><th style="width:170px">เลขที่หนังสือ e-office</th><th style="min-width:280px">ไฟล์ใบยืม</th></tr></thead>
         <tbody>
         <?php foreach ($loans as $l): ?>
-          <tr class="<?= $l['file_path'] ? '' : 'table-warning' ?>">
+          <tr>
             <td><a href="loan_view?id=<?= (int)$l['id'] ?>" class="fw-semibold"><?= h($l['loan_no']) ?></a>
               <?php if ($l['status'] !== 'borrowed'): ?><div><?= loan_status_badge($l['status']) ?></div><?php endif; ?></td>
             <td><?= h($l['borrower_name']) ?><div class="small text-muted"><?= h($l['borrower_position']) ?></div></td>
