@@ -277,6 +277,7 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 | `20261201_budget_txn_plan.sql` | ระบบงบประมาณ: รายการรับเข้า/เบิกจ่ายเลือกแผนงานได้โดยตรง (`bud_txns.plan_id`) งานและโครงการไม่บังคับ — เติมแผนงานของรายการเดิมให้อัตโนมัติ |
 | `20261202_budget_item_parts.sql` | ระบบงบประมาณ: แยกหมวดเป็น งบรายจ่าย · รายการ · ค่าใช้จ่าย (`bud_items.budget_name`, `expense_name`, `activity_name`) — แยกจากชื่อหมวดเดิมให้อัตโนมัติ เช่น "งบดำเนินงาน (ค่าตอบแทนใช้สอยฯ) ค่าน้ำมันเชื้อเพลิง" · ทะเบียนคุมเงิน/รายงานยังรวมเป็นหมวดเหมือนเดิม |
 | `20261203_budget_item_drop_name.sql` | ระบบงบประมาณ: ลบ `bud_items.name` (ชื่อหมวดประกอบจาก งบรายจ่าย (รายการ) ค่าใช้จ่าย) — **ต้องรัน 20261202 ก่อน** |
+| `20261204_cal_ical_tokens.sql` | ปฏิทิน: ลิงก์สมัครรับ "งานของฉัน" (`cal_ical_tokens`) สำหรับ Google Calendar / ปฏิทิน iOS — ตั้ง APP_URL ให้เป็นที่อยู่ที่เข้าถึงจากภายนอกได้ |
 
 > ระบบเบิกวัสดุเดิมยังเปิดใช้อยู่? ก่อนเปิดใช้ระบบใหม่ให้ "ดึงข้อมูลรอบสุดท้าย" ตามหัวข้อด้านบน (`--resync-inventory`)
 
@@ -318,6 +319,7 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261201_budget_txn_plan.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261202_budget_item_parts.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261203_budget_item_drop_name.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261204_cal_ical_tokens.sql
 ```
 
 หลังอัปเดต:

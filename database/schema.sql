@@ -875,6 +875,16 @@ CREATE TABLE IF NOT EXISTS ea_claim_days (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- เวลาปฏิบัติราชการ (ปฏิทินการปฏิบัติงาน — แสดงในแผนการปฏิบัติงาน)
+-- ลิงก์สมัครรับปฏิทิน "งานของฉัน" (iCal) สำหรับ Google Calendar / iOS
+CREATE TABLE IF NOT EXISTS cal_ical_tokens (
+  user_id       INT UNSIGNED NOT NULL PRIMARY KEY,
+  token         CHAR(48)     NOT NULL,                      -- รหัสลับในลิงก์ (สุ่ม 24 ไบต์ hex)
+  created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_used_at  DATETIME     NULL,                          -- แอปปฏิทินดึงข้อมูลล่าสุด
+  UNIQUE KEY uq_cal_ical_token (token),
+  CONSTRAINT fk_cal_ical_user FOREIGN KEY (user_id) REFERENCES core_users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS cal_attendance (
   id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   user_id        INT UNSIGNED NOT NULL,
