@@ -232,6 +232,9 @@ function bud_source_options(array $sources, string $sel, string $empty = 'ทั
 /** ชื่อหมวด (รวม 3 ส่วน) = งบรายจ่าย (รายการ) ค่าใช้จ่าย — ใช้ในทะเบียนคุมเงินและรายงาน */
 function bud_item_name(string $budget, string $expense, string $activity): string
 {
+    if ($expense === $budget) {
+        $expense = '';                          // รายการชื่อเดียวกับงบรายจ่าย → แสดงแค่งบรายจ่าย
+    }
     return trim($budget . ($expense !== '' ? ' (' . $expense . ')' : '') . ($activity !== '' ? ' ' . $activity : ''));
 }
 
@@ -239,7 +242,7 @@ function bud_item_name(string $budget, string $expense, string $activity): strin
 function bud_label_in_type(array $s): string
 {
     if (($s['budget'] ?? '') !== '') {
-        $rest = trim(($s['expense'] !== '' ? '(' . $s['expense'] . ') ' : '') . $s['activity']);
+        $rest = trim(($s['expense'] !== '' && $s['expense'] !== $s['budget'] ? '(' . $s['expense'] . ') ' : '') . $s['activity']);
         return $rest !== '' ? $rest : $s['label'];
     }
     $t = bud_budget_type($s);

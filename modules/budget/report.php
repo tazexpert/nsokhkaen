@@ -65,7 +65,8 @@ $zero = array_fill(0, count($cols), 0.0);
 $add = fn(array $a, array $b) => array_map(fn($x, $y) => $x + $y, $a, $b);
 $buckets = [];                                              // [กลุ่ม][รายการ] => [keys] (ตามลำดับที่พบ)
 foreach ($rows as $k => $s) {
-    $e = isset($s['budget']) && $s['expense'] !== '' ? $s['expense'] : "\0" . $k;   // ไม่มีรายการ = แถวเดี่ยว
+    // ไม่มีรายการ หรือรายการชื่อเดียวกับงบรายจ่าย = แถวเดี่ยว
+    $e = isset($s['budget']) && $s['expense'] !== '' && $s['expense'] !== $s['budget'] ? $s['expense'] : "\0" . $k;
     $buckets[$s['group']][$e][] = $k;
 }
 $table = [];                                                // [กลุ่ม] => [node: num, label, level, vals, key|null, head]
@@ -73,9 +74,9 @@ $groupSum = [];
 $grand = $zero;
 foreach ($buckets as $g => $exps) {
     $n = 0;
+    $table[$g] = [];                            // หัวงบรายจ่ายแสดงเสมอ (แม้ไม่มีแถวย่อย)
     $groupSum[$g] = $zero;
     foreach ($exps as $e => $keys) {
-        $n++;
         $vals = [];
         foreach ($keys as $k) {
             $vals[$k] = array_map(fn($c) => $c[1]($k), $cols);
@@ -85,10 +86,16 @@ foreach ($buckets as $g => $exps) {
         $first = $rows[$keys[0]];
         if (str_starts_with((string)$e, "\0")) {
             $label = isset($first['budget']) ? ($first['activity'] !== '' ? $first['activity'] : $first['budget']) : $first['label'];
+            if ($label === $g && count($exps) === 1) {
+                continue;                       // ชื่อเดียวกับงบรายจ่าย และเป็นแถวเดียวของกลุ่ม → แสดงแค่หัวงบรายจ่าย
+            }
+            $n++;
             $table[$g][] = ['num' => $n . '.', 'label' => $label, 'level' => 1, 'vals' => $sumE, 'key' => $keys[0], 'head' => false];
         } elseif (count($keys) === 1 && $first['activity'] === '') {
+            $n++;
             $table[$g][] = ['num' => $n . '.', 'label' => $e, 'level' => 1, 'vals' => $sumE, 'key' => $keys[0], 'head' => false];
         } else {
+            $n++;
             $table[$g][] = ['num' => $n . '.', 'label' => $e, 'level' => 1, 'vals' => $sumE, 'key' => null, 'head' => true];
             $m = 0;
             foreach ($keys as $k) {

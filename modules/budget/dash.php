@@ -40,7 +40,9 @@ uasort($rank, fn($a, $b) => $b['receive'] <=> $a['receive']);
               <td><a class="dz-link" href="type?<?= h(http_build_query(['fy' => $fy, 'b' => $t])) ?>"><?= h($t) ?> <i class="bi bi-chevron-right small dz-muted"></i></a></td>
               <td><?= bud_money($a['receive']) ?></td><td><?= bud_money($a['spend']) ?></td><td><?= bud_money($a['receive'] - $a['spend']) ?></td>
               <td class="pc"><?= $pbar($a['receive'], $a['spend'], $c) ?></td></tr>
-            <?php foreach ($a['exp'] as $e => $ea): ?>
+            <?php foreach ($a['exp'] as $e => $ea):
+              // รายการเดียวที่ชื่อเดียวกับงบรายจ่าย (หรือไม่ระบุ) → ไม่แสดงซ้ำ
+              if (count($a['exp']) === 1 && ((string)$e === '' || (string)$e === (string)$t)) { continue; } ?>
             <tr class="e"><td><?= $e !== '' ? h($e) : '<span class="dz-muted">(ไม่ระบุรายการ)</span>' ?><?= $ea['n'] > 1 ? ' <span class="small dz-muted">· ' . (int)$ea['n'] . ' หมวด</span>' : '' ?></td>
               <td><?= bud_money($ea['receive']) ?></td><td><?= bud_money($ea['spend']) ?></td><td><?= bud_money($ea['receive'] - $ea['spend']) ?></td>
               <td class="pc"><?= $pbar($ea['receive'], $ea['spend'], $c) ?></td></tr>
