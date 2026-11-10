@@ -66,8 +66,8 @@ foreach ($widgets as $widget) {
       <a class="mod-card" style="--mc:<?= h($m['color']) ?>" href="<?= h(module_url($m['key'], $m['entry'] ?? '')) ?>">
         <span class="mod-icon<?= $m['logo'] ? ' has-logo' : '' ?>" style="background:<?= h($m['color']) ?>"><?= $m['logo'] ? module_logo($m, 52) : '<i class="bi ' . h($m['icon']) . '"></i>' ?></span>
         <span class="min-w-0">
-          <h3><?= h($m['name']) ?></h3>
-          <span class="d-block small text-muted mb-2"><?= h($m['description']) ?></span>
+          <h3 class="mod-name" title="<?= h($m['name']) ?>"><?= h($m['name']) ?></h3>
+          <span class="small text-muted mb-2 mod-desc" title="<?= h($m['description']) ?>"><?= h($m['description']) ?></span>
           <span class="d-flex align-items-center gap-2 flex-wrap">
             <span class="mod-role"><i class="bi bi-person-badge"></i> <?= h(role_short($m['key'], module_role($m['key'], $viewer))) ?></span>
             <span class="mod-go ms-auto">เข้าใช้งาน <i class="bi bi-arrow-right"></i></span>
