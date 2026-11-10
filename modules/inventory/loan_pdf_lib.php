@@ -14,10 +14,17 @@ function loan_pdf_norm(string $s): string
     $s = strtr($s, ['๐' => '0', '๑' => '1', '๒' => '2', '๓' => '3', '๔' => '4', '๕' => '5', '๖' => '6', '๗' => '7', '๘' => '8', '๙' => '9']);
     $s = str_replace("\u{0E4D}\u{0E32}", "\u{0E33}", $s);
     $s = preg_replace('/[\x00-\x1F]/u', '', $s);
-    // ฟอนต์บางตัว (TH SarabunPSK จาก Word) ทำให้ "ำ" ออกมาเป็น " า" หรือ "า" — ไม่มีคำไทยขึ้นต้นด้วย า จึงตัดช่องว่างหน้า า
+    // ฟอนต์บางตัว (TH SarabunPSK จาก Word) ทำให้ "ำ" ออกมาเป็น " า" "า" หรือ "่า" — ไม่มีคำไทยขึ้นต้นด้วย า จึงตัดช่องว่างหน้า า
     // แล้วซ่อมคำที่พบบ่อยในใบยืม
     $s = preg_replace('/(?<=\p{Thai}) (?=\x{0E32})/u', '', $s);
-    return strtr($s, LOAN_PDF_AM_FIX);
+    static $fix = null;
+    if ($fix === null) {      // บางไฟล์ "ำ" ออกมาเป็น "่า" (ต่าแหน่ง ส่านักงาน) — สร้างคำผิดแบบนี้เพิ่มจากรายการเดิม
+        $fix = LOAN_PDF_AM_FIX;
+        foreach (LOAN_PDF_AM_FIX as $right) {
+            $fix[str_replace("\u{0E33}", "\u{0E48}\u{0E32}", $right)] = $right;
+        }
+    }
+    return strtr($s, $fix);
 }
 
 /** คำที่ "ำ" หายไปเหลือ "า" (ซ่อมเฉพาะคำที่ไม่กำกวม) */
@@ -118,26 +125,33 @@ function loan_pdf_parse(array $pages, array $annots = []): array
     $res = ['borrower' => '', 'position' => '', 'org' => '', 'phone' => '', 'purpose' => '', 'doc_no' => '',
             'start_date' => null, 'due_date' => null, 'items' => [], 'errors' => []];
     $lines = loan_pdf_lines($pages);
-    $all = implode("\n", array_column($lines, 'text'));
-    $dateRe = '(\d{1,2})\s*เดือน\s*(\S+)\s*พ\s*\.?\s*ศ\s*\.?\s*(\d{4})';
+    // ข้อความต่อกันทั้งไฟล์ (บางแบบฟอร์มขึ้นบรรทัดใหม่กลางข้อความ) · เส้นจุด "......" ถือเป็นช่องว่าง
+    $flat = preg_replace(['/\.{2,}/u', '/\s+/u'], ' ', implode(' ', array_column($lines, 'text')));
+    $stop = '(?=\s*(?:ตำแหน่ง|หน่วยงาน|หมายเลขโทรศัพท์|โทรศัพท์|มีความประสงค์|ตั้งแต่|$))';
+    $dateRe = '[\s.]*(\d{1,2})[\s.]*เดือน[\s.]*([^\s.\d]+)[\s.]*พ\s*\.?\s*ศ\s*\.?[\s.]*(\d{4})';
 
-    if (preg_match('/ข้าพเจ้า\s*(.+?)\s*ตำแหน่ง\s*(.*)$/mu', $all, $m)) {
+    if (preg_match('/ข้าพเจ้า\s*(.+?)' . $stop . '/u', $flat, $m)) {
         $res['borrower'] = trim($m[1]);
-        $res['position'] = trim($m[2]);
     }
-    if (preg_match('/หน่วยงาน\s*(.+?)\s*(?:หมายเลขโทรศัพท์|โทรศัพท์|$)/mu', $all, $m)) {
-        $res['org'] = trim($m[1]);
+    if (preg_match('/ข้าพเจ้า.*?ตำแหน่ง\s*(.+?)' . $stop . '/u', $flat, $m)) {
+        $res['position'] = trim($m[1]);
     }
-    if (preg_match('/หมายเลขโทรศัพท์\s*([0-9][0-9\s\-]{7,})/u', $all, $m)) {
+    if (preg_match('/หน่วยงาน\s*(.+?)' . $stop . '/u', $flat, $m)) {
+        $res['org'] = trim(preg_replace('/(จังหวัด|สำนักงาน)\s+(?=\p{Thai})/u', '$1', $m[1]));   // ชื่อหน่วยงานที่ขึ้นบรรทัดใหม่
+    }
+    if (preg_match('/หมายเลขโทรศัพท์\s*([0-9][0-9\s\-]{7,})/u', $flat, $m)) {
         $digits = preg_replace('/\D/', '', $m[1]);
         $res['phone'] = strlen($digits) === 10 ? substr($digits, 0, 3) . '-' . substr($digits, 3, 3) . '-' . substr($digits, 6)
             : (strlen($digits) === 9 ? substr($digits, 0, 2) . '-' . substr($digits, 2, 3) . '-' . substr($digits, 5) : $digits);
     }
-    if (preg_match('/ขอยืมพัสดุ\s*(.+)$/mu', $all, $m)) {
+    if (preg_match('/ขอยืมพัสดุ\s*(.+?)(?=\s*(?:ตั้งแต่|$))/u', $flat, $m)) {
         $res['purpose'] = trim($m[1]);
     }
-    if (preg_match('/^ที่\s+([^.\s].*?)\s+วันที่/mu', $all, $m) && preg_match('/\d/', $m[1])) {
-        $res['doc_no'] = trim($m[1]);
+    foreach ($lines as $l) {
+        if (preg_match('/^ที่\s+([^.\s].*?)\s+วันที่/u', $l['text'], $m) && preg_match('/\d/', $m[1])) {
+            $res['doc_no'] = trim($m[1]);
+            break;
+        }
     }
     // เลขที่หนังสือจากตราประทับ e-office: "doc_no: ขก ๐๐๑๓/๑๒๖๙"
     foreach ($annots as $a) {
@@ -146,11 +160,11 @@ function loan_pdf_parse(array $pages, array $annots = []): array
             break;
         }
     }
-    if (preg_match('/ตั้งแต่\s*วันที่\s*' . $dateRe . '.*?ถึง\s*วันที่\s*' . $dateRe . '/su', $all, $m)) {
+    if (preg_match('/ตั้งแต่\s*วันที่' . $dateRe . '.*?ถึง\s*วันที่' . $dateRe . '/u', $flat, $m)) {
         $res['start_date'] = loan_pdf_date($m[1], $m[2], $m[3]);
         $res['due_date'] = loan_pdf_date($m[4], $m[5], $m[6]);
     }
-    if (!$res['due_date'] && preg_match('/ส่งคืน\S*\s*ภายในวันที่\s*' . $dateRe . '/u', $all, $m)) {
+    if (!$res['due_date'] && preg_match('/ส่งคืน\S*\s*ภายในวันที่' . $dateRe . '/u', $flat, $m)) {
         $res['due_date'] = loan_pdf_date($m[1], $m[2], $m[3]);
     }
 
@@ -168,97 +182,143 @@ function loan_pdf_parse(array $pages, array $annots = []): array
     return $res;
 }
 
-/** ตารางรายการ: หาหัวตาราง (คอลัมน์ "หมายเลขพัสดุ") แล้วแบ่งคอลัมน์ตามตำแหน่ง x ของหัวคอลัมน์ */
+/** ชื่อคอลัมน์จากข้อความหัวตาราง (ไม่ใช่หัวคอลัมน์ = null) */
+function loan_pdf_col_name(string $t): ?string
+{
+    $k = loan_pdf_key($t);
+    if (str_contains($k, loan_pdf_key('หมายเลขพัสดุ')) || str_contains($k, loan_pdf_key('เลขครุภัณฑ์'))) {
+        return 'asset';
+    }
+    if (str_starts_with($k, loan_pdf_key('ลำดั'))) {
+        return 'seq';
+    }
+    if (str_starts_with($k, loan_pdf_key('ยี่ห้อ'))) {
+        return 'brand';
+    }
+    if (stripos($t, 'serial') !== false || $k === loan_pdf_key('เครื่อง') || $k === loan_pdf_key('หมายเลขเครื่อง')) {
+        return 'serial';
+    }
+    if ($k === loan_pdf_key('รายการ')) {
+        return 'name';
+    }
+    if (str_starts_with($k, loan_pdf_key('จำน'))) {
+        return 'qty';
+    }
+    return null;
+}
+
+/**
+ * ตารางรายการ: หาหัวตาราง (คอลัมน์ "หมายเลขพัสดุ") แล้วแบ่งคอลัมน์ตามตำแหน่ง x ของหัวคอลัมน์
+ *   แถวเริ่มที่บรรทัดที่มีเลขลำดับ — ถ้าตารางจัดกึ่งกลางแนวตั้ง (มีข้อมูลก่อนเลขลำดับแรก)
+ *   ให้แต่ละบรรทัดไปอยู่กับเลขลำดับที่ใกล้ที่สุดแทน
+ */
 function loan_pdf_items(array $lines): array
 {
-    $cols = [];      // ชื่อคอลัมน์ => x กึ่งกลาง
-    $items = [];
-    $cur = null;
-    $headY = null;
-    $headPage = null;
+    $head = null;
     foreach ($lines as $li => $line) {
-        if (!$cols) {
-            foreach ($line['segs'] as $s) {
-                if (str_contains(loan_pdf_key($s['t']), loan_pdf_key('หมายเลขพัสดุ')) || str_contains(loan_pdf_key($s['t']), loan_pdf_key('เลขครุภัณฑ์'))) {
-                    $headY = $line['y'];
-                    $headPage = $line['page'];
-                }
+        foreach ($line['segs'] as $s) {
+            if (loan_pdf_col_name($s['t']) === 'asset') {
+                $head = $li;
+                break 2;
             }
-            if ($headY === null) {
-                continue;
-            }
-            // หัวตารางอาจแยกหลายบรรทัด (เช่น "ลำดั" / "บ") — รวมทุกบรรทัดที่อยู่ห่างไม่เกิน 30pt
-            foreach ($lines as $hl) {
-                if ($hl['page'] !== $headPage || abs($hl['y'] - $headY) > 30) {
-                    continue;
-                }
-                foreach ($hl['segs'] as $s) {
-                    $k = loan_pdf_key($s['t']);
-                    $name = null;
-                    if (str_contains($k, loan_pdf_key('หมายเลขพัสดุ')) || str_contains($k, loan_pdf_key('เลขครุภัณฑ์'))) {
-                        $name = 'asset';
-                    } elseif (str_starts_with($k, loan_pdf_key('ลำดั'))) {
-                        $name = 'seq';
-                    } elseif (str_starts_with($k, loan_pdf_key('ยี่ห้อ'))) {
-                        $name = 'brand';
-                    } elseif (stripos($s['t'], 'serial') !== false || str_starts_with($k, loan_pdf_key('เครื่อง'))) {
-                        $name = 'serial';
-                    } elseif ($k === loan_pdf_key('รายการ')) {
-                        $name = 'name';
-                    } elseif (str_starts_with($k, loan_pdf_key('จำน'))) {
-                        $name = 'qty';
-                    }
-                    if ($name && !isset($cols[$name])) {
-                        $cols[$name] = $s['c'];
-                    }
-                }
-            }
-            asort($cols);
-            continue;                                       // บรรทัดหัวตารางที่เหลือข้ามไป (ช่องลำดับไม่ใช่ตัวเลข)
         }
-        if (str_contains(loan_pdf_key($line['text']), loan_pdf_key('ตามรายการที่ยืม'))) {
+    }
+    if ($head === null) {
+        return [];
+    }
+    // หัวตารางอาจแยกหลายบรรทัด (เช่น "ลำดั" / "บ", "(Serial – no.)") — บรรทัดใกล้ ๆ ที่ยังไม่มีตัวเลข
+    $cols = [];
+    $page = $lines[$head]['page'];
+    $headY = $lines[$head]['y'];
+    $start = $head;
+    while ($start > 0 && $lines[$start - 1]['page'] === $page && $headY - $lines[$start - 1]['y'] <= 30 && !preg_match('/\d/', $lines[$start - 1]['text'])) {
+        $start--;
+    }
+    $li = $start;
+    for (; $li < count($lines); $li++) {
+        $l = $lines[$li];
+        if ($l['page'] !== $page || $l['y'] - $headY > 30 || ($li > $head && preg_match('/\d/', $l['text']))) {
             break;
         }
-        // แบ่งช่วงข้อความเข้าคอลัมน์ที่ใกล้ที่สุด (ตามจุดกึ่งกลาง)
-        $cells = [];
-        foreach ($line['segs'] as $s) {
-            $best = null;
-            $dist = INF;
-            foreach ($cols as $name => $cx) {
-                $d = abs($s['c'] - $cx);
-                if ($d < $dist) {
-                    $best = $name;
-                    $dist = $d;
-                }
-            }
-            if ($best !== null) {
-                $cells[$best][] = $s['t'];
+        foreach ($l['segs'] as $s) {
+            $name = loan_pdf_col_name($s['t']);
+            if ($name && !isset($cols[$name])) {
+                $cols[$name] = $s['c'];
             }
         }
-        $seq = implode(' ', $cells['seq'] ?? []);
-        if (preg_match('/^\d{1,3}\.?$/', $seq)) {
-            if ($cur) {
-                $items[] = $cur;
+    }
+    if (!isset($cols['seq'])) {
+        return [];
+    }
+
+    // บรรทัดข้อมูล → ช่องตามคอลัมน์ที่ใกล้ที่สุด
+    $rows = [];
+    for (; $li < count($lines); $li++) {
+        $l = $lines[$li];
+        if (str_contains(loan_pdf_key($l['text']), loan_pdf_key('ตามรายการที่ยืม'))) {
+            break;
+        }
+        $cells = [];
+        foreach ($l['segs'] as $s) {
+            $best = null;
+            $dist = INF;
+            $isNum = preg_match('/^\d{1,3}\.?$/', $s['t']);
+            foreach ($cols as $name => $cx) {
+                if ($name === 'seq' && !$isNum) {
+                    continue;                               // ช่องลำดับรับเฉพาะตัวเลข (คำสั้น ๆ ในช่องรายการมักอยู่ใกล้ช่องลำดับ)
+                }
+                if (abs($s['c'] - $cx) < $dist) {
+                    $best = $name;
+                    $dist = abs($s['c'] - $cx);
+                }
             }
-            $cur = ['seq' => (int)$seq, 'name' => '', 'brand' => '', 'serial' => '', 'asset' => '', 'qty' => ''];
-        } elseif (!$cur) {
+            $cells[$best][] = $s['t'];
+        }
+        $seq = implode(' ', $cells['seq'] ?? []);
+        $rows[] = ['y' => $l['y'] + 10000 * $l['page'], 'cells' => $cells, 'seq' => preg_match('/^\d{1,3}\.?$/', $seq) ? (int)$seq : null];
+    }
+    $seqRows = array_keys(array_filter($rows, fn($r) => $r['seq'] !== null));
+    if (!$seqRows) {
+        return [];
+    }
+    $centered = $seqRows[0] > 0;     // มีข้อมูลก่อนเลขลำดับแรก = ตารางจัดกึ่งกลางแนวตั้ง
+
+    $items = [];
+    foreach ($seqRows as $ri) {
+        $items[$ri] = ['seq' => $rows[$ri]['seq'], 'name' => '', 'brand' => '', 'serial' => '', 'asset' => '', 'qty' => ''];
+    }
+    $owner = null;
+    foreach ($rows as $ri => $r) {
+        if ($centered) {
+            $owner = null;
+            $dist = INF;
+            foreach ($seqRows as $si) {
+                if (abs($rows[$si]['y'] - $r['y']) < $dist) {
+                    $owner = $si;
+                    $dist = abs($rows[$si]['y'] - $r['y']);
+                }
+            }
+        } elseif ($r['seq'] !== null) {
+            $owner = $ri;
+        }
+        if ($owner === null) {
             continue;
         }
         foreach (['name', 'brand', 'serial', 'asset', 'qty'] as $c) {
-            if (!empty($cells[$c])) {
-                $add = implode(' ', $cells[$c]);
+            if (!empty($r['cells'][$c])) {
+                $cur = $items[$owner][$c];
+                $add = implode(' ', $r['cells'][$c]);
                 // ข้อความไทยที่ขึ้นบรรทัดใหม่ต่อกันโดยไม่เว้นวรรค ("…พร้อม" + "ติดฟิล์ม")
-                $glue = (preg_match('/\p{Thai}$/u', $cur[$c]) && preg_match('/^\p{Thai}/u', $add)) || preg_match('/[-\/]$/', $cur[$c]) ? '' : ' ';
-                // เลขที่ขึ้นบรรทัดใหม่หลัง "-" ("1105-0970-" + "01198/62") ต่อกันเลย
-                $cur[$c] = trim($cur[$c] . $glue . $add);
+                // และเลขที่ขึ้นบรรทัดใหม่หลัง "-" หรือ "/" ("1105-0970-" + "01198/62")
+                $glue = (preg_match('/\p{Thai}$/u', $cur) && preg_match('/^\p{Thai}/u', $add)) || preg_match('/[-\/]$/', $cur) ? '' : ' ';
+                $items[$owner][$c] = trim($cur . $glue . $add);
             }
         }
     }
-    if ($cur) {
-        $items[] = $cur;
-    }
+    $items = array_values($items);
     foreach ($items as &$it) {
         $it['qty'] = preg_match('/\d+/', $it['qty'], $m) ? (int)$m[0] : 1;
+        $it['name'] = trim($it['name'], " /");
     }
     unset($it);
     return $items;
