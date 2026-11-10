@@ -96,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $label = ($e['asset_no'] ?: equipment_label($e));
                 if (isset($busy[$eid]) && (int)$busy[$eid]['loan_id'] !== $id) {
-                    throw new RuntimeException($label . ' ถูกยืมอยู่แล้ว (' . $busy[$eid]['borrower_name'] . ' รายการยืม ' . $busy[$eid]['loan_no'] . ')');
+                    throw new RuntimeException($label . ' ถูกยืมอยู่แล้ว (' . $busy[$eid]['borrower_name'] . ' หนังสือ ' . loan_ref($busy[$eid]) . ')');
                 }
                 if (eq_is_holding_type($e['type_name']) && !in_array($eid, $before, true)) {
                     throw new RuntimeException($label . ' เป็น' . $e['type_name'] . ' — เป็นการถือครอง ไม่ใช่การยืม (กำหนดผู้ถือครองที่ข้อมูลครุภัณฑ์)');
@@ -167,7 +167,7 @@ foreach ($pdo->query("SELECT e.id, e.asset_no, e.brand, e.model, e.serial_number
 }
 $users = array_values(sort_staff($pdo->query('SELECT id, username, sort_order, full_name, position, phone FROM core_users WHERE is_active = 1 OR id = ' . (int)$loan['borrower_id'])->fetchAll()));   // เรียงตามลำดับตำแหน่ง
 
-$pageTitle = $id ? 'แก้ไขรายการยืม ' . $loan['loan_no'] : 'บันทึกการยืมครุภัณฑ์';
+$pageTitle = $id ? 'แก้ไขรายการยืม ' . loan_ref($loan) : 'บันทึกการยืมครุภัณฑ์';
 require __DIR__ . '/header.php';
 ?>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>

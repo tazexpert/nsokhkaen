@@ -63,12 +63,21 @@ function generate_loan_no(PDO $pdo): string
 }
 
 /**
- * ใบยืมที่ยังไม่ปิดของครุภัณฑ์แต่ละชิ้น [equipment_id => [loan_id, loan_no, status, borrower_name, due_date]]
+ * ข้อความอ้างอิงใบยืมที่แสดงผล = เลขที่หนังสือ e-office (loan_no เก็บในฐานข้อมูลเท่านั้น ไม่ได้อ้างอิงอะไร)
+ */
+function loan_ref(array $l): string
+{
+    $doc = trim((string)($l['doc_no'] ?? ''));
+    return $doc !== '' ? $doc : 'ไม่ระบุเลขที่หนังสือ';
+}
+
+/**
+ * ใบยืมที่ยังไม่ปิดของครุภัณฑ์แต่ละชิ้น [equipment_id => [loan_id, loan_no, doc_no, status, borrower_name, due_date]]
  * ($ids ว่าง = ทั้งหมด)
  */
 function active_loans_by_equipment(array $ids = []): array
 {
-    $sql = "SELECT li.equipment_id, l.id AS loan_id, l.loan_no, l.status, l.borrower_name, l.due_date
+    $sql = "SELECT li.equipment_id, l.id AS loan_id, l.loan_no, l.doc_no, l.status, l.borrower_name, l.due_date
             FROM inv_loan_items li JOIN inv_loans l ON l.id = li.loan_id
             WHERE li.equipment_id IS NOT NULL AND l.status = 'borrowed'";
     if ($ids) {

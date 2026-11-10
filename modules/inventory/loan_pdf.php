@@ -32,7 +32,7 @@ foreach ($res['items'] as &$it) {
     foreach ($it['candidates'] as &$c) {
         $b = $busy[(int)$c['id']] ?? null;
         $c['problem'] = eq_is_holding_type($c['type_name']) ? 'เป็นการถือครอง ไม่ใช่การยืม — กำหนดผู้ถือครองที่ข้อมูลครุภัณฑ์'
-            : ($b && (int)$b['loan_id'] !== $loanId ? 'ถูกยืมอยู่ (' . $b['borrower_name'] . ' ' . $b['loan_no'] . ')'
+            : ($b && (int)$b['loan_id'] !== $loanId ? 'ถูกยืมอยู่ (' . $b['borrower_name'] . ' หนังสือ ' . loan_ref($b) . ')'
             : ($c['status'] !== 'normal' ? 'สภาพ "' . (EQ_STATUS[$c['status']][0] ?? $c['status']) . '" ให้ยืมไม่ได้' : ''));
         $c['label'] = trim(($c['type_name'] ?? '') . ' ' . trim($c['brand'] . ' ' . $c['model']));
     }

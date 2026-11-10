@@ -77,7 +77,7 @@ foreach ($pdo->query("SELECT e.id, e.brand, e.model, e.status, e.asset_no, t.nam
         $m['total']++;
         if ($loan = $activeLoans[(int)$r['id']] ?? null) {
             $m['borrowed']++;
-            $m['loans'][] = ['name' => $loan['borrower_name'], 'loan_no' => $loan['loan_no'], 'loan_id' => (int)$loan['loan_id'],
+            $m['loans'][] = ['name' => $loan['borrower_name'], 'ref' => loan_ref($loan), 'loan_id' => (int)$loan['loan_id'],
                              'due' => $loan['due_date'], 'due_th' => thai_date($loan['due_date']), 'over' => $loan['due_date'] < date('Y-m-d'),
                              'asset' => $r['asset_no'] ?: '-', 'model' => $mdl];
         } elseif ($r['status'] === 'normal') {
@@ -181,9 +181,9 @@ require __DIR__ . '/header.php';
       + (m.models.length ? ' · ' + m.models.map(esc).join(', ') : '') + '</div>';
     document.getElementById('eqmBody').innerHTML =
       '<h6 class="mb-2"><i class="bi bi-person-fill text-primary"></i> ผู้ยืม (' + m.loans.length + ')</h6>'
-      + (m.loans.length ? '<div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th>#</th><th>ผู้ยืม</th><th>รุ่น</th><th>เลขครุภัณฑ์</th><th>รายการยืม</th><th>กำหนดคืน</th></tr></thead><tbody>'
+      + (m.loans.length ? '<div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th>#</th><th>ผู้ยืม</th><th>รุ่น</th><th>เลขครุภัณฑ์</th><th>เลขที่หนังสือ</th><th>กำหนดคืน</th></tr></thead><tbody>'
         + m.loans.map((l, i) => `<tr><td>${i + 1}</td><td>${esc(l.name)}</td><td class="small">${esc(l.model)}</td><td class="font-monospace small">${esc(l.asset)}</td>
-            <td><a href="loan_view?id=${l.loan_id}">${esc(l.loan_no)}</a></td>
+            <td class="text-nowrap"><a href="loan_view?id=${l.loan_id}">${esc(l.ref)}</a></td>
             <td class="text-nowrap">${esc(l.due_th)}${l.over ? ' <span class="badge text-bg-danger">เกินกำหนด</span>' : ''}</td></tr>`).join('')
         + '</tbody></table></div>' : '<p class="text-muted">ยังไม่มีผู้ยืม</p>')
       + '<h6 class="mb-2 mt-3"><i class="bi bi-check-circle text-success"></i> คงเหลือให้ยืม (' + m.free.length + ')</h6>'

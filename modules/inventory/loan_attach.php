@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             $saved++;
         } catch (RuntimeException $ex) {
-            $errors[] = $loan['loan_no'] . ': ' . $ex->getMessage();
+            $errors[] = $loan['borrower_name'] . ' (' . loan_ref($loan) . '): ' . $ex->getMessage();
         }
     }
     if ($saved) {
@@ -80,11 +80,11 @@ require __DIR__ . '/header.php';
     </div>
     <div class="table-responsive">
       <table class="table align-middle mb-0">
-        <thead><tr><th>เลขที่</th><th>ผู้ยืม</th><th>ครุภัณฑ์</th><th>ระยะเวลายืม</th><th style="width:170px">เลขที่หนังสือ e-office</th><th style="min-width:280px">ไฟล์ใบยืม</th></tr></thead>
+        <thead><tr><th></th><th>ผู้ยืม</th><th>ครุภัณฑ์</th><th>ระยะเวลายืม</th><th style="width:170px">เลขที่หนังสือ e-office</th><th style="min-width:280px">ไฟล์ใบยืม</th></tr></thead>
         <tbody>
         <?php foreach ($loans as $l): ?>
           <tr>
-            <td><a href="loan_view?id=<?= (int)$l['id'] ?>" class="fw-semibold"><?= h($l['loan_no']) ?></a>
+            <td><a href="loan_view?id=<?= (int)$l['id'] ?>" class="fw-semibold">ดู</a>
               <?php if ($l['status'] !== 'borrowed'): ?><div><?= loan_status_badge($l['status']) ?></div><?php endif; ?></td>
             <td><?= h($l['borrower_name']) ?><div class="small text-muted"><?= h($l['borrower_position']) ?></div></td>
             <td class="small font-monospace" style="max-width:260px"><?= h($l['item_list']) ?></td>

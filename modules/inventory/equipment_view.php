@@ -46,7 +46,7 @@ require __DIR__ . '/header.php';
           <?php else: ?>
           <dt class="col-sm-4">การยืม</dt><dd class="col-sm-8">
             <?php if ($loan): ?>
-              <?= loan_status_badge($loan['status']) ?> <a href="loan_view?id=<?= (int)$loan['loan_id'] ?>">รายการยืม <?= h($loan['loan_no']) ?></a>
+              <?= loan_status_badge($loan['status']) ?> <a href="loan_view?id=<?= (int)$loan['loan_id'] ?>">หนังสือ <?= h(loan_ref($loan)) ?></a>
               — <?= h($loan['borrower_name']) ?><?= $loan['status'] === 'borrowed' ? ' (กำหนดคืน ' . h(thai_date($loan['due_date'])) . ')' : '' ?>
             <?php elseif ($e['status'] === 'normal'): ?><span class="badge text-bg-success">ว่าง ให้ยืมได้</span>
             <?php else: ?><span class="text-muted">ให้ยืมไม่ได้ (<?= h(EQ_STATUS[$e['status']][0]) ?>)</span><?php endif; ?></dd>
@@ -71,11 +71,11 @@ require __DIR__ . '/header.php';
   <div class="card-header"><strong><i class="bi bi-clock-history"></i> ประวัติการยืม-คืน</strong></div>
   <div class="table-responsive">
     <table class="table align-middle mb-0">
-      <thead><tr><th>เลขที่</th><th>ผู้ยืม</th><th>ระยะเวลายืม</th><th>สถานะ</th><th>คืนเมื่อ</th></tr></thead>
+      <thead><tr><th>เลขที่หนังสือ</th><th>ผู้ยืม</th><th>ระยะเวลายืม</th><th>สถานะ</th><th>คืนเมื่อ</th></tr></thead>
       <tbody>
       <?php foreach ($history as $l): ?>
         <tr>
-          <td><a href="loan_view?id=<?= (int)$l['id'] ?>"><?= h($l['loan_no']) ?></a></td>
+          <td><a href="loan_view?id=<?= (int)$l['id'] ?>"><?= h(loan_ref($l)) ?></a></td>
           <td><?= h($l['borrower_name']) ?></td>
           <td class="small"><?= h(thai_date($l['start_date'])) ?> – <?= h(thai_date($l['due_date'])) ?></td>
           <td><?= loan_status_badge($l['status']) ?></td>

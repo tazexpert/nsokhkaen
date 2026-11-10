@@ -66,12 +66,12 @@ require __DIR__ . '/header.php';
   </div>
   <div class="table-responsive">
     <table class="table table-hover align-middle mb-0">
-      <thead><tr><th>เลขที่</th><th>ผู้ยืม</th><th>รายการ</th><th>ระยะเวลายืม</th><th>สถานะ</th><th class="text-end"></th></tr></thead>
+      <thead><tr><th>เลขที่หนังสือ e-office</th><th>ผู้ยืม</th><th>รายการ</th><th>ระยะเวลายืม</th><th>สถานะ</th><th class="text-end"></th></tr></thead>
       <tbody>
       <?php foreach ($loans as $l): $od = $l['status'] === 'borrowed' && $l['due_date'] < $today; ?>
         <tr class="<?= $od ? 'table-danger' : '' ?>">
-          <td><a href="loan_view?id=<?= (int)$l['id'] ?>" class="fw-semibold text-decoration-none"><?= h($l['loan_no']) ?></a>
-            <div class="small text-muted"><?= $l['doc_no'] ? h($l['doc_no']) : h(thai_date($l['created_at'])) ?></div></td>
+          <td><a href="loan_view?id=<?= (int)$l['id'] ?>" class="fw-semibold text-decoration-none<?= $l['doc_no'] ? '' : ' text-muted fw-normal fst-italic' ?>"><?= h(loan_ref($l)) ?></a>
+            <div class="small text-muted">บันทึก <?= h(thai_date($l['created_at'])) ?></div></td>
           <td><?= h($l['borrower_name']) ?><div class="small text-muted"><?= h($l['borrower_position']) ?></div></td>
           <td class="small" style="max-width:320px"><span class="badge text-bg-light border"><?= (int)$l['item_count'] ?> รายการ</span> <?= h(mb_strimwidth((string)$l['item_list'], 0, 90, '…')) ?></td>
           <td class="small text-nowrap"><?= h(thai_date($l['start_date'])) ?> – <?= h(thai_date($l['due_date'])) ?>

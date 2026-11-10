@@ -71,7 +71,7 @@ $items = $st->fetchAll();
 $overdue = $loan['status'] === 'borrowed' && $loan['due_date'] < date('Y-m-d');
 $isPdf = $loan['file_path'] && str_ends_with(strtolower($loan['file_path']), '.pdf');
 
-$pageTitle = 'รายการยืมเลขที่ ' . $loan['loan_no'];
+$pageTitle = 'รายการยืม ' . loan_ref($loan);
 $pageActions = '<a href="loans" class="btn btn-light"><i class="bi bi-arrow-left"></i> รายการยืม-คืน</a>'
     . ($loan['file_path'] ? '<a href="loan_file?id=' . $id . '" target="_blank" class="btn btn-outline-dark"><i class="bi bi-printer"></i> เปิด/พิมพ์ใบยืม</a>' : '')
     . ($isAdmin && $loan['status'] === 'borrowed' ? '<a href="loan_form?id=' . $id . '" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> แก้ไข</a>' : '');

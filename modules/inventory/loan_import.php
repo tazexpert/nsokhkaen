@@ -163,7 +163,7 @@ function loan_parse_file(string $path, string $name): array
         }
         $busy = active_loans_by_equipment(array_column($equip, 'id'));
         foreach ($busy as $b) {
-            $rowErr[] = 'ครุภัณฑ์ถูกยืมอยู่แล้ว (' . $b['borrower_name'] . ' รายการ ' . $b['loan_no'] . ')';
+            $rowErr[] = 'ครุภัณฑ์ถูกยืมอยู่แล้ว (' . $b['borrower_name'] . ' หนังสือ ' . loan_ref($b) . ')';
         }
         $key = $rowErr ? 'err' . $line : implode('|', [$user['id'], $start, $due, $get('doc_no')]);
         $loans[$key] ??= ['lines' => [], 'user' => $user, 'borrower_text' => $get('borrower'), 'start_date' => $start, 'due_date' => $due,

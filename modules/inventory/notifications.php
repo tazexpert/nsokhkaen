@@ -19,7 +19,7 @@ return function (array $user): array {
         $st->execute([$today]);
         foreach ($st as $l) {
             $out[] = ['title' => 'เกินกำหนดคืนครุภัณฑ์', 'icon' => 'bi-alarm', 'color' => 'danger',
-                      'text' => $l['loan_no'] . ' · ' . $l['borrower_name'] . ' · กำหนดคืน ' . thai_date($l['due_date']),
+                      'text' => $l['borrower_name'] . ' · ' . loan_ref($l) . ' · กำหนดคืน ' . thai_date($l['due_date']),
                       'href' => $base . 'loan_view?id=' . $l['id'], 'time' => date('Y-m-d 08:00:00', strtotime($l['due_date'] . ' +1 day')), 'sticky' => true];
         }
         // ใบเบิกวัสดุ: รออนุมัติทั้งหมด + ที่อนุมัติแล้วใน 3 วันล่าสุด
@@ -59,11 +59,11 @@ return function (array $user): array {
         $href = $base . 'loan_view?id=' . $l['id'];
         if ($l['due_date'] < $today) {
             $out[] = ['title' => 'เกินกำหนดคืนครุภัณฑ์', 'icon' => 'bi-alarm', 'color' => 'danger',
-                      'text' => $l['loan_no'] . ' · กำหนดคืน ' . thai_date($l['due_date']) . ' กรุณาส่งคืน', 'href' => $href,
+                      'text' => loan_ref($l) . ' · กำหนดคืน ' . thai_date($l['due_date']) . ' กรุณาส่งคืน', 'href' => $href,
                       'time' => date('Y-m-d 08:00:00', strtotime($l['due_date'] . ' +1 day')), 'sticky' => true];
         } elseif ($l['due_date'] <= $soon) {
             $out[] = ['title' => 'ใกล้ถึงกำหนดคืนครุภัณฑ์', 'icon' => 'bi-calendar-event', 'color' => 'warning',
-                      'text' => $l['loan_no'] . ' · กำหนดคืน ' . thai_date($l['due_date']), 'href' => $href,
+                      'text' => loan_ref($l) . ' · กำหนดคืน ' . thai_date($l['due_date']), 'href' => $href,
                       'time' => date('Y-m-d 08:00:00', strtotime($l['due_date'] . ' -2 days')), 'sticky' => true];
         }
     }
