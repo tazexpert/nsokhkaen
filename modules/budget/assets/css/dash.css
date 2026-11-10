@@ -59,3 +59,15 @@ a.dz-tile:hover { transform: translateY(-2px); box-shadow: 0 10px 24px color-mix
   .dz-spark rect { transform: none !important; animation: none !important; }
   .dz-tile, .dz-tbl tr.g td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+/* ความสูงคงที่ — ข้อมูลเกินเลื่อนภายในการ์ด (หัวตารางค้าง) */
+.dz-fix { display: flex; flex-direction: column; }
+.dz-fix > .dz-scroll { flex: 1 1 auto; min-height: 0; overflow: auto; }
+.dz-fix-l { height: 600px; }
+.dz-fix-r { height: 600px; }
+.dz-fix-r > .dz-fix-p { flex: 1 1 auto; min-height: 0; }
+.dz-fix-l > .dz-scroll { padding-top: 0; }
+.dz-scroll thead th { position: sticky; top: 0; background: #fff; z-index: 2; }
+.dz-scroll tfoot td { position: sticky; bottom: 0; background: #f8fafc; z-index: 1; border-top: 1px solid #e2e8f0; }
+.dz-scroll { scrollbar-width: thin; }
+@media (max-width: 1199px) { .dz-fix-l { height: 520px; } .dz-fix-r { height: auto; } .dz-fix-r > .dz-fix-p { height: 380px; flex: none; } }
+@media print { .dz-fix-l, .dz-fix-r, .dz-fix-r > .dz-fix-p { height: auto !important; } .dz-fix > .dz-scroll { overflow: visible; } .dz-scroll thead th, .dz-scroll tfoot td { position: static; } }

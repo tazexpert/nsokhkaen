@@ -29,9 +29,9 @@ uasort($rank, fn($a, $b) => $b['receive'] <=> $a['receive']);
 
 <div class="row g-3" data-reveal>
   <div class="col-xl-8 reveal-item">
-    <div class="dz-card h-100">
-      <div class="dz-card-h"><i class="bi bi-table text-primary"></i> งบรายจ่าย → รายการ <a href="report?fy=<?= $fy ?>" class="ms-auto small fw-normal">รายงานฉบับเต็ม <i class="bi bi-chevron-right"></i></a></div>
-      <div class="dz-card-b table-responsive">
+    <div class="dz-card dz-fix dz-fix-l">
+      <div class="dz-card-h"><i class="bi bi-table text-primary"></i> งบรายจ่าย <a href="report?fy=<?= $fy ?>" class="ms-auto small fw-normal">รายงานฉบับเต็ม <i class="bi bi-chevron-right"></i></a></div>
+      <div class="dz-card-b dz-scroll">
         <table class="dz-tbl dz-num">
           <thead><tr><th>งบรายจ่าย / รายการ</th><th>ได้รับ</th><th>เบิกจ่าย</th><th>คงเหลือ</th><th class="pc">ร้อยละ</th></tr></thead>
           <tbody>
@@ -53,7 +53,7 @@ uasort($rank, fn($a, $b) => $b['receive'] <=> $a['receive']);
       </div>
     </div>
   </div>
-  <div class="col-xl-4 d-flex flex-column gap-3">
+  <div class="col-xl-4 d-flex flex-column gap-3 dz-fix-r">
     <div class="dz-card reveal-item dz-vbars-sm">
       <div class="dz-card-h"><i class="bi bi-bar-chart text-primary"></i> รายเดือน
         <span class="bud-legend small fw-normal ms-auto"><i style="background:<?= BUD_COLORS['receive'] ?>"></i>ได้รับ <i style="background:<?= BUD_COLORS['spend'] ?>" class="ms-2"></i>เบิกจ่าย</span></div>
@@ -69,9 +69,9 @@ uasort($rank, fn($a, $b) => $b['receive'] <=> $a['receive']);
         <div class="bud-vlabels"><?php foreach ($months as $ym): ?><span><?= h(preg_replace('/\s+\d+$/', '', bud_month_label($ym, true))) ?></span><?php endforeach; ?></div>
       </div>
     </div>
-    <div class="dz-card reveal-item flex-grow-1">
-      <div class="dz-card-h"><i class="bi bi-trophy text-warning"></i> โครงการ (ตามยอดได้รับ)</div>
-      <div class="dz-card-b">
+    <div class="dz-card reveal-item dz-fix dz-fix-p">
+      <div class="dz-card-h"><i class="bi bi-kanban text-primary"></i> โครงการ <span class="ms-auto small fw-normal dz-muted"><?= count($rank) ?> โครงการ</span></div>
+      <div class="dz-card-b dz-scroll">
         <?php $no = 0; foreach ($rank as $pid => $a): $pj = $projects[$pid]; $tp = $a['receive'] > 0 ? $a['spend'] / $a['receive'] * 100 : 0; ?>
           <a class="dz-rank dz-link" href="type?<?= h(http_build_query(['fy' => $fy, 'p' => $pid])) ?>" style="--bc:<?= h($pj['color']) ?>">
             <span class="no"><?= ++$no ?></span>
