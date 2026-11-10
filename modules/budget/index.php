@@ -78,7 +78,7 @@ require __DIR__ . '/header.php';
   <?php $ti = 0; foreach ($byType as $t => $a): $c = $typeColors[min($ti++, count($typeColors) - 1)];
     $tp = $a['receive'] > 0 ? $a['spend'] / $a['receive'] * 100 : 0; ?>
   <div class="col-md-6 col-xl-3 reveal-item">
-    <a href="report?fy=<?= $fy ?>" class="card h-100 text-decoration-none text-body bud-type" style="--c:<?= $c ?>">
+    <a href="type?<?= h(http_build_query(['fy' => $fy, 'b' => $t])) ?>" class="card h-100 text-decoration-none text-body bud-type" style="--c:<?= $c ?>">
       <div class="card-body">
         <div class="bud-type-name"><?= h($t) ?></div>
         <div class="d-flex justify-content-between small mt-2"><span>ได้รับ</span><b class="bud-receive"><?= bud_money($a['receive']) ?></b></div>
