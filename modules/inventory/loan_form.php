@@ -1,8 +1,9 @@
 <?php
 /**
  * บันทึกการยืมครุภัณฑ์ (ผู้ดูแลระบบวัสดุและครุภัณฑ์)
- * การขออนุมัติยืมทำในระบบ e-office ตามเดิม — หน้านี้นำเข้าไฟล์ใบยืมที่อนุมัติแล้ว
- * และเลือกครุภัณฑ์ (ค้นจากเลขครุภัณฑ์) เพื่ออัปเดตสถานะเป็น "กำลังยืม"
+ * การขออนุมัติยืมทำในระบบ e-office ตามเดิม — หน้านี้อ่านใบยืม (PDF) ที่อนุมัติแล้วเพื่อตรวจสอบ
+ * ผู้ยืม ระยะเวลา และหมายเลขพัสดุ (loan_pdf.php) แล้วยืนยันกรอกลงฟอร์ม — ไม่เก็บไฟล์ใบยืม
+ * เลือกครุภัณฑ์ (ค้นจากเลขครุภัณฑ์) เพื่ออัปเดตสถานะเป็น "กำลังยืม" · อุปกรณ์เสริมไม่มีเลข (เช่น สายชาร์จ) บันทึกเป็นรายการประกอบ
  */
 require_once __DIR__ . '/bootstrap.php';
 $me = require_module(INV_MODULE, 'admin');
@@ -15,6 +16,7 @@ $loan = [
     'start_date' => date('Y-m-d'), 'due_date' => date('Y-m-d', strtotime('+7 days')), 'status' => 'borrowed',
 ];
 $selected = [];
+$accessories = [];      // อุปกรณ์เสริมที่ไม่มีเลขครุภัณฑ์ [['name', 'qty']]
 if ($id) {
     $st = $pdo->prepare('SELECT * FROM inv_loans WHERE id = ?');
     $st->execute([$id]);
@@ -30,6 +32,9 @@ if ($id) {
     $st = $pdo->prepare('SELECT equipment_id FROM inv_loan_items WHERE loan_id = ? AND equipment_id IS NOT NULL ORDER BY sort_order, id');
     $st->execute([$id]);
     $selected = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
+    $st = $pdo->prepare('SELECT item_name AS name, quantity AS qty FROM inv_loan_items WHERE loan_id = ? AND equipment_id IS NULL ORDER BY sort_order, id');
+    $st->execute([$id]);
+    $accessories = $st->fetchAll();
 } elseif ($eq = int_param('equipment')) {
     $selected[] = $eq;
 }
@@ -47,6 +52,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'start_date' => post('start_date'), 'due_date' => post('due_date'),
     ]);
     $selected = array_values(array_unique(array_filter(array_map('intval', (array)($_POST['equipment_ids'] ?? [])))));
+    $accessories = [];
+    foreach ((array)($_POST['acc_name'] ?? []) as $i => $nm) {
+        $nm = trim((string)$nm);
+        if ($nm !== '') {
+            $accessories[] = ['name' => mb_substr($nm, 0, 200), 'qty' => max(1, (int)($_POST['acc_qty'][$i] ?? 1))];
+        }
+    }
 
     if (!$borrower) {
         $errors[] = 'กรุณาเลือกผู้ยืม';
@@ -60,19 +72,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     if (!$selected) {
         $errors[] = 'กรุณาเลือกครุภัณฑ์ที่ยืมอย่างน้อย 1 รายการ';
-    }
-    $hasNewFile = ($_FILES['loan_file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE;
-    if (!$id && !$hasNewFile) {
-        $errors[] = 'กรุณาแนบไฟล์ใบยืม (PDF หรือรูปภาพ) จากระบบ e-office';
-    }
-
-    $newFile = null;
-    if (!$errors) {
-        try {
-            $newFile = save_loan_file($_FILES['loan_file'] ?? []);
-        } catch (RuntimeException $ex) {
-            $errors[] = $ex->getMessage();
-        }
     }
     if (!$errors) {
         try {
@@ -107,9 +106,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'borrower_phone' => $loan['borrower_phone'] ?: null, 'doc_no' => $loan['doc_no'] ?: null,
                 'purpose' => $loan['purpose'] ?: null, 'start_date' => $loan['start_date'], 'due_date' => $loan['due_date'],
             ];
-            if ($newFile) {
-                [$data['file_path'], $data['file_name']] = $newFile;
-            }
             if ($id) {
                 $cols = array_keys($data);
                 $pdo->prepare('UPDATE inv_loans SET ' . implode(', ', array_map(fn($c) => "$c = ?", $cols)) . ' WHERE id = ?')
@@ -131,19 +127,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ins->execute([$id, $eid, $e['type_name'] ?? 'ครุภัณฑ์', trim(($e['brand'] ?? '') . ' ' . ($e['model'] ?? '')) ?: null,
                                $e['serial_number'], $e['asset_no'], $n + 1]);
             }
-            $pdo->commit();
-            if ($newFile && !empty($loan['file_path'])) {
-                delete_upload($loan['file_path']);          // แทนที่ไฟล์เดิม
+            $insA = $pdo->prepare('INSERT INTO inv_loan_items (loan_id, equipment_id, item_name, quantity, sort_order) VALUES (?, NULL, ?, ?, ?)');
+            foreach ($accessories as $n => $a) {
+                $insA->execute([$id, $a['name'], $a['qty'], count($selected) + $n + 1]);
             }
+            $pdo->commit();
             audit_log(isset($data['loan_no']) ? 'loan_create' : 'loan_update', 'loan #' . $id, INV_MODULE);
             flash('บันทึกการยืมเรียบร้อยแล้ว — สถานะครุภัณฑ์เปลี่ยนเป็น "กำลังยืม"');
             redirect('loan_view?id=' . $id);
         } catch (Throwable $ex) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
-            }
-            if ($newFile) {
-                delete_upload($newFile[0]);
             }
             $errors[] = $ex instanceof RuntimeException ? $ex->getMessage() : 'บันทึกไม่สำเร็จ: ' . $ex->getMessage();
         }
@@ -170,19 +164,19 @@ $pageTitle = $id ? 'แก้ไขรายการยืม ' . $loan['loan_n
 require __DIR__ . '/header.php';
 ?>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>
-<form method="post" enctype="multipart/form-data" class="row g-3">
+<form method="post" class="row g-3" id="loanForm">
   <?= csrf_field() ?>
   <div class="col-xl-5">
     <div class="card mb-3">
-      <div class="card-header"><strong><i class="bi bi-file-earmark-arrow-up"></i> ไฟล์ใบยืม (จาก e-office)</strong></div>
+      <div class="card-header"><strong><i class="bi bi-file-earmark-check"></i> ตรวจสอบจากใบยืม (PDF จาก e-office)</strong></div>
       <div class="card-body row g-3">
         <?php if ($loan['file_path']): ?>
-          <div class="col-12"><a href="loan_file?id=<?= (int)$id ?>" target="_blank"><i class="bi bi-paperclip"></i> <?= h($loan['file_name']) ?></a>
-            <div class="form-text">เลือกไฟล์ใหม่ด้านล่างเพื่อแทนที่</div></div>
+          <div class="col-12"><a href="loan_file?id=<?= (int)$id ?>" target="_blank"><i class="bi bi-paperclip"></i> <?= h($loan['file_name']) ?></a> <span class="small text-muted">(ไฟล์เดิม)</span></div>
         <?php endif; ?>
-        <div class="col-12"><input type="file" name="loan_file" class="form-control" accept=".pdf,image/jpeg,image/png,image/webp" <?= $id ? '' : 'required' ?>>
-          <div class="form-text">PDF หรือรูปภาพ ไม่เกิน 10 MB</div></div>
-        <div class="col-12"><label class="form-label">เลขที่หนังสือ e-office</label><input name="doc_no" class="form-control" value="<?= h($loan['doc_no']) ?>" placeholder="ไม่บังคับ"></div>
+        <div class="col-12"><input type="file" id="pdfFile" class="form-control" accept=".pdf,application/pdf">
+          <div class="form-text" id="pdfStatus">เลือกไฟล์ใบยืม ระบบจะอ่านชื่อผู้ยืม ระยะเวลา และหมายเลขพัสดุให้ตรวจสอบ — ใช้ตรวจสอบเท่านั้น ไม่เก็บไฟล์</div></div>
+        <div class="col-12 d-none" id="pdfResult"></div>
+        <div class="col-12"><label class="form-label">เลขที่หนังสือ e-office</label><input name="doc_no" id="docNo" class="form-control" value="<?= h($loan['doc_no']) ?>" placeholder="ไม่บังคับ"></div>
       </div>
     </div>
     <div class="card mb-3">
@@ -196,10 +190,10 @@ require __DIR__ . '/header.php';
           </select></div>
         <div class="col-md-7"><label class="form-label">ตำแหน่ง</label><input name="borrower_position" id="bPos" class="form-control" value="<?= h($loan['borrower_position']) ?>"></div>
         <div class="col-md-5"><label class="form-label">โทรศัพท์</label><input name="borrower_phone" id="bPhone" class="form-control" value="<?= h($loan['borrower_phone']) ?>"></div>
-        <div class="col-12"><label class="form-label">หน่วยงาน</label><input name="borrower_org" class="form-control" value="<?= h($loan['borrower_org']) ?>"></div>
-        <div class="col-12"><label class="form-label">วัตถุประสงค์</label><input name="purpose" class="form-control" value="<?= h($loan['purpose']) ?>" placeholder="ไม่บังคับ"></div>
-        <div class="col-6"><label class="form-label">วันที่ยืม</label><input type="date" name="start_date" class="form-control" required value="<?= h($loan['start_date']) ?>"></div>
-        <div class="col-6"><label class="form-label">กำหนดส่งคืน</label><input type="date" name="due_date" class="form-control" required value="<?= h($loan['due_date']) ?>"></div>
+        <div class="col-12"><label class="form-label">หน่วยงาน</label><input name="borrower_org" id="bOrg" class="form-control" value="<?= h($loan['borrower_org']) ?>"></div>
+        <div class="col-12"><label class="form-label">วัตถุประสงค์</label><input name="purpose" id="bPurpose" class="form-control" value="<?= h($loan['purpose']) ?>" placeholder="ไม่บังคับ"></div>
+        <div class="col-6"><label class="form-label">วันที่ยืม</label><input type="date" name="start_date" id="dStart" class="form-control" required value="<?= h($loan['start_date']) ?>"></div>
+        <div class="col-6"><label class="form-label">กำหนดส่งคืน</label><input type="date" name="due_date" id="dDue" class="form-control" required value="<?= h($loan['due_date']) ?>"></div>
       </div>
     </div>
   </div>
@@ -231,10 +225,12 @@ require __DIR__ . '/header.php';
 .eq-pick .opt:hover,.eq-pick .opt.first{background:#f5f8fc}
 .eq-pick mark{padding:0;background:#fff3a3}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js" integrity="sha384-/1qUCSGwTur9vjf/z9lmu/eCUYbpOTgSjmpbMQZ1/CtX2v/WcAIKqRv+U1DUCG6e" crossorigin="anonymous"></script>
 <script>
 (() => {
   const items = <?= json_encode($choices, JSON_UNESCAPED_UNICODE) ?>;
   const picked = <?= json_encode($selected) ?>;
+  const accs = <?= json_encode(array_map(fn($a) => ['name' => $a['name'], 'qty' => (int)$a['qty']], $accessories), JSON_UNESCAPED_UNICODE) ?>;
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const norm = s => String(s ?? '').toLowerCase().replace(/[\s\-\/]/g, '');
   const mark = (text, q) => { if (!q) return esc(text); const i = String(text).toLowerCase().indexOf(q.toLowerCase()); return i < 0 ? esc(text) : esc(text.slice(0, i)) + '<mark>' + esc(text.slice(i, i + q.length)) + '</mark>' + esc(text.slice(i + q.length)); };
@@ -252,17 +248,120 @@ require __DIR__ . '/header.php';
         <i class="bi bi-laptop text-primary"></i><span class="min-w-0"><span class="d-block font-monospace">${esc(e.asset_no || '(ยังไม่มีเลข)')}</span>
         <span class="small text-muted">${esc(e.type)} · ${esc(e.label)}</span></span>
         <button type="button" class="btn btn-sm btn-light ms-auto" data-unpick="${e.id}" title="นำออก"><i class="bi bi-x-lg"></i></button></li>`).join('')
+      + accs.map((a, i) => `<li class="list-group-item d-flex align-items-center gap-2"><input type="hidden" name="acc_name[]" value="${esc(a.name)}"><input type="hidden" name="acc_qty[]" value="${a.qty}">
+        <i class="bi bi-plug text-secondary"></i><span class="min-w-0"><span class="d-block">${esc(a.name)}</span><span class="small text-muted">อุปกรณ์เสริม (ไม่มีเลขครุภัณฑ์) · จำนวน ${a.qty}</span></span>
+        <button type="button" class="btn btn-sm btn-light ms-auto" data-unacc="${i}" title="นำออก"><i class="bi bi-x-lg"></i></button></li>`).join('')
       || '<li class="list-group-item text-muted small">ยังไม่ได้เลือก</li>';
-    document.getElementById('pickCount').textContent = picked.length;
+    document.getElementById('pickCount').textContent = picked.length + accs.length;
   }
   const add = id => { if (!picked.includes(id)) picked.push(id); search.value = ''; render(); search.focus(); };
   box.addEventListener('click', ev => { const o = ev.target.closest('.opt'); if (o) add(+o.dataset.id); });
-  list.addEventListener('click', ev => { const b = ev.target.closest('[data-unpick]'); if (b) { picked.splice(picked.indexOf(+b.dataset.unpick), 1); render(); } });
+  list.addEventListener('click', ev => {
+    const b = ev.target.closest('[data-unpick]'); if (b) { picked.splice(picked.indexOf(+b.dataset.unpick), 1); render(); }
+    const a = ev.target.closest('[data-unacc]'); if (a) { accs.splice(+a.dataset.unacc, 1); render(); }
+  });
   search.addEventListener('input', render);
   search.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); if (search.value.trim() && matches[0]) add(matches[0].id); } });
   render();
   const sel = document.getElementById('borrowerSel');
   sel.addEventListener('change', () => { const o = sel.selectedOptions[0]; document.getElementById('bPos').value = o.dataset.position || ''; document.getElementById('bPhone').value = o.dataset.phone || ''; });
+
+  // ---- อ่านใบยืม PDF (pdf.js) → ตรวจสอบที่ loan_pdf → ผู้ใช้ยืนยันแล้วกรอกลงฟอร์ม (ไม่อัปโหลดไฟล์) ----
+  const pdfFile = document.getElementById('pdfFile'), pdfStatus = document.getElementById('pdfStatus'), pdfResult = document.getElementById('pdfResult');
+  const TH_M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  const thDate = d => { if (!d) return '<span class="text-danger">ไม่พบ</span>'; const [y, m, dd] = d.split('-').map(Number); return dd + ' ' + TH_M[m - 1] + ' ' + (y + 543); };
+  const ok = t => `<i class="bi bi-check-circle-fill text-success"></i> ${t}`, warn = t => `<i class="bi bi-exclamation-triangle-fill text-warning"></i> ${t}`, bad = t => `<i class="bi bi-x-circle-fill text-danger"></i> ${t}`;
+  let parsed = null;
+  pdfFile.addEventListener('change', async () => {
+    const file = pdfFile.files[0];
+    pdfResult.classList.add('d-none');
+    if (!file) return;
+    if (!window.pdfjsLib) { pdfStatus.textContent = 'โหลดตัวอ่าน PDF ไม่ได้ — ตรวจการเชื่อมต่ออินเทอร์เน็ต'; return; }
+    try {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+      pdfStatus.textContent = 'กำลังอ่านไฟล์…';
+      const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+      const pages = [];
+      for (let i = 1; i <= Math.min(doc.numPages, 10); i++) {
+        const pg = await doc.getPage(i), vp = pg.getViewport({ scale: 1 }), tc = await pg.getTextContent();
+        pages.push(tc.items.filter(it => it.str && it.str.trim() !== '').map(it => [it.str, Math.round(it.transform[4] * 10) / 10,
+          Math.round((vp.height - it.transform[5]) * 10) / 10, Math.round(it.width * 10) / 10]));
+      }
+      if (!pages.some(p => p.length)) { pdfStatus.textContent = 'ไม่พบข้อความในไฟล์ (อาจเป็นภาพสแกน) — กรุณากรอกข้อมูลเอง'; return; }
+      pdfStatus.textContent = 'กำลังตรวจสอบกับทะเบียนครุภัณฑ์…';
+      const fd = new FormData();
+      fd.append('csrf', document.querySelector('#loanForm input[name=csrf]').value);
+      fd.append('pages', JSON.stringify(pages));
+      fd.append('loan_id', <?= (int)$id ?>);
+      const r = await fetch('loan_pdf', { method: 'POST', body: fd, credentials: 'same-origin' });
+      const data = await r.json();
+      if (!r.ok || data.error) throw new Error(data.error || ('HTTP ' + r.status));
+      parsed = data;
+      showResult(file.name);
+    } catch (err) {
+      pdfStatus.textContent = 'อ่านไฟล์ไม่ได้: ' + err.message;
+    }
+  });
+  function showResult(name) {
+    const d = parsed, u = d.borrower_id ? [...sel.options].find(o => +o.value === d.borrower_id) : null;
+    const days = d.start_date && d.due_date ? Math.round((new Date(d.due_date) - new Date(d.start_date)) / 864e5) + 1 : 0;
+    const rows = d.items.map((it, i) => {
+      let res;
+      const cands = it.candidates.filter(c => items.some(e => e.id === +c.id) || picked.includes(+c.id));
+      if (it.match === 'accessory') {
+        res = `<label class="form-check mb-0"><input type="checkbox" class="form-check-input" data-acc="${i}" checked> <span class="text-muted">ไม่มีเลขพัสดุ — บันทึกเป็นอุปกรณ์เสริม</span></label>`;
+      } else if (!it.candidates.length) {
+        res = bad('ไม่พบในทะเบียนครุภัณฑ์ — ค้นหาเพิ่มเองด้านขวา');
+      } else {
+        res = it.candidates.map((c, k) => {
+          const usable = !c.problem && cands.some(x => x.id === c.id);
+          const icon = c.problem ? bad : (it.match === 'exact' || it.match === 'serial' ? ok : warn);
+          return `<label class="form-check mb-0"><input type="${it.match === 'partial' ? 'radio' : 'checkbox'}" class="form-check-input" name="pdfPick${i}" data-eq="${c.id}"
+            ${usable && (it.match !== 'partial' || (k === 0 && it.candidates.length === 1)) ? 'checked' : ''} ${usable ? '' : 'disabled'}>
+            ${icon(`<span class="font-monospace">${esc(c.asset_no || '-')}</span>`)} <span class="small text-muted">${esc(c.label)}</span>
+            ${c.problem ? `<div class="small text-danger">${esc(c.problem)}</div>` : ''}</label>`;
+        }).join('') + (it.match === 'partial' ? `<div class="small text-warning-emphasis">ตรงเฉพาะท้ายเลข — ตรวจสอบและเลือกรายการที่ถูกต้อง</div>` : '')
+          + (it.match === 'serial' ? `<div class="small text-muted">ตรงจากหมายเลขเครื่อง</div>` : '');
+      }
+      return `<tr><td class="text-center">${it.seq}</td><td>${esc(it.name)}${it.brand ? `<div class="small text-muted">${esc(it.brand)}</div>` : ''}
+        <div class="small">ในไฟล์: <span class="font-monospace">${esc(it.asset || '-')}</span>${it.serial ? ` · S/N <span class="font-monospace">${esc(it.serial)}</span>` : ''}${it.qty > 1 ? ' · จำนวน ' + it.qty : ''}</div></td><td>${res}</td></tr>`;
+    }).join('');
+    pdfResult.innerHTML = `<div class="border rounded p-2 bg-body-tertiary small">
+      <div class="fw-semibold mb-1"><i class="bi bi-file-earmark-pdf text-danger"></i> ${esc(name)}</div>
+      ${d.errors.map(e => `<div class="text-danger">${esc(e)}</div>`).join('')}
+      <table class="table table-sm mb-2 bg-transparent"><tbody>
+        <tr><th class="text-nowrap" style="width:1%">ผู้ยืม</th><td>${esc(d.borrower || '-')}<br>${u ? ok('ตรงกับผู้ใช้ ' + esc(u.textContent)) : bad('ไม่พบในรายชื่อผู้ใช้ — เลือกผู้ยืมเอง')}</td></tr>
+        <tr><th>ตำแหน่ง</th><td>${esc(d.position || '-')}${d.phone ? ' · โทร ' + esc(d.phone) : ''}</td></tr>
+        <tr><th>ระยะเวลา</th><td>${thDate(d.start_date)} – ${thDate(d.due_date)}${days > 0 ? ' (' + days + ' วัน)' : (days ? ' ' + bad('วันคืนก่อนวันยืม') : '')}</td></tr>
+        ${d.purpose ? `<tr><th>วัตถุประสงค์</th><td>${esc(d.purpose)}</td></tr>` : ''}
+      </tbody></table>
+      <div class="fw-semibold">รายการพัสดุที่ยืม (${d.items.length})</div>
+      <table class="table table-sm align-top mb-2"><thead><tr><th>ที่</th><th>ในใบยืม</th><th>ทะเบียนครุภัณฑ์</th></tr></thead><tbody>${rows || '<tr><td colspan="3" class="text-muted">ไม่พบรายการ</td></tr>'}</tbody></table>
+      <button type="button" class="btn btn-success btn-sm" id="pdfConfirm"><i class="bi bi-check2-square"></i> ยืนยันข้อมูล กรอกลงฟอร์ม</button>
+      <span class="text-muted ms-1">ตรวจข้อมูลด้านบนก่อนยืนยัน แล้วกด "บันทึกการยืม"</span></div>`;
+    pdfResult.classList.remove('d-none');
+    pdfStatus.textContent = 'อ่านแล้ว — ตรวจสอบข้อมูลด้านล่าง (ไฟล์ไม่ถูกบันทึก)';
+  }
+  pdfResult.addEventListener('click', ev => {
+    if (!ev.target.closest('#pdfConfirm') || !parsed) return;
+    const d = parsed;
+    if (d.borrower_id) { sel.value = d.borrower_id; sel.dispatchEvent(new Event('change')); }
+    if (d.position) document.getElementById('bPos').value = d.position;
+    if (d.phone) document.getElementById('bPhone').value = d.phone;
+    if (d.org) document.getElementById('bOrg').value = d.org;
+    if (d.purpose) document.getElementById('bPurpose').value = d.purpose;
+    if (d.doc_no) document.getElementById('docNo').value = d.doc_no;
+    if (d.start_date) document.getElementById('dStart').value = d.start_date;
+    if (d.due_date) document.getElementById('dDue').value = d.due_date;
+    pdfResult.querySelectorAll('input[data-eq]:checked').forEach(c => { if (!picked.includes(+c.dataset.eq)) picked.push(+c.dataset.eq); });
+    pdfResult.querySelectorAll('input[data-acc]:checked').forEach(c => {
+      const it = d.items[+c.dataset.acc];
+      if (!accs.some(a => a.name === it.name)) accs.push({ name: it.name, qty: it.qty || 1 });
+    });
+    render();
+    pdfStatus.innerHTML = ok('กรอกข้อมูลจากใบยืมแล้ว — ตรวจสอบอีกครั้งแล้วกด "บันทึกการยืม"');
+    pdfResult.classList.add('d-none');
+  });
 })();
 </script>
 <?php require __DIR__ . '/footer.php'; ?>

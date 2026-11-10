@@ -82,7 +82,7 @@ require __DIR__ . '/header.php';
           <td class="text-end text-nowrap">
             <a href="loan_view?id=<?= (int)$l['id'] ?>" class="btn btn-sm btn-light" title="ดู"><i class="bi bi-eye"></i></a>
             <?php if ($l['file_path']): ?><a href="loan_file?id=<?= (int)$l['id'] ?>" target="_blank" class="btn btn-sm btn-light" title="เปิด/พิมพ์ใบยืม"><i class="bi bi-printer"></i></a>
-            <?php elseif ($isAdmin && $l['status'] === 'borrowed'): ?><a href="loan_attach?ids=<?= (int)$l['id'] ?>" class="btn btn-sm btn-outline-warning" title="แนบไฟล์ใบยืม"><i class="bi bi-paperclip"></i></a><?php endif; ?>
+            <?php endif; ?>
           </td>
         </tr>
       <?php endforeach; ?>

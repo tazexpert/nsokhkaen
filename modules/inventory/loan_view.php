@@ -89,10 +89,10 @@ require __DIR__ . '/header.php';
           <dt class="col-sm-3">เลขที่หนังสือ e-office</dt><dd class="col-sm-9"><?= h($loan['doc_no'] ?: '-') ?></dd>
           <?php if ($loan['purpose']): ?><dt class="col-sm-3">วัตถุประสงค์</dt><dd class="col-sm-9"><?= h($loan['purpose']) ?></dd><?php endif; ?>
           <dt class="col-sm-3">ระยะเวลายืม</dt><dd class="col-sm-9"><?= h(thai_date_full($loan['start_date'])) ?> ถึง <?= h(thai_date_full($loan['due_date'])) ?></dd>
-          <dt class="col-sm-3">ไฟล์ใบยืม</dt><dd class="col-sm-9"><?php if ($loan['file_path']): ?>
+          <?php if ($loan['file_path']): ?><dt class="col-sm-3">ไฟล์ใบยืม</dt><dd class="col-sm-9">
             <a href="loan_file?id=<?= $id ?>" target="_blank"><i class="bi <?= $isPdf ? 'bi-file-earmark-pdf text-danger' : 'bi-file-earmark-image' ?>"></i> <?= h($loan['file_name']) ?></a>
             · <a href="loan_file?id=<?= $id ?>&download=1" class="small">ดาวน์โหลด</a>
-            <?php else: ?><span class="text-muted">ไม่มี</span><?php if ($isAdmin): ?> · <a href="loan_attach?ids=<?= $id ?>"><i class="bi bi-paperclip"></i> แนบไฟล์ใบยืม</a><?php endif; ?><?php endif; ?></dd>
+            </dd><?php endif; ?><!-- ไฟล์ใบยืมใช้ตรวจสอบตอนบันทึกเท่านั้น ไม่เก็บไฟล์ (มีเฉพาะรายการเดิม) -->
           <?php if ($loan['returned_at']): ?><dt class="col-sm-3">รับคืน</dt><dd class="col-sm-9"><?= h(thai_date_full($loan['returned_at'])) ?> โดย <?= h($loan['receiver_name']) ?><?= $loan['return_note'] ? '<div class="small text-muted">' . h($loan['return_note']) . '</div>' : '' ?></dd><?php endif; ?>
         </dl>
       </div>
