@@ -116,3 +116,9 @@
 .bud-compact .bud-vbars { height: 180px; }
 .bud-compact .bud-src-list { max-height: 260px; }
 .bud-compact .card-header { padding-top: .45rem; padding-bottom: .45rem; }
+/* การ์ดงบรายจ่าย/โครงการ: พื้นหลังสีอ่อนตามสีของการ์ด */
+.bud-type { background: linear-gradient(135deg, color-mix(in srgb, var(--c) 16%, #fff), color-mix(in srgb, var(--c) 5%, #fff)); border-color: color-mix(in srgb, var(--c) 25%, #fff); }
+.bud-type .bud-progress, .bud-type .bar-track { background: rgba(255, 255, 255, .75); }
+.bud-type .bud-type-exp { border-top-color: color-mix(in srgb, var(--c) 35%, #fff); }
+.bud-type .bud-sum span { color: color-mix(in srgb, var(--c) 45%, #475569); }
+@media print { .bud-type { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
