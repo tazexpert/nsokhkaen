@@ -3,7 +3,8 @@
  * บันทึกการยืมครุภัณฑ์ (ผู้ดูแลระบบวัสดุและครุภัณฑ์)
  * การขออนุมัติยืมทำในระบบ e-office ตามเดิม — หน้านี้อ่านใบยืม (PDF) ที่อนุมัติแล้วเพื่อตรวจสอบ
  * ผู้ยืม ระยะเวลา และหมายเลขพัสดุ (loan_pdf.php) แล้วยืนยันกรอกลงฟอร์ม — ไม่เก็บไฟล์ใบยืม
- * เลือกครุภัณฑ์ (ค้นจากเลขครุภัณฑ์) เพื่ออัปเดตสถานะเป็น "กำลังยืม" · อุปกรณ์เสริมไม่มีเลข (เช่น สายชาร์จ) บันทึกเป็นรายการประกอบ
+ * เลือกครุภัณฑ์ (ค้นจากเลขครุภัณฑ์) เพื่ออัปเดตสถานะเป็น "กำลังยืม"
+ * รายการที่ไม่อยู่ในทะเบียนครุภัณฑ์ (สายชาร์จ ชุดโปรแกรม ฯลฯ) บันทึกเฉพาะรายการ (equipment_id = NULL)
  */
 require_once __DIR__ . '/bootstrap.php';
 $me = require_module(INV_MODULE, 'admin');
@@ -16,7 +17,7 @@ $loan = [
     'start_date' => date('Y-m-d'), 'due_date' => date('Y-m-d', strtotime('+7 days')), 'status' => 'borrowed',
 ];
 $selected = [];
-$accessories = [];      // อุปกรณ์เสริมที่ไม่มีเลขครุภัณฑ์ [['name', 'qty']]
+$accessories = [];      // รายการที่ไม่อยู่ในทะเบียนครุภัณฑ์ [['name', 'brand', 'serial', 'asset', 'qty']]
 if ($id) {
     $st = $pdo->prepare('SELECT * FROM inv_loans WHERE id = ?');
     $st->execute([$id]);
@@ -32,7 +33,7 @@ if ($id) {
     $st = $pdo->prepare('SELECT equipment_id FROM inv_loan_items WHERE loan_id = ? AND equipment_id IS NOT NULL ORDER BY sort_order, id');
     $st->execute([$id]);
     $selected = array_map('intval', $st->fetchAll(PDO::FETCH_COLUMN));
-    $st = $pdo->prepare('SELECT item_name AS name, quantity AS qty FROM inv_loan_items WHERE loan_id = ? AND equipment_id IS NULL ORDER BY sort_order, id');
+    $st = $pdo->prepare('SELECT item_name AS name, brand_model AS brand, serial_number AS serial, asset_no AS asset, quantity AS qty FROM inv_loan_items WHERE loan_id = ? AND equipment_id IS NULL ORDER BY sort_order, id');
     $st->execute([$id]);
     $accessories = $st->fetchAll();
 } elseif ($eq = int_param('equipment')) {
@@ -56,7 +57,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ((array)($_POST['acc_name'] ?? []) as $i => $nm) {
         $nm = trim((string)$nm);
         if ($nm !== '') {
-            $accessories[] = ['name' => mb_substr($nm, 0, 200), 'qty' => max(1, (int)($_POST['acc_qty'][$i] ?? 1))];
+            $f = fn($k, $len) => mb_substr(trim((string)($_POST[$k][$i] ?? '')), 0, $len);
+            $accessories[] = ['name' => mb_substr($nm, 0, 200), 'brand' => $f('acc_brand', 200), 'serial' => $f('acc_serial', 100),
+                              'asset' => $f('acc_asset', 100), 'qty' => max(1, (int)($_POST['acc_qty'][$i] ?? 1))];
         }
     }
 
@@ -70,13 +73,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($d2 < $d1) {
         $errors[] = 'กำหนดส่งคืนต้องไม่ก่อนวันที่ยืม';
     }
-    if (!$selected) {
-        $errors[] = 'กรุณาเลือกครุภัณฑ์ที่ยืมอย่างน้อย 1 รายการ';
+    if (!$selected && !$accessories) {
+        $errors[] = 'กรุณาเลือกครุภัณฑ์หรือรายการที่ยืมอย่างน้อย 1 รายการ';
     }
     if (!$errors) {
         try {
             $pdo->beginTransaction();
-            $in = implode(',', $selected);
+            $in = implode(',', $selected) ?: '0';
             $eqRows = $pdo->query("SELECT e.*, t.name AS type_name FROM inv_equipment e LEFT JOIN inv_equipment_types t ON t.id = e.type_id
                 WHERE e.id IN ($in) FOR UPDATE")->fetchAll(PDO::FETCH_UNIQUE);
             $busy = active_loans_by_equipment($selected);
@@ -127,9 +130,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $ins->execute([$id, $eid, $e['type_name'] ?? 'ครุภัณฑ์', trim(($e['brand'] ?? '') . ' ' . ($e['model'] ?? '')) ?: null,
                                $e['serial_number'], $e['asset_no'], $n + 1]);
             }
-            $insA = $pdo->prepare('INSERT INTO inv_loan_items (loan_id, equipment_id, item_name, quantity, sort_order) VALUES (?, NULL, ?, ?, ?)');
+            $insA = $pdo->prepare('INSERT INTO inv_loan_items (loan_id, equipment_id, item_name, brand_model, serial_number, asset_no, quantity, sort_order)
+                VALUES (?, NULL, ?, ?, ?, ?, ?, ?)');
             foreach ($accessories as $n => $a) {
-                $insA->execute([$id, $a['name'], $a['qty'], count($selected) + $n + 1]);
+                $insA->execute([$id, $a['name'], $a['brand'] ?: null, $a['serial'] ?: null, $a['asset'] ?: null, $a['qty'], count($selected) + $n + 1]);
             }
             $pdo->commit();
             audit_log(isset($data['loan_no']) ? 'loan_create' : 'loan_update', 'loan #' . $id, INV_MODULE);
@@ -230,7 +234,8 @@ require __DIR__ . '/header.php';
 (() => {
   const items = <?= json_encode($choices, JSON_UNESCAPED_UNICODE) ?>;
   const picked = <?= json_encode($selected) ?>;
-  const accs = <?= json_encode(array_map(fn($a) => ['name' => $a['name'], 'qty' => (int)$a['qty']], $accessories), JSON_UNESCAPED_UNICODE) ?>;
+  const accs = <?= json_encode(array_map(fn($a) => ['name' => $a['name'], 'brand' => (string)$a['brand'], 'serial' => (string)$a['serial'],
+      'asset' => (string)$a['asset'], 'qty' => (int)$a['qty']], $accessories), JSON_UNESCAPED_UNICODE) ?>;
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const norm = s => String(s ?? '').toLowerCase().replace(/[\s\-\/]/g, '');
   const mark = (text, q) => { if (!q) return esc(text); const i = String(text).toLowerCase().indexOf(q.toLowerCase()); return i < 0 ? esc(text) : esc(text.slice(0, i)) + '<mark>' + esc(text.slice(i, i + q.length)) + '</mark>' + esc(text.slice(i + q.length)); };
@@ -249,7 +254,8 @@ require __DIR__ . '/header.php';
         <span class="small text-muted">${esc(e.type)} · ${esc(e.label)}</span></span>
         <button type="button" class="btn btn-sm btn-light ms-auto" data-unpick="${e.id}" title="นำออก"><i class="bi bi-x-lg"></i></button></li>`).join('')
       + accs.map((a, i) => `<li class="list-group-item d-flex align-items-center gap-2"><input type="hidden" name="acc_name[]" value="${esc(a.name)}"><input type="hidden" name="acc_qty[]" value="${a.qty}">
-        <i class="bi bi-plug text-secondary"></i><span class="min-w-0"><span class="d-block">${esc(a.name)}</span><span class="small text-muted">อุปกรณ์เสริม (ไม่มีเลขครุภัณฑ์) · จำนวน ${a.qty}</span></span>
+        <input type="hidden" name="acc_brand[]" value="${esc(a.brand)}"><input type="hidden" name="acc_serial[]" value="${esc(a.serial)}"><input type="hidden" name="acc_asset[]" value="${esc(a.asset)}">
+        <i class="bi bi-box text-secondary"></i><span class="min-w-0"><span class="d-block">${esc(a.name)}</span><span class="small text-muted">${[a.brand, a.serial ? 'S/N ' + a.serial : '', a.asset].filter(Boolean).map(esc).join(' · ')}${a.brand || a.serial || a.asset ? ' · ' : ''}ไม่อยู่ในทะเบียนครุภัณฑ์ · จำนวน ${a.qty}</span></span>
         <button type="button" class="btn btn-sm btn-light ms-auto" data-unacc="${i}" title="นำออก"><i class="bi bi-x-lg"></i></button></li>`).join('')
       || '<li class="list-group-item text-muted small">ยังไม่ได้เลือก</li>';
     document.getElementById('pickCount').textContent = picked.length + accs.length;
@@ -344,18 +350,20 @@ require __DIR__ . '/header.php';
       let res;
       const cands = it.candidates.filter(c => items.some(e => e.id === +c.id) || picked.includes(+c.id));
       if (it.match === 'accessory') {
-        res = `<label class="form-check mb-0"><input type="checkbox" class="form-check-input" data-acc="${i}" checked> <span class="text-muted">ไม่มีเลขพัสดุ — บันทึกเป็นอุปกรณ์เสริม</span></label>`;
+        res = `<label class="form-check mb-0"><input type="checkbox" class="form-check-input" data-acc="${i}" checked> <span class="text-muted">ไม่มีเลขพัสดุ — บันทึกเฉพาะรายการ</span></label>`;
       } else if (!it.candidates.length) {
-        res = bad('ไม่พบในทะเบียนครุภัณฑ์ — ค้นหาเพิ่มเองด้านขวา');
+        res = `<label class="form-check mb-0"><input type="checkbox" class="form-check-input" data-acc="${i}" checked> ${warn('ไม่พบในทะเบียนครุภัณฑ์ — บันทึกเฉพาะรายการ')}</label>`;
       } else {
         res = it.candidates.map((c, k) => {
           const usable = !c.problem && cands.some(x => x.id === c.id);
           const icon = c.problem ? bad : (it.match === 'exact' || it.match === 'serial' ? ok : warn);
           return `<label class="form-check mb-0"><input type="${it.match === 'partial' ? 'radio' : 'checkbox'}" class="form-check-input" name="pdfPick${i}" data-eq="${c.id}"
-            ${usable && (it.match !== 'partial' || (k === 0 && it.candidates.length === 1)) ? 'checked' : ''} ${usable ? '' : 'disabled'}>
+            ${usable && it.match !== 'partial' ? 'checked' : ''} ${usable ? '' : 'disabled'}>
             ${icon(`<span class="font-monospace">${esc(c.asset_no || '-')}</span>`)} <span class="small text-muted">${esc(c.label)}</span>
             ${c.problem ? `<div class="small text-danger">${esc(c.problem)}</div>` : ''}</label>`;
-        }).join('') + (it.match === 'partial' ? `<div class="small text-warning-emphasis">ตรงเฉพาะท้ายเลข — ตรวจสอบและเลือกรายการที่ถูกต้อง</div>` : '')
+        }).join('') + (it.match === 'partial' ? `<label class="form-check mb-0"><input type="radio" class="form-check-input" name="pdfPick${i}" data-acc="${i}" checked>
+            <span class="text-muted">ไม่ใช่รายการข้างบน — บันทึกเฉพาะรายการ</span></label>
+            <div class="small text-warning-emphasis">ตรงเฉพาะท้ายเลข — ถ้าเป็นเครื่องเดียวกันให้เลือกเลขในทะเบียน</div>` : '')
           + (it.match === 'serial' ? `<div class="small text-muted">ตรงจากหมายเลขเครื่อง</div>` : '');
       }
       return `<tr><td class="text-center">${it.seq}</td><td>${esc(it.name)}${it.brand ? `<div class="small text-muted">${esc(it.brand)}</div>` : ''}
@@ -392,7 +400,8 @@ require __DIR__ . '/header.php';
     pdfResult.querySelectorAll('input[data-eq]:checked').forEach(c => { if (!picked.includes(+c.dataset.eq)) picked.push(+c.dataset.eq); });
     pdfResult.querySelectorAll('input[data-acc]:checked').forEach(c => {
       const it = d.items[+c.dataset.acc];
-      if (!accs.some(a => a.name === it.name)) accs.push({ name: it.name, qty: it.qty || 1 });
+      const a = { name: it.name || it.brand || '-', brand: it.name ? it.brand : '', serial: it.serial, asset: it.asset, qty: it.qty || 1 };
+      if (!accs.some(x => x.name === a.name && x.brand === a.brand && x.serial === a.serial && x.asset === a.asset)) accs.push(a);
     });
     render();
     pdfStatus.innerHTML = ok('กรอกข้อมูลจากใบยืมแล้ว — ตรวจสอบอีกครั้งแล้วกด "บันทึกการยืม"');

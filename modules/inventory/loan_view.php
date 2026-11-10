@@ -45,7 +45,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // แก้กรณีกดรับคืนผิด: ต้องไม่มีครุภัณฑ์ในใบนี้ถูกยืมโดยใบอื่นไปแล้ว
         $ids = $pdo->prepare('SELECT equipment_id FROM inv_loan_items WHERE loan_id = ? AND equipment_id IS NOT NULL');
         $ids->execute([$id]);
-        if (active_loans_by_equipment(array_map('intval', $ids->fetchAll(PDO::FETCH_COLUMN)))) {
+        $eids = array_map('intval', $ids->fetchAll(PDO::FETCH_COLUMN));
+        if ($eids && active_loans_by_equipment($eids)) {       // ใบที่มีแต่รายการนอกทะเบียน ไม่ต้องตรวจ
             flash('ยกเลิกการรับคืนไม่ได้ — มีครุภัณฑ์ในรายการนี้ถูกยืมไปแล้ว', 'danger');
         } else {
             $pdo->prepare("UPDATE inv_loans SET status = 'borrowed', returned_at = NULL, receiver_id = NULL, receiver_name = NULL,
