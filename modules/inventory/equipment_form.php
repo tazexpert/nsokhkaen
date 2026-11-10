@@ -146,12 +146,12 @@ require __DIR__ . '/header.php';
               <label class="btn btn-outline-<?= $s[1] ?>" for="st_<?= $k ?>"><i class="bi <?= $s[2] ?>"></i> <?= h($s[0]) ?></label>
             <?php endforeach; ?>
           </div></div>
-        <div class="col-md-6"><label class="form-label">ผู้ใช้งานประจำ</label>
+        <div class="col-md-6"><label class="form-label">ผู้ถือครอง</label>
           <select name="assigned_user_id" class="form-select">
             <option value="">— ไม่มี (ใช้ส่วนกลาง / ให้ยืม) —</option>
             <?php foreach ($users as $uid => $uname): ?><option value="<?= (int)$uid ?>" <?= (int)$e['assigned_user_id'] === (int)$uid ? 'selected' : '' ?>><?= h($uname) ?></option><?php endforeach; ?>
           </select>
-          <div class="form-text">เช่น คอมพิวเตอร์ตั้งโต๊ะที่มีคนนั่งใช้ประจำ — แสดงในคอลัมน์ "ผู้ยืม/ผู้ใช้งาน"</div></div>
+          <div class="form-text">เช่น ไมโครคอมพิวเตอร์ (PC Desktop) ที่ถือครองประจำ (ไม่ใช่การยืม) — แสดงในคอลัมน์ "ผู้ยืม/ผู้ถือครอง"</div></div>
         <div class="col-md-6"><label class="form-label">สถานที่เก็บ / ตั้งอยู่ที่</label>
           <input name="storage_location" class="form-control" list="locList" value="<?= h($e['storage_location']) ?>">
           <datalist id="locList"><?php foreach ($locations as $l): ?><option value="<?= h($l) ?>"><?php endforeach; ?></datalist></div>

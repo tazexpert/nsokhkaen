@@ -1,5 +1,5 @@
 <?php
-/** ครุภัณฑ์: สรุปตามประเภท + รายการทั้งหมด พร้อมสภาพการใช้งาน และผู้ยืม/ผู้ใช้งานประจำ */
+/** ครุภัณฑ์: สรุปตามประเภท + รายการทั้งหมด พร้อมสภาพการใช้งาน และผู้ยืม/ผู้ถือครอง */
 require_once __DIR__ . '/bootstrap.php';
 require_module(INV_MODULE);
 $pdo = db();
@@ -134,7 +134,7 @@ require __DIR__ . '/header.php';
 <div class="card" id="list">
   <div class="card-header no-print">
     <form class="row g-2 align-items-center" action="equipment#list">
-      <div class="col-lg-3 col-md-6"><input name="q" class="form-control" placeholder="ค้นหาเลขครุภัณฑ์ / ยี่ห้อ / รุ่น / ผู้ยืม/ผู้ใช้งาน" value="<?= h($q) ?>"></div>
+      <div class="col-lg-3 col-md-6"><input name="q" class="form-control" placeholder="ค้นหาเลขครุภัณฑ์ / ยี่ห้อ / รุ่น / ผู้ยืม/ผู้ถือครอง" value="<?= h($q) ?>"></div>
       <div class="col-lg-3 col-md-6"><select name="type" class="form-select" onchange="this.form.submit()">
         <option value="">ทุกประเภท</option>
         <?php foreach ($types as $tid => $tname): ?><option value="<?= (int)$tid ?>" <?= $fType === (int)$tid ? 'selected' : '' ?>><?= h($tname) ?></option><?php endforeach; ?>
@@ -160,7 +160,7 @@ require __DIR__ . '/header.php';
         <thead><tr>
           <?php if ($isAdmin): ?><th class="no-print" style="width:32px"><input type="checkbox" class="form-check-input" id="checkAll"></th><?php endif; ?>
           <th class="text-center">ที่</th><th>เลขครุภัณฑ์</th><th>ประเภท</th><th>ยี่ห้อ</th><th>รุ่น (Model)</th>
-          <th class="text-center">ปีงบ</th><th class="text-center">อายุ</th><th>สภาพการใช้งาน</th><th>ผู้ยืม/ผู้ใช้งาน</th><th>หมายเหตุ</th>
+          <th class="text-center">ปีงบ</th><th class="text-center">อายุ</th><th>สภาพการใช้งาน</th><th>ผู้ยืม/ผู้ถือครอง</th><th>หมายเหตุ</th>
         </tr></thead>
         <tbody>
         <?php foreach ($rows as $i => $e): $loan = $activeLoans[(int)$e["id"]] ?? null; $age = equipment_age($e['fiscal_year'] ? (int)$e['fiscal_year'] : null); ?>
@@ -180,7 +180,7 @@ require __DIR__ . '/header.php';
               <div class="text-muted">คืน <?= h(thai_date($loan['due_date'])) ?>
                 <?php if ($loan['due_date'] < date('Y-m-d')): ?><span class="badge text-bg-danger">เกินกำหนด</span><?php endif; ?></div>
             <?php elseif ($e['assigned_name']): ?>
-              <i class="bi bi-person-workspace text-success"></i> <?= h($e['assigned_name']) ?><div class="text-muted">ผู้ใช้งานประจำ</div>
+              <i class="bi bi-person-workspace text-success"></i> <?= h($e['assigned_name']) ?><div class="text-muted">ผู้ถือครอง</div>
             <?php else: ?><span class="text-muted">-</span><?php endif; ?></td>
             <td class="small text-muted"><?= h($e['note']) ?></td>
           </tr>

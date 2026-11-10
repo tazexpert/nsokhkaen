@@ -43,6 +43,15 @@ function equipment_age(?int $fiscalYear): ?int
     return $fiscalYear ? max(0, (int)date('Y') + 543 - $fiscalYear) : null;
 }
 
+/**
+ * ครุภัณฑ์ประเภท "ถือครอง" (ไมโครคอมพิวเตอร์ / PC Desktop): ไม่ใช่การยืม — บันทึกผู้ถือครองในข้อมูลครุภัณฑ์
+ * จึงไม่แสดงให้เลือกในการยืม และนำเข้าการยืมไม่ได้
+ */
+function eq_is_holding_type(?string $typeName): bool
+{
+    return (bool)preg_match('/PC\s*Desktop|ไมโครคอมพิวเตอร์|คอมพิวเตอร์ตั้งโต๊ะ/iu', (string)$typeName);
+}
+
 /** เลขที่ใบยืม: เลขรัน/ปี พ.ศ. เริ่ม 1 ใหม่ทุกปี (แบบเดียวกับใบเบิก) */
 function generate_loan_no(PDO $pdo): string
 {

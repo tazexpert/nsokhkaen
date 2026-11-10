@@ -24,7 +24,7 @@ $age = equipment_age($e['fiscal_year'] ? (int)$e['fiscal_year'] : null);
 
 $pageTitle = trim(($e['brand'] ?? '') . ' ' . ($e['model'] ?? '')) ?: 'รายละเอียดครุภัณฑ์';
 $pageActions = '<a href="equipment" class="btn btn-light"><i class="bi bi-arrow-left"></i> รายการครุภัณฑ์</a>'
-    . ($isAdmin && !$loan && $e['status'] === 'normal' ? '<a href="loan_form?equipment=' . $id . '" class="btn btn-success"><i class="bi bi-box-arrow-up-right"></i> บันทึกการยืมรายการนี้</a>' : '')
+    . ($isAdmin && !$loan && $e['status'] === 'normal' && !eq_is_holding_type($e['type_name']) ? '<a href="loan_form?equipment=' . $id . '" class="btn btn-success"><i class="bi bi-box-arrow-up-right"></i> บันทึกการยืมรายการนี้</a>' : '')
     . ($isAdmin ? '<a href="equipment_form?id=' . $id . '" class="btn btn-primary"><i class="bi bi-pencil"></i> แก้ไข</a>' : '');
 require __DIR__ . '/header.php';
 ?>
@@ -40,13 +40,18 @@ require __DIR__ . '/header.php';
           <dt class="col-sm-4">หมายเลขเครื่อง</dt><dd class="col-sm-8"><?= h($e['serial_number'] ?: '-') ?></dd>
           <dt class="col-sm-4">ปีงบประมาณ / อายุ</dt><dd class="col-sm-8"><?= h($e['fiscal_year'] ?: '-') ?><?= $age !== null ? ' · ' . $age . ' ปี' : '' ?></dd>
           <dt class="col-sm-4">สภาพการใช้งาน</dt><dd class="col-sm-8"><?= eq_status_badge($e['status']) ?></dd>
+          <?php if (eq_is_holding_type($e['type_name']) && !$loan): ?>
+          <dt class="col-sm-4">การถือครอง</dt><dd class="col-sm-8"><?= $e['assigned_name'] ? '<i class="bi bi-person-workspace text-success"></i> ' . h($e['assigned_name']) : '<span class="text-muted">ยังไม่ระบุผู้ถือครอง</span>' ?>
+            <div class="small text-muted">ครุภัณฑ์ประเภทนี้เป็นการถือครอง ไม่ใช่การยืม</div></dd>
+          <?php else: ?>
           <dt class="col-sm-4">การยืม</dt><dd class="col-sm-8">
             <?php if ($loan): ?>
               <?= loan_status_badge($loan['status']) ?> <a href="loan_view?id=<?= (int)$loan['loan_id'] ?>">รายการยืม <?= h($loan['loan_no']) ?></a>
               — <?= h($loan['borrower_name']) ?><?= $loan['status'] === 'borrowed' ? ' (กำหนดคืน ' . h(thai_date($loan['due_date'])) . ')' : '' ?>
             <?php elseif ($e['status'] === 'normal'): ?><span class="badge text-bg-success">ว่าง ให้ยืมได้</span>
             <?php else: ?><span class="text-muted">ให้ยืมไม่ได้ (<?= h(EQ_STATUS[$e['status']][0]) ?>)</span><?php endif; ?></dd>
-          <dt class="col-sm-4">ผู้ใช้งานประจำ</dt><dd class="col-sm-8"><?= h($e['assigned_name'] ?: '-') ?></dd>
+          <dt class="col-sm-4">ผู้ถือครอง</dt><dd class="col-sm-8"><?= h($e['assigned_name'] ?: '-') ?></dd>
+          <?php endif; ?>
           <dt class="col-sm-4">สถานที่เก็บ</dt><dd class="col-sm-8"><?= h($e['storage_location'] ?: '-') ?></dd>
           <dt class="col-sm-4">หมายเหตุ</dt><dd class="col-sm-8"><?= h($e['note'] ?: '-') ?></dd>
           <dt class="col-sm-4 text-muted small">บันทึกโดย</dt><dd class="col-sm-8 text-muted small"><?= h($e['created_by_name'] ?: '-') ?> · แก้ไขล่าสุด <?= h(thai_date($e['updated_at'])) ?></dd>

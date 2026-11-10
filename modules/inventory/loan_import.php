@@ -150,6 +150,9 @@ function loan_parse_file(string $path, string $name): array
                 continue;
             }
             $seenEq[$e['id']] = $line;
+            if (eq_is_holding_type($e['type_name'] ?? null)) {
+                $rowErr[] = "$no เป็น{$e['type_name']} — เป็นการถือครอง ไม่ใช่การยืม";
+            }
             if ($e['status'] !== 'normal') {
                 $rowErr[] = "$no สภาพ \"" . EQ_STATUS[$e['status']][0] . '" ให้ยืมไม่ได้';
             }

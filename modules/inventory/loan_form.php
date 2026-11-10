@@ -98,6 +98,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (isset($busy[$eid]) && (int)$busy[$eid]['loan_id'] !== $id) {
                     throw new RuntimeException($label . ' ถูกยืมอยู่แล้ว (' . $busy[$eid]['borrower_name'] . ' รายการยืม ' . $busy[$eid]['loan_no'] . ')');
                 }
+                if (eq_is_holding_type($e['type_name']) && !in_array($eid, $before, true)) {
+                    throw new RuntimeException($label . ' เป็น' . $e['type_name'] . ' — เป็นการถือครอง ไม่ใช่การยืม (กำหนดผู้ถือครองที่ข้อมูลครุภัณฑ์)');
+                }
                 if ($e['status'] !== 'normal' && !in_array($eid, $before, true)) {   // รายการเดิมของใบนี้ยอมให้คงไว้
                     throw new RuntimeException($label . ' อยู่ในสภาพ "' . EQ_STATUS[$e['status']][0] . '" ให้ยืมไม่ได้');
                 }
@@ -156,7 +159,7 @@ foreach ($pdo->query("SELECT e.id, e.asset_no, e.brand, e.model, e.serial_number
     ORDER BY e.asset_no IS NULL, e.asset_no, e.id") as $e) {
     $eid = (int)$e['id'];
     $mine = in_array($eid, $selected, true);
-    if (!$mine && ($e['status'] !== 'normal' || isset($busy[$eid]))) {
+    if (!$mine && ($e['status'] !== 'normal' || isset($busy[$eid]) || eq_is_holding_type($e['type_name']))) {   // ถือครอง ไม่ใช่การยืม
         continue;
     }
     $choices[] = ['id' => $eid, 'asset_no' => $e['asset_no'] ?? '', 'type' => $e['type_name'] ?? '',

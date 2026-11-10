@@ -27,7 +27,7 @@ if (isset($_GET['export'])) {
     }
     foreach ($groups as $type => $items) {
         fputcsv($out, [$type . ' (จำนวน ' . count($items) . ' เครื่อง)']);
-        fputcsv($out, ['ที่', 'เลขครุภัณฑ์', 'ประเภทครุภัณฑ์', 'ยี่ห้อ', 'รุ่น (Model)', 'ปีงบ', 'อายุ', 'หมายเหตุ', 'หมายเลขเครื่อง', 'สภาพการใช้งาน', 'ผู้ยืม/ผู้ใช้งาน']);
+        fputcsv($out, ['ที่', 'เลขครุภัณฑ์', 'ประเภทครุภัณฑ์', 'ยี่ห้อ', 'รุ่น (Model)', 'ปีงบ', 'อายุ', 'หมายเหตุ', 'หมายเลขเครื่อง', 'สภาพการใช้งาน', 'ผู้ยืม/ผู้ถือครอง']);
         foreach ($items as $i => $r) {
             $l = $loans[(int)$r['id']] ?? null;
             fputcsv($out, [$i + 1, $r['asset_no'], $r['type_name'], $r['brand'], $r['model'], $r['fiscal_year'],
