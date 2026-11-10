@@ -95,3 +95,24 @@
 @media print {
   .bud-report thead.bud-report-head th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+/* แดชบอร์ดแบบกะทัดรัด */
+.bud-compact .stat-card.bud-stat { padding: 10px 14px; gap: 10px; }
+.bud-compact .bud-stat .stat-icon { width: 38px; height: 38px; font-size: 1.05rem; }
+.bud-compact .bud-stat .stat-num { font-size: 1.25rem; line-height: 1.2; }
+.bud-compact .bud-stat .stat-label { font-size: .8rem; }
+.bud-compact .bud-type .card-body { padding: .6rem .75rem; }
+.bud-compact .bud-type { border-top-width: 3px; }
+.bud-compact .bud-type-name { font-size: .95rem; margin-bottom: .2rem; }
+.bud-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; font-size: .78rem; line-height: 1.25; }
+.bud-sum span { display: block; color: #64748b; font-size: .7rem; }
+.bud-sum b { white-space: nowrap; }
+.bud-compact .bud-progress { height: 6px; }
+.bud-compact .bud-type-exp { margin-top: .4rem; padding-top: .35rem; }
+.bud-compact .bud-type-exp-row + .bud-type-exp-row { margin-top: .3rem; }
+.bud-line { display: flex; gap: 6px; font-size: .75rem; line-height: 1.25; }
+.bud-line .nm { flex: 1 1 auto; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bud-line .am { white-space: nowrap; }
+.bar-track.bud-thin { display: block; height: 3px; margin-top: 1px; }
+.bud-compact .bud-vbars { height: 180px; }
+.bud-compact .bud-src-list { max-height: 260px; }
+.bud-compact .card-header { padding-top: .45rem; padding-bottom: .45rem; }
