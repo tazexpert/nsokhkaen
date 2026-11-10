@@ -1,17 +1,33 @@
 <?php
 /**
- * รายละเอียดงบรายจ่าย 1 ประเภท (เช่น งบดำเนินงาน) ของปีงบประมาณ — เปิดจากการ์ดงบรายจ่ายในหน้าภาพรวม
- *   การ์ดสรุป · กราฟรายเดือน · รายการ → ค่าใช้จ่าย · รายการรับเข้า/เบิกจ่ายของงบนี้
+ * รายละเอียดของปีงบประมาณ — เปิดจากการ์ดในหน้าภาพรวม
+ *   ?b=<งบรายจ่าย>  งบรายจ่าย 1 ประเภท (เช่น งบดำเนินงาน): รายการ → ค่าใช้จ่าย
+ *   ?p=<id>         โครงการ 1 โครงการ (หมวดที่ผูกโครงการ): งบรายจ่าย → หมวด
+ *   การ์ดสรุป · กราฟรายเดือน · รายการรับเข้า/เบิกจ่าย
  */
 require_once __DIR__ . '/bootstrap.php';
 require_module(BUD_MODULE, 'viewer');
 $fy = bud_fy_param();
 $months = bud_fy_months($fy);
 $type = trim((string)($_GET['b'] ?? ''));
+$pid = (int)($_GET['p'] ?? 0);
 $sources = bud_sources(true);
-$keys = array_keys(array_filter($sources, fn($s) => bud_budget_type($s) === $type));
-if ($type === '' || !$keys) {
-    flash('ไม่พบงบรายจ่ายนี้', 'warning');
+$project = $pid ? (projects_all()[$pid] ?? null) : null;
+if ($project) {
+    $keys = array_keys(array_filter($sources, fn($s) => (int)($s['project_id'] ?? 0) === $pid || $s['key'] === 'p:' . $pid));
+    $heading = $project['code'] . ($project['name'] !== $project['code'] ? ' ' . $project['name'] : '');
+    $groupOf = fn(array $s) => bud_budget_type($s);                                   // งบรายจ่าย → หมวด
+    $itemLabel = fn(array $s) => bud_label_in_type($s);
+    $listTitle = 'งบรายจ่าย → หมวด';
+} else {
+    $keys = $type !== '' ? array_keys(array_filter($sources, fn($s) => bud_budget_type($s) === $type)) : [];
+    $heading = $type;
+    $groupOf = fn(array $s) => $s['expense'] ?? '';                                    // รายการ → ค่าใช้จ่าย
+    $itemLabel = fn(array $s) => ($s['activity'] ?? '') !== '' ? $s['activity'] : (($s['expense'] ?? '') !== '' ? $s['expense'] : $s['label']);
+    $listTitle = 'รายการ → ค่าใช้จ่าย';
+}
+if (!$keys) {
+    flash($pid ? 'ไม่พบหมวดของโครงการนี้' : 'ไม่พบงบรายจ่ายนี้', 'warning');
     redirect('./?fy=' . $fy);
 }
 $totals = array_intersect_key(bud_totals($fy), array_flip($keys));
@@ -37,12 +53,16 @@ foreach ($keys as $k) {
     if (!$s['active'] && !isset($bySrc[$k])) {
         continue;
     }
-    $e = $s['expense'] ?? '';
+    $e = $groupOf($s);
     $exp[$e]['items'][$k] = $bySrc[$k] ?? [];
     $exp[$e]['receive'] = ($exp[$e]['receive'] ?? 0) + ($bySrc[$k]['receive'] ?? 0);
     $exp[$e]['spend'] = ($exp[$e]['spend'] ?? 0) + ($bySrc[$k]['spend'] ?? 0);
 }
-uksort($exp, fn($a, $b) => [(string)$a === '', 0] <=> [(string)$b === '', 0]);
+if ($project) {
+    uksort($exp, fn($a, $b) => bud_budget_rank(['budget' => (string)$a, 'label' => (string)$a]) <=> bud_budget_rank(['budget' => (string)$b, 'label' => (string)$b]));
+} else {
+    uksort($exp, fn($a, $b) => [(string)$a === '', 0] <=> [(string)$b === '', 0]);
+}
 // รายการรับเข้า/เบิกจ่ายของงบนี้
 $ids = array_map(fn($k) => (int)substr($k, 2), array_filter($keys, fn($k) => $k[0] === 'i'));
 $pids = array_map(fn($k) => (int)substr($k, 2), array_filter($keys, fn($k) => $k[0] === 'p'));
@@ -64,7 +84,7 @@ $plans = bud_plans();
 $money = fn(float $v) => $v == 0 ? '-' : ($v < 0 ? '<span class="text-danger">' . bud_money($v) . '</span>' : bud_money($v));
 $pctText = fn(float $r, float $s) => $r > 0 ? number_format($s / $r * 100, 1) . '%' : '-';
 
-$pageTitle = $type . ' ปีงบประมาณ ' . $fy;
+$pageTitle = ($project ? 'โครงการ ' : '') . $heading . ' ปีงบประมาณ ' . $fy;
 $active = 'dashboard';
 $pageActions = '<a href="./?fy=' . $fy . '" class="btn btn-light"><i class="bi bi-arrow-left"></i> ภาพรวม</a>'
     . '<a href="report?fy=' . $fy . '" class="btn btn-outline-secondary"><i class="bi bi-file-earmark-bar-graph"></i> รายงาน</a>';
@@ -110,7 +130,7 @@ require __DIR__ . '/header.php';
   </div>
   <div class="col-lg-6 reveal-item">
     <div class="card h-100">
-      <div class="card-header d-flex align-items-center flex-wrap gap-2"><strong>รายการ → ค่าใช้จ่าย</strong>
+      <div class="card-header d-flex align-items-center flex-wrap gap-2"><strong><?= h($listTitle) ?></strong>
         <span class="bud-legend small ms-auto"><i style="background:<?= BUD_COLORS['spend'] ?>"></i>เบิกจ่าย / ได้รับ</span></div>
       <div class="card-body bud-src-list">
         <?php $n = 0; foreach ($exp as $e => $ea): $n++; ?>
@@ -118,7 +138,7 @@ require __DIR__ . '/header.php';
             <span class="ms-auto text-nowrap"><b><?= bud_money($ea['spend']) ?></b> / <?= bud_money($ea['receive']) ?></span></div>
           <?php $m2 = 0; foreach ($ea['items'] as $k => $a): $s = $sources[$k]; $r = $a['receive'] ?? 0; $sp = $a['spend'] ?? 0; $base = max($r, $sp, 0.01); $m2++; ?>
             <a class="bud-src-row2 text-decoration-none text-body" href="txns?<?= h(http_build_query(['type' => $sp > 0 ? 'spend' : 'receive', 'fy' => $fy, 'src' => $k])) ?>" title="<?= h($s['label']) ?>">
-              <div class="small"><?= $n ?>.<?= $m2 ?> <?= h(($s['activity'] ?? '') !== '' ? $s['activity'] : (($s['expense'] ?? '') !== '' ? $s['expense'] : $s['label'])) ?><?= $s['active'] ? '' : ' <span class="text-muted">(ปิดใช้งาน)</span>' ?></div>
+              <div class="small"><?= $n ?>.<?= $m2 ?> <?= h($itemLabel($s)) ?><?= $s['active'] ? '' : ' <span class="text-muted">(ปิดใช้งาน)</span>' ?></div>
               <div class="d-flex align-items-center gap-2">
                 <span class="bar-track bud-mini"><span class="bar-fill bud-fill<?= $sp > $r ? ' over' : '' ?>" style="width:<?= round($sp / $base * 100, 1) ?>%"></span></span>
                 <span class="small text-nowrap"><b><?= bud_money($sp) ?></b> / <?= bud_money($r) ?><span class="text-muted ms-1"><?= $pctText($r, $sp) ?></span></span>

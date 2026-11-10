@@ -44,6 +44,7 @@ foreach ($byType as &$tt) {
 }
 unset($tt);
 $typeColors = ['#2563eb', '#7c3aed', '#0891b2', '#16a34a', '#db2777', '#ca8a04', '#64748b'];
+$typeBg = ['primary', 'success', 'warning', 'info', 'danger', 'dark'];                    // การ์ดงบรายจ่าย: สีหลัก
 // แยกรายโครงการ: หมวดที่ผูกกับโครงการสำรวจ (และข้อมูลเดิมที่บันทึกด้วยโครงการ) — เฉพาะโครงการที่มีรายการในปีงบนี้
 $projects = projects_all();
 // สรุปย่อในการ์ด: ได้รับ | เบิกจ่าย | คงเหลือ (บรรทัดเดียว) + แถบร้อยละ
@@ -97,10 +98,10 @@ require __DIR__ . '/header.php';
 <?php if ($byType): ?>
 <!-- สรุปตามงบรายจ่าย → รายการ: การ์ดละงบ (อยู่เหนือกราฟ) -->
 <div class="row g-2 mb-3 bud-compact" data-reveal>
-  <?php $ti = 0; foreach ($byType as $t => $a): $c = $typeColors[min($ti++, count($typeColors) - 1)];
+  <?php $ti = 0; foreach ($byType as $t => $a): $bg = $typeBg[min($ti, count($typeBg) - 1)]; $c = $typeColors[min($ti++, count($typeColors) - 1)];
     $tp = $a['receive'] > 0 ? $a['spend'] / $a['receive'] * 100 : 0; ?>
   <div class="col-md-6 col-xl-3 reveal-item">
-    <a href="type?<?= h(http_build_query(['fy' => $fy, 'b' => $t])) ?>" class="card h-100 text-decoration-none text-body bud-type" style="--c:<?= $c ?>">
+    <a href="type?<?= h(http_build_query(['fy' => $fy, 'b' => $t])) ?>" class="card h-100 text-decoration-none bud-type bud-solid text-bg-<?= $bg ?>" style="--c:#fff">
       <div class="card-body">
         <div class="bud-type-name"><?= h($t) ?></div>
         <?= $sumBlock($a, $tp) ?>
@@ -128,25 +129,25 @@ require __DIR__ . '/header.php';
   <?php foreach ($byProject as $pid => $a): $pj = $projects[$pid]; $c = $pj['color'] ?: '#0d6efd';
     $tp = $a['receive'] > 0 ? $a['spend'] / $a['receive'] * 100 : 0; ?>
   <div class="col-md-6 col-xl-3 reveal-item">
-    <div class="card h-100 bud-type" style="--c:<?= h($c) ?>">
+    <a href="type?<?= h(http_build_query(['fy' => $fy, 'p' => $pid])) ?>" class="card h-100 text-decoration-none text-body bud-type" style="--c:<?= h($c) ?>">
       <div class="card-body">
         <div class="bud-type-name text-truncate" title="<?= h($pj['name']) ?>"><?= h($pj['code']) ?><?php if ($pj['name'] !== $pj['code']): ?> <span class="fw-normal text-muted small"><?= h($pj['name']) ?></span><?php endif; ?></div>
         <?= $sumBlock($a, $tp) ?>
         <?php if (count($a['src']) > 1): ?>
         <div class="bud-type-exp">
           <?php foreach ($a['src'] as $k => $sa): $s = $srcInfo($k); $er = $sa['receive'] ?? 0; $es = $sa['spend'] ?? 0; $ep = $er > 0 ? $es / $er * 100 : ($es > 0 ? 100 : 0); ?>
-          <a class="bud-type-exp-row d-block text-decoration-none text-body" href="txns?<?= h(http_build_query(['type' => $es > 0 ? 'spend' : 'receive', 'fy' => $fy, 'src' => $k])) ?>" title="<?= h($s['label']) ?>">
+          <div class="bud-type-exp-row" title="<?= h($s['label']) ?>">
             <div class="bud-line"><span class="nm"><?= h(bud_label_in_type($s)) ?></span>
               <span class="am"><b><?= bud_money($es) ?></b><span class="text-muted"> / <?= bud_money($er) ?></span></span></div>
             <span class="bar-track bud-thin"><span class="bar-fill bud-fill<?= $es > $er ? ' over' : '' ?>" style="width:<?= min(100, round($ep, 1)) ?>%"></span></span>
-          </a>
+          </div>
           <?php endforeach; ?>
         </div>
         <?php else: $k = array_key_first($a['src']); ?>
-        <div class="small mt-1 text-truncate"><a class="text-decoration-none" href="txns?<?= h(http_build_query(['type' => $a['spend'] > 0 ? 'spend' : 'receive', 'fy' => $fy, 'src' => $k])) ?>"><i class="bi bi-list-ul"></i> <?= h(bud_label_in_type($srcInfo($k))) ?></a></div>
+        <div class="small mt-1 text-truncate text-muted"><i class="bi bi-list-ul"></i> <?= h(bud_label_in_type($srcInfo($k))) ?></div>
         <?php endif; ?>
       </div>
-    </div>
+    </a>
   </div>
   <?php endforeach; ?>
 </div>
