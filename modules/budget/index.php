@@ -44,6 +44,21 @@ foreach ($byType as &$tt) {
 }
 unset($tt);
 $typeColors = ['#2563eb', '#7c3aed', '#0891b2', '#16a34a', '#db2777', '#ca8a04', '#64748b'];
+// แยกรายโครงการ: หมวดที่ผูกกับโครงการสำรวจ (และข้อมูลเดิมที่บันทึกด้วยโครงการ) — เฉพาะโครงการที่มีรายการในปีงบนี้
+$projects = projects_all();
+$byProject = [];
+foreach ($bySrc as $k => $a) {
+    $pid = (int)($k[0] === 'p' ? substr($k, 2) : ($srcInfo($k)['project_id'] ?? 0));
+    if (!$pid || !isset($projects[$pid])) {
+        continue;
+    }
+    $byProject[$pid] ??= ['receive' => 0, 'spend' => 0, 'src' => []];
+    $byProject[$pid]['receive'] += $a['receive'] ?? 0;
+    $byProject[$pid]['spend'] += $a['spend'] ?? 0;
+    $byProject[$pid]['src'][$k] = $a;
+}
+$projOrder = array_flip(array_keys($projects));
+uksort($byProject, fn($a, $b) => $projOrder[$a] <=> $projOrder[$b]);
 
 $pageTitle = 'ภาพรวมงบประมาณ ปีงบประมาณ ' . $fy;
 $active = 'dashboard';
@@ -99,6 +114,43 @@ require __DIR__ . '/header.php';
         </div>
       </div>
     </a>
+  </div>
+  <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
+<?php if ($byProject): ?>
+<!-- แยกรายโครงการ (เฉพาะโครงการที่มีงบประมาณ) -->
+<h2 class="h6 text-muted mb-2"><i class="bi bi-kanban"></i> แยกรายโครงการ</h2>
+<div class="row g-3 mb-4" data-reveal>
+  <?php foreach ($byProject as $pid => $a): $pj = $projects[$pid]; $c = $pj['color'] ?: '#0d6efd';
+    $tp = $a['receive'] > 0 ? $a['spend'] / $a['receive'] * 100 : 0; ?>
+  <div class="col-md-6 col-xl-3 reveal-item">
+    <div class="card h-100 bud-type" style="--c:<?= h($c) ?>">
+      <div class="card-body">
+        <div class="bud-type-name"><?= h($pj['code']) ?></div>
+        <?php if ($pj['name'] !== $pj['code']): ?><div class="small text-muted text-truncate" title="<?= h($pj['name']) ?>"><?= h($pj['name']) ?></div><?php endif; ?>
+        <div class="d-flex justify-content-between small mt-2"><span>ได้รับ</span><b class="bud-receive"><?= bud_money($a['receive']) ?></b></div>
+        <div class="d-flex justify-content-between small"><span>เบิกจ่าย</span><b class="bud-spend"><?= bud_money($a['spend']) ?></b></div>
+        <div class="d-flex justify-content-between small"><span>คงเหลือ</span><b class="<?= $a['receive'] - $a['spend'] < 0 ? 'text-danger' : '' ?>"><?= bud_money($a['receive'] - $a['spend']) ?></b></div>
+        <div class="bud-progress mt-2"><span style="width:<?= min(100, $tp) ?>%;background:var(--c)"></span></div>
+        <div class="small text-muted text-end mt-1">เบิกจ่าย <?= number_format($tp, 1) ?>%</div>
+        <?php if (count($a['src']) > 1): ?>
+        <div class="bud-type-exp">
+          <?php foreach ($a['src'] as $k => $sa): $s = $srcInfo($k); $er = $sa['receive'] ?? 0; $es = $sa['spend'] ?? 0; $ep = $er > 0 ? $es / $er * 100 : ($es > 0 ? 100 : 0); ?>
+          <a class="bud-type-exp-row d-block text-decoration-none text-body" href="txns?<?= h(http_build_query(['type' => $es > 0 ? 'spend' : 'receive', 'fy' => $fy, 'src' => $k])) ?>" title="<?= h($s['label']) ?>">
+            <div class="small"><?= h($s['label']) ?></div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="bar-track bud-mini"><span class="bar-fill bud-fill<?= $es > $er ? ' over' : '' ?>" style="width:<?= min(100, round($ep, 1)) ?>%"></span></span>
+              <span class="small text-nowrap"><b><?= bud_money($es) ?></b><span class="text-muted"> / <?= bud_money($er) ?></span></span></div>
+          </a>
+          <?php endforeach; ?>
+        </div>
+        <?php else: $k = array_key_first($a['src']); ?>
+        <div class="small mt-2"><a class="text-decoration-none" href="txns?<?= h(http_build_query(['type' => $a['spend'] > 0 ? 'spend' : 'receive', 'fy' => $fy, 'src' => $k])) ?>"><i class="bi bi-list-ul"></i> <?= h($srcInfo($k)['label']) ?></a></div>
+        <?php endif; ?>
+      </div>
+    </div>
   </div>
   <?php endforeach; ?>
 </div>

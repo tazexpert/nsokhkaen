@@ -278,6 +278,7 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 | `20261202_budget_item_parts.sql` | ระบบงบประมาณ: แยกหมวดเป็น งบรายจ่าย · รายการ · ค่าใช้จ่าย (`bud_items.budget_name`, `expense_name`, `activity_name`) — แยกจากชื่อหมวดเดิมให้อัตโนมัติ เช่น "งบดำเนินงาน (ค่าตอบแทนใช้สอยฯ) ค่าน้ำมันเชื้อเพลิง" · ทะเบียนคุมเงิน/รายงานยังรวมเป็นหมวดเหมือนเดิม |
 | `20261203_budget_item_drop_name.sql` | ระบบงบประมาณ: ลบ `bud_items.name` (ชื่อหมวดประกอบจาก งบรายจ่าย (รายการ) ค่าใช้จ่าย) — **ต้องรัน 20261202 ก่อน** |
 | `20261205_cal_drop_ical_tokens.sql` | ปฏิทิน: ลบตาราง `cal_ical_tokens` (ลิงก์สมัครรับที่ยกเลิกแล้ว — ส่งออก "งานของฉัน" เป็นไฟล์ .ics อย่างเดียว) · รันได้แม้ไม่เคยรัน 20261204 |
+| `20261206_budget_utility_activity.sql` | ระบบงบประมาณ: หมวด งบดำเนินงาน (ค่าสาธารณูปโภค) ที่ไม่ระบุค่าใช้จ่าย → ค่าไฟฟ้า ค่าไปรษณีย์ |
 
 > ระบบเบิกวัสดุเดิมยังเปิดใช้อยู่? ก่อนเปิดใช้ระบบใหม่ให้ "ดึงข้อมูลรอบสุดท้าย" ตามหัวข้อด้านบน (`--resync-inventory`)
 
@@ -320,6 +321,7 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261202_budget_item_parts.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261203_budget_item_drop_name.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261205_cal_drop_ical_tokens.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261206_budget_utility_activity.sql
 ```
 
 หลังอัปเดต:
