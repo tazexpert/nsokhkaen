@@ -55,7 +55,7 @@ require __DIR__ . '/header.php';
       <a href="<?= h('?m=' . $m . '&mine=1') ?>" class="btn btn-outline-primary<?= $mine ? ' active' : '' ?>">เฉพาะงานของฉัน</a>
     </div>
     <a href="list.php?from=<?= h($first) ?>&to=<?= h($last) ?><?= $mine ? '&mine=1' : '' ?>" class="btn btn-outline-secondary btn-sm"><i class="bi bi-list-task"></i> แบบตาราง</a>
-    <?php if ($mine): ?><a href="sync.php" class="btn btn-outline-success btn-sm" title="ส่งออกงานของฉันไป Google Calendar / ปฏิทิน iOS"><i class="bi bi-calendar-plus"></i> ส่งออกไป Google / iOS</a><?php endif; ?>
+    <?php if ($mine): ?><a href="ical.php?download=1" class="btn btn-outline-success btn-sm" title="ดาวน์โหลดไฟล์ .ics งานของฉัน (ย้อนหลัง 6 เดือน – ล่วงหน้า 1 ปี) แล้วนำเข้าใน Google Calendar: การตั้งค่า → นำเข้าและส่งออก"><i class="bi bi-google"></i> ส่งออกไปยัง Google Calendar</a><?php endif; ?>
   </div>
   <div class="cal-grid">
     <?php foreach (CAL_WEEKDAYS_SHORT as $i => $w): ?><div class="cal-wd<?= $i === 0 ? ' sun' : '' ?>"><?= $w ?></div><?php endforeach; ?>

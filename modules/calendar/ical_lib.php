@@ -1,33 +1,10 @@
 <?php
 /**
- * ส่งออก "งานของฉัน" เป็น iCalendar (.ics) — นำเข้า/สมัครรับใน Google Calendar และปฏิทิน iOS
- * ลิงก์สมัครรับใช้รหัสลับต่อคน (cal_ical_tokens) เพราะแอปปฏิทินเข้าสู่ระบบไม่ได้
+ * ส่งออก "งานของฉัน" เป็นไฟล์ iCalendar (.ics) — นำเข้าใน Google Calendar (การตั้งค่า → นำเข้าและส่งออก) หรือปฏิทิน iOS
  */
 
 const CAL_ICAL_PAST_DAYS = 180;     // ช่วงข้อมูล: ย้อนหลัง 6 เดือน
 const CAL_ICAL_AHEAD_DAYS = 400;    //            ล่วงหน้า ~13 เดือน
-
-/** รหัสลับของผู้ใช้ (สร้างใหม่เมื่อยังไม่มี หรือ $renew = true → ลิงก์เดิมใช้ไม่ได้) */
-function cal_ical_token(int $userId, bool $renew = false): string
-{
-    if (!$renew) {
-        $st = db()->prepare('SELECT token FROM cal_ical_tokens WHERE user_id = ?');
-        $st->execute([$userId]);
-        if ($t = $st->fetchColumn()) {
-            return $t;
-        }
-    }
-    $t = bin2hex(random_bytes(24));
-    db()->prepare('INSERT INTO cal_ical_tokens (user_id, token) VALUES (?, ?) ON DUPLICATE KEY UPDATE token = VALUES(token), created_at = NOW(), last_used_at = NULL')
-        ->execute([$userId, $t]);
-    return $t;
-}
-
-/** ลิงก์สมัครรับ (https) */
-function cal_ical_feed_url(string $token): string
-{
-    return APP_URL . 'modules/calendar/ical.php?t=' . $token;
-}
 
 /** กิจกรรมที่ผู้ใช้รับผิดชอบในช่วงข้อมูล (รวมกิจกรรมส่วนตัวที่ตนรับผิดชอบ และเวร) */
 function cal_ical_events(int $userId): array
@@ -75,8 +52,7 @@ function cal_ical_build(array $events, string $calName): string
     $host = parse_url(APP_URL, PHP_URL_HOST) ?: 'nsokhkaen';
     $now = gmdate('Ymd\THis\Z');
     $lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//NSO Khon Kaen//Calendar//TH', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
-              'X-WR-CALNAME:' . cal_ical_text($calName), 'X-WR-TIMEZONE:Asia/Bangkok',
-              'REFRESH-INTERVAL;VALUE=DURATION:PT1H', 'X-PUBLISHED-TTL:PT1H'];
+              'X-WR-CALNAME:' . cal_ical_text($calName), 'X-WR-TIMEZONE:Asia/Bangkok'];
     foreach ($events as $e) {
         $end = $e['end_date'] ?: $e['event_date'];
         $lines[] = 'BEGIN:VEVENT';
@@ -116,12 +92,12 @@ function cal_ical_build(array $events, string $calName): string
     return implode('', array_map('cal_ical_fold', $lines));
 }
 
-/** ส่งไฟล์ .ics ($download = ให้เบราว์เซอร์บันทึกเป็นไฟล์) */
-function cal_ical_send(string $ics, bool $download): void   // ไม่คืนค่า (จบการทำงานเสมอ)
+/** ส่งไฟล์ .ics ให้ดาวน์โหลด */
+function cal_ical_send(string $ics): void   // ไม่คืนค่า (จบการทำงานเสมอ)
 {
     header('Content-Type: text/calendar; charset=utf-8');
     header('Cache-Control: no-cache, must-revalidate');
-    header('Content-Disposition: ' . ($download ? 'attachment' : 'inline') . '; filename="my-calendar.ics"');
+    header('Content-Disposition: attachment; filename="my-calendar-' . date('Ymd') . '.ics"');
     echo $ics;
     exit;
 }
