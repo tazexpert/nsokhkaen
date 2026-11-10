@@ -1,5 +1,5 @@
 <?php
-/** ครุภัณฑ์: ยอดยืม/คงเหลือของรุ่นใหม่ 6 รุ่น + สรุปตามประเภท + รายการทั้งหมด พร้อมสภาพการใช้งาน และผู้ยืม/ผู้ถือครอง */
+/** ครุภัณฑ์: สรุปการยืม 4 กลุ่ม (Samsung Galaxy Tab / โน้ตบุ๊ค / แท็บเล็ต Lenovo / Microsoft) + สรุปตามประเภท + รายการทั้งหมด พร้อมสภาพการใช้งาน และผู้ยืม/ผู้ถือครอง */
 require_once __DIR__ . '/bootstrap.php';
 require_module(INV_MODULE);
 $pdo = db();
@@ -48,33 +48,48 @@ foreach ($summary as $s) {
     }
 }
 
-// ---------- รุ่นใหม่ 6 รุ่น (ตามปีงบล่าสุด): ยอดยืม / คงเหลือ / ใครยืม — ไม่รวมประเภทถือครอง (PC Desktop) ----------
+$link = fn(array $f) => 'equipment?' . http_build_query(array_filter($f)) . '#list';
+
+// ---------- สรุปการยืม 4 กลุ่ม: ยอดยืม / คงเหลือ / ใครยืม ----------
+$isTablet = fn($t) => (bool)preg_match('/tablet|แท็บเล็ต/iu', (string)$t);
+$isNotebook = fn($t) => (bool)preg_match('/notebook|โน้ตบุ๊[คก]/iu', (string)$t);
+$typeIdOf = fn(callable $f) => array_key_first(array_filter($types, $f)) ?: null;
+$groupDefs = [   // [ชื่อการ์ด, เงื่อนไข, ตัวกรองลิงก์ "ดูรายการ"]
+    ['Samsung Galaxy Tab', fn($r) => $isTablet($r['type_name']) && stripos((string)$r['brand'], 'samsung') !== false && stripos((string)$r['model'], 'galaxy tab') !== false,
+        ['q' => 'Galaxy Tab', 'type' => $typeIdOf($isTablet)]],
+    ['โน้ตบุ๊ค', fn($r) => $isNotebook($r['type_name']), ['type' => $typeIdOf($isNotebook)]],
+    ['แท็บเล็ต Lenovo', fn($r) => $isTablet($r['type_name']) && stripos((string)$r['brand'], 'lenovo') !== false, ['q' => 'Lenovo', 'type' => $typeIdOf($isTablet)]],
+    ['แท็บเล็ต Microsoft', fn($r) => $isTablet($r['type_name']) && stripos((string)$r['brand'], 'microsoft') !== false, ['q' => 'Microsoft', 'type' => $typeIdOf($isTablet)]],
+];
 $models = [];
-foreach ($pdo->query("SELECT e.id, e.type_id, e.brand, e.model, e.fiscal_year, e.status, e.asset_no, t.name AS type_name
-    FROM inv_equipment e LEFT JOIN inv_equipment_types t ON t.id = e.type_id ORDER BY e.asset_no") as $r) {
-    if (eq_is_holding_type($r['type_name']) || trim($r['brand'] . $r['model']) === '') {
-        continue;
-    }
-    $key = $r['type_id'] . '|' . $r['brand'] . '|' . $r['model'];
-    $m = &$models[$key];
-    $m ??= ['type' => $r['type_name'] ?? '', 'brand' => (string)$r['brand'], 'model' => (string)$r['model'], 'fy' => 0,
-            'total' => 0, 'borrowed' => 0, 'available' => 0, 'loans' => [], 'free' => []];
-    $m['fy'] = max($m['fy'], (int)$r['fiscal_year']);
-    $m['total']++;
-    if ($loan = $activeLoans[(int)$r['id']] ?? null) {
-        $m['borrowed']++;
-        $m['loans'][] = ['name' => $loan['borrower_name'], 'loan_no' => $loan['loan_no'], 'loan_id' => (int)$loan['loan_id'],
-                         'due' => $loan['due_date'], 'due_th' => thai_date($loan['due_date']), 'over' => $loan['due_date'] < date('Y-m-d'),
-                         'asset' => $r['asset_no'] ?: '-'];
-    } elseif ($r['status'] === 'normal') {
-        $m['available']++;
-        $m['free'][] = $r['asset_no'] ?: '(ยังไม่มีเลข)';
-    }
-    unset($m);
+foreach ($groupDefs as $gi => [$label, , $f]) {
+    $models[$gi] = ['label' => $label, 'href' => $link($f), 'models' => [], 'total' => 0, 'borrowed' => 0, 'available' => 0, 'loans' => [], 'free' => []];
 }
-uasort($models, fn($a, $b) => [$b['fy'], $b['total']] <=> [$a['fy'], $a['total']]);
-$models = array_slice(array_values($models), 0, 6);
+foreach ($pdo->query("SELECT e.id, e.brand, e.model, e.status, e.asset_no, t.name AS type_name
+    FROM inv_equipment e LEFT JOIN inv_equipment_types t ON t.id = e.type_id ORDER BY e.asset_no") as $r) {
+    foreach ($groupDefs as $gi => [, $match]) {
+        if (!$match($r)) {
+            continue;
+        }
+        $m = &$models[$gi];
+        $mdl = trim($r['brand'] . ' ' . $r['model']);
+        $m['models'][$mdl] = true;
+        $m['total']++;
+        if ($loan = $activeLoans[(int)$r['id']] ?? null) {
+            $m['borrowed']++;
+            $m['loans'][] = ['name' => $loan['borrower_name'], 'loan_no' => $loan['loan_no'], 'loan_id' => (int)$loan['loan_id'],
+                             'due' => $loan['due_date'], 'due_th' => thai_date($loan['due_date']), 'over' => $loan['due_date'] < date('Y-m-d'),
+                             'asset' => $r['asset_no'] ?: '-', 'model' => $mdl];
+        } elseif ($r['status'] === 'normal') {
+            $m['available']++;
+            $m['free'][] = $r['asset_no'] ?: '(ยังไม่มีเลข)';
+        }
+        unset($m);
+        break;
+    }
+}
 foreach ($models as &$m) {
+    $m['models'] = array_keys($m['models']);
     usort($m['loans'], fn($a, $b) => [$a['due'], $a['name']] <=> [$b['due'], $b['name']]);   // ใกล้ครบกำหนดก่อน
 }
 unset($m);
@@ -114,7 +129,6 @@ $rows = array_values(array_filter($st->fetchAll(), function ($e) use ($fLoan, $a
     };
 }));
 $filterQs = http_build_query(array_filter(['q' => $q, 'type' => $fType ?: null, 'status' => $fStatus, 'loan' => $fLoan]));
-$link = fn(array $f) => 'equipment?' . http_build_query(array_filter($f)) . '#list';
 
 $pageActions = ($isAdmin ? '<a href="loan_form" class="btn btn-success"><i class="bi bi-box-arrow-up-right"></i> บันทึกการยืม</a>'
         . '<a href="equipment_form" class="btn btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มครุภัณฑ์</a>'
@@ -122,15 +136,15 @@ $pageActions = ($isAdmin ? '<a href="loan_form" class="btn btn-success"><i class
 require __DIR__ . '/header.php';
 ?>
 <?php if ($models): ?>
-<div class="d-flex align-items-center mb-2"><h2 class="h6 mb-0"><i class="bi bi-stars text-warning"></i> การยืมรุ่นใหม่ล่าสุด</h2>
+<div class="d-flex align-items-center mb-2"><h2 class="h6 mb-0"><i class="bi bi-box-arrow-up-right text-primary"></i> สรุปการยืม</h2>
   <span class="ms-auto small text-muted no-print">คลิกการ์ดเพื่อดูว่าใครยืมบ้าง</span></div>
 <div class="row g-3 mb-4" data-reveal>
   <?php foreach ($models as $i => $m): $pct = $m['total'] ? round($m['borrowed'] / $m['total'] * 100) : 0; ?>
-  <div class="col-sm-6 col-xl-4 reveal-item" style="--d:<?= $i * 70 ?>ms">
+  <div class="col-sm-6 col-xl-3 reveal-item" style="--d:<?= $i * 70 ?>ms">
     <button type="button" class="card eq-model h-100 w-100 text-start" data-model="<?= $i ?>">
       <div class="card-body p-3">
-        <div class="small text-muted text-truncate"><?= h($m['type']) ?><?= $m['fy'] ? ' · ปีงบ ' . $m['fy'] : '' ?></div>
-        <div class="fw-semibold text-truncate" title="<?= h($m['brand'] . ' ' . $m['model']) ?>"><?= h($m['brand']) ?> <span class="text-primary"><?= h($m['model']) ?></span></div>
+        <div class="fw-semibold text-truncate fs-6"><?= h($m['label']) ?></div>
+        <div class="small text-muted text-truncate" title="<?= h(implode(', ', $m['models'])) ?>"><?= count($m['models']) ?> รุ่น</div>
         <div class="d-flex gap-3 mt-2 eq-model-nums">
           <div><div class="n text-primary"><?= number_format($m['borrowed']) ?></div><div class="l">ยืมอยู่</div></div>
           <div><div class="n text-success"><?= number_format($m['available']) ?></div><div class="l">คงเหลือ</div></div>
@@ -162,18 +176,19 @@ require __DIR__ . '/header.php';
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   document.querySelectorAll('.eq-model').forEach(btn => btn.addEventListener('click', () => {
     const m = models[+btn.dataset.model];
-    document.getElementById('eqmTitle').innerHTML = esc(m.brand) + ' <span class="text-primary">' + esc(m.model) + '</span>'
-      + '<div class="small text-muted fw-normal">' + esc(m.type) + (m.fy ? ' · ปีงบ ' + m.fy : '') + ' · ยืมอยู่ ' + m.borrowed + ' / คงเหลือ ' + m.available + ' / ทั้งหมด ' + m.total + '</div>';
+    document.getElementById('eqmTitle').innerHTML = esc(m.label)
+      + '<div class="small text-muted fw-normal">ยืมอยู่ ' + m.borrowed + ' / คงเหลือ ' + m.available + ' / ทั้งหมด ' + m.total
+      + (m.models.length ? ' · ' + m.models.map(esc).join(', ') : '') + '</div>';
     document.getElementById('eqmBody').innerHTML =
       '<h6 class="mb-2"><i class="bi bi-person-fill text-primary"></i> ผู้ยืม (' + m.loans.length + ')</h6>'
-      + (m.loans.length ? '<div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th>#</th><th>ผู้ยืม</th><th>เลขครุภัณฑ์</th><th>รายการยืม</th><th>กำหนดคืน</th></tr></thead><tbody>'
-        + m.loans.map((l, i) => `<tr><td>${i + 1}</td><td>${esc(l.name)}</td><td class="font-monospace small">${esc(l.asset)}</td>
+      + (m.loans.length ? '<div class="table-responsive"><table class="table table-sm align-middle"><thead><tr><th>#</th><th>ผู้ยืม</th><th>รุ่น</th><th>เลขครุภัณฑ์</th><th>รายการยืม</th><th>กำหนดคืน</th></tr></thead><tbody>'
+        + m.loans.map((l, i) => `<tr><td>${i + 1}</td><td>${esc(l.name)}</td><td class="small">${esc(l.model)}</td><td class="font-monospace small">${esc(l.asset)}</td>
             <td><a href="loan_view?id=${l.loan_id}">${esc(l.loan_no)}</a></td>
             <td class="text-nowrap">${esc(l.due_th)}${l.over ? ' <span class="badge text-bg-danger">เกินกำหนด</span>' : ''}</td></tr>`).join('')
         + '</tbody></table></div>' : '<p class="text-muted">ยังไม่มีผู้ยืม</p>')
       + '<h6 class="mb-2 mt-3"><i class="bi bi-check-circle text-success"></i> คงเหลือให้ยืม (' + m.free.length + ')</h6>'
       + (m.free.length ? '<div class="d-flex flex-wrap gap-1">' + m.free.map(a => '<span class="badge text-bg-light border font-monospace fw-normal">' + esc(a) + '</span>').join('') + '</div>' : '<p class="text-muted mb-0">ไม่มี</p>')
-      + '<div class="mt-3"><a class="small" href="equipment?q=' + encodeURIComponent(m.model) + '#list"><i class="bi bi-list-ul"></i> ดูรายการครุภัณฑ์รุ่นนี้ทั้งหมด</a></div>';
+      + '<div class="mt-3"><a class="small" href="' + esc(m.href) + '"><i class="bi bi-list-ul"></i> ดูรายการครุภัณฑ์กลุ่มนี้ทั้งหมด</a></div>';
     bootstrap.Modal.getOrCreateInstance(document.getElementById('eqModelModal')).show();
   }));
 })();
