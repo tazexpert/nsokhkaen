@@ -14,6 +14,9 @@ function loan_pdf_norm(string $s): string
     $s = strtr($s, ['๐' => '0', '๑' => '1', '๒' => '2', '๓' => '3', '๔' => '4', '๕' => '5', '๖' => '6', '๗' => '7', '๘' => '8', '๙' => '9']);
     $s = str_replace("\u{0E4D}\u{0E32}", "\u{0E33}", $s);
     $s = preg_replace('/[\x00-\x1F]/u', '', $s);
+    if (loan_pdf_aa_mode()) {
+        $s = str_replace("\u{0E33}", "\u{0E32}", $s);    // ไฟล์ที่ "า" ออกมาเป็น "ำ" ทั้งไฟล์ → เป็น "า" ก่อน แล้วซ่อมคำที่มี "ำ" จริงด้านล่าง
+    }
     // ฟอนต์บางตัว (TH SarabunPSK จาก Word) ทำให้ "ำ" ออกมาเป็น " า" "า" หรือ "่า" — ไม่มีคำไทยขึ้นต้นด้วย า จึงตัดช่องว่างหน้า า
     // แล้วซ่อมคำที่พบบ่อยในใบยืม
     $s = preg_replace('/(?<=\p{Thai}) (?=\x{0E32})/u', '', $s);
@@ -27,6 +30,19 @@ function loan_pdf_norm(string $s): string
     return strtr($s, $fix);
 }
 
+/**
+ * ไฟล์ที่ฟอนต์แปลง "า" เป็น "ำ" (ข้ำพเจ้ำ นำย รำยกำร) — ตรวจจากข้อความทั้งไฟล์ก่อนแยกข้อมูล
+ * เรียกพร้อมค่า = ตั้งค่า · ไม่ใส่ค่า = อ่านค่า
+ */
+function loan_pdf_aa_mode(?bool $set = null): bool
+{
+    static $on = false;
+    if ($set !== null) {
+        $on = $set;
+    }
+    return $on;
+}
+
 /** คำที่ "ำ" หายไปเหลือ "า" (ซ่อมเฉพาะคำที่ไม่กำกวม) */
 const LOAN_PDF_AM_FIX = [
     'สานัก' => 'สำนัก', 'ตาแหน่ง' => 'ตำแหน่ง', 'ลาดับ' => 'ลำดับ', 'จานวน' => 'จำนวน', 'ชานาญ' => 'ชำนาญ',
@@ -38,7 +54,8 @@ const LOAN_PDF_AM_FIX = [
 /** คีย์เทียบข้อความไทย: ตัดช่องว่าง สระบน/ล่าง วรรณยุกต์ (pdf.js อ่านบางตัวไม่ได้) */
 function loan_pdf_key(string $s): string
 {
-    return preg_replace('/[\s\x{0E31}\x{0E34}-\x{0E3A}\x{0E47}-\x{0E4E}]/u', '', loan_pdf_norm($s));
+    // "ำ" เทียบเท่า "า" (ฟอนต์บางไฟล์สลับกัน)
+    return preg_replace('/[\s\x{0E31}\x{0E34}-\x{0E3A}\x{0E47}-\x{0E4E}]/u', '', str_replace("\u{0E33}", "\u{0E32}", loan_pdf_norm($s)));
 }
 
 /** คีย์ชื่อคน: ตัดคำนำหน้า (นาย นาง นางสาว น.ส.) ออกก่อน */
@@ -51,6 +68,13 @@ function loan_pdf_name_key(string $s): string
 /** จัดข้อความเป็นบรรทัด (y ใกล้กัน ±2.5) แล้วรวมชิ้นที่ติดกันเป็นช่วง (ห่าง > 1.5pt = ช่วงใหม่) */
 function loan_pdf_lines(array $pages): array
 {
+    $raw = '';
+    foreach ($pages as $items) {
+        foreach (is_array($items) ? $items : [] as $it) {
+            $raw .= is_array($it) && is_string($it[0] ?? null) ? $it[0] . ' ' : '';
+        }
+    }
+    loan_pdf_aa_mode(preg_match_all('/ข้ำพเจ้ำ|นำย|รำยกำร|หมำยเลข|ตุลำคม|ธันวำคม|พฤศจิกำยน|กำร/u', $raw) >= 3);
     $out = [];
     foreach ($pages as $pi => $items) {
         if (!is_array($items)) {
