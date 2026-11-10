@@ -2,7 +2,7 @@
 /**
  * แผนการปฏิบัติงาน (รายเดือน) — ตารางคน × วัน เหมือนไฟล์ Excel เดิม · ทุกคนที่ login ดูได้
  * - สรุปจำนวนวันต่อรหัสงาน / เวรสำนักงาน / เวรศาลากลาง คำนวณอัตโนมัติ + แถวรวมคนออกสนามรายวัน
- * - เวรสำนักงานดึงจากปฏิทิน · แก้ไข/นำเข้า/รหัสงาน: ผู้ดูแลปฏิทิน
+ * - เวรสำนักงานดึงจากปฏิทิน · แก้ไข/นำเข้า/รหัสงาน: ผู้ดูแลปฏิทิน · ผู้บันทึกกิจกรรมแก้ไขแถวของตนได้ (plan_edit.php)
  */
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/plan_lib.php';
@@ -57,7 +57,8 @@ $pageActions = '<button type="button" class="btn btn-outline-secondary" onclick=
     . ($isAdmin ? '<a href="plan_edit.php?m=' . $ym . '" class="btn btn-primary"><i class="bi bi-pencil-square"></i> ' . ($plan ? 'แก้ไขแผน' : 'สร้างแผน') . '</a>'
         . '<a href="plan_import.php?m=' . $ym . '" class="btn btn-outline-primary"><i class="bi bi-file-earmark-excel"></i> นำเข้า Excel</a>'
         . '<a href="att_import.php" class="btn btn-outline-primary"><i class="bi bi-clock-history"></i> นำเข้าเวลาปฏิบัติราชการ</a>'
-        . '<a href="' . h(module_url('ea', 'projects.php')) . '" class="btn btn-outline-secondary"><i class="bi bi-kanban"></i> โครงการ</a>' : '');
+        . '<a href="' . h(module_url('ea', 'projects.php')) . '" class="btn btn-outline-secondary"><i class="bi bi-kanban"></i> โครงการ</a>'
+        : (cal_can('editor') && $plan ? '<a href="plan_edit.php?m=' . $ym . '" class="btn btn-primary"><i class="bi bi-pencil-square"></i> แก้ไขแผนของฉัน</a>' : ''));
 $wd = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
 $today = date('Y-m-d');
 require __DIR__ . '/header.php';

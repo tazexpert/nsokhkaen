@@ -4,10 +4,12 @@
  * - ตารางคน × วัน: พิมพ์รหัสในช่องได้เหมือน Excel (เช่น สพค, สพค*, โพล สรง) หรือเลือกรหัสจากแถบด้านบนแล้วคลิก/ลากบนช่อง
  * - เพิ่ม/ลบรายชื่อ: ผู้มีบัญชีในระบบ หรือพิมพ์ชื่อ (ผู้ไม่มีบัญชี) · แผนใหม่เริ่มจากรายชื่อเดือนก่อน (ไม่มี = บุคลากรทั้งหมด)
  * - บันทึก = แทนที่แผนของเดือนนั้น + ปรับเวรศาลากลางในปฏิทิน · เวรสำนักงานแสดงจากปฏิทิน (แก้ที่ "นำเข้าเวรสำนักงาน")
+ * - ผู้บันทึกกิจกรรม (editor ที่ไม่ใช่ผู้ดูแล): "แผนของฉัน" แก้ได้เฉพาะแถวของตนในแผนที่ผู้ดูแลสร้างแล้ว
+ *   (รายชื่อ/แถวของผู้อื่น/หมายเหตุ/เวรศาลากลาง คงเดิม · ลบแผนไม่ได้)
  */
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/plan_lib.php';
-$me = require_module(CAL_MODULE, 'admin');
+$me = require_module(CAL_MODULE, 'editor');
 [$y, $m] = plan_ym($_GET['m'] ?? null);
 $ym = sprintf('%04d-%02d', $y, $m);
 $days = (int)date('t', strtotime($ym . '-01'));
@@ -15,10 +17,26 @@ $codes = plan_codes();
 $plan = plan_get($y, $m);
 $errors = [];
 $notice = '';
+$selfOnly = !cal_can('admin');                       // ผู้บันทึกกิจกรรม: แก้เฉพาะแถวของตน
+$myId = (int)$me['id'];
+if ($selfOnly && !$plan) {
+    flash('ยังไม่มีแผนการปฏิบัติงานเดือน' . plan_month_text($y, $m) . ' — รอผู้ดูแลปฏิทินสร้างแผนก่อน', 'warning');
+    redirect('plan.php?m=' . $ym);
+}
+// แถวของฉันในแผนปัจจุบัน (ช่องเดิม รวมเวรศาลากลาง)
+$myOld = [];
+if ($selfOnly) {
+    $allCells = plan_cells((int)$plan['id']);
+    foreach (plan_people((int)$plan['id']) as $pp) {
+        if ((int)$pp['user_id'] === $myId) {
+            $myOld = $allCells[(int)$pp['id']] ?? [];
+        }
+    }
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
-    if (post('action') === 'delete' && $plan) {
+    if (post('action') === 'delete' && $plan && !$selfOnly) {
         plan_delete($y, $m, (int)$me['id']);
         audit_log('cal_plan_delete', 'ลบแผนการปฏิบัติงาน ' . plan_month_text($y, $m), CAL_MODULE);
         flash('ลบแผนการปฏิบัติงานเดือน' . plan_month_text($y, $m) . ' แล้ว');
@@ -59,6 +77,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $people[] = ['user_id' => $uid, 'name' => $name, 'cells' => $cells];
     }
     $note = trim(post('note'));
+    if (!$errors && $selfOnly) {
+        // แทนเฉพาะแถวของฉันในแผนเดิม · เวรศาลากลางของฉันคงเดิม (ผู้ดูแลกำหนด)
+        $mine = null;
+        foreach ($people as $pp) {
+            if ($pp['user_id'] === $myId) {
+                $mine = $pp;
+            }
+        }
+        $newCells = [];
+        for ($d = 1; $d <= $days; $d++) {
+            $ids = array_values(array_filter($mine['cells'][$d] ?? [], fn($cid) => (int)$cid !== PLAN_GUARD_ID));
+            if (in_array(PLAN_GUARD_ID, $myOld[$d] ?? [], true)) {
+                $ids[] = PLAN_GUARD_ID;
+            }
+            if ($ids) {
+                $newCells[$d] = $ids;
+            }
+        }
+        $full = [];
+        $found = false;
+        $allCells = plan_cells((int)$plan['id']);
+        foreach (plan_people((int)$plan['id']) as $pp) {
+            $isMe = (int)$pp['user_id'] === $myId;
+            $found = $found || $isMe;
+            $full[] = ['user_id' => $pp['user_id'] ? (int)$pp['user_id'] : null, 'name' => $pp['name'],
+                       'cells' => $isMe ? $newCells : ($allCells[(int)$pp['id']] ?? [])];
+        }
+        if (!$found) {
+            $full[] = ['user_id' => $myId, 'name' => $me['full_name'], 'cells' => $newCells];
+        }
+        plan_save($y, $m, $full, $plan['note'], $myId);
+        audit_log('cal_plan_self', 'แก้ไขแผนการปฏิบัติงานของตนเอง ' . plan_month_text($y, $m), CAL_MODULE);
+        flash('บันทึกแผนของคุณเดือน' . plan_month_text($y, $m) . ' แล้ว');
+        redirect('plan.php?m=' . $ym);
+    }
     if (!$errors) {
         $r = plan_save($y, $m, $people, $note !== '' ? $note : null, (int)$me['id']);
         audit_log('cal_plan_save', 'บันทึกแผนการปฏิบัติงาน ' . plan_month_text($y, $m) . ' (' . count($people) . ' คน)', CAL_MODULE);
@@ -72,7 +125,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // เริ่มจากแผนเดือนนี้ / รายชื่อแผนเดือนก่อน / บุคลากรทั้งหมด
     $rows = [];
     $note = $plan['note'] ?? '';
-    if ($plan) {
+    if ($selfOnly) {
+        $rows[] = ['user_id' => $myId, 'name' => $me['full_name'], 'texts' => array_map(fn($ids) => plan_cell_text($ids, $codes), $myOld)];
+        $notice = 'แก้ไขเฉพาะแผนของคุณ — เลือกรหัสโครงการแล้วคลิกวัน หรือพิมพ์ในช่อง · เวรศาลากลางกำหนดโดยผู้ดูแลปฏิทิน';
+    } elseif ($plan) {
         $cells = plan_cells((int)$plan['id']);
         foreach (plan_people((int)$plan['id']) as $p) {
             $rows[] = ['user_id' => $p['user_id'] ? (int)$p['user_id'] : null, 'name' => $p['name'],
@@ -104,16 +160,19 @@ foreach ($rows as &$r) {
     }
 }
 unset($r);
+if ($selfOnly) {
+    $rows = array_values(array_filter($rows, fn($r) => (int)$r['user_id'] === $myId));
+}
 $rows = plan_sort_people($rows);
 $duty = plan_duty_map($y, $m);
-$activeCodes = plan_month_projects($codes, $y, $m) + [PLAN_GUARD_ID => $codes[PLAN_GUARD_ID]];   // แถบเครื่องมือ: โครงการที่ดำเนินการในเดือนนี้ + เวรศาลากลาง
+$activeCodes = plan_month_projects($codes, $y, $m) + ($selfOnly ? [] : [PLAN_GUARD_ID => $codes[PLAN_GUARD_ID]]);   // แถบเครื่องมือ: โครงการที่ดำเนินการในเดือนนี้ + เวรศาลากลาง (ผู้ดูแล)
 $colors = [];
 foreach ($codes as $c) {
     $colors[$c['code']] = $c['color'];
 }
 $wd = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
 
-$pageTitle = ($plan ? 'แก้ไข' : 'สร้าง') . 'แผนการปฏิบัติงาน';
+$pageTitle = $selfOnly ? 'แก้ไขแผนการปฏิบัติงานของฉัน' : ($plan ? 'แก้ไข' : 'สร้าง') . 'แผนการปฏิบัติงาน';
 $active = 'plan';
 $pageActions = '<a href="plan.php?m=' . $ym . '" class="btn btn-light"><i class="bi bi-grid-3x3"></i> กลับไปหน้าแผน</a>';
 require __DIR__ . '/header.php';
@@ -127,7 +186,7 @@ require __DIR__ . '/header.php';
     <div class="card-header d-flex flex-wrap align-items-center gap-2">
       <h2 class="h5 mb-0 me-2"><?= h(plan_month_text($y, $m)) ?></h2>
       <span class="small text-muted me-1">เครื่องมือ:</span>
-      <?php if (count($activeCodes) <= 1): ?><span class="small text-danger">ไม่มีโครงการที่ดำเนินการในเดือนนี้ — <a href="<?= h(module_url('ea', 'projects.php')) ?>">เพิ่ม/แก้ช่วงเวลาโครงการ</a></span><?php endif; ?>
+      <?php if (count($activeCodes) <= ($selfOnly ? 0 : 1)): ?><span class="small text-danger">ไม่มีโครงการที่ดำเนินการในเดือนนี้ — <a href="<?= h(module_url('ea', 'projects.php')) ?>">เพิ่ม/แก้ช่วงเวลาโครงการ</a></span><?php endif; ?>
       <div class="btn-group btn-group-sm flex-wrap plan-palette" role="group" aria-label="เลือกรหัสแล้วคลิกช่อง">
         <input type="radio" class="btn-check" name="tool" id="tool-type" value="" checked><label class="btn btn-outline-secondary" for="tool-type" title="พิมพ์ในช่องเอง"><i class="bi bi-cursor-text"></i> พิมพ์</label>
         <?php foreach ($activeCodes as $c): ?>
@@ -152,7 +211,7 @@ require __DIR__ . '/header.php';
         <?php foreach ($rows as $i => $r): ?>
           <tr data-uid="<?= (int)$r['user_id'] ?>">
             <td class="plan-name text-nowrap">
-              <button type="button" class="btn btn-sm btn-link text-danger p-0 me-1 plan-del" title="ลบออกจากแผน" aria-label="ลบ"><i class="bi bi-x-circle"></i></button>
+              <?php if (!$selfOnly): ?><button type="button" class="btn btn-sm btn-link text-danger p-0 me-1 plan-del" title="ลบออกจากแผน" aria-label="ลบ"><i class="bi bi-x-circle"></i></button><?php endif; ?>
               <?= h(preg_replace('/\s+/u', ' ', $r['name'])) ?><?= $r['user_id'] ? '' : ' <i class="bi bi-person-dash text-muted small" title="ไม่มีบัญชีในระบบ"></i>' ?>
               <input type="hidden" name="p[<?= $i ?>][uid]" value="<?= (int)$r['user_id'] ?>"><input type="hidden" name="p[<?= $i ?>][name]" value="<?= h($r['name']) ?>">
             </td>
@@ -167,6 +226,7 @@ require __DIR__ . '/header.php';
         </tbody>
       </table>
     </div>
+    <?php if (!$selfOnly): ?>
     <div class="card-footer">
       <div class="row g-2 align-items-center">
         <div class="col-md-5 d-flex gap-2">
@@ -181,22 +241,25 @@ require __DIR__ . '/header.php';
         </div>
       </div>
     </div>
+    <?php endif; ?>
   </div>
 
+  <?php if (!$selfOnly): ?>
   <div class="card mb-3">
     <div class="card-body">
       <label class="form-label" for="planNote">หมายเหตุ (แสดงท้ายแผน)</label>
       <textarea name="note" id="planNote" class="form-control" rows="2" maxlength="2000"><?= h($note) ?></textarea>
     </div>
   </div>
+  <?php endif; ?>
 
   <div class="d-flex gap-2">
-    <?php if ($plan): ?><button type="submit" form="planDelete" class="btn btn-outline-danger"><i class="bi bi-trash"></i> ลบแผนเดือนนี้</button><?php endif; ?>
+    <?php if ($plan && !$selfOnly): ?><button type="submit" form="planDelete" class="btn btn-outline-danger"><i class="bi bi-trash"></i> ลบแผนเดือนนี้</button><?php endif; ?>
     <a href="plan.php?m=<?= $ym ?>" class="btn btn-outline-secondary ms-auto">ยกเลิก</a>
-    <button class="btn btn-primary"><i class="bi bi-save"></i> บันทึกแผน</button>
+    <button class="btn btn-primary"><i class="bi bi-save"></i> <?= $selfOnly ? 'บันทึกแผนของฉัน' : 'บันทึกแผน' ?></button>
   </div>
 </form>
-<?php if ($plan): ?>
+<?php if ($plan && !$selfOnly): ?>
 <form method="post" id="planDelete" onsubmit="return confirm(<?= js_attr('ลบแผนการปฏิบัติงานเดือน' . plan_month_text($y, $m) . " ทั้งหมด?\n(เวรศาลากลางของเดือนนี้ในปฏิทินจะถูกลบด้วย)") ?>)">
   <?= csrf_field() ?><input type="hidden" name="action" value="delete">
 </form>
@@ -296,15 +359,18 @@ require __DIR__ . '/header.php';
   };
   const sel = document.getElementById('addUser');
   const syncSelect = () => {
+    if (!sel) return;
     const used = new Set([...body.rows].map(r => r.dataset.uid));
     [...sel.options].forEach(o => { if (o.value) o.disabled = used.has(o.value); });
   };
   syncSelect();
-  sel.addEventListener('change', () => { if (sel.value) { addRow(sel.value, sel.selectedOptions[0].text); sel.value = ''; } });
-  const nameIn = document.getElementById('addName');
-  const addName = () => { const n = nameIn.value.trim(); if (n) { addRow(0, n); nameIn.value = ''; } };
-  document.getElementById('addNameBtn').addEventListener('click', addName);
-  nameIn.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addName(); } });
+  if (sel) {   // ผู้ดูแล: เพิ่มรายชื่อ (โหมดแผนของฉันไม่มี)
+    sel.addEventListener('change', () => { if (sel.value) { addRow(sel.value, sel.selectedOptions[0].text); sel.value = ''; } });
+    const nameIn = document.getElementById('addName');
+    const addName = () => { const n = nameIn.value.trim(); if (n) { addRow(0, n); nameIn.value = ''; } };
+    document.getElementById('addNameBtn').addEventListener('click', addName);
+    nameIn.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addName(); } });
+  }
 
   // เลื่อนช่องด้วยลูกศร/Enter เหมือนตาราง
   body.addEventListener('keydown', e => {
