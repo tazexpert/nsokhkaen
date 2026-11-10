@@ -46,7 +46,7 @@ require __DIR__ . '/header.php';
             <div class="list-group-item bg-light small fw-semibold">พ.ศ. <?= (int)$yr ?></div>
           <?php endif; ?>
             <a href="?p=<?= (int)$s['year'] ?>-<?= (int)$s['month'] ?>" class="list-group-item list-group-item-action d-flex<?= (int)$s['id'] === (int)$slip['id'] ? ' active' : '' ?>">
-              <?= h(pay_month_name((int)$s['month'])) ?><span class="ms-auto small"><?= pay_money($s['net_pay']) ?></span></a>
+              <?= h(pay_month_name((int)$s['month'])) ?></a>
           <?php endforeach; ?>
         </div>
       </div>
