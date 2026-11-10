@@ -470,7 +470,7 @@ function cal_render_table(array $events, string $from, int $meId, bool $showActi
             $done = cal_is_done($e);
             $html .= '<tr class="' . trim(($duty ? 'cal-duty ' : '') . ($guard ? 'cal-guard ' : '') . ($mine ? 'cal-mine ' : '') . ($done ? 'cal-done' : '')) . '">'
                 . '<td class="text-nowrap">' . ($duty || $guard ? '<span class="text-muted">-</span>' : h(cal_time_text($e))) . ($multi ? '<div class="small text-muted">' . h(cal_range_text($e)) . '</div>' : '') . '</td>'
-                . '<td><a href="' . h($base . 'event_view.php?id=' . (int)$e['id']) . '" class="fw-semibold text-decoration-none">' . ($duty ? '<i class="bi bi-shield-check"></i> ' : '') . ($guard ? '<i class="bi bi-shield-shaded"></i> ' : '') . h($e['title']) . '</a>'
+                . '<td><a href="' . h($base . 'event_view?id=' . (int)$e['id']) . '" class="fw-semibold text-decoration-none">' . ($duty ? '<i class="bi bi-shield-check"></i> ' : '') . ($guard ? '<i class="bi bi-shield-shaded"></i> ' : '') . h($e['title']) . '</a>'
                 . (cal_is_private($e) ? ' <span class="badge text-bg-secondary" title="เห็นเฉพาะผู้บันทึกและผู้รับผิดชอบ"><i class="bi bi-lock-fill"></i> ส่วนตัว</span>' : '')
                 . ($mine ? ' <span class="badge text-bg-warning">งานของคุณ</span>' : '')
                 . ($done ? ' <span class="badge text-bg-secondary"><i class="bi bi-check2"></i> จบแล้ว</span>' : '') . '</td>'
@@ -478,7 +478,7 @@ function cal_render_table(array $events, string $from, int $meId, bool $showActi
                 . '<td class="cal-people">' . cal_assignee_html($ids, $meId, 6, $showAs[(int)$e['id']] ?? []) . '</td>'
                 . '<td class="small">' . ($link ? '<a href="' . h($link) . '" target="_blank" rel="noopener"><i class="bi bi-link-45deg"></i> เปิดลิงก์</a>' : '')
                 . ($e['note'] ? '<div class="text-muted">' . nl2br(h(mb_strimwidth($e['note'], 0, 160, '…'))) . '</div>' : '')
-                . ($showActions && cal_can_edit($e) ? '<a href="' . h($base . 'event_form.php?id=' . (int)$e['id']) . '" class="btn btn-sm btn-light float-end" title="แก้ไข"><i class="bi bi-pencil"></i></a>' : '')
+                . ($showActions && cal_can_edit($e) ? '<a href="' . h($base . 'event_form?id=' . (int)$e['id']) . '" class="btn btn-sm btn-light float-end" title="แก้ไข"><i class="bi bi-pencil"></i></a>' : '')
                 . '</td></tr>';
         }
     }
@@ -570,7 +570,7 @@ function cal_modal_script(): string
   const box = document.getElementById('calEventModalContent');
   const loading = '<div class="modal-body text-center py-5 text-muted"><div class="spinner-border text-primary mb-2"></div><div>กำลังโหลด…</div></div>';
   document.addEventListener('click', ev => {
-    const a = ev.target.closest('.cal-table a[href*="event_view.php"], .cal-grid a[href*="event_view.php"]');
+    const a = ev.target.closest('.cal-table a[href*="event_view"], .cal-grid a[href*="event_view"]');
     if (!a || ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button !== 0 || typeof bootstrap === 'undefined') return;
     ev.preventDefault();
     box.innerHTML = loading;

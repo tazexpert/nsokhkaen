@@ -106,11 +106,11 @@ if ($tab === 'stats') {
 $pageTitle = 'บันทึกการใช้งาน';
 $active = 'audit';
 require APP_ROOT . '/core/layout/header.php';
-$qs = fn(array $p) => h(url('admin/audit.php?' . http_build_query(array_filter($p + ['period' => $period !== '30' ? $period : null, 'sort' => $sort !== 'staff' ? $sort : null]))));
+$qs = fn(array $p) => h(url('admin/audit?' . http_build_query(array_filter($p + ['period' => $period !== '30' ? $period : null, 'sort' => $sort !== 'staff' ? $sort : null]))));
 ?>
 <ul class="nav nav-tabs mb-3">
-  <li class="nav-item"><a class="nav-link<?= $tab === 'stats' ? ' active' : '' ?>" href="<?= h(url('admin/audit.php')) ?>"><i class="bi bi-bar-chart-line"></i> สถิติรายบุคคล</a></li>
-  <li class="nav-item"><a class="nav-link<?= $tab === 'log' ? ' active' : '' ?>" href="<?= h(url('admin/audit.php?tab=log')) ?>"><i class="bi bi-journal-text"></i> บันทึก (log)</a></li>
+  <li class="nav-item"><a class="nav-link<?= $tab === 'stats' ? ' active' : '' ?>" href="<?= h(url('admin/audit')) ?>"><i class="bi bi-bar-chart-line"></i> สถิติรายบุคคล</a></li>
+  <li class="nav-item"><a class="nav-link<?= $tab === 'log' ? ' active' : '' ?>" href="<?= h(url('admin/audit?tab=log')) ?>"><i class="bi bi-journal-text"></i> บันทึก (log)</a></li>
 </ul>
 
 <?php if ($tab === 'stats'): ?>
@@ -164,7 +164,7 @@ $qs = fn(array $p) => h(url('admin/audit.php?' . http_build_query(array_filter($
         <tr class="<?= $idle ? 'audit-idle' : '' ?>">
           <td class="text-center text-muted"><?= $i + 1 ?></td>
           <td>
-            <a href="<?= h(url('admin/audit.php?tab=log&user=' . (int)$u['id'])) ?>" class="d-flex align-items-center gap-2 text-reset text-decoration-none" title="ดูบันทึกการใช้งานของผู้ใช้นี้">
+            <a href="<?= h(url('admin/audit?tab=log&user=' . (int)$u['id'])) ?>" class="d-flex align-items-center gap-2 text-reset text-decoration-none" title="ดูบันทึกการใช้งานของผู้ใช้นี้">
               <?= user_avatar($u, 32, 'flex-shrink-0') ?>
               <span class="min-w-0"><span class="d-block fw-semibold text-truncate"><?= h(preg_replace('/\s+/u', ' ', $u['full_name'])) ?><?= $u['is_active'] ? '' : ' <span class="badge text-bg-secondary">ปิดใช้งาน</span>' ?></span>
                 <small class="d-block text-muted text-truncate"><?= h($u['position'] ?: ($u['username'] ?: '-')) ?></small></span>
@@ -218,7 +218,7 @@ $qs = fn(array $p) => h(url('admin/audit.php?' . http_build_query(array_filter($
       <div class="col-auto"><button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button></div>
       <?php if ($uid): ?>
         <div class="col-auto align-self-center"><span class="badge text-bg-primary fs-6 fw-normal"><i class="bi bi-person"></i> <?= h($uidName) ?>
-          <a href="<?= h(url('admin/audit.php?' . http_build_query(array_filter(['tab' => 'log', 'q' => $q])))) ?>" class="text-white ms-1" aria-label="ล้างตัวกรองผู้ใช้"><i class="bi bi-x-lg"></i></a></span></div>
+          <a href="<?= h(url('admin/audit?' . http_build_query(array_filter(['tab' => 'log', 'q' => $q])))) ?>" class="text-white ms-1" aria-label="ล้างตัวกรองผู้ใช้"><i class="bi bi-x-lg"></i></a></span></div>
       <?php endif; ?>
       <div class="col-auto ms-auto small text-muted align-self-center">แสดง 300 รายการล่าสุด</div></form>
   </div>

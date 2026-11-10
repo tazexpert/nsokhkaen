@@ -12,7 +12,7 @@ if ($id) {
     $a = $st->fetch();
     if (!$a) {
         flash('ไม่พบกิจกรรม', 'danger');
-        redirect('activities.php');
+        redirect('activities');
     }
 }
 $centers = $pdo->query('SELECT id, name, district FROM dcc_centers ORDER BY district, name')->fetchAll();
@@ -95,7 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             array_map('delete_upload', $removed);
             flash('บันทึกกิจกรรมเรียบร้อยแล้ว');
-            redirect("activity_form.php?id=$id");
+            redirect("activity_form?id=$id");
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
@@ -119,7 +119,7 @@ require __DIR__ . '/header.php';
 ?>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>
 <?php if (!$centers): ?>
-  <div class="alert alert-info">ยังไม่มีศูนย์ในระบบ — <a href="center_form.php">เพิ่มศูนย์ก่อน</a></div>
+  <div class="alert alert-info">ยังไม่มีศูนย์ในระบบ — <a href="center_form">เพิ่มศูนย์ก่อน</a></div>
 <?php else: ?>
 <form method="post" enctype="multipart/form-data" class="row g-3">
   <?= csrf_field() ?>
@@ -183,7 +183,7 @@ require __DIR__ . '/header.php';
   </div>
   <div class="col-12 sticky-actions">
     <button class="btn btn-primary btn-lg"><i class="bi bi-save"></i> บันทึกกิจกรรม</button>
-    <a href="activities.php" class="btn btn-light btn-lg">กลับ</a>
+    <a href="activities" class="btn btn-light btn-lg">กลับ</a>
     <?php if ($id): ?><a href="public/center.html?id=<?= (int)$a['center_id'] ?>#activities" target="_blank" class="btn btn-outline-secondary btn-lg ms-auto"><i class="bi bi-eye"></i> ดูหน้าเว็บ</a><?php endif; ?>
   </div>
 </form>

@@ -104,14 +104,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $token = bin2hex(random_bytes(16));
                 file_put_contents($tmpFile($token), json_encode($res, JSON_UNESCAPED_UNICODE));
                 $_SESSION[$sessKey] = ['token' => $token, 'file' => mb_substr($f['name'], 0, 150), 'province' => $province, 'region' => $region];
-                redirect('project_import.php?step=preview');
+                redirect('project_import?step=preview');
             }
         }
     } elseif ($action === 'import') {
         $res = $load();
         if (!$res) {
             flash('ไม่พบข้อมูลที่อ่านไว้ กรุณาอัปโหลดไฟล์อีกครั้ง', 'warning');
-            redirect('project_import.php');
+            redirect('project_import');
         }
         @set_time_limit(300);
         if (($res['format'] ?? '') === 'units') {
@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pid = ctype_digit($v) && isset($projects[(int)$v]) ? (int)$v : null;
             if (!$pid) {
                 flash('กรุณาเลือกโครงการที่จะนำเข้าสถานประกอบการ', 'warning');
-                redirect('project_import.php?step=preview');
+                redirect('project_import?step=preview');
             }
             $staff = ea_staff();
             $people = [];
@@ -194,7 +194,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  . ($n['removed'] ? ' · นำออก ' . number_format($n['removed']) : '');
             audit_log('ea_units_import', $msg . ' (ไฟล์ ' . $file . ')', EA_MODULE);
             flash($msg);
-            redirect('project_units.php?' . http_build_query(['id' => $pid, 'round' => $round]));
+            redirect('project_units?' . http_build_query(['id' => $pid, 'round' => $round]));
         }
         // โครงการที่เลือกสำหรับรหัสในไฟล์ (ไม่เลือก = ข้าม)
         $map = [];
@@ -345,10 +345,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         audit_log('ea_project_import', $msg . ' (ไฟล์ ' . $file . ')', EA_MODULE);
         flash($msg, $n['skipped'] ? 'warning' : 'success');
         $pids = array_values(array_unique(array_filter($map)));
-        redirect(count($pids) === 1 ? 'project_eas.php?id=' . $pids[0] : 'projects.php');
+        redirect(count($pids) === 1 ? 'project_eas?id=' . $pids[0] : 'projects');
     } elseif ($action === 'cancel') {
         $clear();
-        redirect('project_import.php');
+        redirect('project_import');
     }
 }
 
@@ -460,7 +460,7 @@ require __DIR__ . '/header.php';
             <option value="">— เลือกโครงการ —</option>
             <?php foreach ($projects as $p): ?><option value="<?= (int)$p['id'] ?>" <?= $map[$pk] === (int)$p['id'] ? 'selected' : '' ?>><?= h($p['code'] . ' — ' . $p['name']) ?></option><?php endforeach; ?>
           </select>
-          <div class="small text-muted">ในไฟล์: <?= h($u0['project_titles'][$pk] ?: $u0['projects'][$pk]) ?><?= $map[$pk] ? '' : ' — ไม่พบโครงการชื่อนี้ เลือกโครงการ หรือ' . (projects_can_manage() ? ' <a href="' . h(module_url('ea', 'projects.php')) . '" target="_blank">เพิ่มโครงการ</a>' : 'แจ้งผู้ดูแลเพิ่มโครงการ') ?></div>
+          <div class="small text-muted">ในไฟล์: <?= h($u0['project_titles'][$pk] ?: $u0['projects'][$pk]) ?><?= $map[$pk] ? '' : ' — ไม่พบโครงการชื่อนี้ เลือกโครงการ หรือ' . (projects_can_manage() ? ' <a href="' . h(module_url('ea', 'projects')) . '" target="_blank">เพิ่มโครงการ</a>' : 'แจ้งผู้ดูแลเพิ่มโครงการ') ?></div>
         </div>
       </div>
       <div class="fw-semibold small mb-2">ผู้ปฏิบัติงานในไฟล์ → บัญชีผู้ใช้</div>
@@ -575,7 +575,7 @@ require __DIR__ . '/header.php';
               <option value="">— ข้าม ไม่นำเข้า —</option>
               <?php foreach ($projects as $p): ?><option value="<?= (int)$p['id'] ?>" <?= $map[$k] === (int)$p['id'] ? 'selected' : '' ?>><?= h($p['code'] . ' — ' . $p['name']) ?></option><?php endforeach; ?>
             </select>
-            <?php if (!$map[$k]): ?><div class="small text-danger">ไม่พบโครงการรหัสนี้ — เลือกโครงการ หรือ<?= projects_can_manage() ? ' <a href="' . h(module_url('ea', 'projects.php')) . '" target="_blank">เพิ่มโครงการ</a> แล้วอัปโหลดใหม่' : 'แจ้งผู้ดูแลเพิ่มโครงการ' ?></div><?php endif; ?></td>
+            <?php if (!$map[$k]): ?><div class="small text-danger">ไม่พบโครงการรหัสนี้ — เลือกโครงการ หรือ<?= projects_can_manage() ? ' <a href="' . h(module_url('ea', 'projects')) . '" target="_blank">เพิ่มโครงการ</a> แล้วอัปโหลดใหม่' : 'แจ้งผู้ดูแลเพิ่มโครงการ' ?></div><?php endif; ?></td>
             <td class="small text-nowrap"><?php
               $det = $detected[$k] ?? ''; $cur = $map[$k] ? (string)($projects[$map[$k]]['survey_period'] ?? '') : '';
               if ($det === '') {

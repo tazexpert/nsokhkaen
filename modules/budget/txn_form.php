@@ -9,7 +9,7 @@ if ($id) {
     $st->execute([$id]);
     if (!$t = $st->fetch()) {
         flash('ไม่พบรายการ', 'danger');
-        redirect('index.php');
+        redirect('./');
     }
 }
 $type = $t['txn_type'] ?? (($_GET['type'] ?? $_POST['type'] ?? '') === 'spend' ? 'spend' : 'receive');
@@ -76,9 +76,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         audit_log($t ? 'bud_update' : 'bud_create', ($t ? 'แก้ไข' : 'บันทึก') . 'รายการ' . BUD_TYPES[$type] . ': ' . $v['description'] . ' ' . bud_money($v['amount']) . ' บาท', BUD_MODULE);
         flash(($t ? 'แก้ไข' : 'บันทึก') . 'รายการ' . BUD_TYPES[$type] . ' ' . bud_money($v['amount']) . ' บาท แล้ว');
         if (!$t && post('again')) {
-            redirect('txn_form.php?' . http_build_query(['type' => $type, 'src' => $v['src'], 'plan' => $v['plan_id'], 'work' => $v['work_id']]));
+            redirect('txn_form?' . http_build_query(['type' => $type, 'src' => $v['src'], 'plan' => $v['plan_id'], 'work' => $v['work_id']]));
         }
-        redirect('txns.php?' . http_build_query(['type' => $type, 'fy' => $v['fiscal_year']]));
+        redirect('txns?' . http_build_query(['type' => $type, 'fy' => $v['fiscal_year']]));
     }
 }
 if ($v['work_id'] !== null && !isset($works[$v['work_id']]) && isset($allWorks[$v['work_id']])) {
@@ -109,7 +109,7 @@ usort($catItems, fn($p, $q) => $p['r'] <=> $q['r']);   // usort คงลำด�
 
 $pageTitle = ($t ? 'แก้ไข' : 'บันทึก') . BUD_TYPE_PAGES[$type];
 $active = $type;
-$pageActions = '<a href="txns.php?type=' . $type . '" class="btn btn-light"><i class="bi bi-arrow-left"></i> กลับ</a>';
+$pageActions = '<a href="txns?type=' . $type . '" class="btn btn-light"><i class="bi bi-arrow-left"></i> กลับ</a>';
 $headExtra = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" integrity="sha384-RkASv+6KfBMW9eknReJIJ6b3UnjKOKC5bOUaNgIY778NFbQ8MtWq9Lr/khUgqtTt" crossorigin="anonymous">';
 require __DIR__ . '/header.php';
 ?>
@@ -129,7 +129,7 @@ require __DIR__ . '/header.php';
     <div class="col-md-6"><label class="form-label">แผนงาน<?= $plans ? ' <span class="text-danger">*</span>' : '' ?></label>
       <select name="plan_id" id="txnPlan" class="form-select"<?= $plans ? ' required' : '' ?>><option value="">— เลือก —</option>
         <?php foreach ($plans as $pid => $p): ?><option value="<?= $pid ?>"<?= $pid === $v['plan_id'] ? ' selected' : '' ?>><?= h($p['name']) ?></option><?php endforeach; ?></select>
-      <?php if (!$plans): ?><div class="form-text text-warning">ยังไม่มีแผนงาน<?= bud_can('admin') ? ' — <a href="items.php">เพิ่มที่เมนูแผนงานและหมวด</a>' : ' (ผู้ดูแลระบบงบประมาณเพิ่มที่เมนูแผนงานและหมวด)' ?></div><?php endif; ?></div>
+      <?php if (!$plans): ?><div class="form-text text-warning">ยังไม่มีแผนงาน<?= bud_can('admin') ? ' — <a href="items">เพิ่มที่เมนูแผนงานและหมวด</a>' : ' (ผู้ดูแลระบบงบประมาณเพิ่มที่เมนูแผนงานและหมวด)' ?></div><?php endif; ?></div>
     <div class="col-md-6"><label class="form-label">งานและโครงการ <span class="text-muted small">(ถ้ามี)</span></label>
       <select name="work_id" id="txnWork" class="form-select"><option value="">— ไม่ระบุ —</option>
         <?php foreach ($works as $wid => $w): ?><option value="<?= $wid ?>" data-plan="<?= (int)$w['plan_id'] ?>"<?= $wid === $v['work_id'] ? ' selected' : '' ?>><?= h($w['name']) ?></option><?php endforeach; ?></select></div>
@@ -154,7 +154,7 @@ require __DIR__ . '/header.php';
   <div class="card-footer d-flex gap-2">
     <button class="btn btn-primary"><i class="bi bi-check-lg"></i> บันทึก</button>
     <?php if (!$t): ?><button name="again" value="1" class="btn btn-outline-primary"><i class="bi bi-plus-lg"></i> บันทึกและเพิ่มรายการต่อ</button><?php endif; ?>
-    <a href="txns.php?type=<?= $type ?>" class="btn btn-light ms-auto">ยกเลิก</a>
+    <a href="txns?type=<?= $type ?>" class="btn btn-light ms-auto">ยกเลิก</a>
   </div>
 </form>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" integrity="sha384-5JqMv4L/Xa0hfvtF06qboNdhvuYXUku9ZrhZh3bSk8VXF0A/RuSLHpLsSV9Zqhl6" crossorigin="anonymous"></script>

@@ -10,7 +10,7 @@ $ea = $st->fetch();
 if (!$ea) {
     http_response_code(404);
     flash('ไม่พบ EA', 'warning');
-    redirect('eas.php');
+    redirect('eas');
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'save') {
@@ -25,14 +25,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'save') {
     $dup->execute([$newCode, $id]);
     if ($dup->fetchColumn()) {
         flash('รหัส EA ' . $newCode . ' ซ้ำกับ EA อื่น — ตรวจรหัสเทศบาล/อบต.', 'danger');
-        redirect('ea_view.php?id=' . $id . '&edit=1');
+        redirect('ea_view?id=' . $id . '&edit=1');
     }
     $pdo->prepare('UPDATE ea_areas SET ea_code = ?, local_code = ?, local_name = ?, village_code = ?, village_name = ?, advance_ea = ?, houses = ?, households = ?, vacant_houses = ?, population = ?, note = ?, is_active = ? WHERE id = ?')
         ->execute([$newCode, $lcode, mb_substr(trim(post('local_name')), 0, 150), $vcode, mb_substr(trim(post('village_name')), 0, 150), mb_substr(trim(post('advance_ea')), 0, 20),
                    $num('houses'), $num('households'), $num('vacant_houses'), $num('population'), mb_substr(trim(post('note')), 0, 2000), post('is_active') === '1' ? 1 : 0, $id]);
     audit_log('ea_edit', 'แก้ไขข้อมูล EA ' . $ea['ea_code'], EA_MODULE);
     flash('บันทึกข้อมูล EA ' . $ea['ea_code'] . ' แล้ว');
-    redirect('ea_view.php?id=' . $id);
+    redirect('ea_view?id=' . $id);
 }
 
 $st = $pdo->prepare('SELECT pe.*, p.code, p.name, p.color, u.full_name AS assignee FROM ea_project_eas pe
@@ -44,7 +44,7 @@ $edit = ea_can('admin') && isset($_GET['edit']);
 
 $pageTitle = 'EA ' . $ea['ea_code'];
 $active = 'eas';
-$pageActions = '<a href="eas.php?district=' . h($ea['district_code']) . '&amp;tambon=' . h($ea['tambon_code']) . '" class="btn btn-light"><i class="bi bi-arrow-left"></i> EA ในตำบลเดียวกัน</a>'
+$pageActions = '<a href="eas?district=' . h($ea['district_code']) . '&amp;tambon=' . h($ea['tambon_code']) . '" class="btn btn-light"><i class="bi bi-arrow-left"></i> EA ในตำบลเดียวกัน</a>'
     . (ea_can('admin') && !$edit ? ' <a href="?id=' . $id . '&amp;edit=1" class="btn btn-primary"><i class="bi bi-pencil"></i> แก้ไข</a>' : '');
 require __DIR__ . '/header.php';
 $c = $ea['ea_code'];
@@ -111,7 +111,7 @@ $c = $ea['ea_code'];
           <tbody>
           <?php foreach ($uses as $u): ?>
             <tr>
-              <td><a href="project_eas.php?id=<?= (int)$u['project_id'] ?>&amp;round=<?= urlencode($u['round_label']) ?>" class="text-decoration-none">
+              <td><a href="project_eas?id=<?= (int)$u['project_id'] ?>&amp;round=<?= urlencode($u['round_label']) ?>" class="text-decoration-none">
                 <span class="badge" style="background:<?= h($u['color']) ?>"><?= h($u['code']) ?></span> <?= h($u['name']) ?></a></td>
               <td class="text-nowrap"><?= h($u['round_label'] ?: '-') ?><?= $u['enum_type'] !== '' ? ' <span class="small text-muted">' . h($u['enum_type']) . '</span>' : '' ?></td>
               <td class="ea-code small"><?= h($u['psu_no'] ?: '-') ?></td>

@@ -18,7 +18,7 @@ if ($id) {
     $s = $st->fetch();
     if (!$s) {
         flash('ไม่พบสลิป', 'danger');
-        redirect('slips.php');
+        redirect('slips');
     }
 } elseif ($suggest) {
     forbidden(PAY_MODULE, 'manager');
@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $suggest) {
             ->execute([$id, $me['id'], $message !== '' ? $message : null, $changes ? json_encode($changes) : null]);
         audit_log('payslip_comment', 'slip #' . $id . ' ' . $s['code'] . ' ' . $s['month'] . '/' . $s['year'] . ' (' . count($changes) . ' รายการ)', PAY_MODULE);
         flash('ส่งแจ้งแก้ไขให้ผู้จัดการสลิปแล้ว — สลิปยังไม่ถูกแก้จนกว่าผู้จัดการสลิปจะตรวจสอบ');
-        redirect('slip_view.php?id=' . $id);
+        redirect('slip_view?id=' . $id);
     }
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ---------- ผู้จัดการสลิป: แก้ไขจริง ----------
@@ -103,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $suggest) {
         audit_log('payslip_save', 'slip #' . $id . ' ' . $emp['code'] . ' ' . $s['month'] . '/' . $s['year'] . ($resolved ? " (ปิดแจ้งแก้ไข $resolved เรื่อง)" : ''), PAY_MODULE);
         $msg = isset($data['status']) ? 'บันทึกแล้ว — สลิปกลับเป็น "รออนุมัติ" เพราะมีการแก้ไข' : 'บันทึกสลิปเรียบร้อยแล้ว';
         flash($msg . ($resolved ? ' · ปิดเรื่องแจ้งแก้ไขแล้ว (แจ้งผู้อนุมัติให้ตรวจอีกครั้ง)' : ''), isset($data['status']) ? 'warning' : 'success');
-        redirect('slip_view.php?id=' . $id);
+        redirect('slip_view?id=' . $id);
     }
 }
 
@@ -155,7 +155,7 @@ $field = function (string $k, string $label) use ($s, $orig, $suggest, $applied)
           <?= pay_changes_table($c['changes']) ?>
           <?php if ($c['changes']): ?>
             <?php if ($applied && (int)$applied['id'] === (int)$c['id']): ?><span class="badge text-bg-primary"><i class="bi bi-check2"></i> เติมค่าที่เสนอในฟอร์มแล้ว — ตรวจแล้วกดบันทึก</span>
-            <?php else: ?><a href="slip_form.php?id=<?= (int)$id ?>&apply=<?= (int)$c['id'] ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-magic"></i> ใช้ค่าที่เสนอ</a><?php endif; ?>
+            <?php else: ?><a href="slip_form?id=<?= (int)$id ?>&apply=<?= (int)$c['id'] ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-magic"></i> ใช้ค่าที่เสนอ</a><?php endif; ?>
           <?php endif; ?>
         </div>
       <?php endforeach; ?>
@@ -202,7 +202,7 @@ $field = function (string $k, string $label) use ($s, $orig, $suggest, $applied)
   <div class="col-12 sticky-actions">
     <button class="btn btn-primary btn-lg"><i class="bi <?= $suggest ? 'bi-send' : 'bi-save' ?>"></i> <?= $suggest ? 'ส่งแจ้งแก้ไข' : 'บันทึก' ?></button>
     <button type="button" class="btn btn-outline-secondary btn-lg" id="calc"><i class="bi bi-calculator"></i> คำนวณยอดรวม</button>
-    <a href="<?= $id ? 'slip_view.php?id=' . $id : 'slips.php' ?>" class="btn btn-light btn-lg">ยกเลิก</a>
+    <a href="<?= $id ? 'slip_view?id=' . $id : 'slips' ?>" class="btn btn-light btn-lg">ยกเลิก</a>
   </div>
 </form>
 <script>

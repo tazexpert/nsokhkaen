@@ -11,7 +11,7 @@ $st->execute([$id]);
 $loan = $st->fetch();
 if (!$loan || !can_view_loan($loan)) {
     flash('ไม่พบรายการยืม หรือไม่มีสิทธิ์', 'danger');
-    redirect('loans.php');
+    redirect('loans');
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $dt = DateTime::createFromFormat('!Y-m-d', post('returned_date'));
         if (!$dt) {
             flash('กรุณาระบุวันที่รับคืน', 'danger');
-            redirect('loan_view.php?id=' . $id);
+            redirect('loan_view?id=' . $id);
         }
         $pdo->beginTransaction();
         $pdo->prepare("UPDATE inv_loans SET status = 'returned', returned_at = ?, receiver_id = ?, receiver_name = ?, receiver_position = ?, return_note = ?
@@ -58,9 +58,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         delete_upload($loan['file_path']);
         audit_log('loan_delete', 'loan #' . $id . ' ' . $loan['loan_no'] . ' ' . $loan['borrower_name'], INV_MODULE);
         flash('ลบรายการยืมเรียบร้อยแล้ว');
-        redirect('loans.php');
+        redirect('loans');
     }
-    redirect('loan_view.php?id=' . $id);
+    redirect('loan_view?id=' . $id);
 }
 
 $st = $pdo->prepare('SELECT li.*, e.status AS eq_status FROM inv_loan_items li LEFT JOIN inv_equipment e ON e.id = li.equipment_id
@@ -71,9 +71,9 @@ $overdue = $loan['status'] === 'borrowed' && $loan['due_date'] < date('Y-m-d');
 $isPdf = $loan['file_path'] && str_ends_with(strtolower($loan['file_path']), '.pdf');
 
 $pageTitle = 'รายการยืมเลขที่ ' . $loan['loan_no'];
-$pageActions = '<a href="loans.php" class="btn btn-light"><i class="bi bi-arrow-left"></i> รายการยืม-คืน</a>'
-    . ($loan['file_path'] ? '<a href="loan_file.php?id=' . $id . '" target="_blank" class="btn btn-outline-dark"><i class="bi bi-printer"></i> เปิด/พิมพ์ใบยืม</a>' : '')
-    . ($isAdmin && $loan['status'] === 'borrowed' ? '<a href="loan_form.php?id=' . $id . '" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> แก้ไข</a>' : '');
+$pageActions = '<a href="loans" class="btn btn-light"><i class="bi bi-arrow-left"></i> รายการยืม-คืน</a>'
+    . ($loan['file_path'] ? '<a href="loan_file?id=' . $id . '" target="_blank" class="btn btn-outline-dark"><i class="bi bi-printer"></i> เปิด/พิมพ์ใบยืม</a>' : '')
+    . ($isAdmin && $loan['status'] === 'borrowed' ? '<a href="loan_form?id=' . $id . '" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> แก้ไข</a>' : '');
 require __DIR__ . '/header.php';
 ?>
 <div class="row g-3">
@@ -90,9 +90,9 @@ require __DIR__ . '/header.php';
           <?php if ($loan['purpose']): ?><dt class="col-sm-3">วัตถุประสงค์</dt><dd class="col-sm-9"><?= h($loan['purpose']) ?></dd><?php endif; ?>
           <dt class="col-sm-3">ระยะเวลายืม</dt><dd class="col-sm-9"><?= h(thai_date_full($loan['start_date'])) ?> ถึง <?= h(thai_date_full($loan['due_date'])) ?></dd>
           <dt class="col-sm-3">ไฟล์ใบยืม</dt><dd class="col-sm-9"><?php if ($loan['file_path']): ?>
-            <a href="loan_file.php?id=<?= $id ?>" target="_blank"><i class="bi <?= $isPdf ? 'bi-file-earmark-pdf text-danger' : 'bi-file-earmark-image' ?>"></i> <?= h($loan['file_name']) ?></a>
-            · <a href="loan_file.php?id=<?= $id ?>&download=1" class="small">ดาวน์โหลด</a>
-            <?php else: ?><span class="text-muted">ไม่มี</span><?php if ($isAdmin): ?> · <a href="loan_attach.php?ids=<?= $id ?>"><i class="bi bi-paperclip"></i> แนบไฟล์ใบยืม</a><?php endif; ?><?php endif; ?></dd>
+            <a href="loan_file?id=<?= $id ?>" target="_blank"><i class="bi <?= $isPdf ? 'bi-file-earmark-pdf text-danger' : 'bi-file-earmark-image' ?>"></i> <?= h($loan['file_name']) ?></a>
+            · <a href="loan_file?id=<?= $id ?>&download=1" class="small">ดาวน์โหลด</a>
+            <?php else: ?><span class="text-muted">ไม่มี</span><?php if ($isAdmin): ?> · <a href="loan_attach?ids=<?= $id ?>"><i class="bi bi-paperclip"></i> แนบไฟล์ใบยืม</a><?php endif; ?><?php endif; ?></dd>
           <?php if ($loan['returned_at']): ?><dt class="col-sm-3">รับคืน</dt><dd class="col-sm-9"><?= h(thai_date_full($loan['returned_at'])) ?> โดย <?= h($loan['receiver_name']) ?><?= $loan['return_note'] ? '<div class="small text-muted">' . h($loan['return_note']) . '</div>' : '' ?></dd><?php endif; ?>
         </dl>
       </div>
@@ -106,7 +106,7 @@ require __DIR__ . '/header.php';
           <?php foreach ($items as $i => $it): ?>
             <tr>
               <td class="text-center"><?= $i + 1 ?></td>
-              <td class="font-monospace small"><?= $it['equipment_id'] ? '<a href="equipment_view.php?id=' . (int)$it['equipment_id'] . '">' . h($it['asset_no'] ?: '(ไม่มีเลข)') . '</a>' : h($it['asset_no']) ?></td>
+              <td class="font-monospace small"><?= $it['equipment_id'] ? '<a href="equipment_view?id=' . (int)$it['equipment_id'] . '">' . h($it['asset_no'] ?: '(ไม่มีเลข)') . '</a>' : h($it['asset_no']) ?></td>
               <td><?= h($it['item_name']) ?><?= (int)$it['quantity'] > 1 ? ' × ' . (int)$it['quantity'] : '' ?></td>
               <td><?= h($it['brand_model']) ?></td>
               <td><?= $it['eq_status'] ? eq_status_badge($it['eq_status']) : '<span class="text-muted small">-</span>' ?></td>
@@ -118,9 +118,9 @@ require __DIR__ . '/header.php';
     </div>
     <?php if ($isPdf): ?>
       <div class="card"><div class="card-header"><strong><i class="bi bi-file-earmark-pdf"></i> ใบยืม</strong></div>
-        <iframe src="loan_file.php?id=<?= $id ?>" style="width:100%;height:75vh;border:0" title="ใบยืม"></iframe></div>
+        <iframe src="loan_file?id=<?= $id ?>" style="width:100%;height:75vh;border:0" title="ใบยืม"></iframe></div>
     <?php elseif ($loan['file_path']): ?>
-      <div class="card"><div class="card-body text-center"><img src="loan_file.php?id=<?= $id ?>" class="img-fluid" alt="ใบยืม"></div></div>
+      <div class="card"><div class="card-body text-center"><img src="loan_file?id=<?= $id ?>" class="img-fluid" alt="ใบยืม"></div></div>
     <?php endif; ?>
   </div>
 

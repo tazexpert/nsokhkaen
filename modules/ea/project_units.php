@@ -12,7 +12,7 @@ $pid = int_param('id');
 $project = projects_all()[$pid] ?? null;
 if (!$project) {
     flash('ไม่พบโครงการ', 'warning');
-    redirect('projects.php');
+    redirect('projects');
 }
 $canEdit = ea_can('admin');                    // กำหนดผู้ปฏิบัติงาน / ลบ
 $canStatus = ea_can('editor');                 // อัปเดตสถานะ (เจ้าหน้าที่โครงการ: เฉพาะที่ตนรับผิดชอบ)
@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare('DELETE FROM ea_project_units WHERE id = ?')->execute([$id]);
         audit_log('ea_unit_delete', 'ลบสถานประกอบการ "' . $u['name'] . '" โครงการ ' . $project['code'] . ' ' . $u['round_label'], EA_MODULE);
         flash('ลบ "' . $u['name'] . '" แล้ว');
-        redirect('project_units.php?' . http_build_query(['id' => $pid, 'round' => $u['round_label']]));
+        redirect('project_units?' . http_build_query(['id' => $pid, 'round' => $u['round_label']]));
     }
     json_out(['ok' => false, 'error' => 'คำสั่งไม่ถูกต้อง'], 400);
 }
@@ -131,10 +131,10 @@ $active = 'projects';
 $st = $pdo->prepare('SELECT COUNT(*) FROM ea_project_eas WHERE project_id = ?' . ($mine ? ' AND assigned_user_id = ' . (int)$mine : ''));
 $st->execute([$pid]);
 $eaCount = (int)$st->fetchColumn();
-$pageActions = '<a href="projects.php" class="btn btn-light"><i class="bi bi-arrow-left"></i> ทุกโครงการ</a>'
-    . ($eaCount || $canEdit ? ' <a href="project_eas.php?id=' . $pid . '&amp;ea=1" class="btn btn-outline-secondary"><i class="bi bi-map"></i> ' . ($eaCount ? 'EA ของโครงการ (' . number_format($eaCount) . ')' : 'เพิ่ม EA ให้โครงการ') . '</a>' : '')
+$pageActions = '<a href="projects" class="btn btn-light"><i class="bi bi-arrow-left"></i> ทุกโครงการ</a>'
+    . ($eaCount || $canEdit ? ' <a href="project_eas?id=' . $pid . '&amp;ea=1" class="btn btn-outline-secondary"><i class="bi bi-map"></i> ' . ($eaCount ? 'EA ของโครงการ (' . number_format($eaCount) . ')' : 'เพิ่ม EA ให้โครงการ') . '</a>' : '')
     . ($rows ? ' <a href="?' . h($qs(['export' => 'csv'])) . '" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> Export CSV</a>' : '')
-    . ($canEdit ? ' <a href="project_import.php" class="btn btn-outline-primary"><i class="bi bi-file-earmark-arrow-up"></i> นำเข้าไฟล์</a>' : '');
+    . ($canEdit ? ' <a href="project_import" class="btn btn-outline-primary"><i class="bi bi-file-earmark-arrow-up"></i> นำเข้าไฟล์</a>' : '');
 require __DIR__ . '/header.php';
 ?>
 <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
@@ -142,13 +142,13 @@ require __DIR__ . '/header.php';
   <?php if (($project['survey_period'] ?? '') !== ''): ?><span class="text-muted small">· <?= h(project_period_label($project['survey_period'])) ?></span><?php endif; ?>
   <?php if ($rounds): ?>
   <select class="form-select form-select-sm w-auto ms-auto" data-goto title="รอบ/งวด">
-    <?php foreach ($rounds as $rl => $cnt): ?><option value="project_units.php?<?= h(http_build_query(['id' => $pid, 'round' => (string)$rl])) ?>" <?= (string)$rl === $round ? 'selected' : '' ?>><?= h((string)$rl ?: 'ไม่ระบุรอบ') ?> (<?= number_format($cnt) ?>)</option><?php endforeach; ?>
+    <?php foreach ($rounds as $rl => $cnt): ?><option value="project_units?<?= h(http_build_query(['id' => $pid, 'round' => (string)$rl])) ?>" <?= (string)$rl === $round ? 'selected' : '' ?>><?= h((string)$rl ?: 'ไม่ระบุรอบ') ?> (<?= number_format($cnt) ?>)</option><?php endforeach; ?>
   </select>
   <?php endif; ?>
 </div>
 
 <?php if (!$rounds): ?>
-  <div class="alert alert-info">ยังไม่มีสถานประกอบการในโครงการนี้<?= $canEdit ? ' — <a href="project_import.php" class="alert-link">นำเข้าบัญชีมอบหมายสถานประกอบการ</a>' : '' ?></div>
+  <div class="alert alert-info">ยังไม่มีสถานประกอบการในโครงการนี้<?= $canEdit ? ' — <a href="project_import" class="alert-link">นำเข้าบัญชีมอบหมายสถานประกอบการ</a>' : '' ?></div>
 <?php else: ?>
 <div class="row g-3 mb-3" data-reveal>
   <?php foreach ([
@@ -200,7 +200,7 @@ require __DIR__ . '/header.php';
         <tr>
           <td class="small text-muted"><?= (int)$r['seq'] ?></td>
           <td><?= $r['prefix'] !== '' ? '<span class="text-muted small">' . h($r['prefix']) . '</span> ' : '' ?><?= h($r['name']) ?></td>
-          <td class="small text-nowrap"><?php if ($r['ea_code']): ?><a href="ea_view.php?id=<?= (int)$r['ea_id'] ?>" class="ea-code text-decoration-none" title="<?= h($r['ea_code']) ?>"><?= h($r['ea_no']) ?></a>
+          <td class="small text-nowrap"><?php if ($r['ea_code']): ?><a href="ea_view?id=<?= (int)$r['ea_id'] ?>" class="ea-code text-decoration-none" title="<?= h($r['ea_code']) ?>"><?= h($r['ea_no']) ?></a>
             <?php else: ?><span class="ea-code text-muted"><?= h($r['ea_no'] ?: '-') ?></span><?php endif; ?></td>
           <td class="small"><?= h(ea_unit_address($r)) ?></td>
           <?php if ($canEdit): ?>

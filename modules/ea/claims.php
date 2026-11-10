@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $c = $find(int_param('id'));
     if (!$c || !claim_can_view($c)) {
         flash('ไม่พบใบเบิก', 'warning');
-        redirect('claims.php');
+        redirect('claims');
     }
     $action = post('action');
     if ($action === 'delete' && claim_can_edit($c)) {
@@ -44,9 +44,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ->execute([(int)$me['id'], $c['id']]);
         $new = (int)$pdo->lastInsertId();
         flash('คัดลอกเป็นใบเบิกใหม่แล้ว — เพิ่มรายวันที่เดินทาง');
-        redirect('claim_form.php?id=' . $new);
+        redirect('claim_form?id=' . $new);
     }
-    redirect('claims.php');
+    redirect('claims');
 }
 
 // ---------- รายการ ----------
@@ -81,7 +81,7 @@ $sum = array_sum(array_map(fn($r) => (float)$r['total_amount'], $rows));
 
 $pageTitle = 'ใบเบิกค่าเดินทาง';
 $active = 'claims';
-$pageActions = '<a href="claim_form.php" class="btn btn-primary"><i class="bi bi-plus-lg"></i> สร้างใบเบิก</a>';
+$pageActions = '<a href="claim_form" class="btn btn-primary"><i class="bi bi-plus-lg"></i> สร้างใบเบิก</a>';
 require __DIR__ . '/header.php';
 ?>
 <p class="text-muted small mb-3">ใบเบิกค่าใช้จ่ายในการเดินทางไปราชการ — พิมพ์ชุดเอกสาร แบบ 8708 · แบบประกอบใบเบิกค่าใช้จ่าย · ใบรับรองแทนใบเสร็จรับเงิน (แบบ บก.111)
@@ -116,8 +116,8 @@ require __DIR__ . '/header.php';
           <td class="text-end text-nowrap fw-semibold"><?= number_format((float)$r['total_amount'], 2) ?></td>
           <td><?= $r['status'] === 'issued' ? '<span class="badge text-bg-success">ออกใบสำคัญแล้ว</span>' : '<span class="badge text-bg-secondary">ร่าง</span>' ?></td>
           <td class="text-end text-nowrap">
-            <a href="claim_print.php?id=<?= (int)$r['id'] ?>" target="_blank" class="btn btn-sm btn-outline-success" title="พิมพ์ชุดเอกสาร"><i class="bi bi-printer"></i></a>
-            <?php if ($editable): ?><a href="claim_form.php?id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-outline-primary" title="แก้ไข"><i class="bi bi-pencil"></i></a><?php endif; ?>
+            <a href="claim_print?id=<?= (int)$r['id'] ?>" target="_blank" class="btn btn-sm btn-outline-success" title="พิมพ์ชุดเอกสาร"><i class="bi bi-printer"></i></a>
+            <?php if ($editable): ?><a href="claim_form?id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-outline-primary" title="แก้ไข"><i class="bi bi-pencil"></i></a><?php endif; ?>
             <form method="post" class="d-inline"><?= csrf_field() ?><input type="hidden" name="id" value="<?= (int)$r['id'] ?>">
               <?php if ($r['status'] === 'draft'): ?>
               <button name="action" value="issue" class="btn btn-sm btn-outline-success" title="ออกใบสำคัญ" onclick="return confirm('ออกใบสำคัญใบเบิกนี้? (หลังออกแล้วแก้ไขได้เฉพาะผู้ดูแล)')"><i class="bi bi-check2-square"></i></button>
@@ -130,7 +130,7 @@ require __DIR__ . '/header.php';
           </td>
         </tr>
       <?php endforeach; ?>
-      <?php if (!$rows): ?><tr><td colspan="7" class="text-center text-muted py-5">ยังไม่มีใบเบิก — <a href="claim_form.php">สร้างใบเบิกค่าเดินทาง</a></td></tr><?php endif; ?>
+      <?php if (!$rows): ?><tr><td colspan="7" class="text-center text-muted py-5">ยังไม่มีใบเบิก — <a href="claim_form">สร้างใบเบิกค่าเดินทาง</a></td></tr><?php endif; ?>
       </tbody>
     </table>
   </div>

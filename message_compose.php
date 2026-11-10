@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->commit();
                 audit_log('message.send', 'ส่งข้อความ #' . $mid . ' ถึงผู้ใช้ #' . $data['to'] . ($files ? ' (แนบ ' . count($files) . ' ไฟล์)' : ''));
                 flash('ส่งข้อความเรียบร้อยแล้ว');
-                redirect(url('messages.php?tab=sent'));
+                redirect(url('messages?tab=sent'));
             } catch (Throwable $e) {
                 $pdo->rollBack();
                 $errors[] = $e instanceof RuntimeException ? $e->getMessage() : 'ส่งข้อความไม่สำเร็จ กรุณาลองใหม่';
@@ -88,7 +88,7 @@ if ($replyTo && !in_array($data['to'], array_map('intval', array_column($recipie
 $pageTitle = $replyTo ? 'ตอบกลับข้อความ' : 'เขียนข้อความ';
 $active = 'messages';
 $headExtra = richtext_assets();
-$pageActions = '<a href="' . h(url('messages.php')) . '" class="btn btn-outline-secondary"><i class="bi bi-inbox"></i> กล่องจดหมาย</a>';
+$pageActions = '<a href="' . h(url('messages')) . '" class="btn btn-outline-secondary"><i class="bi bi-inbox"></i> กล่องจดหมาย</a>';
 require APP_ROOT . '/core/layout/header.php';
 ?>
 <div class="row justify-content-center">
@@ -127,7 +127,7 @@ require APP_ROOT . '/core/layout/header.php';
         </div>
       </div>
       <div class="card-footer d-flex gap-2 justify-content-end">
-        <a href="<?= h($replyTo ? url('message_view.php?id=' . $replyTo['id']) : url('messages.php')) ?>" class="btn btn-outline-secondary">ยกเลิก</a>
+        <a href="<?= h($replyTo ? url('message_view?id=' . $replyTo['id']) : url('messages')) ?>" class="btn btn-outline-secondary">ยกเลิก</a>
         <button class="btn btn-primary" id="msgSend"><i class="bi bi-send"></i> ส่งข้อความ</button>
       </div>
     </form>

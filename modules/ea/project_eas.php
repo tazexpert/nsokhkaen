@@ -12,7 +12,7 @@ $pid = int_param('id');
 $project = projects_all()[$pid] ?? null;
 if (!$project) {
     flash('ไม่พบโครงการ', 'warning');
-    redirect('projects.php');
+    redirect('projects');
 }
 $round = isset($_GET['round']) ? mb_substr(trim((string)$_GET['round']), 0, 50) : null;   // null = ทุกรอบ
 $f = ea_filter_input();
@@ -50,7 +50,7 @@ if ($fUser === 'none') {
 $from = ' FROM ea_project_eas pe JOIN ea_areas a ON a.id = pe.ea_id WHERE ' . implode(' AND ', $where);
 $query = ['id' => $pid, 'fy' => $fy, 'round' => $round] + $f + ['status' => $fStatus, 'user' => $fUser];
 $keep = fn(array $q) => array_filter($q, fn($v, $k) => $v !== null && ($v !== '' || $k === 'round'), ARRAY_FILTER_USE_BOTH);
-$back = 'project_eas.php?' . http_build_query($keep($query));
+$back = 'project_eas?' . http_build_query($keep($query));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
@@ -144,7 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              . ($dup ? ' (มีอยู่แล้ว ' . number_format($dup) . ' EA)' : '');
         audit_log('ea_project_add', $msg, EA_MODULE);
         flash($msg . ($unknown ? ' — ไม่พบรหัสในบัญชี EA: ' . implode(', ', array_slice($unknown, 0, 20)) . (count($unknown) > 20 ? ' …' : '') : ''), $unknown || !$added ? 'warning' : 'success');
-        redirect('project_eas.php?id=' . $pid . '&round=' . urlencode($rl));
+        redirect('project_eas?id=' . $pid . '&round=' . urlencode($rl));
     }
 
     if ($action === 'bulk') {
@@ -279,21 +279,21 @@ if ($mine) {                                   // เจ้าหน้าที
     $unitCount = (int)$st->fetchColumn();
     if (!$eaTotal && !$unitCount) {
         flash('คุณยังไม่ได้รับมอบหมาย EA ในโครงการ ' . $project['code'], 'warning');
-        redirect('projects.php');
+        redirect('projects');
     }
 }
 if ($unitCount && !$eaTotal && (!isset($_GET['ea']) || $mine) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
-    redirect('project_units.php?id=' . $pid);
+    redirect('project_units?id=' . $pid);
 }
-$pageActions = '<a href="projects.php" class="btn btn-light"><i class="bi bi-arrow-left"></i> ทุกโครงการ</a>'
-    . ($unitCount ? ' <a href="project_units.php?id=' . $pid . '" class="btn btn-outline-primary"><i class="bi bi-shop"></i> สถานประกอบการ (' . number_format($unitCount) . ')</a>' : '')
+$pageActions = '<a href="projects" class="btn btn-light"><i class="bi bi-arrow-left"></i> ทุกโครงการ</a>'
+    . ($unitCount ? ' <a href="project_units?id=' . $pid . '" class="btn btn-outline-primary"><i class="bi bi-shop"></i> สถานประกอบการ (' . number_format($unitCount) . ')</a>' : '')
     . ' <a href="?' . h(http_build_query($keep($query) + ['export' => 'csv'])) . '" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> Export CSV</a>'
-    . ($canEdit ? ' <a href="assign.php?project=' . $pid . '" class="btn btn-outline-primary"><i class="bi bi-shuffle"></i> มอบหมายผู้ปฏิบัติงาน</a>' : '')
-    . ($canEdit ? ' <a href="project_import.php" class="btn btn-outline-primary"><i class="bi bi-file-earmark-arrow-up"></i> นำเข้าไฟล์</a>' : '')
+    . ($canEdit ? ' <a href="assign?project=' . $pid . '" class="btn btn-outline-primary"><i class="bi bi-shuffle"></i> มอบหมายผู้ปฏิบัติงาน</a>' : '')
+    . ($canEdit ? ' <a href="project_import" class="btn btn-outline-primary"><i class="bi bi-file-earmark-arrow-up"></i> นำเข้าไฟล์</a>' : '')
     . ($canEdit ? ' <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addModal"><i class="bi bi-plus-lg"></i> เพิ่ม EA</button>' : '');
 require __DIR__ . '/header.php';
 $n = (int)$tot['n'];
-$roundUrl = fn($r) => 'project_eas.php?id=' . $pid . ($fy !== '' ? '&fy=' . $fy : '') . ($r === null ? '' : '&round=' . urlencode($r));
+$roundUrl = fn($r) => 'project_eas?id=' . $pid . ($fy !== '' ? '&fy=' . $fy : '') . ($r === null ? '' : '&round=' . urlencode($r));
 $roundName = fn(string $rl) => ($rl === '' ? 'ไม่ระบุรอบ' : $rl) . ($roundTypes[$rl] ?? '' ? ' · ' . str_replace(',', '/', $roundTypes[$rl]) : '');
 ?>
 <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
@@ -304,8 +304,8 @@ $roundName = fn(string $rl) => ($rl === '' ? 'ไม่ระบุรอบ' : 
 <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
   <?php if ($fiscalYears): ?>
   <select class="form-select form-select-sm w-auto" data-goto title="ปีงบประมาณ">
-    <option value="project_eas.php?id=<?= $pid ?>">ทุกปีงบประมาณ</option>
-    <?php foreach ($fiscalYears as $y): ?><option value="project_eas.php?id=<?= $pid ?>&amp;fy=<?= $y ?>" <?= $fy === $y ? 'selected' : '' ?>>ปีงบประมาณ <?= $y ?></option><?php endforeach; ?>
+    <option value="project_eas?id=<?= $pid ?>">ทุกปีงบประมาณ</option>
+    <?php foreach ($fiscalYears as $y): ?><option value="project_eas?id=<?= $pid ?>&amp;fy=<?= $y ?>" <?= $fy === $y ? 'selected' : '' ?>>ปีงบประมาณ <?= $y ?></option><?php endforeach; ?>
   </select>
   <?php endif; ?>
   <?php if (count($rounds) > 8): ?>
@@ -384,7 +384,7 @@ $roundName = fn(string $rl) => ($rl === '' ? 'ไม่ระบุรอบ' : 
         <?php foreach ($rows as $r): ?>
           <tr>
             <?php if ($canStatus): ?><td><input type="checkbox" class="form-check-input pe-check" name="ids[]" value="<?= (int)$r['pe_id'] ?>"></td><?php endif; ?>
-            <td><a href="ea_view.php?id=<?= (int)$r['id'] ?>" class="ea-code text-decoration-none"><?= h($r['ea_code']) ?></a></td>
+            <td><a href="ea_view?id=<?= (int)$r['id'] ?>" class="ea-code text-decoration-none"><?= h($r['ea_code']) ?></a></td>
             <td class="ea-code small"><?= h($r['psu_no'] ?: '-') ?></td>
             <?php if ($round === null && count($rounds) > 1): ?><td class="small text-nowrap"><?= h($r['round_label'] ?: '-') ?><?= $r['enum_type'] !== '' ? '<div class="text-muted">' . h($r['enum_type']) . '</div>' : '' ?></td><?php endif; ?>
             <td><?= h(ea_place($r)) ?><?php if ($r['lat'] !== null && $r['lng'] !== null): ?>

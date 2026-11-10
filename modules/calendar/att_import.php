@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 file_put_contents($tmpFile($token), json_encode($res, JSON_UNESCAPED_UNICODE));
                 $_SESSION[$sessKey] = ['token' => $token, 'file' => mb_substr(post('file_name'), 0, 150)];
                 if (!$errors) {
-                    redirect('att_import.php?step=preview');
+                    redirect('att_import?step=preview');
                 }
             }
         }
@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $res = $load();
         if (!$res) {
             flash('ไม่พบข้อมูลที่อ่านไว้ กรุณาเลือกไฟล์อีกครั้ง', 'warning');
-            redirect('att_import.php');
+            redirect('att_import');
         }
         $up = $pdo->prepare('INSERT INTO cal_attendance (user_id, work_date, holiday, shift, time_in, time_out, late, certify, leave_code, absent_am, absent_pm, detail, report_at)
                              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         audit_log('cal_att_import', $msg . ' (ไฟล์ ' . $file . ')', CAL_MODULE);
         flash($msg);
         ksort($months);
-        redirect('plan.php?m=' . (array_key_last($months) ?? date('Y-m')));
+        redirect('plan?m=' . (array_key_last($months) ?? date('Y-m')));
     } elseif ($action === 'delete') {
         // ลบข้อมูลเวลาปฏิบัติราชการเพื่อนำเข้าใหม่: ทั้งหมด หรือเฉพาะเดือน (การรับรองของเจ้าของในช่วงที่ลบหายด้วย)
         $scope = (string)post('scope');
@@ -108,14 +108,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $label = 'เดือน' . thai_month_long((int)$mm[2]) . ' ' . ((int)$mm[1] + 543);
         } else {
             flash('กรุณาเลือกช่วงข้อมูลที่จะลบ', 'warning');
-            redirect('att_import.php');
+            redirect('att_import');
         }
         audit_log('cal_att_delete', 'ลบข้อมูลเวลาปฏิบัติราชการ' . $label . ' ' . $n . ' รายการ', CAL_MODULE);
         flash('ลบข้อมูลเวลาปฏิบัติราชการ' . $label . ' ' . number_format($n) . ' รายการแล้ว — นำเข้าไฟล์ใหม่ได้');
-        redirect('att_import.php');
+        redirect('att_import');
     } elseif ($action === 'cancel') {
         $clear();
-        redirect('att_import.php');
+        redirect('att_import');
     }
 }
 
@@ -124,7 +124,7 @@ $attMonths = $pdo->query("SELECT DATE_FORMAT(work_date, '%Y-%m') ym, COUNT(*) n,
 $res = ($_GET['step'] ?? '') === 'preview' || ($errors && isset($_SESSION[$sessKey])) ? $load() : null;
 $pageTitle = 'นำเข้าเวลาปฏิบัติราชการ';
 $active = 'att';
-$pageActions = '<a href="plan.php" class="btn btn-light"><i class="bi bi-grid-3x3"></i> แผนการปฏิบัติงาน</a>';
+$pageActions = '<a href="plan" class="btn btn-light"><i class="bi bi-grid-3x3"></i> แผนการปฏิบัติงาน</a>';
 require __DIR__ . '/header.php';
 ?>
 <?php foreach ($errors as $e): ?><div class="alert alert-warning py-2"><i class="bi bi-exclamation-triangle"></i> <?= h($e) ?></div><?php endforeach; ?>

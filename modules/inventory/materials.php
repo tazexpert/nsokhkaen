@@ -10,8 +10,8 @@ $materialCategories = $pdo->query("SELECT * FROM inv_categories WHERE item_type 
     <h3><?= isAdmin() ? 'จัดการวัสดุสิ้นเปลือง' : 'วัสดุสิ้นเปลือง' ?></h3>
     <?php if (isAdmin()): ?>
     <div>
-        <a href="qr_print.php?type=material" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-qr-code"></i> พิมพ์ QR Code</a>
-        <a href="catalog_print.php?type=material" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-journal-richtext"></i> พิมพ์แคตตาล็อก</a>
+        <a href="qr_print?type=material" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-qr-code"></i> พิมพ์ QR Code</a>
+        <a href="catalog_print?type=material" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-journal-richtext"></i> พิมพ์แคตตาล็อก</a>
         <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#importModal"><i class="bi bi-upload"></i> นำเข้า Excel</button>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#materialModal" onclick="resetMaterialForm()"><i class="bi bi-plus-lg"></i> เพิ่มวัสดุ</button>
     </div>
@@ -200,7 +200,7 @@ $materialCategories = $pdo->query("SELECT * FROM inv_categories WHERE item_type 
                     <li>แบบฟอร์ม "รายละเอียดพัสดุ" ของสำนักงาน (ลำดับที่ / รายละเอียดของพัสดุ / ราคาที่ได้มาจากการสืบราคา(หน่วยละ) / จำนวน(หน่วย)) - ใช้ไฟล์เดิมได้เลยโดยไม่ต้องปรับคอลัมน์ (ไม่มีรหัสหมวดวัสดุ)</li>
                     <li>แบบฟอร์ม "รายงานวัสดุคงเหลือ" ของสำนักงาน (ลำดับที่ / รหัสหมวดวัสดุ / รายการ / หน่วยนับ / ยอดตามบัญชี) - ใช้ยอดตามบัญชีเป็นจำนวนคงเหลือ และใช้รหัสหมวดวัสดุกำหนดหมวดหมู่และรหัสวัสดุ</li>
                 </ul>
-                <a href="<?= INV_URL ?>api/import_template.php?type=material" class="btn btn-sm btn-outline-primary mb-3">
+                <a href="<?= INV_URL ?>api/import_template?type=material" class="btn btn-sm btn-outline-primary mb-3">
                     <i class="bi bi-download"></i> ดาวน์โหลดแบบฟอร์มเปล่า (Excel)
                 </a>
                 <form id="importForm" enctype="multipart/form-data">

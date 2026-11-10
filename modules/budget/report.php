@@ -176,7 +176,7 @@ require __DIR__ . '/header.php';
         <?php foreach ($list as $nd): ?>
           <tr class="<?= $nd['head'] ? 'bud-exp-head' : '' ?>">
             <td class="bud-name bud-lv<?= $nd['level'] ?>"><span class="bud-num"><?= h($nd['num']) ?></span>
-              <?php if ($nd['key'] !== null): ?><a class="text-body text-decoration-none" href="txns.php?<?= h(http_build_query(['type' => $mode === 'matrix' ? $mtype : 'spend', 'fy' => $fy, 'src' => $nd['key'], 'month' => $mode === 'month' ? $month : null])) ?>" title="<?= h($rows[$nd['key']]['label']) ?>"><?= h($nd['label']) ?></a>
+              <?php if ($nd['key'] !== null): ?><a class="text-body text-decoration-none" href="txns?<?= h(http_build_query(['type' => $mode === 'matrix' ? $mtype : 'spend', 'fy' => $fy, 'src' => $nd['key'], 'month' => $mode === 'month' ? $month : null])) ?>" title="<?= h($rows[$nd['key']]['label']) ?>"><?= h($nd['label']) ?></a>
               <?php else: ?><?= h($nd['label']) ?><?php endif; ?></td>
             <?php foreach ($nd['vals'] as $v): ?><td class="text-end"><?= $money($v) ?></td><?php endforeach; ?>
             <?php if ($withPct): ?><td class="text-end"><?= $pctText($nd['vals']) ?></td><?php endif; ?>

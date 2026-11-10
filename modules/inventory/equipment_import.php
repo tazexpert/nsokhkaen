@@ -179,12 +179,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Throwable $ex) {
             $pdo->rollBack();
             flash('นำเข้าไม่สำเร็จ: ' . $ex->getMessage(), 'danger');
-            redirect('equipment_import.php');
+            redirect('equipment_import');
         }
         unset($_SESSION[$sessKey]);
         audit_log('equipment_import', json_encode($stats), INV_MODULE);
         flash("นำเข้าเรียบร้อย: เพิ่มใหม่ {$stats['insert']} รายการ · ปรับปรุง {$stats['update']} รายการ · ข้าม {$stats['skip']} รายการ");
-        redirect('equipment.php');
+        redirect('equipment');
     }
 }
 
@@ -208,8 +208,8 @@ if ($step === 'preview') {
     }
 }
 
-$pageActions = '<a href="equipment.php" class="btn btn-light"><i class="bi bi-arrow-left"></i> รายการครุภัณฑ์</a>'
-    . '<a href="equipment_import.php?export=1" class="btn btn-outline-success"><i class="bi bi-download"></i> ส่งออก CSV</a>';
+$pageActions = '<a href="equipment" class="btn btn-light"><i class="bi bi-arrow-left"></i> รายการครุภัณฑ์</a>'
+    . '<a href="equipment_import?export=1" class="btn btn-outline-success"><i class="bi bi-download"></i> ส่งออก CSV</a>';
 require __DIR__ . '/header.php';
 ?>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>
@@ -299,7 +299,7 @@ require __DIR__ . '/header.php';
   </div>
   <div class="sticky-actions">
     <button class="btn btn-primary btn-lg"><i class="bi bi-check2-circle"></i> ยืนยันนำเข้า <?= count($items) ?> รายการ</button>
-    <a href="equipment_import.php" class="btn btn-light btn-lg">เลือกไฟล์ใหม่</a>
+    <a href="equipment_import" class="btn btn-light btn-lg">เลือกไฟล์ใหม่</a>
   </div>
 </form>
 <?php endif; ?>

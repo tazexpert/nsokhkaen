@@ -37,26 +37,26 @@ function dashboardCard(string $colorClass, int $value, string $label, string $hr
 
 <div class="row g-3 mb-4" data-reveal>
     <div class="col-6 col-lg reveal-item">
-        <?php dashboardCard('text-bg-primary', (int) $materialCount, 'วัสดุสิ้นเปลืองทั้งหมด', INV_URL . 'materials.php') ?>
+        <?php dashboardCard('text-bg-primary', (int) $materialCount, 'วัสดุสิ้นเปลืองทั้งหมด', INV_URL . 'materials') ?>
     </div>
     <div class="col-6 col-lg reveal-item">
-        <?php dashboardCard('text-bg-warning', (int) $lowStockCount, 'วัสดุใกล้หมดสต๊อก', INV_URL . 'materials.php?filter=low_stock') ?>
+        <?php dashboardCard('text-bg-warning', (int) $lowStockCount, 'วัสดุใกล้หมดสต๊อก', INV_URL . 'materials?filter=low_stock') ?>
     </div>
     <div class="col-6 col-lg reveal-item">
-        <?php dashboardCard('text-bg-success', (int) $equipmentCount, 'ครุภัณฑ์ทั้งหมด', INV_URL . 'equipment.php') ?>
+        <?php dashboardCard('text-bg-success', (int) $equipmentCount, 'ครุภัณฑ์ทั้งหมด', INV_URL . 'equipment') ?>
     </div>
     <div class="col-6 col-lg reveal-item">
-        <?php dashboardCard('text-bg-info', (int) $loanCounts['borrowed'], 'ครุภัณฑ์ที่กำลังยืม', INV_URL . 'loans.php?tab=borrowed') ?>
+        <?php dashboardCard('text-bg-info', (int) $loanCounts['borrowed'], 'ครุภัณฑ์ที่กำลังยืม', INV_URL . 'loans?tab=borrowed') ?>
     </div>
     <div class="col-6 col-lg reveal-item">
-        <?php dashboardCard((int) $loanCounts['overdue'] ? 'text-bg-danger' : 'text-bg-light border', (int) $loanCounts['overdue'], 'เกินกำหนดคืน', INV_URL . 'loans.php?tab=overdue') ?>
+        <?php dashboardCard((int) $loanCounts['overdue'] ? 'text-bg-danger' : 'text-bg-light border', (int) $loanCounts['overdue'], 'เกินกำหนดคืน', INV_URL . 'loans?tab=overdue') ?>
     </div>
 </div>
 
 <div class="card reveal-item" data-reveal>
     <div class="card-header d-flex justify-content-between align-items-center">
         <span>ใบเบิกล่าสุด</span>
-        <a href="<?= INV_URL ?>requisitions.php" class="small">ดูทั้งหมด &rarr;</a>
+        <a href="<?= INV_URL ?>requisitions" class="small">ดูทั้งหมด &rarr;</a>
     </div>
     <div class="card-body p-0">
         <table class="table table-sm mb-0">
@@ -64,12 +64,12 @@ function dashboardCard(string $colorClass, int $value, string $label, string $hr
             <tbody>
             <?php foreach ($recentRequisitions as $req): ?>
                 <tr>
-                    <td><a href="<?= INV_URL ?>requisition_view.php?id=<?= (int) $req['id'] ?>"><?= htmlspecialchars($req['requisition_no']) ?></a></td>
+                    <td><a href="<?= INV_URL ?>requisition_view?id=<?= (int) $req['id'] ?>"><?= htmlspecialchars($req['requisition_no']) ?></a></td>
                     <td><?= htmlspecialchars($req['requester_name'] ?: '-') ?></td>
                     <td><?= (int) $req['item_count'] ?></td>
                     <td><?= htmlspecialchars(formatThaiDateTime($req['created_at'])) ?></td>
                     <td>
-                        <a href="<?= INV_URL ?>requisition_print.php?id=<?= (int) $req['id'] ?>" target="_blank" class="btn btn-sm btn-outline-secondary">พิมพ์</a>
+                        <a href="<?= INV_URL ?>requisition_print?id=<?= (int) $req['id'] ?>" target="_blank" class="btn btn-sm btn-outline-secondary">พิมพ์</a>
                     </td>
                 </tr>
             <?php endforeach; ?>

@@ -169,7 +169,7 @@ function msg_notifications(array $user): array
     foreach ($st as $m) {
         $out[] = ['title' => 'ข้อความใหม่จาก ' . preg_replace('/\s+/u', ' ', $m['full_name']), 'icon' => 'bi-envelope-fill', 'color' => 'primary',
                   'text' => mb_strimwidth($m['subject'], 0, 80, '…') . ($m['nfiles'] ? ' · แนบ ' . $m['nfiles'] . ' ไฟล์' : ''),
-                  'href' => url('message_view.php?id=' . $m['id']), 'time' => $m['created_at'], 'module' => 'messages'];
+                  'href' => url('message_view?id=' . $m['id']), 'time' => $m['created_at'], 'module' => 'messages'];
     }
     return $out;
 }

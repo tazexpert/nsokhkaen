@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach ($errors as $e) {
         flash($e, 'danger');
     }
-    redirect('loan_attach.php' . $idsQs);
+    redirect('loan_attach' . $idsQs);
 }
 
 $sql = 'SELECT l.*, (SELECT GROUP_CONCAT(COALESCE(i.asset_no, i.brand_model, i.item_name) ORDER BY i.sort_order SEPARATOR ", ")
@@ -66,7 +66,7 @@ if ($ids) {
 $missing = count(array_filter($loans, fn($l) => !$l['file_path']));
 
 $pageTitle = $ids ? 'รายการที่นำเข้า — แนบไฟล์ใบยืม' : 'รายการยืมที่ยังไม่มีไฟล์ใบยืม';
-$pageActions = '<a href="loans.php" class="btn btn-light"><i class="bi bi-arrow-left"></i> รายการยืม-คืน</a>';
+$pageActions = '<a href="loans" class="btn btn-light"><i class="bi bi-arrow-left"></i> รายการยืม-คืน</a>';
 require __DIR__ . '/header.php';
 ?>
 <?php if (!$loans): ?>
@@ -86,7 +86,7 @@ require __DIR__ . '/header.php';
         <tbody>
         <?php foreach ($loans as $l): ?>
           <tr class="<?= $l['file_path'] ? '' : 'table-warning' ?>">
-            <td><a href="loan_view.php?id=<?= (int)$l['id'] ?>" class="fw-semibold"><?= h($l['loan_no']) ?></a>
+            <td><a href="loan_view?id=<?= (int)$l['id'] ?>" class="fw-semibold"><?= h($l['loan_no']) ?></a>
               <?php if ($l['status'] !== 'borrowed'): ?><div><?= loan_status_badge($l['status']) ?></div><?php endif; ?></td>
             <td><?= h($l['borrower_name']) ?><div class="small text-muted"><?= h($l['borrower_position']) ?></div></td>
             <td class="small font-monospace" style="max-width:260px"><?= h($l['item_list']) ?></td>
@@ -94,7 +94,7 @@ require __DIR__ . '/header.php';
             <td><input name="doc_no[<?= (int)$l['id'] ?>]" class="form-control form-control-sm" value="<?= h($l['doc_no']) ?>" maxlength="100"></td>
             <td>
               <?php if ($l['file_path']): ?>
-                <div class="small mb-1"><a href="loan_file.php?id=<?= (int)$l['id'] ?>" target="_blank"><i class="bi bi-paperclip"></i> <?= h($l['file_name']) ?></a> <span class="text-muted">(เลือกไฟล์ใหม่เพื่อแทนที่)</span></div>
+                <div class="small mb-1"><a href="loan_file?id=<?= (int)$l['id'] ?>" target="_blank"><i class="bi bi-paperclip"></i> <?= h($l['file_name']) ?></a> <span class="text-muted">(เลือกไฟล์ใหม่เพื่อแทนที่)</span></div>
               <?php endif; ?>
               <input type="file" name="files[<?= (int)$l['id'] ?>]" accept=".pdf,image/jpeg,image/png,image/webp" class="form-control form-control-sm">
             </td>

@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('กรุณาเลือกรายการ', 'warning');
     }
     $back = post('back');
-    redirect(preg_match('/^(slips|slip_view)\.php(\?[\w=&%.-]*)?$/', $back) ? $back : 'slips.php');
+    redirect(preg_match('/^(slips|slip_view)(\.php)?(\?[\w=&%.-]*)?$/', $back) ? $back : 'slips');
 }
 
 $periods = $pdo->query('SELECT year, month, COUNT(*) n, SUM(status = \'pending\') pending FROM pay_slips
@@ -110,8 +110,8 @@ $backQs = http_build_query(array_filter(['status' => $status, 'year' => $year ?:
 
 $active = $status === 'pending' ? 'pending' : 'slips';
 $pageTitle = $status === 'pending' ? 'สลิปรออนุมัติ' : 'จัดการสลิปเงินเดือน';
-$pageActions = $canManage ? '<a href="import.php" class="btn btn-outline-success"><i class="bi bi-file-earmark-excel"></i> นำเข้าข้อมูล</a>'
-    . '<a href="slip_form.php" class="btn btn-outline-primary"><i class="bi bi-plus-lg"></i> เพิ่มสลิป</a>' : '';
+$pageActions = $canManage ? '<a href="import" class="btn btn-outline-success"><i class="bi bi-file-earmark-excel"></i> นำเข้าข้อมูล</a>'
+    . '<a href="slip_form" class="btn btn-outline-primary"><i class="bi bi-plus-lg"></i> เพิ่มสลิป</a>' : '';
 require __DIR__ . '/header.php';
 ?>
 <div class="card mb-3">
@@ -140,14 +140,14 @@ require __DIR__ . '/header.php';
       <?php endif; ?>
     </form>
     <form method="post" id="approveAllForm" data-confirm="อนุมัติสลิปที่รออนุมัติทั้งหมด<?= $year && $month ? 'ของ ' . h(pay_period($year, $month)) : '' ?>?">
-      <?= csrf_field() ?><input type="hidden" name="action" value="approve_all"><input type="hidden" name="back" value="slips.php?<?= h($backQs) ?>">
+      <?= csrf_field() ?><input type="hidden" name="action" value="approve_all"><input type="hidden" name="back" value="slips?<?= h($backQs) ?>">
       <input type="hidden" name="year" value="<?= $year && $month ? $year : '' ?>"><input type="hidden" name="month" value="<?= $year && $month ? $month : '' ?>">
     </form>
   </div>
 </div>
 
 <form method="post" id="bulkForm">
-  <?= csrf_field() ?><input type="hidden" name="back" value="slips.php?<?= h($backQs) ?>">
+  <?= csrf_field() ?><input type="hidden" name="back" value="slips?<?= h($backQs) ?>">
   <div class="card">
     <div class="table-responsive">
       <table class="table table-sm table-hover align-middle mb-0 pay-table">
@@ -166,11 +166,11 @@ require __DIR__ . '/header.php';
             <?php if (!$month): ?><td class="small"><?= h(pay_period((int)$s['year'], (int)$s['month'])) ?></td><?php endif; ?>
             <?php foreach ($cols as $k => $_): ?><td class="num<?= $k === 'net_pay' ? ' fw-semibold' : '' ?>"><?= pay_money($s[$k]) ?></td><?php endforeach; ?>
             <td class="text-nowrap"><?= $s['status'] === 'approved' ? '<span class="badge text-bg-success">อนุมัติแล้ว</span>' : '<span class="badge text-bg-warning">รออนุมัติ</span>' ?>
-              <?php if ($s['open_comments']): ?><a href="slip_view.php?id=<?= (int)$s['id'] ?>#comments" class="badge text-bg-danger text-decoration-none" title="ผู้อนุมัติแจ้งแก้ไข รอผู้จัดการสลิป"><i class="bi bi-chat-square-text"></i> แจ้งแก้ไข</a><?php endif; ?></td>
+              <?php if ($s['open_comments']): ?><a href="slip_view?id=<?= (int)$s['id'] ?>#comments" class="badge text-bg-danger text-decoration-none" title="ผู้อนุมัติแจ้งแก้ไข รอผู้จัดการสลิป"><i class="bi bi-chat-square-text"></i> แจ้งแก้ไข</a><?php endif; ?></td>
             <td class="text-nowrap">
-              <a href="slip_view.php?id=<?= (int)$s['id'] ?>" class="btn btn-sm btn-light" title="ดูสลิป"><i class="bi bi-search"></i></a>
-              <?php if ($canManage): ?><a href="slip_form.php?id=<?= (int)$s['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a>
-              <?php else: ?><a href="slip_form.php?id=<?= (int)$s['id'] ?>" class="btn btn-sm btn-light text-warning-emphasis" title="แจ้งแก้ไข (ส่งให้ผู้จัดการสลิปตรวจสอบ)"><i class="bi bi-chat-square-text"></i></a><?php endif; ?>
+              <a href="slip_view?id=<?= (int)$s['id'] ?>" class="btn btn-sm btn-light" title="ดูสลิป"><i class="bi bi-search"></i></a>
+              <?php if ($canManage): ?><a href="slip_form?id=<?= (int)$s['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a>
+              <?php else: ?><a href="slip_form?id=<?= (int)$s['id'] ?>" class="btn btn-sm btn-light text-warning-emphasis" title="แจ้งแก้ไข (ส่งให้ผู้จัดการสลิปตรวจสอบ)"><i class="bi bi-chat-square-text"></i></a><?php endif; ?>
             </td>
           </tr>
         <?php endforeach; ?>

@@ -14,7 +14,7 @@ if ($id) {
     $c = $st->fetch();
     if (!$c) {
         flash('ไม่พบศูนย์ที่ต้องการแก้ไข', 'danger');
-        redirect('centers.php');
+        redirect('centers');
     }
 }
 
@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             delete_upload($photo);
             flash('ลบผู้ดูแลเรียบร้อยแล้ว');
         }
-        redirect("center_form.php?id=$id#staff");
+        redirect("center_form?id=$id#staff");
     }
 
     foreach ($fields as $f) {
@@ -118,7 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             array_map('delete_upload', $removed);
             flash('บันทึกข้อมูลศูนย์เรียบร้อยแล้ว');
-            redirect("center_form.php?id=$id");
+            redirect("center_form?id=$id");
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
@@ -251,8 +251,8 @@ require __DIR__ . '/header.php';
 
   <div class="col-12 sticky-actions">
     <button class="btn btn-primary btn-lg"><i class="bi bi-save"></i> บันทึกข้อมูลศูนย์</button>
-    <a href="centers.php" class="btn btn-light btn-lg">กลับ</a>
-    <?php if ($id): ?><a href="visit_form.php?center_id=<?= $id ?>" class="btn btn-outline-success btn-lg ms-auto"><i class="bi bi-clipboard-check"></i> ตรวจเยี่ยม</a>
+    <a href="centers" class="btn btn-light btn-lg">กลับ</a>
+    <?php if ($id): ?><a href="visit_form?center_id=<?= $id ?>" class="btn btn-outline-success btn-lg ms-auto"><i class="bi bi-clipboard-check"></i> ตรวจเยี่ยม</a>
     <a href="public/center.html?id=<?= $id ?>" target="_blank" class="btn btn-outline-secondary btn-lg"><i class="bi bi-eye"></i> ดูหน้าเว็บ</a><?php endif; ?>
   </div>
 </form>
@@ -260,7 +260,7 @@ require __DIR__ . '/header.php';
 <div class="card mt-4" id="staff">
   <div class="card-header d-flex align-items-center">
     <strong><i class="bi bi-person-badge"></i> ผู้ดูแลศูนย์</strong>
-    <?php if ($id): ?><a href="staff_form.php?center_id=<?= $id ?>" class="btn btn-sm btn-primary ms-auto"><i class="bi bi-person-plus"></i> เพิ่มผู้ดูแล</a><?php endif; ?>
+    <?php if ($id): ?><a href="staff_form?center_id=<?= $id ?>" class="btn btn-sm btn-primary ms-auto"><i class="bi bi-person-plus"></i> เพิ่มผู้ดูแล</a><?php endif; ?>
   </div>
   <div class="card-body">
     <?php if (!$id): ?>
@@ -279,7 +279,7 @@ require __DIR__ . '/header.php';
                 <div class="small"><?= h($s['phone']) ?></div>
               </div>
               <div class="d-flex flex-column gap-1">
-                <a href="staff_form.php?id=<?= (int)$s['id'] ?>" class="btn btn-sm btn-light"><i class="bi bi-pencil"></i></a>
+                <a href="staff_form?id=<?= (int)$s['id'] ?>" class="btn btn-sm btn-light"><i class="bi bi-pencil"></i></a>
                 <form method="post" data-confirm="ลบผู้ดูแล <?= h($s['name']) ?>?">
                   <?= csrf_field() ?><input type="hidden" name="action" value="delete_staff"><input type="hidden" name="staff_id" value="<?= (int)$s['id'] ?>">
                   <button class="btn btn-sm btn-light text-danger"><i class="bi bi-trash"></i></button>

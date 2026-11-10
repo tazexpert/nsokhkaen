@@ -37,3 +37,21 @@ RedirectMatch 404 "/\.(git|svn|hg|env|idea|vscode)(/|$)"
     php_value post_max_size 64M
     php_value max_file_uploads 30
 </IfModule>
+
+# URL ไม่มี .php (ต้องเปิด mod_rewrite — XAMPP เปิดไว้แล้ว และ AllowOverride All)
+#   /modules/calendar/plan?m=2026-11  → plan.php · ลิงก์เดิม/QR Code ที่มี .php ยังใช้ได้ (GET ถูกพาไป URL ใหม่)
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # 1) GET/HEAD ที่ขอ xxx.php โดยตรง → 301 ไป URL ไม่มี .php (POST ไม่ redirect เพราะข้อมูลฟอร์มจะหาย)
+    #    THE_REQUEST = บรรทัดคำขอจริงจากเบราว์เซอร์ (ไม่วนซ้ำหลัง rewrite ภายใน)
+    #    (query string เดิมต่อท้ายให้อัตโนมัติ — ไม่ใส่ ? ใน backreference เพราะ Apache 2.4.60+ ปฏิเสธ)
+    RewriteCond %{THE_REQUEST} ^(GET|HEAD)\ (/[^?\ ]*/)index\.php[?\ ] [NC]
+    RewriteRule ^ %2 [R=301,L,NE]
+    RewriteCond %{THE_REQUEST} ^(GET|HEAD)\ (/[^?\ ]+)\.php[?\ ] [NC]
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ %2 [R=301,L,NE]
+    # 2) ภายใน: /xxx → xxx.php (ถ้ามีไฟล์ และไม่ใช่โฟลเดอร์)
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME}.php -f
+    RewriteRule ^(.+?)/?$ $1.php [L]
+</IfModule>

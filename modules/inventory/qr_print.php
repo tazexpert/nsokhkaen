@@ -37,7 +37,7 @@ $items = $pdo->query('SELECT material_code AS code, qr_code, name FROM inv_mater
 <div class="grid">
     <?php foreach ($items as $item): ?>
         <div class="sticker">
-            <img src="qr_image.php?data=<?= urlencode(buildQrScanUrl($item['qr_code'])) ?>" alt="QR">
+            <img src="qr_image?data=<?= urlencode(buildQrScanUrl($item['qr_code'])) ?>" alt="QR">
             <div class="code"><?= htmlspecialchars($item['code']) ?></div>
             <div class="name"><?= htmlspecialchars($item['name']) ?></div>
         </div>

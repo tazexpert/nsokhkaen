@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'delete') {
     $pdo->prepare('DELETE FROM dcc_visits WHERE id = ?')->execute([$id]);
     array_map('delete_upload', array_filter($files));
     flash('ลบบันทึกการตรวจเยี่ยมเรียบร้อยแล้ว');
-    redirect('visits.php?' . http_build_query(array_filter(['district' => post('district'), 'q' => post('q'), 'status' => post('status'), 'center_id' => post('center_id')])));
+    redirect('visits?' . http_build_query(array_filter(['district' => post('district'), 'q' => post('q'), 'status' => post('status'), 'center_id' => post('center_id')])));
 }
 
 // ----- ตัวกรอง (ใช้ร่วมกันทั้งรายชื่อศูนย์และประวัติ) -----
@@ -76,7 +76,7 @@ if ($centerId) {
 }
 
 $keep = array_filter(['district' => $district, 'q' => $q, 'status' => $status]);
-$url = fn(array $extra = []) => 'visits.php?' . http_build_query(array_filter($extra + $keep, fn($v) => $v !== '' && $v !== 0 && $v !== null));
+$url = fn(array $extra = []) => 'visits?' . http_build_query(array_filter($extra + $keep, fn($v) => $v !== '' && $v !== 0 && $v !== null));
 
 $pageTitle = 'ตรวจเยี่ยมศูนย์';
 $active = 'visits';
@@ -106,7 +106,7 @@ $pct = $total ? round($visited / $total * 100) : 0;
     <span class="bar-track flex-grow-1" style="max-width:260px"><span class="bar-fill" style="width:<?= $pct ?>%"></span></span>
     <span><?= $pct ?>%</span>
     <span class="text-muted">· รวมการตรวจเยี่ยม <?= number_format($visitSum) ?> ครั้ง</span>
-    <?php if ($keep): ?><a href="visits.php" class="ms-auto">ล้างตัวกรอง</a><?php endif; ?>
+    <?php if ($keep): ?><a href="visits" class="ms-auto">ล้างตัวกรอง</a><?php endif; ?>
   </div>
 </form>
 
@@ -134,7 +134,7 @@ $pct = $total ? round($visited / $total * 100) : 0;
             <?php if ($c['visit_count'] > 0): ?>
               <a href="<?= h($url(['center_id' => (int)$c['id']])) ?>#history" class="btn btn-sm btn-light text-nowrap" title="ดูประวัติ"><i class="bi bi-clock-history"></i></a>
             <?php endif; ?>
-            <a href="visit_form.php?center_id=<?= (int)$c['id'] ?>" class="btn btn-sm btn-success text-nowrap"><i class="bi bi-clipboard-plus"></i> ตรวจเยี่ยม<?= $c['visit_count'] > 0 ? ' ครั้งที่ ' . ($c['visit_count'] + 1) : '' ?></a>
+            <a href="visit_form?center_id=<?= (int)$c['id'] ?>" class="btn btn-sm btn-success text-nowrap"><i class="bi bi-clipboard-plus"></i> ตรวจเยี่ยม<?= $c['visit_count'] > 0 ? ' ครั้งที่ ' . ($c['visit_count'] + 1) : '' ?></a>
           </div>
         <?php endforeach; ?>
         <?php if (!$centers): ?><div class="list-group-item text-center text-muted py-4">ไม่พบศูนย์ตามเงื่อนไข</div><?php endif; ?>
@@ -156,13 +156,13 @@ $pct = $total ? round($visited / $total * 100) : 0;
           <?php foreach ($history as $r): ?>
             <tr>
               <td class="text-nowrap"><?= thai_date($r['visit_date']) ?><?= $r['visit_time'] ? '<div class="small text-muted">' . h(substr($r['visit_time'], 0, 5)) . ' น.</div>' : '' ?></td>
-              <td><a href="visit_view.php?id=<?= (int)$r['id'] ?>" class="fw-semibold text-decoration-none"><?= h($r['center_name']) ?></a>
+              <td><a href="visit_view?id=<?= (int)$r['id'] ?>" class="fw-semibold text-decoration-none"><?= h($r['center_name']) ?></a>
                 <span class="badge text-bg-light border">ครั้งที่ <?= (int)$r['visit_no'] ?></span>
                 <div class="small text-muted"><?= h(($r['code'] ? $r['code'] . ' · ' : '') . 'อ.' . $r['district']) ?><?= $r['inspector_name'] ? ' · ' . h($r['inspector_name']) : '' ?></div></td>
               <td class="text-center"><?= (int)$r['photo_count'] ?></td>
               <td class="text-end text-nowrap">
-                <a href="visit_view.php?id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-light" title="ดู/พิมพ์"><i class="bi bi-printer"></i></a>
-                <a href="visit_form.php?id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a>
+                <a href="visit_view?id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-light" title="ดู/พิมพ์"><i class="bi bi-printer"></i></a>
+                <a href="visit_form?id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a>
                 <?php if (dcc_can('admin')): ?>
                 <form method="post" class="d-inline" data-confirm="ลบบันทึกการตรวจเยี่ยมครั้งที่ <?= (int)$r['visit_no'] ?> ของ <?= h($r['center_name']) ?> และภาพทั้งหมด?">
                   <?= csrf_field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$r['id'] ?>">

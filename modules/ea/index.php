@@ -27,7 +27,7 @@ $active = 'dashboard';
 require __DIR__ . '/header.php';
 ?>
 <?php if (!(int)$s['n']): ?>
-  <div class="alert alert-info"><i class="bi bi-info-circle"></i> ยังไม่มีบัญชี EA<?= ea_can('admin') ? ' — <a href="import.php" class="alert-link">นำเข้าจากไฟล์ Excel "บัญชีเขตแจงนับ"</a>' : ' (รอผู้ดูแลระบบบริหารโครงการนำเข้า)' ?></div>
+  <div class="alert alert-info"><i class="bi bi-info-circle"></i> ยังไม่มีบัญชี EA<?= ea_can('admin') ? ' — <a href="import" class="alert-link">นำเข้าจากไฟล์ Excel "บัญชีเขตแจงนับ"</a>' : ' (รอผู้ดูแลระบบบริหารโครงการนำเข้า)' ?></div>
 <?php endif; ?>
 <div class="row g-3 mb-4" data-reveal>
   <?php $areaTotal = max(1, (int)$s['muni'] + (int)$s['rural']);
@@ -65,7 +65,7 @@ require __DIR__ . '/header.php';
         <?php $max = max(1, ...array_map(fn($r) => (int)$r['n'], $byDistrict ?: [['n' => 1]])); $step = $byDistrict ? 600 / count($byDistrict) : 0; ?>
         <div class="ea-vbars">
           <?php foreach ($byDistrict as $i => $r): ?>
-          <a class="col text-decoration-none" href="eas.php?district=<?= h($r['district_code']) ?>"
+          <a class="col text-decoration-none" href="eas?district=<?= h($r['district_code']) ?>"
              title="<?= h($r['district_code'] . ' ' . $r['name'] . ': ' . number_format($r['n']) . ' EA (ในเขตเทศบาล ' . $r['muni'] . ' · นอกเขตเทศบาล ' . $r['rural'] . ') · ครัวเรือน ' . number_format($r['households']) . ' · ประชากร ' . number_format($r['population'])) ?>">
             <div class="ea-stack ea-anim" style="height:<?= $r['n'] / $max * 100 ?>%;--d:<?= round($i * $step) ?>ms">
               <span class="bar" style="height:<?= $r['rural'] / $r['n'] * 100 ?>%;border-radius:0"></span>
@@ -103,16 +103,16 @@ require __DIR__ . '/header.php';
   <div class="col-lg-<?= $mine ? '8' : '12' ?> reveal-item">
     <div class="card h-100">
       <div class="card-header d-flex align-items-center"><strong>ความก้าวหน้าการสำรวจของโครงการ</strong>
-        <a href="projects.php" class="btn btn-sm btn-light ms-auto">ทุกโครงการ <i class="bi bi-chevron-right"></i></a></div>
+        <a href="projects" class="btn btn-sm btn-light ms-auto">ทุกโครงการ <i class="bi bi-chevron-right"></i></a></div>
       <div class="card-body">
         <?php foreach ($projects as $p): $r = $prog[(int)$p['id']]; ?>
-          <a href="project_eas.php?id=<?= (int)$p['id'] ?>" class="d-block text-decoration-none text-body mb-3">
+          <a href="project_eas?id=<?= (int)$p['id'] ?>" class="d-block text-decoration-none text-body mb-3">
             <div class="d-flex small"><span><strong style="color:<?= h($p['color']) ?>"><?= h($p['code']) ?></strong> <?= h($p['name'] !== $p['code'] ? $p['name'] : '') ?></span>
               <span class="ms-auto text-nowrap ps-2"><?= number_format((int)$r['done']) ?>/<?= number_format((int)$r['n']) ?> EA<?= $r['rounds'] > 1 ? ' · ' . (int)$r['rounds'] . ' รอบ' : '' ?></span></div>
             <div class="ea-progress"><span class="done" style="width:<?= $r['done'] / $r['n'] * 100 ?>%"></span><span class="doing" style="width:<?= $r['doing'] / $r['n'] * 100 ?>%"></span></div>
           </a>
         <?php endforeach; ?>
-        <?php if (!$projects): ?><p class="text-muted mb-0">ยังไม่มีโครงการที่กำหนด EA — <a href="projects.php">เลือกโครงการเพื่อเพิ่ม EA</a></p><?php endif; ?>
+        <?php if (!$projects): ?><p class="text-muted mb-0">ยังไม่มีโครงการที่กำหนด EA — <a href="projects">เลือกโครงการเพื่อเพิ่ม EA</a></p><?php endif; ?>
         <?php if ($projects): ?><div class="small text-muted ea-legend"><i style="background:#22c55e"></i>สำรวจเสร็จ <i style="background:#f59e0b" class="ms-2"></i>กำลังสำรวจ</div><?php endif; ?>
       </div>
     </div>
@@ -123,7 +123,7 @@ require __DIR__ . '/header.php';
       <div class="card-header"><strong><i class="bi bi-person-check"></i> EA ที่ฉันรับผิดชอบ (ยังไม่เสร็จ)</strong></div>
       <div class="list-group list-group-flush">
         <?php foreach ($mine as $m): $p = $all[(int)$m['project_id']] ?? null; if (!$p) { continue; } ?>
-          <a class="list-group-item list-group-item-action d-flex" href="project_eas.php?<?= h(http_build_query(['id' => $p['id'], 'round' => $m['round_label'], 'user' => current_user()['id']])) ?>">
+          <a class="list-group-item list-group-item-action d-flex" href="project_eas?<?= h(http_build_query(['id' => $p['id'], 'round' => $m['round_label'], 'user' => current_user()['id']])) ?>">
             <span><strong style="color:<?= h($p['color']) ?>"><?= h($p['code']) ?></strong> <?= h($m['round_label']) ?></span>
             <span class="ms-auto small"><?= (int)$m['done'] ?>/<?= (int)$m['n'] ?> EA</span></a>
         <?php endforeach; ?>

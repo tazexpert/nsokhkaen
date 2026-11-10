@@ -8,7 +8,7 @@ require_once __DIR__ . '/att_lib.php';
 $me = require_module(CAL_MODULE);
 $date = (string)($_POST['date'] ?? $_GET['date'] ?? '');
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || !checkdate((int)substr($date, 5, 2), (int)substr($date, 8, 2), (int)substr($date, 0, 4))) {
-    redirect('index.php');
+    redirect('./');
 }
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'certify') {
     check_csrf();
@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'certify') {
     } else {
         flash('แก้ได้เฉพาะวันที่เป็น "ขาดราชการ" เท่านั้น', 'warning');
     }
-    redirect('att_view.php?date=' . $date);
+    redirect('att_view?date=' . $date);
 }
 $s = att_user_statuses((int)$me['id'], $date, $date)[$date] ?? null;
 $row = $s['row'] ?? null;
@@ -29,8 +29,8 @@ if (!$row) {
 $t = fn($v) => $v ? substr($v, 0, 5) . ' น.' : '-';
 $active = 'month';
 $pageTitle = 'เวลาปฏิบัติราชการ ' . thai_date($date);
-$pageActions = '<a href="index.php?m=' . substr($date, 0, 7) . '" class="btn btn-light"><i class="bi bi-calendar3"></i> ปฏิทิน</a>'
-    . '<a href="plan.php?m=' . substr($date, 0, 7) . '" class="btn btn-outline-secondary"><i class="bi bi-table"></i> แผนการปฏิบัติงาน</a>';
+$pageActions = '<a href="./?m=' . substr($date, 0, 7) . '" class="btn btn-light"><i class="bi bi-calendar3"></i> ปฏิทิน</a>'
+    . '<a href="plan?m=' . substr($date, 0, 7) . '" class="btn btn-outline-secondary"><i class="bi bi-table"></i> แผนการปฏิบัติงาน</a>';
 require __DIR__ . '/header.php';
 ?>
 <div class="card" style="max-width:640px">

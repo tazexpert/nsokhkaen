@@ -228,21 +228,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Throwable $ex) {
             $pdo->rollBack();
             flash('นำเข้าไม่สำเร็จ: ' . $ex->getMessage(), 'danger');
-            redirect('loan_import.php');
+            redirect('loan_import');
         }
         unset($_SESSION[$sessKey]);
         audit_log('loan_import', count($created) . ' รายการ', INV_MODULE);
         if (!$created) {
             flash('ไม่มีรายการที่นำเข้าได้', 'warning');
-            redirect('loan_import.php');
+            redirect('loan_import');
         }
         flash('นำเข้ารายการยืม ' . count($created) . ' รายการ — สถานะครุภัณฑ์เป็น "กำลังยืม" แล้ว · แนบไฟล์ใบยืมด้านล่างได้เลย');
-        redirect('loan_attach.php?ids=' . implode(',', $created));
+        redirect('loan_attach?ids=' . implode(',', $created));
     }
 }
 
 $pageActions = '<a href="?template=1" class="btn btn-outline-success"><i class="bi bi-download"></i> ดาวน์โหลดไฟล์ตัวอย่าง</a>'
-    . '<a href="loans.php" class="btn btn-light"><i class="bi bi-arrow-left"></i> รายการยืม-คืน</a>';
+    . '<a href="loans" class="btn btn-light"><i class="bi bi-arrow-left"></i> รายการยืม-คืน</a>';
 require __DIR__ . '/header.php';
 ?>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>
@@ -303,7 +303,7 @@ require __DIR__ . '/header.php';
   </div>
   <div class="sticky-actions">
     <button class="btn btn-primary btn-lg" <?= $ok ? '' : 'disabled' ?>><i class="bi bi-check2-circle"></i> ยืนยันนำเข้า แล้วแนบไฟล์ใบยืม</button>
-    <a href="loan_import.php" class="btn btn-light btn-lg">เลือกไฟล์ใหม่</a>
+    <a href="loan_import" class="btn btn-light btn-lg">เลือกไฟล์ใหม่</a>
   </div>
 </form>
 <?php endif; ?>

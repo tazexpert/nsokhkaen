@@ -13,7 +13,7 @@ $st->execute([$id]);
 $e = $st->fetch();
 if (!$e) {
     flash('ไม่พบครุภัณฑ์', 'danger');
-    redirect('equipment.php');
+    redirect('equipment');
 }
 $loan = active_loans_by_equipment([$id])[$id] ?? null;
 $hist = $pdo->prepare('SELECT l.* FROM inv_loan_items li JOIN inv_loans l ON l.id = li.loan_id
@@ -23,9 +23,9 @@ $history = $hist->fetchAll();
 $age = equipment_age($e['fiscal_year'] ? (int)$e['fiscal_year'] : null);
 
 $pageTitle = trim(($e['brand'] ?? '') . ' ' . ($e['model'] ?? '')) ?: 'รายละเอียดครุภัณฑ์';
-$pageActions = '<a href="equipment.php" class="btn btn-light"><i class="bi bi-arrow-left"></i> รายการครุภัณฑ์</a>'
-    . ($isAdmin && !$loan && $e['status'] === 'normal' ? '<a href="loan_form.php?equipment=' . $id . '" class="btn btn-success"><i class="bi bi-box-arrow-up-right"></i> บันทึกการยืมรายการนี้</a>' : '')
-    . ($isAdmin ? '<a href="equipment_form.php?id=' . $id . '" class="btn btn-primary"><i class="bi bi-pencil"></i> แก้ไข</a>' : '');
+$pageActions = '<a href="equipment" class="btn btn-light"><i class="bi bi-arrow-left"></i> รายการครุภัณฑ์</a>'
+    . ($isAdmin && !$loan && $e['status'] === 'normal' ? '<a href="loan_form?equipment=' . $id . '" class="btn btn-success"><i class="bi bi-box-arrow-up-right"></i> บันทึกการยืมรายการนี้</a>' : '')
+    . ($isAdmin ? '<a href="equipment_form?id=' . $id . '" class="btn btn-primary"><i class="bi bi-pencil"></i> แก้ไข</a>' : '');
 require __DIR__ . '/header.php';
 ?>
 <div class="row g-3">
@@ -42,7 +42,7 @@ require __DIR__ . '/header.php';
           <dt class="col-sm-4">สภาพการใช้งาน</dt><dd class="col-sm-8"><?= eq_status_badge($e['status']) ?></dd>
           <dt class="col-sm-4">การยืม</dt><dd class="col-sm-8">
             <?php if ($loan): ?>
-              <?= loan_status_badge($loan['status']) ?> <a href="loan_view.php?id=<?= (int)$loan['loan_id'] ?>">รายการยืม <?= h($loan['loan_no']) ?></a>
+              <?= loan_status_badge($loan['status']) ?> <a href="loan_view?id=<?= (int)$loan['loan_id'] ?>">รายการยืม <?= h($loan['loan_no']) ?></a>
               — <?= h($loan['borrower_name']) ?><?= $loan['status'] === 'borrowed' ? ' (กำหนดคืน ' . h(thai_date($loan['due_date'])) . ')' : '' ?>
             <?php elseif ($e['status'] === 'normal'): ?><span class="badge text-bg-success">ว่าง ให้ยืมได้</span>
             <?php else: ?><span class="text-muted">ให้ยืมไม่ได้ (<?= h(EQ_STATUS[$e['status']][0]) ?>)</span><?php endif; ?></dd>
@@ -70,7 +70,7 @@ require __DIR__ . '/header.php';
       <tbody>
       <?php foreach ($history as $l): ?>
         <tr>
-          <td><a href="loan_view.php?id=<?= (int)$l['id'] ?>"><?= h($l['loan_no']) ?></a></td>
+          <td><a href="loan_view?id=<?= (int)$l['id'] ?>"><?= h($l['loan_no']) ?></a></td>
           <td><?= h($l['borrower_name']) ?></td>
           <td class="small"><?= h(thai_date($l['start_date'])) ?> – <?= h(thai_date($l['due_date'])) ?></td>
           <td><?= loan_status_badge($l['status']) ?></td>

@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 audit_log('project_create', $form['code'] . ' — ' . $form['name']);
                 flash('เพิ่มโครงการ "' . $form['code'] . '" แล้ว');
             }
-            redirect('projects.php');
+            redirect('projects');
         }
     } elseif ($action === 'delete' && ($row = $find($id))) {
         $n = $pdo->prepare('SELECT COUNT(*) FROM cal_plan_work WHERE project_id = ?');
@@ -97,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             audit_log('project_delete', $row['code'] . ' — ' . $row['name']);
             flash('ลบโครงการ "' . $row['code'] . '" แล้ว');
         }
-        redirect('projects.php');
+        redirect('projects');
     }
 }
 
@@ -137,8 +137,8 @@ $headExtra = $canManage ? '<link rel="stylesheet" href="https://cdn.jsdelivr.net
     . '<link href="' . h(asset_v('modules/calendar/assets/css/calendar.css')) . '" rel="stylesheet">' : '';
 $active = 'projects';
 $showForm = $canManage && ($editId || isset($_GET['add']) || $errors);      // เปิด popup ฟอร์มทันที
-$pageActions = '<a href="' . h(module_url('calendar', 'plan.php')) . '" class="btn btn-outline-secondary"><i class="bi bi-grid-3x3"></i> แผนการปฏิบัติงาน</a>'
-    . ($canManage ? ' <a href="projects.php?add=1" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#projectModal" data-project-add><i class="bi bi-plus-lg"></i> เพิ่มโครงการ</a>' : '');
+$pageActions = '<a href="' . h(module_url('calendar', 'plan')) . '" class="btn btn-outline-secondary"><i class="bi bi-grid-3x3"></i> แผนการปฏิบัติงาน</a>'
+    . ($canManage ? ' <a href="projects?add=1" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#projectModal" data-project-add><i class="bi bi-plus-lg"></i> เพิ่มโครงการ</a>' : '');
 require __DIR__ . '/header.php';
 ?>
 <div class="row g-3 align-items-start" data-reveal>
@@ -182,24 +182,24 @@ require __DIR__ . '/header.php';
               <td><span class="badge text-bg-<?= $sc ?>"><?= $st ?></span></td>
               <td class="small"><?php $es = $eaStat[(int)$p['id']] ?? null; $us = $unitStat[(int)$p['id']] ?? null; ?>
                 <?php if ($es): ?>
-                  <a href="project_eas.php?id=<?= (int)$p['id'] ?>" class="text-decoration-none d-block">
+                  <a href="project_eas?id=<?= (int)$p['id'] ?>" class="text-decoration-none d-block">
                     <span class="d-flex"><span><?= number_format((int)$es['n']) ?> EA<?= $es['rounds'] > 1 ? ' · ' . (int)$es['rounds'] . ' รอบ' : '' ?></span>
                       <span class="ms-auto text-muted">เสร็จ <?= round($es['done'] / $es['n'] * 100) ?>%</span></span>
                     <span class="ea-progress mt-1"><span class="done" style="width:<?= $es['done'] / $es['n'] * 100 ?>%"></span><span class="doing" style="width:<?= $es['doing'] / $es['n'] * 100 ?>%"></span></span></a>
                 <?php else: ?><span class="text-muted">ยังไม่มี EA</span><?php endif; ?>
-                <?php if ($us): ?><a href="project_units.php?id=<?= (int)$p['id'] ?>" class="d-block mt-1 text-decoration-none"><i class="bi bi-shop"></i> สถานประกอบการ <?= number_format((int)$us['n']) ?> · เสร็จ <?= number_format((int)$us['done']) ?></a><?php endif; ?>
+                <?php if ($us): ?><a href="project_units?id=<?= (int)$p['id'] ?>" class="d-block mt-1 text-decoration-none"><i class="bi bi-shop"></i> สถานประกอบการ <?= number_format((int)$us['n']) ?> · เสร็จ <?= number_format((int)$us['done']) ?></a><?php endif; ?>
               </td>
               <?php if ($canManage): ?>
                 <td class="text-center small"><?= !empty($usage[$p['id']]) ? number_format((int)$usage[$p['id']]) : '-' ?></td>
               <?php endif; ?>
                 <td class="text-end text-nowrap">
                   <?php if (!$es && $us): ?>
-                  <a href="project_units.php?id=<?= (int)$p['id'] ?>" class="btn btn-sm btn-outline-success" title="สถานประกอบการ" aria-label="สถานประกอบการ"><i class="bi bi-shop"></i></a>
+                  <a href="project_units?id=<?= (int)$p['id'] ?>" class="btn btn-sm btn-outline-success" title="สถานประกอบการ" aria-label="สถานประกอบการ"><i class="bi bi-shop"></i></a>
                   <?php else: ?>
-                  <a href="project_eas.php?id=<?= (int)$p['id'] ?>" class="btn btn-sm btn-outline-success" title="EA ของโครงการ" aria-label="EA ของโครงการ"><i class="bi bi-map"></i></a>
+                  <a href="project_eas?id=<?= (int)$p['id'] ?>" class="btn btn-sm btn-outline-success" title="EA ของโครงการ" aria-label="EA ของโครงการ"><i class="bi bi-map"></i></a>
                   <?php endif; ?>
               <?php if ($canManage): ?>
-                  <a href="<?= h('projects.php?edit=' . (int)$p['id']) ?>" class="btn btn-sm btn-outline-primary" title="แก้ไข" aria-label="แก้ไข"><i class="bi bi-pencil"></i></a>
+                  <a href="<?= h('projects?edit=' . (int)$p['id']) ?>" class="btn btn-sm btn-outline-primary" title="แก้ไข" aria-label="แก้ไข"><i class="bi bi-pencil"></i></a>
                   <?php if (empty($usage[$p['id']]) && empty($eaUsage[$p['id']])): ?>
                     <form method="post" class="d-inline" onsubmit="return confirm(<?= js_attr('ลบโครงการ ' . $p['code'] . '?') ?>)"><?= csrf_field() ?>
                       <input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$p['id'] ?>">
@@ -227,7 +227,7 @@ require __DIR__ . '/header.php';
     <form method="post" class="modal-content" id="projectForm">
       <?= csrf_field() ?><input type="hidden" name="action" value="save"><input type="hidden" name="id" value="<?= $editId ?>">
       <div class="modal-header"><h5 class="modal-title" id="projectModalTitle"><i class="bi <?= $editId ? 'bi-pencil-square' : 'bi-plus-circle' ?>"></i> <?= $editId ? 'แก้ไขโครงการ ' . h($form['code']) : 'เพิ่มโครงการ' ?></h5>
-        <a href="projects.php" class="btn-close" aria-label="ปิด"<?= $editId || $errors ? '' : ' data-bs-dismiss="modal"' ?>></a></div>
+        <a href="projects" class="btn-close" aria-label="ปิด"<?= $editId || $errors ? '' : ' data-bs-dismiss="modal"' ?>></a></div>
       <div class="modal-body">
         <?php if ($errors): ?><div class="alert alert-danger py-2 small"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>
         <div class="row g-2 mb-2">
@@ -288,7 +288,7 @@ require __DIR__ . '/header.php';
         </div>
       </div>
       <div class="modal-footer">
-        <a href="projects.php" class="btn btn-outline-secondary"<?= $editId || $errors ? '' : ' data-bs-dismiss="modal"' ?>>ยกเลิก</a>
+        <a href="projects" class="btn btn-outline-secondary"<?= $editId || $errors ? '' : ' data-bs-dismiss="modal"' ?>>ยกเลิก</a>
         <button class="btn btn-primary"><i class="bi bi-save"></i> <?= $editId ? 'บันทึกการแก้ไข' : 'เพิ่มโครงการ' ?></button>
       </div>
     </form>
@@ -311,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const modal = bootstrap.Modal.getOrCreateInstance(el, { backdrop: <?= $editId || $errors ? "'static'" : 'true' ?> });
   if (el.hasAttribute('data-show')) { modal.show(); }
   <?php if ($editId || $errors): ?>
-  document.querySelectorAll('[data-project-add]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); location.href = 'projects.php?add=1'; }, true));
+  document.querySelectorAll('[data-project-add]').forEach(a => a.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); location.href = 'projects?add=1'; }, true));
   <?php endif; ?>
   el.addEventListener('shown.bs.modal', () => document.getElementById('pjCode').focus());
 });

@@ -1,5 +1,5 @@
 /* ฟังก์ชันใช้ร่วมกันของหน้าบ้าน */
-const API = '../api/centers.php';
+const API = '../api/centers';
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 

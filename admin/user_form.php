@@ -16,7 +16,7 @@ if ($id) {
     $u = $st->fetch();
     if (!$u) {
         flash('ไม่พบผู้ใช้งาน', 'danger');
-        redirect(url('admin/users.php'));
+        redirect(url('admin/users'));
     }
     $st = $pdo->prepare('SELECT module_key, role FROM core_user_roles WHERE user_id = ?');
     $st->execute([$id]);
@@ -140,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             audit_log(($u['id'] ?? null) ? 'user_update' : 'user_create', 'user #' . $id . ' ' . $u['full_name']
                 . ' roles: ' . json_encode($roles, JSON_UNESCAPED_UNICODE) . ($u['is_superadmin'] ? ' superadmin' : ''));
             flash('บันทึกข้อมูลผู้ใช้งานเรียบร้อยแล้ว');
-            redirect(url('admin/users.php'));
+            redirect(url('admin/users'));
         } catch (PDOException $e) {
             $pdo->rollBack();
             $errors[] = $e->getCode() === '23000' ? 'มีชื่อผู้ใช้นี้อยู่แล้ว' : 'บันทึกไม่สำเร็จ: ' . $e->getMessage();
@@ -254,7 +254,7 @@ require APP_ROOT . '/core/layout/header.php';
 
   <div class="col-12 sticky-actions">
     <button class="btn btn-primary btn-lg"><i class="bi bi-save"></i> บันทึก</button>
-    <a href="<?= h(url('admin/users.php')) ?>" class="btn btn-light btn-lg">กลับ</a>
+    <a href="<?= h(url('admin/users')) ?>" class="btn btn-light btn-lg">กลับ</a>
   </div>
 </form>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" integrity="sha384-5JqMv4L/Xa0hfvtF06qboNdhvuYXUku9ZrhZh3bSk8VXF0A/RuSLHpLsSV9Zqhl6" crossorigin="anonymous"></script>

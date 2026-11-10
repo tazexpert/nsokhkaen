@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         flash('กรุณาเลือกรายการและสภาพที่ต้องการ', 'warning');
     }
-    redirect('equipment.php?' . ($_POST['back'] ?? ''));
+    redirect('equipment?' . ($_POST['back'] ?? ''));
 }
 
 $types = equipment_types();
@@ -83,11 +83,11 @@ $rows = array_values(array_filter($st->fetchAll(), function ($e) use ($fLoan, $a
     };
 }));
 $filterQs = http_build_query(array_filter(['q' => $q, 'type' => $fType ?: null, 'status' => $fStatus, 'loan' => $fLoan]));
-$link = fn(array $f) => 'equipment.php?' . http_build_query(array_filter($f)) . '#list';
+$link = fn(array $f) => 'equipment?' . http_build_query(array_filter($f)) . '#list';
 
-$pageActions = ($isAdmin ? '<a href="loan_form.php" class="btn btn-success"><i class="bi bi-box-arrow-up-right"></i> บันทึกการยืม</a>'
-        . '<a href="equipment_form.php" class="btn btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มครุภัณฑ์</a>'
-        . '<a href="equipment_import.php" class="btn btn-outline-primary"><i class="bi bi-filetype-csv"></i> นำเข้า CSV</a>' : '');
+$pageActions = ($isAdmin ? '<a href="loan_form" class="btn btn-success"><i class="bi bi-box-arrow-up-right"></i> บันทึกการยืม</a>'
+        . '<a href="equipment_form" class="btn btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มครุภัณฑ์</a>'
+        . '<a href="equipment_import" class="btn btn-outline-primary"><i class="bi bi-filetype-csv"></i> นำเข้า CSV</a>' : '');
 require __DIR__ . '/header.php';
 ?>
 <div class="card mb-4">
@@ -133,7 +133,7 @@ require __DIR__ . '/header.php';
 
 <div class="card" id="list">
   <div class="card-header no-print">
-    <form class="row g-2 align-items-center" action="equipment.php#list">
+    <form class="row g-2 align-items-center" action="equipment#list">
       <div class="col-lg-3 col-md-6"><input name="q" class="form-control" placeholder="ค้นหาเลขครุภัณฑ์ / ยี่ห้อ / รุ่น / ผู้ยืม/ผู้ใช้งาน" value="<?= h($q) ?>"></div>
       <div class="col-lg-3 col-md-6"><select name="type" class="form-select" onchange="this.form.submit()">
         <option value="">ทุกประเภท</option>
@@ -149,7 +149,7 @@ require __DIR__ . '/header.php';
         <option value="available" <?= $fLoan === 'available' ? 'selected' : '' ?>>ว่างให้ยืม</option>
       </select></div>
       <div class="col-auto"><button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button>
-        <?php if ($filterQs): ?><a href="equipment.php#list" class="btn btn-link">ล้างตัวกรอง</a><?php endif; ?></div>
+        <?php if ($filterQs): ?><a href="equipment#list" class="btn btn-link">ล้างตัวกรอง</a><?php endif; ?></div>
       <div class="col-auto ms-auto"><button type="button" class="btn btn-light" onclick="window.print()"><i class="bi bi-printer"></i> พิมพ์</button></div>
     </form>
   </div>
@@ -167,15 +167,15 @@ require __DIR__ . '/header.php';
           <tr>
             <?php if ($isAdmin): ?><td class="no-print"><input type="checkbox" class="form-check-input row-check" name="ids[]" value="<?= (int)$e['id'] ?>"></td><?php endif; ?>
             <td class="text-center text-muted"><?= $i + 1 ?></td>
-            <td class="text-nowrap"><a href="equipment_view.php?id=<?= (int)$e['id'] ?>" class="text-decoration-none font-monospace small"><?= $e['asset_no'] ? h($e['asset_no']) : '<span class="text-muted fst-italic">(ยังไม่มีเลข)</span>' ?></a></td>
+            <td class="text-nowrap"><a href="equipment_view?id=<?= (int)$e['id'] ?>" class="text-decoration-none font-monospace small"><?= $e['asset_no'] ? h($e['asset_no']) : '<span class="text-muted fst-italic">(ยังไม่มีเลข)</span>' ?></a></td>
             <td class="small"><?= h($e['type_name'] ?? '-') ?></td>
             <td><?= h($e['brand']) ?></td>
-            <td><a href="equipment_view.php?id=<?= (int)$e['id'] ?>" class="text-decoration-none text-reset"><?= h($e['model']) ?></a></td>
+            <td><a href="equipment_view?id=<?= (int)$e['id'] ?>" class="text-decoration-none text-reset"><?= h($e['model']) ?></a></td>
             <td class="text-center"><?= h($e['fiscal_year']) ?></td>
             <td class="text-center"><?= $age === null ? '-' : $age ?></td>
             <td class="text-nowrap"><?= eq_status_badge($e['status']) ?></td>
             <td class="small eq-person"><?php if ($loan): ?>
-              <a href="loan_view.php?id=<?= (int)$loan['loan_id'] ?>" class="text-decoration-none">
+              <a href="loan_view?id=<?= (int)$loan['loan_id'] ?>" class="text-decoration-none">
                 <i class="bi bi-person-fill text-primary"></i> <?= h($loan['borrower_name']) ?></a>
               <div class="text-muted">คืน <?= h(thai_date($loan['due_date'])) ?>
                 <?php if ($loan['due_date'] < date('Y-m-d')): ?><span class="badge text-bg-danger">เกินกำหนด</span><?php endif; ?></div>

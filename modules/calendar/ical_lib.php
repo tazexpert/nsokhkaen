@@ -79,7 +79,7 @@ function cal_ical_build(array $events, string $calName): string
         if ($e['location']) {
             $lines[] = 'LOCATION:' . cal_ical_text($e['location']);
         }
-        $url = APP_URL . 'modules/calendar/event_view.php?id=' . (int)$e['id'];
+        $url = APP_URL . 'modules/calendar/event_view?id=' . (int)$e['id'];
         $desc = trim(implode("\n", array_filter([(string)$e['note'], $e['link'] ? 'ลิงก์: ' . $e['link'] : '', 'รายละเอียด: ' . $url])));
         $lines[] = 'DESCRIPTION:' . cal_ical_text($desc);
         $lines[] = 'URL:' . $url;

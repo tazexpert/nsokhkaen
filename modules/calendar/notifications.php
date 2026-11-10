@@ -16,7 +16,7 @@ return function (array $user): array {
         ORDER BY e.event_date, e.start_time LIMIT 30");
     $st->execute([$user['id'], $today, $tomorrow]);
     foreach ($st as $e) {
-        $href = $base . 'event_view.php?id=' . $e['id'];
+        $href = $base . 'event_view?id=' . $e['id'];
         $when = cal_is_shift($e) ? cal_range_text($e) : cal_range_text($e) . ' · ' . cal_time_text($e) . ($e['location'] ? ' · ' . $e['location'] : '');
         $soon = $e['event_date'] <= $tomorrow;
         if ($soon) {
@@ -43,7 +43,7 @@ return function (array $user): array {
             $out[] = ['title' => ($absent ? 'ขาดราชการ' : 'ลงเวลาไม่ครบ') . ' วันที่ ' . thai_date($d), 'icon' => 'bi-clock-history', 'color' => 'danger',
                       'text' => ($absent ? 'ไม่ได้ลงเวลา' : 'เข้า ' . ($r['time_in'] ? substr($r['time_in'], 0, 5) : '-') . ' · ออก ' . ($r['time_out'] ? substr($r['time_out'], 0, 5) : '-'))
                               . ' — กรุณาทำใบรับรองการมาปฏิบัติราชการ',
-                      'href' => $base . 'att_view.php?date=' . $d, 'time' => $r['imported_at'], 'sticky' => true];
+                      'href' => $base . 'att_view?date=' . $d, 'time' => $r['imported_at'], 'sticky' => true];
         }
     } catch (PDOException $e) {
         // ยังไม่ได้รัน migration cal_attendance

@@ -8,7 +8,7 @@ $pageTitle = pbi_title();
 $pageActions = ''
     . '<button type="button" class="btn btn-outline-secondary" id="pbiFull"><i class="bi bi-arrows-fullscreen"></i> เต็มจอ</button>'
     . '<a href="' . h($url) . '" target="_blank" rel="noopener" class="btn btn-outline-primary" title="ถ้าแผนที่ไม่แสดง ให้เปิดในแท็บใหม่"><i class="bi bi-box-arrow-up-right"></i> เปิดในแท็บใหม่</a>'
-    . (user_can(PBI_MODULE, 'admin') ? '<a href="settings.php" class="btn btn-light"><i class="bi bi-gear"></i> ตั้งค่า</a>' : '');
+    . (user_can(PBI_MODULE, 'admin') ? '<a href="settings" class="btn btn-light"><i class="bi bi-gear"></i> ตั้งค่า</a>' : '');
 require __DIR__ . '/header.php';
 ?>
 <div data-reveal>

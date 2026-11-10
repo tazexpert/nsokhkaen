@@ -354,3 +354,11 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 | สแกน QR แล้วเปิด localhost | ตั้ง APP_URL ที่ผู้ดูแลระบบกลาง → ตั้งค่าระบบ ให้เป็น IP/โดเมนที่มือถือเข้าถึงได้ |
 | สติ๊กเกอร์เดิม 404 | ยังไม่ได้ทำขั้นที่ 6 หรือ `NEW_APP_URL` ใน redirect-config.php ไม่ถูกต้อง |
 | ภาษาไทยเพี้ยนหลังนำเข้า SQL | นำเข้าด้วย `mysql --default-character-set=utf8mb4` (ไฟล์ SQL มี `SET NAMES utf8mb4` แล้ว) |
+
+## URL ไม่มี .php (ตั้งแต่ 10 พ.ย. 2569)
+
+ลิงก์ในระบบไม่มี `.php` แล้ว เช่น `/nsokhkaen/modules/calendar/plan?m=2026-11` — `.htaccess` (ราก) แปลงให้ด้วย **mod_rewrite**
+- XAMPP เปิดไว้แล้วตามค่าเริ่มต้น: `httpd.conf` มี `LoadModule rewrite_module modules/mod_rewrite.so` (ไม่มี `#` นำหน้า)
+  และโฟลเดอร์ htdocs เป็น `AllowOverride All` — ถ้าปิดอยู่ ลิงก์จะขึ้น 404 ให้เปิดแล้วรีสตาร์ต Apache
+- ลิงก์เดิม / bookmark / QR Code ที่มี `.php` ยังใช้ได้ (GET ถูกพาไป URL ใหม่แบบ 301 · ฟอร์ม POST ไม่ถูก redirect)
+- ทดสอบ: เปิด `http://<เซิร์ฟเวอร์>/nsokhkaen/login` ต้องขึ้นหน้าเข้าสู่ระบบ

@@ -15,10 +15,10 @@ return [
         'admin'     => 'ผู้ดูแลระบบศูนย์ฯ — ทำได้ทั้งหมด รวมถึงการลบข้อมูล',
     ],
     'menu' => [
-        ['id' => 'dashboard',  'label' => 'ภาพรวม',            'href' => 'index.php',      'icon' => 'bi-speedometer2',    'role' => 'inspector'],
-        ['id' => 'centers',    'label' => 'ศูนย์ดิจิทัลชุมชน',   'href' => 'centers.php',    'icon' => 'bi-building',        'role' => 'inspector'],
-        ['id' => 'visits',     'label' => 'ตรวจเยี่ยมศูนย์',     'href' => 'visits.php',     'icon' => 'bi-clipboard-check', 'role' => 'inspector'],
-        ['id' => 'activities', 'label' => 'กิจกรรม',            'href' => 'activities.php', 'icon' => 'bi-calendar-event',  'role' => 'editor'],
+        ['id' => 'dashboard',  'label' => 'ภาพรวม',            'href' => '',      'icon' => 'bi-speedometer2',    'role' => 'inspector'],
+        ['id' => 'centers',    'label' => 'ศูนย์ดิจิทัลชุมชน',   'href' => 'centers',    'icon' => 'bi-building',        'role' => 'inspector'],
+        ['id' => 'visits',     'label' => 'ตรวจเยี่ยมศูนย์',     'href' => 'visits',     'icon' => 'bi-clipboard-check', 'role' => 'inspector'],
+        ['id' => 'activities', 'label' => 'กิจกรรม',            'href' => 'activities', 'icon' => 'bi-calendar-event',  'role' => 'editor'],
         ['id' => 'site',       'label' => 'ดูหน้าเว็บไซต์',      'href' => 'public/',        'icon' => 'bi-box-arrow-up-right', 'role' => 'inspector', 'target' => '_blank'],
     ],
     'links' => [

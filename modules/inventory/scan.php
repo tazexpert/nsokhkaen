@@ -60,9 +60,9 @@ $draft = $_SESSION['inv_requisition_draft'] ?? [
 </div>
 
 <script>
-const SCAN_API_URL = '<?= INV_URL ?>api/scan_api.php';
-const REQ_API_URL = '<?= INV_URL ?>api/requisition_api.php';
-const PRINT_URL = '<?= INV_URL ?>requisition_print.php';
+const SCAN_API_URL = '<?= INV_URL ?>api/scan_api';
+const REQ_API_URL = '<?= INV_URL ?>api/requisition_api';
+const PRINT_URL = '<?= INV_URL ?>requisition_print';
 const QR_FROM_LINK = <?= json_encode((string)($_GET['qr'] ?? ''), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 
 function showAlert(message, type = 'danger') {

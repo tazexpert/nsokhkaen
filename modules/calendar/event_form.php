@@ -18,7 +18,7 @@ if ($id) {
     $e = $st->fetch();
     if (!$e || !cal_can_see($e) || !cal_can_edit($e)) {        // กิจกรรมส่วนตัวของผู้อื่น = ทำเหมือนไม่มี
         flash('ไม่พบกิจกรรม หรือไม่มีสิทธิ์แก้ไข', 'danger');
-        redirect('index.php');
+        redirect('./');
     }
     $assigned = cal_assignees([$id])[$id] ?? [];
     foreach (cal_assignee_show_as([$id])[$id] ?? [] as $uid => $txt) {
@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare('DELETE FROM cal_events WHERE id = ?')->execute([$id]);
         audit_log('cal_delete', '#' . $id . ' ' . $e['title'], CAL_MODULE);
         flash('ลบกิจกรรมแล้ว');
-        redirect('index.php?m=' . substr($e['event_date'], 0, 7));
+        redirect('./?m=' . substr($e['event_date'], 0, 7));
     }
     $before = $e;
     $allDay = !empty($_POST['all_day']);
@@ -135,15 +135,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         audit_log('cal_save', '#' . $id . ' ' . $data['title'] . ' (' . count($assigned) . ' คน)', CAL_MODULE);
         flash('บันทึกกิจกรรมแล้ว' . ($data['visibility'] === 'private' ? ' (ส่วนตัว — เห็นเฉพาะคุณและผู้รับผิดชอบ)' : '')
             . ($assigned ? ' — แจ้งเตือนผู้รับผิดชอบ ' . count($assigned) . ' คน' : ''));
-        redirect('event_view.php?id=' . $id);
+        redirect('event_view?id=' . $id);
     }
 }
 
 $users = cal_users();
 $active = 'add';
 $pageTitle = $id ? 'แก้ไขกิจกรรม' : 'เพิ่มกิจกรรม';
-$pageActions = $id || !cal_can('admin') ? '' : '<a href="import.php" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> นำเข้าหลายรายการจาก CSV</a>'
-    . '<a href="duty_import.php" class="btn btn-outline-secondary"><i class="bi bi-shield-check"></i> นำเข้าเวรสำนักงาน</a>';
+$pageActions = $id || !cal_can('admin') ? '' : '<a href="import" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> นำเข้าหลายรายการจาก CSV</a>'
+    . '<a href="duty_import" class="btn btn-outline-secondary"><i class="bi bi-shield-check"></i> นำเข้าเวรสำนักงาน</a>';
 $allDay = $e['start_time'] === null && $e['end_time'] === null;
 $headExtra = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" integrity="sha384-RkASv+6KfBMW9eknReJIJ6b3UnjKOKC5bOUaNgIY778NFbQ8MtWq9Lr/khUgqtTt" crossorigin="anonymous">';
 require __DIR__ . '/header.php';
@@ -231,7 +231,7 @@ require __DIR__ . '/header.php';
   </div>
   <div class="col-12 sticky-actions">
     <button class="btn btn-primary btn-lg"><i class="bi bi-save"></i> บันทึก</button>
-    <a href="<?= $id ? 'event_view.php?id=' . $id : 'index.php' ?>" class="btn btn-light btn-lg">ยกเลิก</a>
+    <a href="<?= $id ? 'event_view?id=' . $id : './' ?>" class="btn btn-light btn-lg">ยกเลิก</a>
   </div>
 </form>
 <?php if ($id): ?>

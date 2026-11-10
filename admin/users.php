@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('ไม่สามารถลบผู้ใช้งานนี้ได้เนื่องจากมีประวัติการทำรายการอยู่ กรุณาใช้ "ปิดการใช้งาน" แทน', 'danger');
         }
     }
-    redirect(url('admin/users.php?' . http_build_query(array_filter(['q' => post('q'), 'module' => post('module'), 'group' => post('group')]))));
+    redirect(url('admin/users?' . http_build_query(array_filter(['q' => post('q'), 'module' => post('module'), 'group' => post('group')]))));
 }
 
 $q = trim($_GET['q'] ?? '');
@@ -63,7 +63,7 @@ $mods = modules();
 
 $pageTitle = 'ผู้ใช้งานและสิทธิ์';
 $active = 'users';
-$pageActions = '<a href="' . h(url('staff.php')) . '" class="btn btn-outline-primary"><i class="bi bi-person-lines-fill"></i> บุคลากรสถิติขอนแก่น</a>';
+$pageActions = '<a href="' . h(url('staff')) . '" class="btn btn-outline-primary"><i class="bi bi-person-lines-fill"></i> บุคลากรสถิติขอนแก่น</a>';
 require APP_ROOT . '/core/layout/header.php';
 ?>
 <div class="card">
@@ -85,7 +85,7 @@ require APP_ROOT . '/core/layout/header.php';
         </select>
       </div>
       <div class="col-auto"><button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button></div>
-      <div class="col-auto ms-auto"><a href="<?= h(url('admin/user_form.php')) ?>" class="btn btn-primary"><i class="bi bi-person-plus"></i> เพิ่มผู้ใช้งาน</a></div>
+      <div class="col-auto ms-auto"><a href="<?= h(url('admin/user_form')) ?>" class="btn btn-primary"><i class="bi bi-person-plus"></i> เพิ่มผู้ใช้งาน</a></div>
     </form>
   </div>
   <div class="table-responsive">
@@ -99,7 +99,7 @@ require APP_ROOT . '/core/layout/header.php';
       <?php foreach ($users as $u): ?>
         <tr class="<?= $u['is_active'] ? '' : 'table-secondary text-muted' ?>">
           <td><?= $u['username'] ? '<span class="font-monospace">' . h($u['username']) . '</span>' : '<span class="text-muted small">— PIN อย่างเดียว</span>' ?></td>
-          <td><a href="<?= h(url('admin/user_form.php?id=' . (int)$u['id'])) ?>" class="fw-semibold text-decoration-none"><?= h($u['full_name']) ?></a>
+          <td><a href="<?= h(url('admin/user_form?id=' . (int)$u['id'])) ?>" class="fw-semibold text-decoration-none"><?= h($u['full_name']) ?></a>
             <?php if ($u['is_superadmin']): ?><span class="badge text-bg-warning">ผู้ดูแลระบบกลาง</span><?php endif; ?>
             <?php if (!$u['is_active']): ?><span class="badge text-bg-secondary">ปิดการใช้งาน</span><?php endif; ?>
             <div class="small text-muted"><?= h(implode(' · ', staff_position_lines($u))) ?></div></td>
@@ -109,7 +109,7 @@ require APP_ROOT . '/core/layout/header.php';
             <td class="small text-center mod-col"><?= $r ? h(role_short($m['key'], $r)) : ($m['default_role'] ? '<span class="text-muted">' . h(role_short($m['key'], $m['default_role'])) . ' <span class="text-nowrap">(ทุกคน)</span></span>' : '<span class="text-muted">-</span>') ?></td>
           <?php endforeach; ?>
           <td class="text-end text-nowrap">
-            <a href="<?= h(url('admin/user_form.php?id=' . (int)$u['id'])) ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a>
+            <a href="<?= h(url('admin/user_form?id=' . (int)$u['id'])) ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a>
             <?php if ((int)$u['id'] !== $me['id']): ?>
               <form method="post" class="d-inline"><?= csrf_field() ?>
                 <input type="hidden" name="action" value="toggle"><input type="hidden" name="id" value="<?= (int)$u['id'] ?>">

@@ -1,5 +1,5 @@
-const API = INV_URL_JS + 'api/materials_api.php';
-const IMPORT_API = INV_URL_JS + 'api/import_api.php';
+const API = INV_URL_JS + 'api/materials_api';
+const IMPORT_API = INV_URL_JS + 'api/import_api';
 
 // If the item's saved storage_location isn't in the current master list
 // (e.g. it was removed from Settings), add it so the dropdown still shows

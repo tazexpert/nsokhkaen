@@ -10,7 +10,7 @@ $st->execute([$id]);
 $v = $st->fetch();
 if (!$v) {
     flash('ไม่พบบันทึกการตรวจเยี่ยม', 'danger');
-    redirect('visits.php');
+    redirect('visits');
 }
 $d = (json_decode((string)$v['data'], true) ?: []) + ['groups' => [], 'purposes' => [], 'safety' => []];
 // ข้อมูลทั่วไป ณ วันที่ตรวจ (ถ้าไม่มีสำเนา ใช้ข้อมูลศูนย์ปัจจุบัน)
@@ -82,9 +82,9 @@ $typeSel = visit_type_option((string)$s['center_type']);
 </head>
 <body>
 <div class="toolbar">
-  <a href="visits.php?center_id=<?= (int)$v['center_id'] ?>#history"><i class="bi bi-arrow-left"></i> กลับ</a>
-  <a href="visit_form.php?center_id=<?= (int)$v['center_id'] ?>&amp;copy=1"><i class="bi bi-clipboard-plus"></i> ตรวจเยี่ยมครั้งถัดไป</a>
-  <a href="visit_form.php?id=<?= (int)$v['id'] ?>"><i class="bi bi-pencil"></i> แก้ไข</a>
+  <a href="visits?center_id=<?= (int)$v['center_id'] ?>#history"><i class="bi bi-arrow-left"></i> กลับ</a>
+  <a href="visit_form?center_id=<?= (int)$v['center_id'] ?>&amp;copy=1"><i class="bi bi-clipboard-plus"></i> ตรวจเยี่ยมครั้งถัดไป</a>
+  <a href="visit_form?id=<?= (int)$v['id'] ?>"><i class="bi bi-pencil"></i> แก้ไข</a>
   <a href="public/center.html?id=<?= (int)$v['center_id'] ?>#act-<?= (int)$v['activity_id'] ?>" target="_blank"><i class="bi bi-eye"></i> ดูบนเว็บไซต์</a>
   <button class="primary" onclick="print()"><i class="bi bi-printer"></i> พิมพ์ / บันทึก PDF</button>
 </div>

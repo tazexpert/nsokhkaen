@@ -55,17 +55,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 audit_log('link_create', $form['label'] . ' → ' . $form['url']);
                 flash('เพิ่มลิงก์ "' . $form['label'] . '" แล้ว');
             }
-            redirect(url('admin/links.php'));
+            redirect(url('admin/links'));
         }
     } elseif ($action === 'delete' && ($row = $findLink($id))) {
         $pdo->prepare('DELETE FROM core_links WHERE id = ?')->execute([$id]);
         audit_log('link_delete', $row['label'] . ' → ' . $row['url']);
         flash('ลบลิงก์ "' . $row['label'] . '" แล้ว');
-        redirect(url('admin/links.php'));
+        redirect(url('admin/links'));
     } elseif ($action === 'toggle' && ($row = $findLink($id))) {
         $pdo->prepare('UPDATE core_links SET is_active = 1 - is_active WHERE id = ?')->execute([$id]);
         audit_log('link_update', ($row['is_active'] ? 'ซ่อน ' : 'แสดง ') . $row['label']);
-        redirect(url('admin/links.php'));
+        redirect(url('admin/links'));
     } elseif (in_array($action, ['up', 'down'], true) && $findLink($id)) {
         // สลับลำดับกับรายการข้างเคียง แล้วจัดเลขลำดับใหม่ (10, 20, 30, …)
         $ids = $pdo->query('SELECT id FROM core_links ORDER BY sort_order, id')->fetchAll(PDO::FETCH_COLUMN);
@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $up->execute([($k + 1) * 10, $lid]);
             }
         }
-        redirect(url('admin/links.php'));
+        redirect(url('admin/links'));
     }
 }
 
@@ -86,7 +86,7 @@ $links = $pdo->query('SELECT * FROM core_links ORDER BY sort_order, id')->fetchA
 
 $pageTitle = 'ลิงก์และเครื่องมือ';
 $active = 'links';
-$pageActions = '<a href="' . h(url('index.php')) . '" class="btn btn-outline-secondary"><i class="bi bi-house"></i> ดูหน้าแรก</a>';
+$pageActions = '<a href="' . h(url('')) . '" class="btn btn-outline-secondary"><i class="bi bi-house"></i> ดูหน้าแรก</a>';
 require APP_ROOT . '/core/layout/header.php';
 ?>
 <div class="row g-3 align-items-start">
@@ -118,7 +118,7 @@ require APP_ROOT . '/core/layout/header.php';
                 <?php else: ?><span class="badge text-bg-success"><i class="bi bi-people"></i> ทุกคน</span><?php endif; ?>
               </td>
               <td class="text-end text-nowrap">
-                <a href="<?= h(url('admin/links.php?edit=' . (int)$l['id'])) ?>" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="แก้ไข"><i class="bi bi-pencil"></i></a>
+                <a href="<?= h(url('admin/links?edit=' . (int)$l['id'])) ?>" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="แก้ไข"><i class="bi bi-pencil"></i></a>
                 <form method="post" class="d-inline"><?= csrf_field() ?><input type="hidden" name="id" value="<?= (int)$l['id'] ?>">
                   <button name="action" value="toggle" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip" title="<?= $l['is_active'] ? 'ซ่อนจากหน้าแรก' : 'แสดงในหน้าแรก' ?>"><i class="bi <?= $l['is_active'] ? 'bi-eye-slash' : 'bi-eye' ?>"></i></button>
                 </form>
@@ -173,7 +173,7 @@ require APP_ROOT . '/core/layout/header.php';
         <span class="btn btn-outline-secondary btn-sm mt-1" id="linkPreview"><i class="bi <?= h($form['icon']) ?>"></i> <span><?= h($form['label'] ?: 'ชื่อลิงก์') ?></span></span>
       </div>
       <div class="card-footer d-flex gap-2">
-        <?php if ($editId): ?><a href="<?= h(url('admin/links.php')) ?>" class="btn btn-outline-secondary">ยกเลิก</a><?php endif; ?>
+        <?php if ($editId): ?><a href="<?= h(url('admin/links')) ?>" class="btn btn-outline-secondary">ยกเลิก</a><?php endif; ?>
         <button class="btn btn-primary ms-auto"><i class="bi bi-save"></i> <?= $editId ? 'บันทึกการแก้ไข' : 'เพิ่มลิงก์' ?></button>
       </div>
     </form>

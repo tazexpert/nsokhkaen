@@ -33,17 +33,17 @@ $unread = msg_unread_count($uid);
 
 $pageTitle = 'กล่องจดหมาย';
 $active = 'messages';
-$pageActions = '<a href="' . h(url('message_compose.php')) . '" class="btn btn-primary"><i class="bi bi-pencil-square"></i> เขียนข้อความ</a>';
+$pageActions = '<a href="' . h(url('message_compose')) . '" class="btn btn-primary"><i class="bi bi-pencil-square"></i> เขียนข้อความ</a>';
 require APP_ROOT . '/core/layout/header.php';
-$link = fn(array $p) => h(url('messages.php?' . http_build_query(array_filter(['tab' => $tab === 'sent' ? 'sent' : null, 'q' => $q ?: null] + $p))));
+$link = fn(array $p) => h(url('messages?' . http_build_query(array_filter(['tab' => $tab === 'sent' ? 'sent' : null, 'q' => $q ?: null] + $p))));
 ?>
 <div class="card">
   <div class="card-header">
     <div class="row g-2 align-items-center">
       <div class="col-md-auto">
         <ul class="nav nav-pills">
-          <li class="nav-item"><a class="nav-link<?= $tab === 'in' ? ' active' : '' ?>" href="<?= h(url('messages.php')) ?>"><i class="bi bi-inbox"></i> ข้อความเข้า<?php if ($unread): ?> <span class="badge rounded-pill text-bg-danger"><?= $unread ?></span><?php endif; ?></a></li>
-          <li class="nav-item"><a class="nav-link<?= $tab === 'sent' ? ' active' : '' ?>" href="<?= h(url('messages.php?tab=sent')) ?>"><i class="bi bi-send"></i> ส่งแล้ว</a></li>
+          <li class="nav-item"><a class="nav-link<?= $tab === 'in' ? ' active' : '' ?>" href="<?= h(url('messages')) ?>"><i class="bi bi-inbox"></i> ข้อความเข้า<?php if ($unread): ?> <span class="badge rounded-pill text-bg-danger"><?= $unread ?></span><?php endif; ?></a></li>
+          <li class="nav-item"><a class="nav-link<?= $tab === 'sent' ? ' active' : '' ?>" href="<?= h(url('messages?tab=sent')) ?>"><i class="bi bi-send"></i> ส่งแล้ว</a></li>
         </ul>
       </div>
       <form class="col-md-5 ms-md-auto d-flex gap-2">
@@ -55,7 +55,7 @@ $link = fn(array $p) => h(url('messages.php?' . http_build_query(array_filter(['
   </div>
   <div class="list-group list-group-flush msg-list">
     <?php foreach ($rows as $r): $new = $tab === 'in' && !$r['read_at']; ?>
-      <a href="<?= h(url('message_view.php?id=' . $r['id'])) ?>" class="list-group-item list-group-item-action d-flex gap-3 align-items-start py-3<?= $new ? ' msg-new' : '' ?>">
+      <a href="<?= h(url('message_view?id=' . $r['id'])) ?>" class="list-group-item list-group-item-action d-flex gap-3 align-items-start py-3<?= $new ? ' msg-new' : '' ?>">
         <?= user_avatar($r, 40, 'flex-shrink-0') ?>
         <div class="min-w-0 flex-grow-1">
           <div class="d-flex gap-2 align-items-baseline">

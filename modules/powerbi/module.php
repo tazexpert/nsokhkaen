@@ -15,7 +15,7 @@ return [
         'admin'  => 'ผู้ดูแล — ดูได้ และแก้ไขลิงก์ Power BI / ชื่อที่แสดง',
     ],
     'menu' => [
-        ['id' => 'view',     'label' => 'พิกัด EA ตัวอย่าง', 'href' => 'index.php',    'icon' => 'bi-geo-alt', 'role' => 'viewer'],
-        ['id' => 'settings', 'label' => 'ตั้งค่า',         'href' => 'settings.php', 'icon' => 'bi-gear',           'role' => 'admin'],
+        ['id' => 'view',     'label' => 'พิกัด EA ตัวอย่าง', 'href' => '',    'icon' => 'bi-geo-alt', 'role' => 'viewer'],
+        ['id' => 'settings', 'label' => 'ตั้งค่า',         'href' => 'settings', 'icon' => 'bi-gear',           'role' => 'admin'],
     ],
 ];

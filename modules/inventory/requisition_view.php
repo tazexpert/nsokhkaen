@@ -39,8 +39,8 @@ $items = $itemsStmt->fetchAll();
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h3>ใบเบิก เลขที่ <?= htmlspecialchars($requisition['requisition_no']) ?></h3>
     <div>
-        <a href="<?= INV_URL ?>requisitions.php" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> กลับไปหน้ารายการใบเบิก</a>
-        <a href="<?= INV_URL ?>requisition_print.php?id=<?= (int) $requisition['id'] ?>" target="_blank" class="btn btn-primary"><i class="bi bi-printer"></i> พิมพ์ใบเบิก</a>
+        <a href="<?= INV_URL ?>requisitions" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> กลับไปหน้ารายการใบเบิก</a>
+        <a href="<?= INV_URL ?>requisition_print?id=<?= (int) $requisition['id'] ?>" target="_blank" class="btn btn-primary"><i class="bi bi-printer"></i> พิมพ์ใบเบิก</a>
         <?php if (isAdmin()): ?>
             <?php if ($requisition['approved_at']): ?>
                 <button type="button" class="btn btn-outline-danger" disabled title="ใบเบิกนี้อนุมัติแล้ว ไม่สามารถยกเลิกได้">
@@ -135,10 +135,10 @@ function cancelRequisitionView(id, requisitionNo) {
     if (!confirm(`ยืนยันยกเลิกใบเบิกเลขที่ ${requisitionNo}?\n\nระบบจะลบใบเบิกนี้ออกอย่างถาวร และคืนจำนวนวัสดุที่เบิกไปทั้งหมดกลับเข้าสต๊อก ไม่สามารถย้อนกลับได้`)) {
         return;
     }
-    $.post(INV_URL_JS + 'api/requisition_api.php', { action: 'cancel', id }, function (res) {
+    $.post(INV_URL_JS + 'api/requisition_api', { action: 'cancel', id }, function (res) {
         alert(res.message);
         if (res.success) {
-            window.location.href = INV_URL_JS + 'requisitions.php';
+            window.location.href = INV_URL_JS + 'requisitions';
         }
     }, 'json').fail(function (xhr) {
         alert((xhr.responseJSON && xhr.responseJSON.message) || 'เกิดข้อผิดพลาดในการยกเลิกใบเบิก');
@@ -152,7 +152,7 @@ function approveRequisitionView(id, requisitionNo) {
     if (!confirm(`ยืนยันอนุมัติใบเบิกเลขที่ ${requisitionNo}?\n\nหลังอนุมัติแล้วจะไม่สามารถยกเลิกใบเบิกนี้ได้อีก`)) {
         return;
     }
-    $.post(INV_URL_JS + 'api/requisition_api.php', { action: 'approve', id }, function (res) {
+    $.post(INV_URL_JS + 'api/requisition_api', { action: 'approve', id }, function (res) {
         alert(res.message);
         if (res.success) {
             window.location.reload();

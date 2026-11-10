@@ -20,13 +20,13 @@ return function (array $user): array {
         foreach ($st as $l) {
             $out[] = ['title' => 'เกินกำหนดคืนครุภัณฑ์', 'icon' => 'bi-alarm', 'color' => 'danger',
                       'text' => $l['loan_no'] . ' · ' . $l['borrower_name'] . ' · กำหนดคืน ' . thai_date($l['due_date']),
-                      'href' => $base . 'loan_view.php?id=' . $l['id'], 'time' => date('Y-m-d 08:00:00', strtotime($l['due_date'] . ' +1 day')), 'sticky' => true];
+                      'href' => $base . 'loan_view?id=' . $l['id'], 'time' => date('Y-m-d 08:00:00', strtotime($l['due_date'] . ' +1 day')), 'sticky' => true];
         }
         // บันทึกการยืมใน 7 วันล่าสุด
         foreach ($pdo->query("SELECT l.*, ($itemCount) AS n FROM inv_loans l WHERE l.status = 'borrowed' AND l.created_at >= NOW() - INTERVAL 7 DAY ORDER BY l.created_at DESC LIMIT 10") as $l) {
             $out[] = ['title' => 'มีการยืมครุภัณฑ์', 'icon' => 'bi-box-arrow-up-right', 'color' => 'primary',
                       'text' => $l['borrower_name'] . ' ยืม ' . $l['n'] . ' รายการ ถึง ' . thai_date($l['due_date']),
-                      'href' => $base . 'loan_view.php?id=' . $l['id'], 'time' => $l['created_at']];
+                      'href' => $base . 'loan_view?id=' . $l['id'], 'time' => $l['created_at']];
         }
         // ใบเบิกวัสดุ: รออนุมัติทั้งหมด + ที่อนุมัติแล้วใน 3 วันล่าสุด
         foreach ($pdo->query("SELECT r.*, u.full_name, (SELECT COUNT(*) FROM inv_requisition_items i WHERE i.requisition_id = r.id) AS n
@@ -36,7 +36,7 @@ return function (array $user): array {
             $out[] = ['title' => $pending ? 'ใบเบิกวัสดุ รออนุมัติ' : 'มีการเบิกวัสดุ', 'icon' => 'bi-receipt',
                       'color' => $pending ? 'warning' : 'info',
                       'text' => 'เลขที่ ' . $r['requisition_no'] . ' · ' . ($r['requester_name'] ?: $r['full_name']) . ' · ' . $r['n'] . ' รายการ',
-                      'href' => $base . 'requisition_view.php?id=' . $r['id'], 'time' => $r['created_at'], 'sticky' => $pending];
+                      'href' => $base . 'requisition_view?id=' . $r['id'], 'time' => $r['created_at'], 'sticky' => $pending];
         }
         // วัสดุจากการเบิกใน 30 วันล่าสุด ที่หมด หรือเหลือไม่เกินจำนวนขั้นต่ำของวัสดุนั้น
         $st = $pdo->prepare("SELECT m.id, m.name, m.unit, m.stock_qty, m.min_stock, MAX(r.created_at) AS last_req
@@ -50,7 +50,7 @@ return function (array $user): array {
             $out[] = ['title' => $empty ? 'วัสดุหมดสต๊อก' : 'วัสดุใกล้หมด', 'icon' => $empty ? 'bi-exclamation-octagon' : 'bi-exclamation-triangle',
                       'color' => $empty ? 'danger' : 'warning',
                       'text' => $m['name'] . ' · คงเหลือ ' . (int)$m['stock_qty'] . ' ' . $m['unit'],
-                      'href' => $base . 'materials.php?filter=low_stock', 'time' => $m['last_req'], 'sticky' => true];
+                      'href' => $base . 'materials?filter=low_stock', 'time' => $m['last_req'], 'sticky' => true];
         }
         return $out;
     }
@@ -62,7 +62,7 @@ return function (array $user): array {
     $st->execute([$user['id'], $user['id']]);
     $soon = date('Y-m-d', strtotime('+2 days'));
     foreach ($st as $l) {
-        $href = $base . 'loan_view.php?id=' . $l['id'];
+        $href = $base . 'loan_view?id=' . $l['id'];
         if ($l['due_date'] < $today) {
             $out[] = ['title' => 'เกินกำหนดคืนครุภัณฑ์', 'icon' => 'bi-alarm', 'color' => 'danger',
                       'text' => $l['loan_no'] . ' · กำหนดคืน ' . thai_date($l['due_date']) . ' กรุณาส่งคืน', 'href' => $href,
@@ -81,7 +81,7 @@ return function (array $user): array {
     $st->execute([$user['id']]);
     foreach ($st as $r) {
         $out[] = ['title' => 'ใบเบิกวัสดุได้รับอนุมัติแล้ว', 'icon' => 'bi-receipt', 'color' => 'success',
-                  'text' => 'เลขที่ ' . $r['requisition_no'], 'href' => $base . 'requisition_view.php?id=' . $r['id'], 'time' => $r['approved_at']];
+                  'text' => 'เลขที่ ' . $r['requisition_no'], 'href' => $base . 'requisition_view?id=' . $r['id'], 'time' => $r['approved_at']];
     }
     return $out;
 };

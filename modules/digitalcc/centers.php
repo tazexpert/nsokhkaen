@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'delete') {
     $pdo->prepare('DELETE FROM dcc_centers WHERE id = ?')->execute([$id]); // ลบตารางลูกด้วย ON DELETE CASCADE
     array_map('delete_upload', array_filter($files));
     flash('ลบศูนย์เรียบร้อยแล้ว');
-    redirect('centers.php');
+    redirect('centers');
 }
 
 $q = trim($_GET['q'] ?? '');
@@ -108,7 +108,7 @@ require __DIR__ . '/header.php';
       <div class="col-auto"><a href="?<?= h(http_build_query(array_filter(['q' => $q, 'district' => $district, 'nolocation' => $noLoc ? 1 : null, 'export' => 'csv']))) ?>"
          class="btn btn-outline-success" title="ส่งออกรายชื่อศูนย์ตามเงื่อนไขค้นหาปัจจุบัน"><i class="bi bi-filetype-csv"></i> Export CSV</a></div>
       <?php if (dcc_can('editor')): ?>
-      <div class="col-auto ms-auto"><a href="center_form.php" class="btn btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มศูนย์ใหม่</a></div>
+      <div class="col-auto ms-auto"><a href="center_form" class="btn btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มศูนย์ใหม่</a></div>
       <?php endif; ?>
     </form>
   </div>
@@ -120,22 +120,22 @@ require __DIR__ . '/header.php';
       <?php foreach ($rows as $r): ?>
         <tr class="<?= $r['is_active'] ? '' : 'table-secondary' ?>">
           <td><?php if ($r['cover_image']): ?><img src="<?= h(upload_url($r['cover_image'])) ?>" class="thumb" alt=""><?php else: ?><span class="thumb thumb-empty"><i class="bi bi-image"></i></span><?php endif; ?></td>
-          <td><a href="<?= dcc_can('editor') ? 'center_form.php?id=' . (int)$r['id'] : 'public/center.html?id=' . (int)$r['id'] . '" target="_blank' ?>" class="fw-semibold text-decoration-none"><?= h($r['name']) ?></a>
+          <td><a href="<?= dcc_can('editor') ? 'center_form?id=' . (int)$r['id'] : 'public/center.html?id=' . (int)$r['id'] . '" target="_blank' ?>" class="fw-semibold text-decoration-none"><?= h($r['name']) ?></a>
             <?php if (!$r['is_active']): ?><span class="badge text-bg-secondary">ซ่อน</span><?php endif; ?>
             <div class="small text-muted"><?= $r['code'] ? '<span class="badge text-bg-light border">' . h($r['code']) . '</span> ' : '' ?><?= h(trim('ต.' . $r['subdistrict'] . ' ' . $r['center_type'])) ?></div></td>
           <td><?= h($r['district']) ?></td>
           <td class="text-center"><?= $r['lat'] !== null && $r['lng'] !== null ? '<i class="bi bi-geo-alt-fill text-success" title="' . h($r['lat'] . ', ' . $r['lng']) . '"></i>' : '<i class="bi bi-geo-alt text-danger" title="ยังไม่ระบุพิกัด"></i>' ?></td>
           <td class="text-center"><?= (int)$r['staff_count'] ?></td>
           <td class="text-center"><?= (int)$r['image_count'] ?></td>
-          <td class="text-center"><a href="activities.php?center_id=<?= (int)$r['id'] ?>"><?= (int)$r['activity_count'] ?></a></td>
+          <td class="text-center"><a href="activities?center_id=<?= (int)$r['id'] ?>"><?= (int)$r['activity_count'] ?></a></td>
           <td class="text-end text-nowrap">
             <a href="public/center.html?id=<?= (int)$r['id'] ?>" target="_blank" class="btn btn-sm btn-light" title="ดูหน้าเว็บ"><i class="bi bi-eye"></i></a>
             <?php if (dcc_can('editor')): ?>
-            <a href="center_form.php?id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a>
+            <a href="center_form?id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a>
             <?php endif; ?>
-            <a href="visit_form.php?center_id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-light text-success" title="ตรวจเยี่ยม"><i class="bi bi-clipboard-check"></i></a>
+            <a href="visit_form?center_id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-light text-success" title="ตรวจเยี่ยม"><i class="bi bi-clipboard-check"></i></a>
             <?php if (dcc_can('editor')): ?>
-            <a href="activity_form.php?center_id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-light" title="เพิ่มกิจกรรม"><i class="bi bi-calendar-plus"></i></a>
+            <a href="activity_form?center_id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-light" title="เพิ่มกิจกรรม"><i class="bi bi-calendar-plus"></i></a>
             <?php endif; ?>
             <?php if (dcc_can('admin')): ?>
             <form method="post" class="d-inline" data-confirm="ลบศูนย์ &quot;<?= h($r['name']) ?>&quot; รวมถึงผู้ดูแล ภาพ และกิจกรรมทั้งหมด?">

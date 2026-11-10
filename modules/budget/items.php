@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $planId = int_param('plan_id');
         if (!$isPlan && $action !== 'work_delete' && !isset(bud_plans()[$planId])) {
             flash('กรุณาเลือกแผนงาน', 'warning');
-            redirect('items.php');
+            redirect('items');
         }
         if (str_ends_with($action, '_delete')) {
             $used = $pdo->prepare($isPlan ? 'SELECT (SELECT COUNT(*) FROM bud_works WHERE plan_id = ?) + (SELECT COUNT(*) FROM bud_txns WHERE plan_id = ?)' : 'SELECT COUNT(*) FROM bud_txns WHERE work_id = ?');
@@ -32,17 +32,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 audit_log('bud_' . $action, 'ลบ' . $label . ' #' . $id, BUD_MODULE);
                 flash('ลบ' . $label . 'แล้ว');
             }
-            redirect('items.php');
+            redirect('items');
         }
         if ($name === '') {
             flash('กรุณาระบุชื่อ' . $label, 'warning');
-            redirect('items.php');
+            redirect('items');
         }
         $dup = $pdo->prepare($isPlan ? 'SELECT id FROM bud_plans WHERE name = ? AND id <> ?' : 'SELECT id FROM bud_works WHERE name = ? AND id <> ? AND plan_id = ' . $planId);
         $dup->execute([$name, str_ends_with($action, '_save') ? $id : 0]);
         if ($dup->fetch()) {
             flash('มี' . $label . 'ชื่อ "' . $name . '" แล้ว', 'warning');
-            redirect('items.php');
+            redirect('items');
         }
         $name = mb_substr($name, 0, 255);
         if ($action === 'plan_add') {
@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         audit_log('bud_' . $action, (str_ends_with($action, '_add') ? 'เพิ่ม' : 'แก้ไข') . $label . ': ' . $name, BUD_MODULE);
         flash((str_ends_with($action, '_add') ? 'เพิ่ม' : 'บันทึก') . $label . ' "' . $name . '" แล้ว');
-        redirect('items.php');
+        redirect('items');
     }
     $pid = int_param('project_id') ?: null;
     if ($pid && !isset(projects_all()[$pid])) {
@@ -70,17 +70,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $name = bud_item_name(...$parts);
         if ($parts[0] === '') {
             flash('กรุณาระบุงบรายจ่าย', 'warning');
-            redirect('items.php');
+            redirect('items');
         }
         if (mb_strlen($name) > 255) {
             flash('ชื่อหมวดรวมยาวเกิน 255 ตัวอักษร', 'warning');
-            redirect('items.php');
+            redirect('items');
         }
         $dup = $pdo->prepare('SELECT id FROM bud_items WHERE budget_name = ? AND expense_name = ? AND activity_name = ? AND id <> ?');
         $dup->execute([...$parts, $action === 'save' ? int_param('id') : 0]);
         if ($dup->fetch()) {
             flash('มีหมวดชื่อ "' . $name . '" แล้ว', 'warning');
-            redirect('items.php');
+            redirect('items');
         }
     }
     if ($action === 'add') {
@@ -106,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('ลบรายการแล้ว');
         }
     }
-    redirect('items.php');
+    redirect('items');
 }
 
 $items = $pdo->query('SELECT i.*, (SELECT COUNT(*) FROM bud_txns t WHERE t.item_id = i.id) used FROM bud_items i ORDER BY sort_order, id')->fetchAll();
@@ -272,7 +272,7 @@ require __DIR__ . '/header.php';
         <?php foreach ($survey as $p): ?><li class="list-group-item"><span class="bud-dot" style="background:<?= h($p['color']) ?>"></span><b><?= h($p['code']) ?></b> <?= h($p['name'] !== $p['code'] ? $p['name'] : '') ?></li><?php endforeach; ?>
         <?php if (!$survey): ?><li class="list-group-item text-muted">ทุกโครงการผูกกับหมวดแล้ว</li><?php endif; ?>
       </ul>
-      <div class="card-footer small"><a href="<?= h(module_url('ea', 'projects.php')) ?>">จัดการโครงการที่รับผิดชอบ <i class="bi bi-box-arrow-up-right"></i></a></div>
+      <div class="card-footer small"><a href="<?= h(module_url('ea', 'projects')) ?>">จัดการโครงการที่รับผิดชอบ <i class="bi bi-box-arrow-up-right"></i></a></div>
     </div>
   </div>
 </div>

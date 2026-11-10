@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'delete') {
         audit_log('bud_delete', 'ลบรายการ' . BUD_TYPES[$t['txn_type']] . ': ' . $t['description'] . ' ' . bud_money($t['amount']) . ' บาท', BUD_MODULE);
         flash('ลบรายการแล้ว');
     }
-    redirect('txns.php?' . http_build_query(['type' => $type, 'fy' => $_POST['fy'] ?? null]));
+    redirect('txns?' . http_build_query(['type' => $type, 'fy' => $_POST['fy'] ?? null]));
 }
 
 $fy = bud_fy_param();
@@ -69,7 +69,7 @@ if (($_GET['export'] ?? '') === 'csv') {
 $qs = fn(array $p) => '?' . http_build_query(array_filter($p + ['type' => $type, 'fy' => $fy, 'month' => $month, 'src' => $src, 'scope' => $scope, 'q' => $q], fn($v) => $v !== '' && $v !== null));
 $pageTitle = BUD_TYPE_PAGES[$type];
 $active = $type;
-$pageActions = (bud_can('editor') ? '<a href="txn_form.php?type=' . $type . '" class="btn btn-' . ($type === 'spend' ? 'warning' : 'primary') . '"><i class="bi bi-plus-lg"></i> บันทึก' . BUD_TYPE_PAGES[$type] . '</a>' : '')
+$pageActions = (bud_can('editor') ? '<a href="txn_form?type=' . $type . '" class="btn btn-' . ($type === 'spend' ? 'warning' : 'primary') . '"><i class="bi bi-plus-lg"></i> บันทึก' . BUD_TYPE_PAGES[$type] . '</a>' : '')
     . '<a href="' . h($qs(['export' => 'csv'])) . '" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> ส่งออก CSV</a>';
 require __DIR__ . '/header.php';
 ?>
@@ -115,7 +115,7 @@ require __DIR__ . '/header.php';
           <td class="text-end fw-semibold text-nowrap"><?= bud_money($t['amount']) ?></td>
           <?php if (bud_can('editor')): ?>
           <td class="text-end text-nowrap">
-            <a href="txn_form.php?id=<?= (int)$t['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a>
+            <a href="txn_form?id=<?= (int)$t['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a>
             <form method="post" class="d-inline" data-confirm="<?= h('ลบรายการ "' . $t['description'] . '" ' . bud_money($t['amount']) . ' บาท?') ?>">
               <?= csrf_field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$t['id'] ?>">
               <input type="hidden" name="type" value="<?= $type ?>"><input type="hidden" name="fy" value="<?= $fy ?>">

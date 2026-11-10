@@ -1,5 +1,5 @@
-const LOCATIONS_API = INV_URL_JS + 'api/storage_locations_api.php';
-const SETTINGS_API = INV_URL_JS + 'api/settings_api.php';
+const LOCATIONS_API = INV_URL_JS + 'api/storage_locations_api';
+const SETTINGS_API = INV_URL_JS + 'api/settings_api';
 const escHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /* ---------------- Storage locations ---------------- */

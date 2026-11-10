@@ -16,11 +16,11 @@ return [
         'admin'  => 'ผู้ดูแลระบบงบประมาณ — ทำได้ทั้งหมด และจัดการแผนงาน งานและโครงการ และหมวด',
     ],
     'menu' => [
-        ['id' => 'dashboard', 'label' => 'ภาพรวม',            'href' => 'index.php',               'icon' => 'bi-speedometer2',   'role' => 'viewer'],
-        ['id' => 'receive',   'label' => 'รับเข้างบประมาณ',     'href' => 'txns.php?type=receive',   'icon' => 'bi-box-arrow-in-down', 'role' => 'viewer'],
-        ['id' => 'spend',     'label' => 'เบิกจ่ายงบประมาณ',    'href' => 'txns.php?type=spend',     'icon' => 'bi-box-arrow-up',   'role' => 'viewer'],
-        ['id' => 'ledger',    'label' => 'ทะเบียนคุมเงินประจำงวด', 'href' => 'ledger.php',             'icon' => 'bi-journal-text',   'role' => 'viewer'],
-        ['id' => 'report',    'label' => 'รายงาน',             'href' => 'report.php',              'icon' => 'bi-file-earmark-bar-graph', 'role' => 'viewer'],
-        ['id' => 'items',     'label' => 'แผนงานและหมวด',      'href' => 'items.php',               'icon' => 'bi-list-check',     'role' => 'admin'],
+        ['id' => 'dashboard', 'label' => 'ภาพรวม',            'href' => '',               'icon' => 'bi-speedometer2',   'role' => 'viewer'],
+        ['id' => 'receive',   'label' => 'รับเข้างบประมาณ',     'href' => 'txns?type=receive',   'icon' => 'bi-box-arrow-in-down', 'role' => 'viewer'],
+        ['id' => 'spend',     'label' => 'เบิกจ่ายงบประมาณ',    'href' => 'txns?type=spend',     'icon' => 'bi-box-arrow-up',   'role' => 'viewer'],
+        ['id' => 'ledger',    'label' => 'ทะเบียนคุมเงินประจำงวด', 'href' => 'ledger',             'icon' => 'bi-journal-text',   'role' => 'viewer'],
+        ['id' => 'report',    'label' => 'รายงาน',             'href' => 'report',              'icon' => 'bi-file-earmark-bar-graph', 'role' => 'viewer'],
+        ['id' => 'items',     'label' => 'แผนงานและหมวด',      'href' => 'items',               'icon' => 'bi-list-check',     'role' => 'admin'],
     ],
 ];

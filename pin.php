@@ -6,7 +6,7 @@
 require_once __DIR__ . '/core/bootstrap.php';
 
 if (current_user()) {
-    redirect(take_login_target(url('index.php')));
+    redirect(take_login_target(url('')));
 }
 
 $error = '';
@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'กรุณากรอก PIN 6 หลัก';
     } elseif ($row = find_user_by_pin($pin)) {
         login_user((int)$row['id'], true);
-        redirect(take_login_target(url('index.php')));
+        redirect(take_login_target(url('')));
     } else {
         $_SESSION['login_fails'] = ($_SESSION['login_fails'] ?? 0) + 1;
         audit_log('login_pin_failed', '', 'core', null);
@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 // ข้อความหัวเรื่องตามหน้าที่กำลังจะเข้า
 $target = (string)($_SESSION['redirect_after_login'] ?? '');
-$title = str_contains($target, '/modules/inventory/scan.php') ? 'สแกน QR Code เพื่อเบิกวัสดุ' : 'เข้าใช้ด้วย PIN';
+$title = str_contains($target, '/modules/inventory/scan') ? 'สแกน QR Code เพื่อเบิกวัสดุ' : 'เข้าใช้ด้วย PIN';
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -185,7 +185,7 @@ $title = str_contains($target, '/modules/inventory/scan.php') ? 'สแกน QR
 
     <div class="pin-footer">
         ยังไม่มี PIN? ตั้งได้ที่เมนู "บัญชีของฉัน" หลังเข้าสู่ระบบ หรือติดต่อผู้ดูแลระบบ<br>
-        ต้องการ <a href="<?= h(url('login.php')) ?>">เข้าสู่ระบบด้วยชื่อผู้ใช้/รหัสผ่าน</a> แทน
+        ต้องการ <a href="<?= h(url('login')) ?>">เข้าสู่ระบบด้วยชื่อผู้ใช้/รหัสผ่าน</a> แทน
     </div>
 </div>
 

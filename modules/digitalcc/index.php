@@ -46,7 +46,7 @@ require __DIR__ . '/header.php';
 
 <?php if ((int)$stats['no_location'] > 0): ?>
   <div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i>
-    มี <?= (int)$stats['no_location'] ?> ศูนย์ที่ยังไม่ได้ระบุพิกัด lat/long จึงยังไม่แสดงบนแผนที่ — <a href="centers.php?nolocation=1" class="alert-link">ดูรายการ</a></div>
+    มี <?= (int)$stats['no_location'] ?> ศูนย์ที่ยังไม่ได้ระบุพิกัด lat/long จึงยังไม่แสดงบนแผนที่ — <a href="centers?nolocation=1" class="alert-link">ดูรายการ</a></div>
 <?php endif; ?>
 
 <div class="row g-3" data-reveal>
@@ -54,11 +54,11 @@ require __DIR__ . '/header.php';
     <div class="card h-100">
       <div class="card-header d-flex align-items-center">
         <strong>กิจกรรมล่าสุด</strong>
-        <?php if (dcc_can('editor')): ?><a href="activity_form.php" class="btn btn-sm btn-primary ms-auto"><i class="bi bi-plus-lg"></i> เพิ่มกิจกรรม</a><?php endif; ?>
+        <?php if (dcc_can('editor')): ?><a href="activity_form" class="btn btn-sm btn-primary ms-auto"><i class="bi bi-plus-lg"></i> เพิ่มกิจกรรม</a><?php endif; ?>
       </div>
       <div class="list-group list-group-flush">
         <?php foreach ($recent as $r): ?>
-          <a class="list-group-item list-group-item-action" href="<?= dcc_can('editor') ? 'activity_form.php?id=' . (int)$r['id'] : '#' ?>">
+          <a class="list-group-item list-group-item-action" href="<?= dcc_can('editor') ? 'activity_form?id=' . (int)$r['id'] : '#' ?>">
             <div class="d-flex"><strong class="me-2"><?= h($r['title']) ?></strong>
               <span class="ms-auto small text-muted text-nowrap"><?= thai_date($r['activity_date']) ?></span></div>
             <div class="small text-muted"><?= h($r['center_name']) ?><?= $r['participants'] > 0 ? ' · ' . number_format((int)$r['participants']) . ' คน' : '' ?></div>
@@ -72,7 +72,7 @@ require __DIR__ . '/header.php';
     <div class="card h-100">
       <div class="card-header d-flex align-items-center">
         <strong>จำนวนศูนย์ตามอำเภอ</strong>
-        <?php if (dcc_can('editor')): ?><a href="center_form.php" class="btn btn-sm btn-primary ms-auto"><i class="bi bi-plus-lg"></i> เพิ่มศูนย์</a><?php endif; ?>
+        <?php if (dcc_can('editor')): ?><a href="center_form" class="btn btn-sm btn-primary ms-auto"><i class="bi bi-plus-lg"></i> เพิ่มศูนย์</a><?php endif; ?>
       </div>
       <div class="card-body">
         <?php $max = max(1, ...array_map(fn($r) => (int)$r['n'], $byDistrict ?: [['n' => 1]])); ?>
@@ -89,18 +89,18 @@ require __DIR__ . '/header.php';
             <div class="district-centers">
               <?php foreach ($centersByDistrict[$r['district']] ?? [] as $c): ?>
                 <div class="dc-item">
-                  <a href="<?= dcc_can('editor') ? 'center_form.php?id=' . (int)$c['id'] : 'public/center.html?id=' . (int)$c['id'] ?>" class="dc-name"><?= h($c['name']) ?></a>
+                  <a href="<?= dcc_can('editor') ? 'center_form?id=' . (int)$c['id'] : 'public/center.html?id=' . (int)$c['id'] ?>" class="dc-name"><?= h($c['name']) ?></a>
                   <span class="small text-muted"><?= h(($c['code'] ? $c['code'] . ' · ' : '') . 'ต.' . $c['subdistrict']) ?></span>
                   <span class="dc-tags">
                     <?= $c['lat'] !== null ? '<i class="bi bi-geo-alt-fill text-success" title="มีพิกัดแล้ว"></i>' : '<i class="bi bi-geo-alt text-danger" title="ยังไม่มีพิกัด"></i>' ?>
                     <?php if ($c['visit_count'] > 0): ?><span class="badge text-bg-success">ตรวจ <?= (int)$c['visit_count'] ?> ครั้ง</span>
-                    <?php else: ?><a href="visit_form.php?center_id=<?= (int)$c['id'] ?>" class="badge text-bg-warning text-decoration-none">ยังไม่ตรวจเยี่ยม</a><?php endif; ?>
+                    <?php else: ?><a href="visit_form?center_id=<?= (int)$c['id'] ?>" class="badge text-bg-warning text-decoration-none">ยังไม่ตรวจเยี่ยม</a><?php endif; ?>
                   </span>
                 </div>
               <?php endforeach; ?>
               <div class="d-flex gap-3 small pt-1">
-                <a href="centers.php?district=<?= urlencode($r['district']) ?>"><i class="bi bi-building"></i> จัดการศูนย์ในอำเภอนี้</a>
-                <a href="visits.php?district=<?= urlencode($r['district']) ?>"><i class="bi bi-clipboard-check"></i> ตรวจเยี่ยม</a>
+                <a href="centers?district=<?= urlencode($r['district']) ?>"><i class="bi bi-building"></i> จัดการศูนย์ในอำเภอนี้</a>
+                <a href="visits?district=<?= urlencode($r['district']) ?>"><i class="bi bi-clipboard-check"></i> ตรวจเยี่ยม</a>
               </div>
             </div>
           </details>

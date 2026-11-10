@@ -107,7 +107,7 @@ $pages = array_chunk($rows, 6);
                 <?php else: ?>
                     <div class="photo-placeholder">ไม่มีรูป</div>
                 <?php endif; ?>
-                <img class="qr" src="qr_image.php?data=<?= urlencode(buildQrScanUrl($item['qr_code'])) ?>" alt="QR">
+                <img class="qr" src="qr_image?data=<?= urlencode(buildQrScanUrl($item['qr_code'])) ?>" alt="QR">
                 <div class="code"><?= htmlspecialchars($item['code']) ?></div>
                 <div class="name"><?= htmlspecialchars($item['name']) ?></div>
             </div>

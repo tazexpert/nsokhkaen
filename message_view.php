@@ -9,7 +9,7 @@ $uid = (int)$user['id'];
 $msg = msg_get(int_param('id'), $uid);
 if (!$msg) {
     flash('ไม่พบข้อความ หรือข้อความถูกลบแล้ว', 'warning');
-    redirect(url('messages.php'));
+    redirect(url('messages'));
 }
 $isRecipient = (int)$msg['recipient_id'] === $uid;
 $isSender = (int)$msg['sender_id'] === $uid;
@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             msg_purge((int)$msg['id']);           // ทั้งสองฝ่ายลบแล้ว → ลบข้อความและไฟล์แนบจริง
         }
         flash('ลบข้อความแล้ว');
-        redirect(url('messages.php' . ($isRecipient ? '' : '?tab=sent')));
+        redirect(url('messages' . ($isRecipient ? '' : '?tab=sent')));
     }
 }
 
@@ -43,7 +43,7 @@ $parent = $msg['reply_to_id'] ? msg_get((int)$msg['reply_to_id'], $uid) : null;
 $pageTitle = 'ข้อความ';
 $headExtra = richtext_assets(false);
 $active = 'messages';
-$pageActions = '<a href="' . h(url('messages.php' . ($isRecipient ? '' : '?tab=sent'))) . '" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> กล่องจดหมาย</a>';
+$pageActions = '<a href="' . h(url('messages' . ($isRecipient ? '' : '?tab=sent'))) . '" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> กล่องจดหมาย</a>';
 require APP_ROOT . '/core/layout/header.php';
 $from = ['photo' => $msg['sender_photo']];
 ?>
@@ -65,7 +65,7 @@ $from = ['photo' => $msg['sender_photo']];
       </div>
       <div class="card-body msg-body">
         <?php if ($parent): ?>
-          <a href="<?= h(url('message_view.php?id=' . $parent['id'])) ?>" class="d-inline-block small mb-3 text-decoration-none"><i class="bi bi-reply"></i> ตอบกลับข้อความ: <?= h($parent['subject']) ?></a>
+          <a href="<?= h(url('message_view?id=' . $parent['id'])) ?>" class="d-inline-block small mb-3 text-decoration-none"><i class="bi bi-reply"></i> ตอบกลับข้อความ: <?= h($parent['subject']) ?></a>
         <?php endif; ?>
         <?= $msg['body'] !== '' ? msg_body_html($msg['body']) : '<span class="text-muted">(ไม่มีข้อความ)</span>' ?>
       </div>
@@ -77,9 +77,9 @@ $from = ['photo' => $msg['sender_photo']];
               <div class="msg-file border rounded d-flex align-items-center gap-2 px-2 py-1">
                 <i class="bi <?= msg_file_icon($f['file_name']) ?> fs-4"></i>
                 <div class="min-w-0 small">
-                  <a href="<?= h(url('message_file.php?id=' . $f['id'])) ?>"<?= $inline ? ' target="_blank"' : '' ?> class="d-block text-truncate text-decoration-none" title="<?= h($f['file_name']) ?>"><?= h($f['file_name']) ?></a>
+                  <a href="<?= h(url('message_file?id=' . $f['id'])) ?>"<?= $inline ? ' target="_blank"' : '' ?> class="d-block text-truncate text-decoration-none" title="<?= h($f['file_name']) ?>"><?= h($f['file_name']) ?></a>
                   <span class="text-muted"><?= msg_file_size((int)$f['file_size']) ?></span>
-                  · <a href="<?= h(url('message_file.php?id=' . $f['id'] . '&download=1')) ?>" class="text-decoration-none">ดาวน์โหลด</a>
+                  · <a href="<?= h(url('message_file?id=' . $f['id'] . '&download=1')) ?>" class="text-decoration-none">ดาวน์โหลด</a>
                 </div>
               </div>
             <?php endforeach; ?>
@@ -91,7 +91,7 @@ $from = ['photo' => $msg['sender_photo']];
           <?= csrf_field() ?><input type="hidden" name="action" value="delete">
           <button class="btn btn-outline-danger"><i class="bi bi-trash"></i> ลบ</button>
         </form>
-        <a href="<?= h(url('message_compose.php?reply=' . $msg['id'])) ?>" class="btn btn-primary ms-auto"><i class="bi bi-reply"></i> <?= $isRecipient ? 'ตอบกลับ' : 'ส่งข้อความเพิ่ม' ?></a>
+        <a href="<?= h(url('message_compose?reply=' . $msg['id'])) ?>" class="btn btn-primary ms-auto"><i class="bi bi-reply"></i> <?= $isRecipient ? 'ตอบกลับ' : 'ส่งข้อความเพิ่ม' ?></a>
       </div>
     </div>
   </div>

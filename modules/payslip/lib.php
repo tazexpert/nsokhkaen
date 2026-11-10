@@ -228,7 +228,7 @@ function pay_render_slip(array $s, string $code): string
     $deduct = $rows . $line(0, 'รวมรายจ่าย', $s['total_deduct'], true);
     $approved = $s['status'] === 'approved';
     $sig = $approved && !empty($sg['signature_path'])
-        ? '<img src="' . h(module_url(PAY_MODULE, 'signature.php?id=' . (int)$sg['id'] . '&v=' . substr(md5($sg['signature_path']), 0, 8))) . '" alt="ลายมือชื่อ" class="sig-img">'
+        ? '<img src="' . h(module_url(PAY_MODULE, 'signature?id=' . (int)$sg['id'] . '&v=' . substr(md5($sg['signature_path']), 0, 8))) . '" alt="ลายมือชื่อ" class="sig-img">'
         : '<span class="sig-line"></span>';
     return '<div class="payslip">'
         . '<div class="ps-no">เลขที่ ' . h($code) . '</div>'

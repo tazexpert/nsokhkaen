@@ -178,7 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         unset($_SESSION[$sessKey]);
         audit_log('cal_import', "$n กิจกรรม ข้าม $skipped", CAL_MODULE);
         flash("นำเข้ากิจกรรม $n รายการ" . ($skipped ? " · ข้าม $skipped รายการ" : '') . ($n ? ' — แจ้งเตือนผู้รับผิดชอบแล้ว' : ''), $n ? 'success' : 'warning');
-        redirect('list.php');
+        redirect('list');
     }
 }
 
@@ -248,7 +248,7 @@ $users = cal_users();
   </div>
   <div class="sticky-actions">
     <button class="btn btn-primary btn-lg" <?= $ok ? '' : 'disabled' ?>><i class="bi bi-check2-circle"></i> ยืนยันนำเข้า</button>
-    <a href="import.php" class="btn btn-light btn-lg">เลือกไฟล์ใหม่</a>
+    <a href="import" class="btn btn-light btn-lg">เลือกไฟล์ใหม่</a>
   </div>
 </form>
 <?php endif; ?>

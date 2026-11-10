@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash('ลบไม่ได้เพราะมีสลิปของพนักงานคนนี้อยู่ — ใช้ "ปิดใช้งาน" แทน', 'danger');
         }
     }
-    redirect('employees.php');
+    redirect('employees');
 }
 
 $emps = $pdo->query('SELECT e.*, u.full_name AS user_name, u.username, u.is_active AS user_active,

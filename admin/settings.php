@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'reset_audit') {
         }
         audit_log('audit_reset', 'ล้าง' . implode(' และ ', $done));
         flash('ล้าง' . implode(' และ ', $done) . ' เรียบร้อยแล้ว');
-        redirect(url('admin/settings.php'));
+        redirect(url('admin/settings'));
     }
 } elseif ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
@@ -106,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'reset_audit') {
         save_setting('app_url', rtrim($appUrl, '/') . '/');
         audit_log('settings_update', 'app_url: ' . $appUrl);
         flash('บันทึกค่าระบบเรียบร้อยแล้ว');
-        redirect(url('admin/settings.php'));
+        redirect(url('admin/settings'));
     }
 }
 
@@ -158,7 +158,7 @@ $dirs = array_map('basename', glob(APP_ROOT . '/modules/*', GLOB_ONLYDIR) ?: [])
         <label class="form-check-label fw-semibold" for="doAudit"><i class="bi bi-journal-text"></i> ล้างบันทึกการใช้งาน (log)</label>
       </div>
       <div class="small text-muted ms-4 mb-2">มี <?= number_format((int)$auditInfo['n']) ?> รายการ<?= $auditInfo['first_at'] ? ' ตั้งแต่ ' . h(thai_date($auditInfo['first_at'])) : '' ?>
-        · <a href="<?= h(url('admin/settings.php?export=audit')) ?>"><i class="bi bi-download"></i> ดาวน์โหลดเก็บไว้ก่อน (CSV)</a></div>
+        · <a href="<?= h(url('admin/settings?export=audit')) ?>"><i class="bi bi-download"></i> ดาวน์โหลดเก็บไว้ก่อน (CSV)</a></div>
       <div class="ms-4" id="auditOpts">
         <select name="keep" id="resetKeep" class="form-select form-select-sm" style="max-width:320px" aria-label="ขอบเขต">
           <?php foreach ($resetKeep as $k => $label): ?><option value="<?= $k ?>"<?= post('keep', '0') === (string)$k ? ' selected' : '' ?>><?= h($label) ?></option><?php endforeach; ?>
@@ -186,7 +186,7 @@ $dirs = array_map('basename', glob(APP_ROOT . '/modules/*', GLOB_ONLYDIR) ?: [])
         <input name="pin" id="resetPin" type="password" class="form-control font-monospace" inputmode="numeric" pattern="\d{6}" maxlength="6"
                autocomplete="off" required placeholder="ใส่ PIN 6 หลัก">
       <?php else: ?>
-        <div class="alert alert-warning py-2 small mb-0">ยังไม่ได้ตั้ง PIN — <a href="<?= h(url('account.php?setup_pin=1')) ?>">ตั้ง PIN ที่บัญชีของฉัน</a> ก่อนจึงจะล้างข้อมูลได้</div>
+        <div class="alert alert-warning py-2 small mb-0">ยังไม่ได้ตั้ง PIN — <a href="<?= h(url('account?setup_pin=1')) ?>">ตั้ง PIN ที่บัญชีของฉัน</a> ก่อนจึงจะล้างข้อมูลได้</div>
       <?php endif; ?>
     </div>
   </div>

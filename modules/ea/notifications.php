@@ -11,7 +11,7 @@ return function (array $user): array {
         $items[] = [
             'title' => 'ได้รับมอบหมาย EA โครงการ ' . $r['code'] . ($r['round_label'] !== '' ? ' ' . $r['round_label'] : ''),
             'text'  => number_format((int)$r['n']) . ' EA ที่ยังสำรวจไม่เสร็จ',
-            'href'  => module_url('ea', 'project_eas.php?' . http_build_query(['id' => $r['project_id'], 'round' => $r['round_label'], 'user' => $user['id']])),
+            'href'  => module_url('ea', 'project_eas?' . http_build_query(['id' => $r['project_id'], 'round' => $r['round_label'], 'user' => $user['id']])),
             'time'  => $r['t'], 'icon' => 'bi-map', 'color' => 'success',
         ];
     }

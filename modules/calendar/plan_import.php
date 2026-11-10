@@ -63,12 +63,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             [$gc, $gu, $gd] = $r['guard'];
             flash('นำเข้าแผนการปฏิบัติงานเดือน' . plan_month_text($y, $m) . ' แล้ว ' . count($people) . ' คน'
                 . ($gc + $gu + $gd ? ' · เวรศาลากลางในปฏิทิน: เพิ่ม ' . $gc . ' วัน ปรับ ' . $gu . ' วัน ลบ ' . $gd . ' วัน' : ''));
-            redirect('plan.php?m=' . sprintf('%04d-%02d', $y, $m));
+            redirect('plan?m=' . sprintf('%04d-%02d', $y, $m));
         }
         $step = 'preview';
     } elseif ($action === 'cancel') {
         unset($_SESSION[$sessKey]);
-        redirect('plan_import.php');
+        redirect('plan_import');
     }
 }
 
@@ -106,7 +106,7 @@ if ($step === 'preview') {
 
 $pageTitle = 'นำเข้าแผนการปฏิบัติงาน';
 $active = 'plan';
-$pageActions = '<a href="plan.php?m=' . sprintf('%04d-%02d', $y0, $m0) . '" class="btn btn-light"><i class="bi bi-grid-3x3"></i> แผนการปฏิบัติงาน</a>';
+$pageActions = '<a href="plan?m=' . sprintf('%04d-%02d', $y0, $m0) . '" class="btn btn-light"><i class="bi bi-grid-3x3"></i> แผนการปฏิบัติงาน</a>';
 require __DIR__ . '/header.php';
 ?>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>
@@ -165,7 +165,7 @@ require __DIR__ . '/header.php';
     <div class="alert alert-warning">
       <b><i class="bi bi-question-circle"></i> รหัสที่ไม่รู้จัก (จะไม่ถูกนำเข้า):</b>
       <?php foreach ($res['unknown'] as [$n, $d, $code]): ?><span class="badge text-bg-light border me-1"><?= h(preg_replace('/\s+/u', ' ', $n)) ?> · วันที่ <?= $d ?> · "<?= h($code) ?>"</span><?php endforeach; ?>
-      <div class="small mt-1">ถ้าเป็นรหัสโครงการใหม่ ให้เพิ่มที่ <a href="<?= h(module_url('ea', 'projects.php')) ?>" target="_blank">โครงการที่รับผิดชอบ</a> แล้วนำเข้าใหม่ · ถ้าพิมพ์ผิด แก้ได้ที่หน้าแก้ไขแผนหลังนำเข้า</div>
+      <div class="small mt-1">ถ้าเป็นรหัสโครงการใหม่ ให้เพิ่มที่ <a href="<?= h(module_url('ea', 'projects')) ?>" target="_blank">โครงการที่รับผิดชอบ</a> แล้วนำเข้าใหม่ · ถ้าพิมพ์ผิด แก้ได้ที่หน้าแก้ไขแผนหลังนำเข้า</div>
     </div>
   <?php endif; ?>
 

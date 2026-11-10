@@ -21,11 +21,11 @@ if ($id) {
     $loan = $st->fetch();
     if (!$loan) {
         flash('ไม่พบรายการยืม', 'danger');
-        redirect('loans.php');
+        redirect('loans');
     }
     if ($loan['status'] !== 'borrowed') {
         flash('แก้ไขได้เฉพาะรายการที่กำลังยืม', 'warning');
-        redirect('loan_view.php?id=' . $id);
+        redirect('loan_view?id=' . $id);
     }
     $st = $pdo->prepare('SELECT equipment_id FROM inv_loan_items WHERE loan_id = ? AND equipment_id IS NOT NULL ORDER BY sort_order, id');
     $st->execute([$id]);
@@ -137,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             audit_log(isset($data['loan_no']) ? 'loan_create' : 'loan_update', 'loan #' . $id, INV_MODULE);
             flash('บันทึกการยืมเรียบร้อยแล้ว — สถานะครุภัณฑ์เปลี่ยนเป็น "กำลังยืม"');
-            redirect('loan_view.php?id=' . $id);
+            redirect('loan_view?id=' . $id);
         } catch (Throwable $ex) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
@@ -177,7 +177,7 @@ require __DIR__ . '/header.php';
       <div class="card-header"><strong><i class="bi bi-file-earmark-arrow-up"></i> ไฟล์ใบยืม (จาก e-office)</strong></div>
       <div class="card-body row g-3">
         <?php if ($loan['file_path']): ?>
-          <div class="col-12"><a href="loan_file.php?id=<?= (int)$id ?>" target="_blank"><i class="bi bi-paperclip"></i> <?= h($loan['file_name']) ?></a>
+          <div class="col-12"><a href="loan_file?id=<?= (int)$id ?>" target="_blank"><i class="bi bi-paperclip"></i> <?= h($loan['file_name']) ?></a>
             <div class="form-text">เลือกไฟล์ใหม่ด้านล่างเพื่อแทนที่</div></div>
         <?php endif; ?>
         <div class="col-12"><input type="file" name="loan_file" class="form-control" accept=".pdf,image/jpeg,image/png,image/webp" <?= $id ? '' : 'required' ?>>
@@ -222,7 +222,7 @@ require __DIR__ . '/header.php';
 
   <div class="col-12 sticky-actions">
     <button class="btn btn-primary btn-lg"><i class="bi bi-save"></i> บันทึกการยืม</button>
-    <a href="<?= $id ? 'loan_view.php?id=' . $id : 'loans.php' ?>" class="btn btn-light btn-lg">ยกเลิก</a>
+    <a href="<?= $id ? 'loan_view?id=' . $id : 'loans' ?>" class="btn btn-light btn-lg">ยกเลิก</a>
   </div>
 </form>
 <style>

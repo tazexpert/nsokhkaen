@@ -20,7 +20,7 @@ return [
     ],
     'menu' => [
         // แสดงเฉพาะผู้ที่ผูกกับรหัสพนักงาน (มีสลิป)
-        ['id' => 'my',        'label' => 'สลิปของฉัน',       'href' => 'index.php',               'icon' => 'bi-receipt',            'role' => 'employee',
+        ['id' => 'my',        'label' => 'สลิปของฉัน',       'href' => '',               'icon' => 'bi-receipt',            'role' => 'employee',
          'visible' => function (array $user): bool {
              static $cache = [];
              if (!isset($cache[$user['id']])) {
@@ -30,14 +30,14 @@ return [
              }
              return $cache[$user['id']];
          }],
-        ['id' => 'pending',   'label' => 'รออนุมัติ',         'href' => 'slips.php?status=pending', 'icon' => 'bi-hourglass-split',   'role' => 'employee',
+        ['id' => 'pending',   'label' => 'รออนุมัติ',         'href' => 'slips?status=pending', 'icon' => 'bi-hourglass-split',   'role' => 'employee',
          'visible' => fn(array $u) => in_array(module_role('payslip', $u), ['approver', 'admin'], true)],
-        ['id' => 'slips',     'label' => 'จัดการสลิป',        'href' => 'slips.php',               'icon' => 'bi-table',              'role' => 'employee',
+        ['id' => 'slips',     'label' => 'จัดการสลิป',        'href' => 'slips',               'icon' => 'bi-table',              'role' => 'employee',
          'visible' => fn(array $u) => in_array(module_role('payslip', $u), ['manager', 'admin'], true)],
-        ['id' => 'import',    'label' => 'นำเข้าข้อมูล',       'href' => 'import.php',              'icon' => 'bi-file-earmark-excel', 'role' => 'employee',
+        ['id' => 'import',    'label' => 'นำเข้าข้อมูล',       'href' => 'import',              'icon' => 'bi-file-earmark-excel', 'role' => 'employee',
          'visible' => fn(array $u) => in_array(module_role('payslip', $u), ['manager', 'admin'], true)],
-        ['id' => 'employees', 'label' => 'รายชื่อพนักงาน',    'href' => 'employees.php',           'icon' => 'bi-person-vcard',       'role' => 'employee',
+        ['id' => 'employees', 'label' => 'รายชื่อพนักงาน',    'href' => 'employees',           'icon' => 'bi-person-vcard',       'role' => 'employee',
          'visible' => fn(array $u) => in_array(module_role('payslip', $u), ['manager', 'admin'], true)],
-        ['id' => 'settings',  'label' => 'ตั้งค่าสลิป',        'href' => 'settings.php',            'icon' => 'bi-gear',               'role' => 'admin'],
+        ['id' => 'settings',  'label' => 'ตั้งค่าสลิป',        'href' => 'settings',            'icon' => 'bi-gear',               'role' => 'admin'],
     ],
 ];

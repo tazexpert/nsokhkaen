@@ -195,7 +195,7 @@ function formatThaiDateTime(string $datetime): string
 // (สติ๊กเกอร์ที่พิมพ์จากระบบเดิมชี้ไปที่ .../public/scan.php — ดู legacy-redirects/)
 function buildQrScanUrl(string $qrCode): string
 {
-    return APP_URL . 'modules/inventory/scan.php?qr=' . urlencode($qrCode);
+    return APP_URL . 'modules/inventory/scan?qr=' . urlencode($qrCode);
 }
 
 // Click-to-pick date field used anywhere a date-range filter is needed

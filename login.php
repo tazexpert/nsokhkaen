@@ -13,13 +13,13 @@ function login_target(array $u): string
     if (!$u['has_pin']) {
         foreach (accessible_modules($u) as $m) {
             if (in_array(module_role($m['key'], $u), $m['prompt_pin_roles'] ?? [], true)) {
-                return url('account.php?setup_pin=1');
+                return url('account?setup_pin=1');
             }
         }
     }
     $return = (string)($_POST['return'] ?? '');
-    $fallback = (str_starts_with($return, BASE_URL) && !str_starts_with($return, '//') && !preg_match('#/(login|logout|pin)\.php#', $return))
-        ? preg_replace('/([?&])login=1(&|$)/', '$1', $return) : url('index.php');
+    $fallback = (str_starts_with($return, BASE_URL) && !str_starts_with($return, '//') && !preg_match('#/(login|logout|pin)(\.php)?([?\#]|$)#', $return))
+        ? preg_replace('/([?&])login=1(&|$)/', '$1', $return) : url('');
     return take_login_target(rtrim($fallback, '?&'));
 }
 
@@ -27,7 +27,7 @@ if ($u = current_user()) {
     $ajax ? json_out(['ok' => true, 'redirect' => login_target($u)]) : redirect(login_target($u));
 }
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    redirect(url('index.php?login=1'));            // หน้า login = popup บนหน้าหลัก
+    redirect(url('?login=1'));            // หน้า login = popup บนหน้าหลัก
 }
 
 $error = '';
@@ -91,9 +91,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
     <button class="btn btn-primary btn-lg w-100">เข้าสู่ระบบ</button>
     <div class="text-center mt-3 small">
-      <a href="<?= h(url('pin.php')) ?>"><i class="bi bi-grid-3x3-gap"></i> เข้าใช้ด้วย PIN 6 หลัก</a>
+      <a href="<?= h(url('pin')) ?>"><i class="bi bi-grid-3x3-gap"></i> เข้าใช้ด้วย PIN 6 หลัก</a>
       <span class="text-muted mx-2">·</span>
-      <a href="<?= h(url('index.php')) ?>"><i class="bi bi-house-door"></i> กลับหน้าหลัก</a>
+      <a href="<?= h(url('')) ?>"><i class="bi bi-house-door"></i> กลับหน้าหลัก</a>
     </div>
   </form>
 </body>

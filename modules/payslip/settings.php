@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             audit_log('payslip_signer_delete', $row['name'] . ' ' . $row['effective_ym'], PAY_MODULE);
             flash('ลบผู้ลงนามแล้ว');
         }
-        redirect('settings.php');
+        redirect('settings');
     }
     $ym = post('from') === 'start' ? 0 : int_param('year') * 100 + int_param('month');
     $form = array_merge($form, ['id' => $id, 'effective_ym' => $ym, 'name' => post('name'),
@@ -88,7 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         audit_log('payslip_signer_save', $form['name'] . ' ' . pay_signer_from($ym), PAY_MODULE);
         flash('บันทึกผู้ลงนามแล้ว — สลิป' . pay_signer_from($ym) . ' จะแสดง ' . $form['name']);
-        redirect('settings.php');
+        redirect('settings');
     }
     if ($newSig) {
         delete_upload($newSig);
@@ -125,7 +125,7 @@ require __DIR__ . '/header.php';
                 <div class="small text-muted"><?php if ($next): $e = (int)$next['effective_ym']; [$ey, $em] = $e % 100 === 1 ? [intdiv($e, 100) - 1, 12] : [intdiv($e, 100), $e % 100 - 1]; ?>
                   ถึง <?= h(pay_period($ey, $em)) ?><?php else: ?>ถึงปัจจุบัน<?php endif; ?></div></td>
               <td><?= h($sg['name']) ?><div class="small text-muted"><?= nl2br(h((string)$sg['position'])) ?></div></td>
-              <td><?= $sg['signature_path'] ? '<img src="signature.php?id=' . (int)$sg['id'] . '&v=' . substr(md5($sg['signature_path']), 0, 8) . '" style="height:40px" alt="">' : '<span class="small text-muted">ไม่มี</span>' ?></td>
+              <td><?= $sg['signature_path'] ? '<img src="signature?id=' . (int)$sg['id'] . '&v=' . substr(md5($sg['signature_path']), 0, 8) . '" style="height:40px" alt="">' : '<span class="small text-muted">ไม่มี</span>' ?></td>
               <td class="text-end text-nowrap">
                 <a href="?edit=<?= (int)$sg['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a>
                 <form method="post" class="d-inline" data-confirm="ลบผู้ลงนาม <?= h($sg['name']) ?>?"><?= csrf_field() ?>
@@ -149,7 +149,7 @@ require __DIR__ . '/header.php';
   <div class="col-xl-5">
     <form method="post" enctype="multipart/form-data" class="card">
       <div class="card-header d-flex"><strong><?= $form['id'] ? '<i class="bi bi-pencil"></i> แก้ไขผู้ลงนาม' : '<i class="bi bi-plus-lg"></i> เพิ่มผู้ลงนาม (เปลี่ยนผู้ลงนาม)' ?></strong>
-        <?php if ($form['id']): ?><a href="settings.php" class="ms-auto small">เพิ่มใหม่แทน</a><?php endif; ?></div>
+        <?php if ($form['id']): ?><a href="settings" class="ms-auto small">เพิ่มใหม่แทน</a><?php endif; ?></div>
       <div class="card-body row g-3">
         <?= csrf_field() ?><input type="hidden" name="id" value="<?= (int)$form['id'] ?>">
         <div class="col-12"><label class="form-label">เริ่มใช้กับสลิปเดือน</label>
@@ -167,14 +167,14 @@ require __DIR__ . '/header.php';
           <textarea name="position" id="sgPos" class="form-control" rows="2" placeholder="เช่น สถิติจังหวัดขอนแก่น"><?= h((string)$form['position']) ?></textarea></div>
         <div class="col-12"><label class="form-label">รูปลายมือชื่อ <small class="text-muted">(PNG พื้นโปร่งใส · แสดงเฉพาะสลิปที่อนุมัติแล้ว)</small></label>
           <?php if ($form['signature_path']): ?>
-            <div class="border rounded p-2 mb-2 d-inline-block bg-white"><img src="signature.php?id=<?= (int)$form['id'] ?>&v=<?= substr(md5($form['signature_path']), 0, 8) ?>" style="height:56px" alt=""></div>
+            <div class="border rounded p-2 mb-2 d-inline-block bg-white"><img src="signature?id=<?= (int)$form['id'] ?>&v=<?= substr(md5($form['signature_path']), 0, 8) ?>" style="height:56px" alt=""></div>
             <div class="form-check mb-2"><input class="form-check-input" type="checkbox" name="remove_signature" value="1" id="rmSig"><label class="form-check-label" for="rmSig">ลบรูปลายมือชื่อ</label></div>
           <?php endif; ?>
           <input type="file" name="signature" accept="image/png,image/jpeg,image/webp" class="form-control">
           <div class="form-text">เก็บในโฟลเดอร์ที่เปิดตรงจาก URL ไม่ได้ ส่งให้เฉพาะผู้มีสิทธิ์ในระบบสลิป</div></div>
       </div>
       <div class="card-footer"><button class="btn btn-primary"><i class="bi bi-save"></i> บันทึก</button>
-        <?php if ($form['id']): ?><a href="settings.php" class="btn btn-light">ยกเลิก</a><?php endif; ?></div>
+        <?php if ($form['id']): ?><a href="settings" class="btn btn-light">ยกเลิก</a><?php endif; ?></div>
     </form>
   </div>
 </div>

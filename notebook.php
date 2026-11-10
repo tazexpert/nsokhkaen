@@ -64,7 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 audit_log('notebook.edit', 'แก้ไขสมุดบันทึกส่วนตัว');   // ไม่บันทึกเนื้อหา
                 flash('บันทึกเรียบร้อยแล้ว');
             }
-            redirect(url('notebook.php'));
+            redirect(url('notebook'));
         }
     } elseif ($action === 'restore') {
         $old = notebook_rev($uid, int_param('rev'));
@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
             flash('นำเวอร์ชัน ' . notebook_when($old['created_at']) . ' กลับมาใช้แล้ว');
         }
-        redirect(url('notebook.php'));
+        redirect(url('notebook'));
     }
 }
 
@@ -93,7 +93,7 @@ $broken = $latest && $latest['text'] === null;   // ถอดรหัสไม�
 $pageTitle = 'สมุดบันทึก';
 $headExtra = richtext_assets($editing && !$broken);
 $active = 'notebook';
-$pageActions = $editing || $broken ? '' : '<a href="' . h(url('notebook.php?edit=1')) . '" class="btn btn-primary"><i class="bi bi-pencil-square"></i> แก้ไข</a>';
+$pageActions = $editing || $broken ? '' : '<a href="' . h(url('notebook?edit=1')) . '" class="btn btn-primary"><i class="bi bi-pencil-square"></i> แก้ไข</a>';
 require APP_ROOT . '/core/layout/header.php';
 ?>
 <div class="alert alert-light border small py-2"><i class="bi bi-shield-lock text-success"></i> สมุดบันทึกส่วนตัว — เห็นได้เฉพาะคุณ เนื้อหาถูกเข้ารหัสก่อนจัดเก็บ ผู้อื่น (รวมถึงผู้ดูแลระบบ) เปิดอ่านไม่ได้</div>
@@ -122,7 +122,7 @@ require APP_ROOT . '/core/layout/header.php';
           <div class="form-text">ทุกครั้งที่บันทึกจะเก็บเป็นประวัติ นำเวอร์ชันเดิมกลับมาใช้ได้</div>
         </div>
         <div class="card-footer d-flex gap-2 justify-content-end">
-          <a href="<?= h(url('notebook.php')) ?>" class="btn btn-outline-secondary">ยกเลิก</a>
+          <a href="<?= h(url('notebook')) ?>" class="btn btn-outline-secondary">ยกเลิก</a>
           <button class="btn btn-primary"><i class="bi bi-save"></i> บันทึก</button>
         </div>
       </form>
@@ -132,7 +132,7 @@ require APP_ROOT . '/core/layout/header.php';
           <span><i class="bi bi-clock-history"></i> กำลังดูเวอร์ชันเก่า: <?= h(notebook_when($viewRev['created_at'])) ?></span>
           <form method="post" class="ms-auto d-flex gap-2" onsubmit="return confirm('นำเวอร์ชันนี้กลับมาใช้แทนเนื้อหาปัจจุบัน?\n(เนื้อหาปัจจุบันยังเก็บไว้ในประวัติ)')">
             <?= csrf_field() ?><input type="hidden" name="action" value="restore"><input type="hidden" name="rev" value="<?= (int)$viewRev['id'] ?>">
-            <a href="<?= h(url('notebook.php')) ?>" class="btn btn-sm btn-outline-secondary">กลับไปเวอร์ชันปัจจุบัน</a>
+            <a href="<?= h(url('notebook')) ?>" class="btn btn-sm btn-outline-secondary">กลับไปเวอร์ชันปัจจุบัน</a>
             <?php if ($viewRev['text'] !== null): ?><button class="btn btn-sm btn-primary"><i class="bi bi-arrow-counterclockwise"></i> นำเวอร์ชันนี้กลับมาใช้</button><?php endif; ?>
           </form>
         </div>
@@ -159,7 +159,7 @@ require APP_ROOT . '/core/layout/header.php';
       <div class="list-group list-group-flush small notebook-history">
         <?php foreach ($history as $i => $r):
           $cur = !$editing && ($viewRev ? (int)$viewRev['id'] === (int)$r['id'] : $i === 0); ?>
-          <a href="<?= h(url($i === 0 ? 'notebook.php' : 'notebook.php?rev=' . (int)$r['id'])) ?>" class="list-group-item list-group-item-action<?= $cur ? ' active' : '' ?>">
+          <a href="<?= h(url($i === 0 ? 'notebook' : 'notebook?rev=' . (int)$r['id'])) ?>" class="list-group-item list-group-item-action<?= $cur ? ' active' : '' ?>">
             <?= h(notebook_when($r['created_at'])) ?><?= $i === 0 ? ' <span class="badge text-bg-success">ปัจจุบัน</span>' : '' ?>
           </a>
         <?php endforeach; ?>

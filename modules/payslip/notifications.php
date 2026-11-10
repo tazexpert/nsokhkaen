@@ -15,7 +15,7 @@ return function (array $user): array {
             GROUP BY year, month ORDER BY year DESC, month DESC LIMIT 6") as $p) {
             $out[] = ['title' => 'สลิปเงินเดือนรออนุมัติ', 'icon' => 'bi-receipt-cutoff', 'color' => 'warning',
                       'text' => pay_period((int)$p['year'], (int)$p['month']) . ' · ' . $p['n'] . ' รายการ',
-                      'href' => $base . 'slips.php?' . http_build_query(['status' => 'pending', 'year' => $p['year'], 'month' => $p['month']]),
+                      'href' => $base . 'slips?' . http_build_query(['status' => 'pending', 'year' => $p['year'], 'month' => $p['month']]),
                       'time' => $p['t'], 'sticky' => true];
         }
     }
@@ -29,7 +29,7 @@ return function (array $user): array {
                       'text' => $c['code'] . ' ' . $c['full_name'] . ' · ' . pay_period((int)$c['year'], (int)$c['month'])
                           . ($n ? " · เสนอแก้ $n รายการ" : '') . ($c['message'] ? ' — ' . mb_strimwidth($c['message'], 0, 60, '…') : '')
                           . ($c['by_name'] ? ' (' . $c['by_name'] . ')' : ''),
-                      'href' => $base . 'slip_view.php?id=' . $c['slip_id'] . '#comments', 'time' => $c['created_at'], 'sticky' => true];
+                      'href' => $base . 'slip_view?id=' . $c['slip_id'] . '#comments', 'time' => $c['created_at'], 'sticky' => true];
         }
     }
     if (in_array($role, ['approver', 'admin'], true)) {
@@ -41,7 +41,7 @@ return function (array $user): array {
             $out[] = ['title' => 'ผู้จัดการสลิปตอบเรื่องแจ้งแก้ไขแล้ว', 'icon' => 'bi-reply', 'color' => 'info',
                       'text' => $c['code'] . ' ' . $c['full_name'] . ' · ' . pay_period((int)$c['year'], (int)$c['month'])
                           . ($c['resolve_note'] ? ' — ' . mb_strimwidth($c['resolve_note'], 0, 60, '…') : ''),
-                      'href' => $base . 'slip_view.php?id=' . $c['slip_id'] . '#comments', 'time' => $c['resolved_at']];
+                      'href' => $base . 'slip_view?id=' . $c['slip_id'] . '#comments', 'time' => $c['resolved_at']];
         }
     }
     $st = $pdo->prepare("SELECT s.id, s.year, s.month, s.approved_at FROM pay_slips s JOIN pay_employees e ON e.id = s.employee_id
@@ -51,7 +51,7 @@ return function (array $user): array {
     foreach ($st as $s) {
         $out[] = ['title' => 'สลิปเงินเดือนพร้อมแล้ว', 'icon' => 'bi-receipt', 'color' => 'success',
                   'text' => 'ประจำเดือน ' . pay_period((int)$s['year'], (int)$s['month']),
-                  'href' => $base . 'index.php?p=' . $s['year'] . '-' . $s['month'], 'time' => $s['approved_at']];
+                  'href' => $base . '?p=' . $s['year'] . '-' . $s['month'], 'time' => $s['approved_at']];
     }
     return $out;
 };

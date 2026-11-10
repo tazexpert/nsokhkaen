@@ -23,16 +23,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         audit_log('payslip_comment_resolve', 'slip #' . $slip['id'] . " ($n เรื่อง)", PAY_MODULE);
         flash($n ? 'ปิดเรื่องแจ้งแก้ไขแล้ว — แจ้งผู้อนุมัติให้ตรวจอีกครั้ง' : 'เรื่องนี้ปิดไปแล้ว', $n ? 'success' : 'info');
     }
-    redirect('slip_view.php?id=' . (int)$slip['id'] . '#comments');
+    redirect('slip_view?id=' . (int)$slip['id'] . '#comments');
 }
 $comments = $staff ? pay_slip_comments((int)$slip['id']) : [];
 $openCount = count(array_filter($comments, fn($c) => $c['status'] === 'open'));
 $active = pay_is('manager') ? 'slips' : ($staff ? 'pending' : 'my');
 $pageTitle = 'สลิปเงินเดือน ' . $slip['code'] . ' · ' . pay_period((int)$slip['year'], (int)$slip['month']);
-$back = pay_is('manager') ? 'slips.php?' . http_build_query(['year' => $slip['year'], 'month' => $slip['month']]) : 'slips.php?status=pending';
+$back = pay_is('manager') ? 'slips?' . http_build_query(['year' => $slip['year'], 'month' => $slip['month']]) : 'slips?status=pending';
 $pageActions = ($staff ? '<a href="' . h($back) . '" class="btn btn-light"><i class="bi bi-arrow-left"></i> กลับ</a>' : '')
-    . ($canManage ? '<a href="slip_form.php?id=' . (int)$slip['id'] . '" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> แก้ไข</a>'
-        : ($staff ? '<a href="slip_form.php?id=' . (int)$slip['id'] . '" class="btn btn-outline-warning"><i class="bi bi-chat-square-text"></i> แจ้งแก้ไข</a>' : ''))
+    . ($canManage ? '<a href="slip_form?id=' . (int)$slip['id'] . '" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> แก้ไข</a>'
+        : ($staff ? '<a href="slip_form?id=' . (int)$slip['id'] . '" class="btn btn-outline-warning"><i class="bi bi-chat-square-text"></i> แจ้งแก้ไข</a>' : ''))
     . '<button class="btn btn-primary" onclick="window.print()"><i class="bi bi-printer"></i> พิมพ์</button>';
 require __DIR__ . '/header.php';
 ?>
@@ -46,9 +46,9 @@ require __DIR__ . '/header.php';
       <?php if (pay_is('approver') && $openCount): ?>
         <span class="btn btn-sm btn-outline-secondary disabled ms-2"><i class="bi bi-hourglass"></i> รอผู้จัดการสลิปแก้ไขตามที่แจ้ง</span>
       <?php elseif (pay_is('approver')): ?>
-        <form method="post" action="slips.php" class="d-inline ms-2"><?= csrf_field() ?>
+        <form method="post" action="slips" class="d-inline ms-2"><?= csrf_field() ?>
           <input type="hidden" name="action" value="approve"><input type="hidden" name="ids[]" value="<?= (int)$slip['id'] ?>">
-          <input type="hidden" name="back" value="slip_view.php?id=<?= (int)$slip['id'] ?>">
+          <input type="hidden" name="back" value="slip_view?id=<?= (int)$slip['id'] ?>">
           <button class="btn btn-sm btn-success"><i class="bi bi-check2"></i> อนุมัติ</button></form>
       <?php endif; ?>
     <?php endif; ?>
@@ -74,7 +74,7 @@ require __DIR__ . '/header.php';
             <div class="small text-success"><i class="bi bi-reply"></i> <?= h($c['resolver_name'] ?: '-') ?> · <?= h(pay_when($c['resolved_at'])) ?><?= $c['resolve_note'] ? ' — ' . h($c['resolve_note']) : '' ?></div>
           <?php elseif ($canManage): ?>
             <div class="d-flex flex-wrap gap-2 align-items-center">
-              <a href="slip_form.php?id=<?= (int)$slip['id'] ?><?= $c['changes'] ? '&apply=' . (int)$c['id'] : '' ?>" class="btn btn-sm btn-primary"><i class="bi bi-pencil"></i> <?= $c['changes'] ? 'แก้ไขตามที่เสนอ' : 'แก้ไขสลิป' ?></a>
+              <a href="slip_form?id=<?= (int)$slip['id'] ?><?= $c['changes'] ? '&apply=' . (int)$c['id'] : '' ?>" class="btn btn-sm btn-primary"><i class="bi bi-pencil"></i> <?= $c['changes'] ? 'แก้ไขตามที่เสนอ' : 'แก้ไขสลิป' ?></a>
               <form method="post" class="d-flex gap-1 flex-grow-1"><?= csrf_field() ?><input type="hidden" name="action" value="resolve"><input type="hidden" name="comment_id" value="<?= (int)$c['id'] ?>">
                 <input name="resolve_note" class="form-control form-control-sm" placeholder="ตอบผู้อนุมัติ เช่น ตรวจสอบแล้ว ตัวเลขถูกต้อง">
                 <button class="btn btn-sm btn-outline-success text-nowrap"><i class="bi bi-check2"></i> ปิดเรื่อง (ไม่แก้สลิป)</button></form>

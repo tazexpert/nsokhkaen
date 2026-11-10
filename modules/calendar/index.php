@@ -40,8 +40,8 @@ $qs = fn(array $p) => '?' . http_build_query(array_filter($p + ['m' => $m, 'mine
 
 $active = $mine ? 'mine' : 'month';
 $pageTitle = 'ปฏิทินการปฏิบัติงาน';
-$pageActions = (cal_can('admin') ? '<a href="import.php" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> นำเข้า CSV</a>' : '')
-    . (cal_can('editor') ? '<a href="event_form.php" class="btn btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มกิจกรรม</a>' : '');
+$pageActions = (cal_can('admin') ? '<a href="import" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> นำเข้า CSV</a>' : '')
+    . (cal_can('editor') ? '<a href="event_form" class="btn btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มกิจกรรม</a>' : '');
 require __DIR__ . '/header.php';
 ?>
 <div class="card">
@@ -54,21 +54,21 @@ require __DIR__ . '/header.php';
       <a href="<?= h('?m=' . $m) ?>" class="btn btn-outline-primary<?= $mine ? '' : ' active' ?>">ทุกคน</a>
       <a href="<?= h('?m=' . $m . '&mine=1') ?>" class="btn btn-outline-primary<?= $mine ? ' active' : '' ?>">เฉพาะงานของฉัน</a>
     </div>
-    <a href="list.php?from=<?= h($first) ?>&to=<?= h($last) ?><?= $mine ? '&mine=1' : '' ?>" class="btn btn-outline-secondary btn-sm"><i class="bi bi-list-task"></i> แบบตาราง</a>
-    <?php if ($mine): ?><a href="ical.php?download=1" class="btn btn-outline-success btn-sm" title="ดาวน์โหลดไฟล์ .ics งานของฉัน (ย้อนหลัง 6 เดือน – ล่วงหน้า 1 ปี) แล้วนำเข้าใน Google Calendar: การตั้งค่า → นำเข้าและส่งออก"><i class="bi bi-google"></i> ส่งออกไปยัง Google Calendar</a><?php endif; ?>
+    <a href="list?from=<?= h($first) ?>&to=<?= h($last) ?><?= $mine ? '&mine=1' : '' ?>" class="btn btn-outline-secondary btn-sm"><i class="bi bi-list-task"></i> แบบตาราง</a>
+    <?php if ($mine): ?><a href="ical?download=1" class="btn btn-outline-success btn-sm" title="ดาวน์โหลดไฟล์ .ics งานของฉัน (ย้อนหลัง 6 เดือน – ล่วงหน้า 1 ปี) แล้วนำเข้าใน Google Calendar: การตั้งค่า → นำเข้าและส่งออก"><i class="bi bi-google"></i> ส่งออกไปยัง Google Calendar</a><?php endif; ?>
   </div>
   <div class="cal-grid">
     <?php foreach (CAL_WEEKDAYS_SHORT as $i => $w): ?><div class="cal-wd<?= $i === 0 ? ' sun' : '' ?>"><?= $w ?></div><?php endforeach; ?>
     <?php for ($d = $gridStart; $d <= $gridEnd; $d = date('Y-m-d', strtotime($d . ' +1 day'))):
         $out = substr($d, 0, 7) !== $m; ?>
       <div class="cal-cell<?= $out ? ' out' : '' ?><?= $d === $today ? ' today' : '' ?>">
-        <div class="cal-dnum"><?php if (cal_can('editor')): ?><a href="event_form.php?date=<?= $d ?>" class="cal-add" title="เพิ่มกิจกรรมวันนี้"><i class="bi bi-plus"></i></a><?php endif; ?><?= (int)substr($d, 8, 2) ?></div>
+        <div class="cal-dnum"><?php if (cal_can('editor')): ?><a href="event_form?date=<?= $d ?>" class="cal-add" title="เพิ่มกิจกรรมวันนี้"><i class="bi bi-plus"></i></a><?php endif; ?><?= (int)substr($d, 8, 2) ?></div>
         <?php foreach ($byDay[$d] ?? [] as $e): $isMine = in_array($me['id'], $assignees[(int)$e['id']] ?? [], true); ?>
-          <a href="event_view.php?id=<?= (int)$e['id'] ?>" class="cal-ev<?= cal_is_duty($e) ? ' duty' : '' ?><?= cal_is_guard($e) ? ' guard' : '' ?><?= $isMine ? ' mine' : '' ?>" title="<?= h(cal_time_text($e) . ' ' . $e['title'] . ($e['location'] ? ' @ ' . $e['location'] : '')) ?>">
+          <a href="event_view?id=<?= (int)$e['id'] ?>" class="cal-ev<?= cal_is_duty($e) ? ' duty' : '' ?><?= cal_is_guard($e) ? ' guard' : '' ?><?= $isMine ? ' mine' : '' ?>" title="<?= h(cal_time_text($e) . ' ' . $e['title'] . ($e['location'] ? ' @ ' . $e['location'] : '')) ?>">
             <?php if ($e['start_time'] && $d === $e['event_date']): ?><span class="t"><?= cal_time_thai($e['start_time']) ?></span><?php endif; ?><?= cal_is_private($e) ? '<i class="bi bi-lock-fill me-1" title="ส่วนตัว"></i>' : '' ?><?= h($e['title']) ?></a>
         <?php endforeach; ?>
         <?php if (isset($attItems[$d])): $ai = $attItems[$d]; ?>
-          <a href="att_view.php?date=<?= $d ?>" class="cal-ev att-ev<?= $ai['cls'] === 'att-cert' ? ' done' : ($ai['cls'] === 'att-late' ? ' late' : '') ?>" title="<?= h($ai['title']) ?> (เห็นเฉพาะคุณ)"><i class="bi bi-lock-fill me-1"></i><?= h(att_item_title($ai)) ?></a>
+          <a href="att_view?date=<?= $d ?>" class="cal-ev att-ev<?= $ai['cls'] === 'att-cert' ? ' done' : ($ai['cls'] === 'att-late' ? ' late' : '') ?>" title="<?= h($ai['title']) ?> (เห็นเฉพาะคุณ)"><i class="bi bi-lock-fill me-1"></i><?= h(att_item_title($ai)) ?></a>
         <?php endif; ?>
       </div>
     <?php endfor; ?>

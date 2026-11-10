@@ -158,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         audit_log('cal_duty_import', "เพิ่ม $new แก้ไข $updated เหมือนเดิม $same ข้าม $skipped", CAL_MODULE);
         flash("นำเข้าเวรสำนักงาน: เพิ่ม $new วัน" . ($updated ? " · เปลี่ยนผู้อยู่เวร $updated วัน" : '') . ($same ? " · เหมือนเดิม $same วัน" : '')
             . ($skipped ? " · ข้าม $skipped วัน (ไม่พบผู้รับผิดชอบ)" : '') . ($new + $updated ? ' — แจ้งเตือนผู้อยู่เวรแล้ว' : ''), $new + $updated ? 'success' : 'warning');
-        redirect('index.php' . (preg_match('/^\d{4}-\d{2}$/', post('month')) ? '?m=' . post('month') : ''));
+        redirect('./' . (preg_match('/^\d{4}-\d{2}$/', post('month')) ? '?m=' . post('month') : ''));
     }
 }
 
@@ -229,7 +229,7 @@ require __DIR__ . '/header.php';
   </div>
   <div class="sticky-actions mt-3">
     <button class="btn btn-primary btn-lg" <?= $ok ? '' : 'disabled' ?>><i class="bi bi-check2-circle"></i> ยืนยันนำเข้า</button>
-    <a href="duty_import.php" class="btn btn-light btn-lg">เลือกไฟล์ใหม่</a>
+    <a href="duty_import" class="btn btn-light btn-lg">เลือกไฟล์ใหม่</a>
   </div>
 </form>
 <?php endif; ?>

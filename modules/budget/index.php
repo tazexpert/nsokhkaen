@@ -51,14 +51,14 @@ $pageActions = '<form method="get" class="d-flex align-items-center gap-2"><labe
 foreach (bud_fy_list() as $y) {
     $pageActions .= '<option value="' . $y . '"' . ($y === $fy ? ' selected' : '') . '>' . $y . '</option>';
 }
-$pageActions .= '</select></form>' . (bud_can('editor') ? '<a href="txn_form.php?type=receive" class="btn btn-primary"><i class="bi bi-box-arrow-in-down"></i> รับเข้า</a><a href="txn_form.php?type=spend" class="btn btn-warning"><i class="bi bi-box-arrow-up"></i> เบิกจ่าย</a>' : '');
+$pageActions .= '</select></form>' . (bud_can('editor') ? '<a href="txn_form?type=receive" class="btn btn-primary"><i class="bi bi-box-arrow-in-down"></i> รับเข้า</a><a href="txn_form?type=spend" class="btn btn-warning"><i class="bi bi-box-arrow-up"></i> เบิกจ่าย</a>' : '');
 require __DIR__ . '/header.php';
 ?>
 <div class="row g-3 mb-4" data-reveal>
   <?php foreach ([
-      ['ได้รับ', bud_money($rec), 'bi-box-arrow-in-down', 'primary', 'บาท · รับเข้างบประมาณ', 'txns.php?type=receive&fy=' . $fy],
-      ['เบิกจ่าย', bud_money($spd), 'bi-box-arrow-up', 'warning', 'บาท · เบิกจ่ายงบประมาณ', 'txns.php?type=spend&fy=' . $fy],
-      ['คงเหลือ', bud_money($rec - $spd), 'bi-wallet2', $rec - $spd < 0 ? 'danger' : 'success', 'บาท · ได้รับ − เบิกจ่าย', 'report.php?fy=' . $fy],
+      ['ได้รับ', bud_money($rec), 'bi-box-arrow-in-down', 'primary', 'บาท · รับเข้างบประมาณ', 'txns?type=receive&fy=' . $fy],
+      ['เบิกจ่าย', bud_money($spd), 'bi-box-arrow-up', 'warning', 'บาท · เบิกจ่ายงบประมาณ', 'txns?type=spend&fy=' . $fy],
+      ['คงเหลือ', bud_money($rec - $spd), 'bi-wallet2', $rec - $spd < 0 ? 'danger' : 'success', 'บาท · ได้รับ − เบิกจ่าย', 'report?fy=' . $fy],
   ] as [$label, $v, $icon, $color, $sub, $href]): ?>
   <div class="col-sm-6 col-xl-3 reveal-item">
     <a href="<?= h($href) ?>" class="stat-card h-100 text-decoration-none text-body"><span class="stat-icon text-bg-<?= $color ?>"><i class="bi <?= $icon ?>"></i></span>
@@ -78,7 +78,7 @@ require __DIR__ . '/header.php';
   <?php $ti = 0; foreach ($byType as $t => $a): $c = $typeColors[min($ti++, count($typeColors) - 1)];
     $tp = $a['receive'] > 0 ? $a['spend'] / $a['receive'] * 100 : 0; ?>
   <div class="col-md-6 col-xl-3 reveal-item">
-    <a href="report.php?fy=<?= $fy ?>" class="card h-100 text-decoration-none text-body bud-type" style="--c:<?= $c ?>">
+    <a href="report?fy=<?= $fy ?>" class="card h-100 text-decoration-none text-body bud-type" style="--c:<?= $c ?>">
       <div class="card-body">
         <div class="bud-type-name"><?= h($t) ?></div>
         <div class="d-flex justify-content-between small mt-2"><span>ได้รับ</span><b class="bud-receive"><?= bud_money($a['receive']) ?></b></div>
@@ -113,7 +113,7 @@ require __DIR__ . '/header.php';
         <?php $max = max(1, ...array_map(fn($m) => max($m['receive'], $m['spend']), array_values($byMonth))); $i = 0; ?>
         <div class="bud-vbars">
           <?php foreach ($byMonth as $ym => $m): ?>
-            <a class="bud-col text-decoration-none" href="report.php?<?= h(http_build_query(['fy' => $fy, 'mode' => 'month', 'month' => $ym])) ?>"
+            <a class="bud-col text-decoration-none" href="report?<?= h(http_build_query(['fy' => $fy, 'mode' => 'month', 'month' => $ym])) ?>"
                title="<?= h(bud_month_label($ym) . ' · ได้รับ ' . bud_money($m['receive']) . ' · เบิกจ่าย ' . bud_money($m['spend']) . ' บาท') ?>">
               <?php foreach (['receive', 'spend'] as $type): ?>
                 <span class="bud-bar bud-anim <?= $type ?>" style="height:<?= round($m[$type] / $max * 100, 2) ?>%;--d:<?= $i++ * 38 ?>ms"></span>
@@ -134,7 +134,7 @@ require __DIR__ . '/header.php';
           <div class="bud-type-head"><?= h($t) ?><span class="ms-auto text-nowrap"><b><?= bud_money($ta['spend']) ?></b> / <?= bud_money($ta['receive']) ?></span></div>
         <?php foreach ($ta['src'] as $k => $a): $s = $srcInfo($k);
           $r = $a['receive'] ?? 0; $sp = $a['spend'] ?? 0; $base = max($r, $sp, 0.01); ?>
-          <a class="bud-src-row2 text-decoration-none text-body" href="txns.php?<?= h(http_build_query(['type' => $sp > 0 ? 'spend' : 'receive', 'fy' => $fy, 'src' => $k])) ?>" title="<?= h($s['label']) ?>">
+          <a class="bud-src-row2 text-decoration-none text-body" href="txns?<?= h(http_build_query(['type' => $sp > 0 ? 'spend' : 'receive', 'fy' => $fy, 'src' => $k])) ?>" title="<?= h($s['label']) ?>">
             <div class="small"><span class="bud-dot" style="background:<?= h($s['color']) ?>"></span><?= h(bud_label_in_type($s)) ?></div>
             <div class="d-flex align-items-center gap-2">
               <span class="bar-track bud-mini"><span class="bar-fill bud-fill<?= $sp > $r ? ' over' : '' ?>" style="width:<?= round($sp / $base * 100, 1) ?>%"></span></span>
@@ -142,7 +142,7 @@ require __DIR__ . '/header.php';
             </div>
           </a>
         <?php endforeach; endforeach; ?>
-        <?php if (!$bySrc): ?><p class="text-muted mb-0">ยังไม่มีข้อมูล<?= bud_can('editor') ? ' — <a href="txn_form.php?type=receive">บันทึกรับเข้างบประมาณ</a>' : '' ?></p><?php endif; ?>
+        <?php if (!$bySrc): ?><p class="text-muted mb-0">ยังไม่มีข้อมูล<?= bud_can('editor') ? ' — <a href="txn_form?type=receive">บันทึกรับเข้างบประมาณ</a>' : '' ?></p><?php endif; ?>
       </div>
     </div>
   </div>

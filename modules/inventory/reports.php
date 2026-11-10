@@ -193,7 +193,7 @@ requireAdmin();
 </style>
 
 <script>
-const REPORT_API = INV_URL_JS + 'api/report_api.php';
+const REPORT_API = INV_URL_JS + 'api/report_api';
 
 function getFilters() {
     return {

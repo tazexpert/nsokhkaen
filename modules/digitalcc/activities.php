@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'delete') {
     $pdo->prepare('DELETE FROM dcc_activities WHERE id = ?')->execute([$id]);
     array_map('delete_upload', array_filter($files));
     flash('ลบกิจกรรมเรียบร้อยแล้ว');
-    redirect('activities.php' . (int_param('center_id') ? '?center_id=' . int_param('center_id') : ''));
+    redirect('activities' . (int_param('center_id') ? '?center_id=' . int_param('center_id') : ''));
 }
 
 $centerId = int_param('center_id');
@@ -59,7 +59,7 @@ require __DIR__ . '/header.php';
       </div>
       <div class="col-md-4"><input name="q" class="form-control" placeholder="ค้นหาชื่อกิจกรรม / ผู้จัด" value="<?= h($q) ?>"></div>
       <div class="col-auto"><button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button></div>
-      <div class="col-auto ms-auto"><a href="activity_form.php<?= $centerId ? '?center_id=' . $centerId : '' ?>" class="btn btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มกิจกรรม</a></div>
+      <div class="col-auto ms-auto"><a href="activity_form<?= $centerId ? '?center_id=' . $centerId : '' ?>" class="btn btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มกิจกรรม</a></div>
     </form>
   </div>
   <div class="table-responsive">
@@ -69,15 +69,15 @@ require __DIR__ . '/header.php';
       <?php foreach ($rows as $r): $thumb = $r['cover_image'] ?: $r['first_image']; ?>
         <tr>
           <td><?php if ($thumb): ?><img src="<?= h(upload_url($thumb)) ?>" class="thumb" alt=""><?php else: ?><span class="thumb thumb-empty"><i class="bi bi-image"></i></span><?php endif; ?></td>
-          <td><a href="activity_form.php?id=<?= (int)$r['id'] ?>" class="fw-semibold text-decoration-none"><?= h($r['title']) ?></a>
-            <?php if ($r['visit_id']): ?> <a href="visit_view.php?id=<?= (int)$r['visit_id'] ?>" class="badge text-bg-success text-decoration-none"><i class="bi bi-clipboard-check"></i> แบบตรวจเยี่ยม</a><?php endif; ?>
+          <td><a href="activity_form?id=<?= (int)$r['id'] ?>" class="fw-semibold text-decoration-none"><?= h($r['title']) ?></a>
+            <?php if ($r['visit_id']): ?> <a href="visit_view?id=<?= (int)$r['visit_id'] ?>" class="badge text-bg-success text-decoration-none"><i class="bi bi-clipboard-check"></i> แบบตรวจเยี่ยม</a><?php endif; ?>
             <div class="small text-muted"><?= h($r['organizer']) ?></div></td>
           <td><?= h($r['center_name']) ?><div class="small text-muted">อ.<?= h($r['district']) ?></div></td>
           <td class="text-nowrap"><?= thai_date($r['activity_date']) ?></td>
           <td class="text-center"><?= number_format((int)$r['participants']) ?></td>
           <td class="text-center"><?= (int)$r['image_count'] + ($r['cover_image'] ? 1 : 0) ?></td>
           <td class="text-end text-nowrap">
-            <a href="activity_form.php?id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-light"><i class="bi bi-pencil"></i></a>
+            <a href="activity_form?id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-light"><i class="bi bi-pencil"></i></a>
             <?php if (dcc_can('admin')): ?>
             <form method="post" class="d-inline" data-confirm="ลบกิจกรรม &quot;<?= h($r['title']) ?>&quot; และภาพทั้งหมด?">
               <?= csrf_field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$r['id'] ?>">

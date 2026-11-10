@@ -14,7 +14,7 @@ $st->execute([int_param('id')]);
 $c = $st->fetch();
 if (!$c || !claim_can_view($c)) {
     flash('ไม่พบใบเบิก', 'warning');
-    redirect('claims.php');
+    redirect('claims');
 }
 $st = $pdo->prepare('SELECT * FROM ea_claim_days WHERE claim_id = ? ORDER BY seq, trip_date, id');
 $st->execute([$c['id']]);
@@ -94,8 +94,8 @@ $split = fn(float $n) => [number_format(floor($n)), str_pad((string)(int)round((
   <strong>ใบเบิกค่าใช้จ่ายในการเดินทางไปราชการ</strong>
   <span><?= h($c['full_name']) ?> · <?= number_format((float)$c['total_amount'], 2) ?> บาท · <?= $totalPages ?> หน้า · <?= $c['status'] === 'issued' ? 'ออกใบสำคัญแล้ว' : 'ร่าง' ?></span>
   <span style="margin-left:auto"></span>
-  <?php if (claim_can_edit($c)): ?><a href="claim_form.php?id=<?= (int)$c['id'] ?>">แก้ไข</a><?php endif; ?>
-  <a href="claims.php">ใบเบิกทั้งหมด</a>
+  <?php if (claim_can_edit($c)): ?><a href="claim_form?id=<?= (int)$c['id'] ?>">แก้ไข</a><?php endif; ?>
+  <a href="claims">ใบเบิกทั้งหมด</a>
   <button type="button" class="primary" onclick="window.print()">พิมพ์ / บันทึก PDF</button>
 </div>
 

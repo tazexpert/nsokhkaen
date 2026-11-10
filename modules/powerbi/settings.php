@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         save_setting('powerbi_title', mb_substr($title, 0, 150));
         audit_log('powerbi_settings', $title, PBI_MODULE);
         flash('บันทึกการตั้งค่าแดชบอร์ดแล้ว');
-        redirect('index.php');
+        redirect('./');
     }
 }
 $active = 'settings';
@@ -44,6 +44,6 @@ require __DIR__ . '/header.php';
       ข้อมูลที่เป็นความลับควรใช้ลิงก์แบบ "ฝังเว็บไซต์หรือพอร์ทัล" ที่ต้องลงชื่อเข้าใช้ Microsoft</div>
   </div>
   <div class="card-footer d-flex gap-2"><button class="btn btn-primary"><i class="bi bi-save"></i> บันทึก</button>
-    <a href="index.php" class="btn btn-light">ยกเลิก</a></div>
+    <a href="./" class="btn btn-light">ยกเลิก</a></div>
 </form>
 <?php require __DIR__ . '/footer.php'; ?>

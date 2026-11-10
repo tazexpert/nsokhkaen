@@ -24,7 +24,7 @@ require APP_ROOT . '/core/layout/header.php';
   <?php if ($isGuest): ?>
   <span class="home-hero-avatar"><?= user_avatar($viewer, 64) ?></span>
   <?php else: ?>
-  <a href="<?= h(url('account.php')) ?>" class="home-hero-avatar" title="บัญชีของฉัน — เปลี่ยนรูปโปรไฟล์"><?= user_avatar($viewer, 64) ?></a>
+  <a href="<?= h(url('account')) ?>" class="home-hero-avatar" title="บัญชีของฉัน — เปลี่ยนรูปโปรไฟล์"><?= user_avatar($viewer, 64) ?></a>
   <?php endif; ?>
   <div class="min-w-0 me-auto">
     <div class="home-hero-date"><i class="bi bi-calendar3"></i> <?= h(cal_home_date()) ?></div>
@@ -32,9 +32,9 @@ require APP_ROOT . '/core/layout/header.php';
     <div class="home-hero-sub"><?= h(ORG_NAME) ?></div>
   </div>
   <?php if ($isGuest): ?>
-    <a href="<?= h(url('login.php')) ?>" class="btn btn-primary ms-auto" data-login-modal><i class="bi bi-box-arrow-in-right"></i> เข้าสู่ระบบเพื่อใช้งานระบบงาน</a>
+    <a href="<?= h(url('login')) ?>" class="btn btn-primary ms-auto" data-login-modal><i class="bi bi-box-arrow-in-right"></i> เข้าสู่ระบบเพื่อใช้งานระบบงาน</a>
   <?php else: ?>
-    <a href="<?= h(url('logout.php')) ?>" class="btn btn-outline-danger ms-auto"><i class="bi bi-box-arrow-right"></i> <?= !empty($viewer['via_pin']) ? 'เปลี่ยนผู้ใช้' : 'ออกจากระบบ' ?></a>
+    <a href="<?= h(url('logout')) ?>" class="btn btn-outline-danger ms-auto"><i class="bi bi-box-arrow-right"></i> <?= !empty($viewer['via_pin']) ? 'เปลี่ยนผู้ใช้' : 'ออกจากระบบ' ?></a>
   <?php endif; ?>
 </section>
 
@@ -63,7 +63,7 @@ foreach ($widgets as $widget) {
 <div class="row g-3 mb-4" id="modGrid" data-reveal>
   <?php foreach ($mods as $m): ?>
     <div class="col-md-6 col-xl-4 mod-item reveal-item" data-key="<?= h($m['key']) ?>">
-      <a class="mod-card" style="--mc:<?= h($m['color']) ?>" href="<?= h(module_url($m['key'], $m['entry'] ?? 'index.php')) ?>">
+      <a class="mod-card" style="--mc:<?= h($m['color']) ?>" href="<?= h(module_url($m['key'], $m['entry'] ?? '')) ?>">
         <span class="mod-icon<?= $m['logo'] ? ' has-logo' : '' ?>" style="background:<?= h($m['color']) ?>"><?= $m['logo'] ? module_logo($m, 52) : '<i class="bi ' . h($m['icon']) . '"></i>' ?></span>
         <span class="min-w-0">
           <h3><?= h($m['name']) ?></h3>
@@ -100,7 +100,7 @@ foreach ($widgets as $widget) {
     items().forEach(el => el.draggable = on);
     if (on) { original = items(); number(); }
   };
-  const save = order => $.post(BASE_URL_JS + 'api/prefs.php', { action: 'module_order', order })
+  const save = order => $.post(BASE_URL_JS + 'api/prefs', { action: 'module_order', order })
     .done(() => location.reload()).fail(() => alert('บันทึกไม่สำเร็จ'));
   btn.addEventListener('click', () => setMode(true));
   document.getElementById('arrangeCancel').addEventListener('click', () => { original.forEach(el => grid.appendChild(el)); setMode(false); });
@@ -142,7 +142,7 @@ if ($links || !empty($viewer['is_superadmin'])): ?>
 if ($links): ?>
   <div class="col-lg reveal-item"><div class="card h-100 home-tool tone-orange"><div class="card-body">
   <div class="home-tool-title d-flex align-items-center"><span><i class="bi bi-globe2"></i> ลิงก์ที่เกี่ยวข้อง</span>
-    <?php if (!empty($viewer['is_superadmin'])): ?><a href="<?= h(url('admin/links.php')) ?>" class="ms-auto small fw-normal text-decoration-none"><i class="bi bi-pencil-square"></i> จัดการลิงก์</a><?php endif; ?></div>
+    <?php if (!empty($viewer['is_superadmin'])): ?><a href="<?= h(url('admin/links')) ?>" class="ms-auto small fw-normal text-decoration-none"><i class="bi bi-pencil-square"></i> จัดการลิงก์</a><?php endif; ?></div>
   <div class="d-flex flex-wrap gap-2">
     <?php foreach ($links as $l): ?>
       <a href="<?= h(link_href($l['url'])) ?>" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm">
@@ -156,11 +156,11 @@ if ($links): ?>
   <div class="col-lg reveal-item"><div class="card h-100 home-tool tone-red"><div class="card-body">
   <div class="home-tool-title"><i class="bi bi-shield-lock"></i> ผู้ดูแลระบบกลาง</div>
   <div class="d-flex flex-wrap gap-2">
-    <a href="<?= h(url('admin/users.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-people"></i> ผู้ใช้งานและสิทธิ์</a>
-    <a href="<?= h(module_url('ea', 'projects.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-kanban"></i> โครงการที่รับผิดชอบ</a>
-    <a href="<?= h(url('admin/links.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-link-45deg"></i> ลิงก์และเครื่องมือ</a>
-    <a href="<?= h(url('admin/settings.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-sliders"></i> ตั้งค่าระบบ</a>
-    <a href="<?= h(url('admin/audit.php')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-journal-text"></i> บันทึกการใช้งาน</a>
+    <a href="<?= h(url('admin/users')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-people"></i> ผู้ใช้งานและสิทธิ์</a>
+    <a href="<?= h(module_url('ea', 'projects')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-kanban"></i> โครงการที่รับผิดชอบ</a>
+    <a href="<?= h(url('admin/links')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-link-45deg"></i> ลิงก์และเครื่องมือ</a>
+    <a href="<?= h(url('admin/settings')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-sliders"></i> ตั้งค่าระบบ</a>
+    <a href="<?= h(url('admin/audit')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-journal-text"></i> บันทึกการใช้งาน</a>
   </div>
   </div></div></div>
 <?php endif; ?>

@@ -53,7 +53,7 @@ $loadRows = function () use ($pdo, $pid, $year, $month): array {
     return $st->fetchAll();
 };
 $critQuery = ['project' => $pid, 'year' => $year ?: null, 'month' => $month ?: null];
-$critUrl = 'assign.php?' . http_build_query(array_filter($critQuery));
+$critUrl = 'assign?' . http_build_query(array_filter($critQuery));
 $roundText = $project ? ($year ? ($month ? EA_MONTHS_LONG[$month] . ' ' . $year : 'ทุกเดือน ปี ' . $year) : 'ทุกรอบ') : '';
 
 /**
@@ -342,7 +342,7 @@ require __DIR__ . '/header.php';
     <div class="card-footer d-flex align-items-center gap-2 ea-bulk">
       <button name="action" value="save" class="btn btn-success"><i class="bi bi-check-lg"></i> บันทึกการมอบหมาย</button>
       <span class="small text-muted">เปลี่ยนจากที่บันทึกไว้ <strong id="changedCount">0</strong> EA</span>
-      <a href="project_eas.php?<?= h(http_build_query(array_filter(['id' => $pid, 'fy' => null]))) ?>" class="btn btn-link ms-auto">ไปหน้า EA ของโครงการ</a>
+      <a href="project_eas?<?= h(http_build_query(array_filter(['id' => $pid, 'fy' => null]))) ?>" class="btn btn-link ms-auto">ไปหน้า EA ของโครงการ</a>
     </div>
   </div>
 </form>

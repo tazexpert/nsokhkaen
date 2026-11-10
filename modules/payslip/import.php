@@ -178,7 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Throwable $ex) {
             $pdo->rollBack();
             flash('นำเข้าไม่สำเร็จ: ' . $ex->getMessage(), 'danger');
-            redirect('import.php');
+            redirect('import');
         }
         $linked = pay_auto_link();
         unset($_SESSION[$sessKey]);
@@ -187,7 +187,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             . ($stats['employees'] ? " · พนักงานใหม่ {$stats['employees']} คน" : '') . ($linked ? " · ผูกบัญชีผู้ใช้อัตโนมัติ $linked คน" : '')
             . ($useFileApproval ? '' : ' — สลิปใหม่/ที่ปรับปรุงอยู่ในสถานะ "รออนุมัติ"'));
         // ผู้จัดการสลิปไม่เห็นหน้าจัดการสลิป → กลับหน้านำเข้า (ผู้อนุมัติได้รับแจ้งเตือนสลิปรออนุมัติ)
-        redirect('slips.php' . ($useFileApproval ? '' : '?status=pending'));
+        redirect('slips' . ($useFileApproval ? '' : '?status=pending'));
     }
 }
 
@@ -291,7 +291,7 @@ require __DIR__ . '/header.php';
   </div>
   <div class="sticky-actions">
     <button class="btn btn-primary btn-lg"><i class="bi bi-check2-circle"></i> ยืนยันนำเข้า <?= count($d['rows']) ?> รายการ</button>
-    <a href="import.php" class="btn btn-light btn-lg">เลือกไฟล์ใหม่</a>
+    <a href="import" class="btn btn-light btn-lg">เลือกไฟล์ใหม่</a>
   </div>
 </form>
 <?php endif; ?>

@@ -48,9 +48,9 @@ $loans = $st->fetchAll();
 
 $tabs = ['borrowed' => 'กำลังยืม', 'overdue' => 'เกินกำหนดคืน', 'returned' => 'คืนแล้ว', 'all' => 'ทั้งหมด'];
 $noFile = $isAdmin ? (int)$pdo->query("SELECT COUNT(*) FROM inv_loans WHERE status = 'borrowed' AND (file_path IS NULL OR file_path = '')")->fetchColumn() : 0;
-$pageActions = $isAdmin ? ($noFile ? '<a href="loan_attach.php" class="btn btn-warning"><i class="bi bi-paperclip"></i> แนบใบยืมที่ยังขาด (' . $noFile . ')</a>' : '')
-    . '<a href="loan_import.php" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> นำเข้า CSV</a>'
-    . '<a href="loan_form.php" class="btn btn-success"><i class="bi bi-plus-lg"></i> บันทึกการยืม</a>' : '';
+$pageActions = $isAdmin ? ($noFile ? '<a href="loan_attach" class="btn btn-warning"><i class="bi bi-paperclip"></i> แนบใบยืมที่ยังขาด (' . $noFile . ')</a>' : '')
+    . '<a href="loan_import" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> นำเข้า CSV</a>'
+    . '<a href="loan_form" class="btn btn-success"><i class="bi bi-plus-lg"></i> บันทึกการยืม</a>' : '';
 require __DIR__ . '/header.php';
 ?>
 <ul class="nav nav-pills mb-3 flex-wrap gap-1">
@@ -72,7 +72,7 @@ require __DIR__ . '/header.php';
       <tbody>
       <?php foreach ($loans as $l): $od = $l['status'] === 'borrowed' && $l['due_date'] < $today; ?>
         <tr class="<?= $od ? 'table-danger' : '' ?>">
-          <td><a href="loan_view.php?id=<?= (int)$l['id'] ?>" class="fw-semibold text-decoration-none"><?= h($l['loan_no']) ?></a>
+          <td><a href="loan_view?id=<?= (int)$l['id'] ?>" class="fw-semibold text-decoration-none"><?= h($l['loan_no']) ?></a>
             <div class="small text-muted"><?= $l['doc_no'] ? h($l['doc_no']) : h(thai_date($l['created_at'])) ?></div></td>
           <td><?= h($l['borrower_name']) ?><div class="small text-muted"><?= h($l['borrower_position']) ?></div></td>
           <td class="small" style="max-width:320px"><span class="badge text-bg-light border"><?= (int)$l['item_count'] ?> รายการ</span> <?= h(mb_strimwidth((string)$l['item_list'], 0, 90, '…')) ?></td>
@@ -80,9 +80,9 @@ require __DIR__ . '/header.php';
             <?php if ($l['returned_at']): ?><div class="text-success">คืน <?= h(thai_date($l['returned_at'])) ?></div><?php endif; ?></td>
           <td><?= loan_status_badge($l['status']) ?><?= $od ? ' <span class="badge text-bg-danger">เกินกำหนด</span>' : '' ?></td>
           <td class="text-end text-nowrap">
-            <a href="loan_view.php?id=<?= (int)$l['id'] ?>" class="btn btn-sm btn-light" title="ดู"><i class="bi bi-eye"></i></a>
-            <?php if ($l['file_path']): ?><a href="loan_file.php?id=<?= (int)$l['id'] ?>" target="_blank" class="btn btn-sm btn-light" title="เปิด/พิมพ์ใบยืม"><i class="bi bi-printer"></i></a>
-            <?php elseif ($isAdmin && $l['status'] === 'borrowed'): ?><a href="loan_attach.php?ids=<?= (int)$l['id'] ?>" class="btn btn-sm btn-outline-warning" title="แนบไฟล์ใบยืม"><i class="bi bi-paperclip"></i></a><?php endif; ?>
+            <a href="loan_view?id=<?= (int)$l['id'] ?>" class="btn btn-sm btn-light" title="ดู"><i class="bi bi-eye"></i></a>
+            <?php if ($l['file_path']): ?><a href="loan_file?id=<?= (int)$l['id'] ?>" target="_blank" class="btn btn-sm btn-light" title="เปิด/พิมพ์ใบยืม"><i class="bi bi-printer"></i></a>
+            <?php elseif ($isAdmin && $l['status'] === 'borrowed'): ?><a href="loan_attach?ids=<?= (int)$l['id'] ?>" class="btn btn-sm btn-outline-warning" title="แนบไฟล์ใบยืม"><i class="bi bi-paperclip"></i></a><?php endif; ?>
           </td>
         </tr>
       <?php endforeach; ?>

@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 delete_upload($old);
                 audit_log('change_photo');
                 flash('เปลี่ยนรูปโปรไฟล์เรียบร้อยแล้ว');
-                redirect(url('account.php'));
+                redirect(url('account'));
             }
         } catch (RuntimeException $e) {
             $errors[] = $e->getMessage();
@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->prepare('UPDATE core_users SET photo = NULL WHERE id = ?')->execute([$user['id']]);
         delete_upload($user['photo'] ?? null);
         flash('ลบรูปโปรไฟล์แล้ว');
-        redirect(url('account.php'));
+        redirect(url('account'));
     } elseif ($action === 'profile') {
         $fullName = post('full_name');
         if ($fullName === '') {
@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute([$fullName, post('position') ?: null, isset(work_groups()[$wg]) ? $wg : null,
                            post('email') ?: null, post('phone') ?: null, mb_substr(post('nickname'), 0, 50) ?: null, $user['id']]);
             flash('บันทึกข้อมูลส่วนตัวเรียบร้อยแล้ว');
-            redirect(url('account.php'));
+            redirect(url('account'));
         }
     } elseif ($action === 'password') {
         $st = $pdo->prepare('SELECT password_hash FROM core_users WHERE id = ?');
@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare('UPDATE core_users SET password_hash = ? WHERE id = ?')->execute([password_hash($new, PASSWORD_DEFAULT), $user['id']]);
             audit_log('change_password');
             flash('เปลี่ยนรหัสผ่านเรียบร้อยแล้ว');
-            redirect(url('account.php'));
+            redirect(url('account'));
         }
     } elseif ($action === 'set_pin') {
         $pin = post('pin');
@@ -71,13 +71,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare('UPDATE core_users SET pin_hash = ? WHERE id = ?')->execute([password_hash($pin, PASSWORD_DEFAULT), $user['id']]);
             audit_log('set_pin');
             flash('ตั้ง PIN เรียบร้อยแล้ว');
-            redirect($setupPin ? take_login_target(url('index.php')) : url('account.php'));
+            redirect($setupPin ? take_login_target(url('')) : url('account'));
         }
     } elseif ($action === 'remove_pin') {
         $pdo->prepare('UPDATE core_users SET pin_hash = NULL WHERE id = ?')->execute([$user['id']]);
         audit_log('remove_pin');
         flash('ลบ PIN เรียบร้อยแล้ว');
-        redirect(url('account.php'));
+        redirect(url('account'));
     }
 }
 $user = current_user(true);
@@ -90,7 +90,7 @@ require APP_ROOT . '/core/layout/header.php';
 <?php if ($setupPin && !$user['has_pin']): ?>
   <div class="alert alert-warning d-flex flex-wrap gap-2 align-items-center">
     <span><i class="bi bi-shield-lock"></i> กรุณาตั้ง <strong>PIN 6 หลัก</strong> สำหรับใช้หน้าสแกน QR Code เบิกวัสดุ โดยไม่ต้องพิมพ์ชื่อผู้ใช้/รหัสผ่าน</span>
-    <a class="ms-auto" href="<?= h(peek_login_target(url('index.php'))) ?>">ข้ามไปก่อน</a>
+    <a class="ms-auto" href="<?= h(peek_login_target(url(''))) ?>">ข้ามไปก่อน</a>
   </div>
 <?php endif; ?>
 

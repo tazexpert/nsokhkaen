@@ -47,7 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $token = bin2hex(random_bytes(16));
                 file_put_contents($tmpFile($token), json_encode($res, JSON_UNESCAPED_UNICODE));
                 $_SESSION[$sessKey] = ['token' => $token, 'file' => mb_substr($f['name'], 0, 150)];
-                redirect('import.php?step=preview');
+                redirect('import?step=preview');
             }
         }
     } elseif ($action === 'import') {
@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $res = $file && is_file($file) ? json_decode((string)file_get_contents($file), true) : null;
         if (!$res) {
             flash('ไม่พบข้อมูลที่อ่านไว้ กรุณาอัปโหลดไฟล์อีกครั้ง', 'warning');
-            redirect('import.php');
+            redirect('import');
         }
         @set_time_limit(300);
         $source = mb_substr(trim(post('source')), 0, 255);
@@ -106,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              . ' · ไม่เปลี่ยนแปลง ' . number_format($n['same']) . ($n['off'] ? ' · ทำเครื่องหมายเลิกใช้ ' . number_format($n['off']) : '');
         audit_log('ea_import', $msg . ' (ไฟล์ ' . $fileName . ')', EA_MODULE);
         flash($msg);
-        redirect('eas.php');
+        redirect('eas');
     } elseif ($action === 'clear') {
         // ล้างบัญชี EA (ยืนยันด้วย PIN — ผิด 5 ครั้ง พัก 15 นาที)
         $scope = in_array(post('scope'), ['all', 'projects'], true) ? post('scope') : 'list';
@@ -160,14 +160,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             audit_log('ea_clear', $msg, EA_MODULE);
             if ($scope === 'projects') {
                 flash($msg . ' — นำเข้า EA ของโครงการใหม่ได้เลย');
-                redirect('project_import.php');
+                redirect('project_import');
             }
             flash($msg . ' — นำเข้าบัญชี EA ใหม่ได้เลย');
-            redirect('import.php');
+            redirect('import');
         }
     } elseif ($action === 'cancel') {
         $clear();
-        redirect('import.php');
+        redirect('import');
     }
 }
 
@@ -311,7 +311,7 @@ require __DIR__ . '/header.php';
           <button class="btn btn-danger"><i class="bi bi-trash3"></i> ล้างข้อมูล</button>
         </div>
         <?php else: ?>
-        <div class="alert alert-warning py-2 mb-0 small">ต้องตั้ง PIN ที่ <a href="<?= h(url('account.php')) ?>">บัญชีของฉัน</a> ก่อน จึงจะล้างบัญชี EA ได้</div>
+        <div class="alert alert-warning py-2 mb-0 small">ต้องตั้ง PIN ที่ <a href="<?= h(url('account')) ?>">บัญชีของฉัน</a> ก่อน จึงจะล้างบัญชี EA ได้</div>
         <?php endif; ?>
       </div>
     </form>

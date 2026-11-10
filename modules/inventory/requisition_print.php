@@ -145,7 +145,7 @@ function signatureLine(?string $name, int $dots = 43): string
 <body>
 <div class="toolbar">
     <button onclick="window.print()">พิมพ์ใบเบิก</button>
-    <a href="requisitions.php">&larr; กลับไปหน้ารายการใบเบิก</a>
+    <a href="requisitions">&larr; กลับไปหน้ารายการใบเบิก</a>
 </div>
 
 <div class="page">

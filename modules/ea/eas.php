@@ -44,8 +44,8 @@ $query = $f + ['project' => $project ?: '', 'status' => $status === 'active' ? '
 
 $pageTitle = 'บัญชี EA';
 $active = 'eas';
-$pageActions = (ea_can('admin') ? '<a href="import.php#clear" class="btn btn-outline-danger"><i class="bi bi-trash3"></i> ล้างและนำเข้าใหม่</a>'
-    . ' <a href="import.php" class="btn btn-outline-primary"><i class="bi bi-file-earmark-arrow-up"></i> นำเข้าบัญชี EA</a>' : '');
+$pageActions = (ea_can('admin') ? '<a href="import#clear" class="btn btn-outline-danger"><i class="bi bi-trash3"></i> ล้างและนำเข้าใหม่</a>'
+    . ' <a href="import" class="btn btn-outline-primary"><i class="bi bi-file-earmark-arrow-up"></i> นำเข้าบัญชี EA</a>' : '');
 require __DIR__ . '/header.php';
 ?>
 <div class="card">
@@ -68,7 +68,7 @@ require __DIR__ . '/header.php';
       </div>
       <div class="col-auto"><button class="btn btn-outline-secondary"><i class="bi bi-search"></i> ค้นหา</button></div>
       <div class="col-auto"><a href="?<?= h(http_build_query(array_filter($query + ['export' => 'csv']))) ?>" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> Export CSV</a></div>
-      <?php if (array_filter($query)): ?><div class="col-auto"><a href="eas.php" class="btn btn-link">ล้างตัวกรอง</a></div><?php endif; ?>
+      <?php if (array_filter($query)): ?><div class="col-auto"><a href="eas" class="btn btn-link">ล้างตัวกรอง</a></div><?php endif; ?>
     </form>
   </div>
   <div class="px-3 py-2 small bg-light border-bottom">
@@ -82,7 +82,7 @@ require __DIR__ . '/header.php';
       <tbody>
       <?php foreach ($rows as $r): ?>
         <tr class="<?= $r['is_active'] ? '' : 'text-muted' ?>">
-          <td><a href="ea_view.php?id=<?= (int)$r['id'] ?>" class="ea-code fw-semibold text-decoration-none"><?= h($r['ea_code']) ?></a>
+          <td><a href="ea_view?id=<?= (int)$r['id'] ?>" class="ea-code fw-semibold text-decoration-none"><?= h($r['ea_code']) ?></a>
             <?= $r['is_active'] ? '' : '<div class="small">เลิกใช้</div>' ?></td>
           <td><?= h($r['district_name']) ?></td>
           <td><?= h($r['tambon_name']) ?><?= $r['local_name'] !== '' ? '<div class="small text-muted">' . h($r['local_name']) . '</div>' : '' ?></td>
@@ -96,7 +96,7 @@ require __DIR__ . '/header.php';
         </tr>
       <?php endforeach; ?>
       <?php if (!$rows): ?><tr><td colspan="10" class="text-center text-muted py-5">
-        <?= $pdo->query('SELECT COUNT(*) FROM ea_areas')->fetchColumn() ? 'ไม่พบ EA ตามเงื่อนไข' : 'ยังไม่มีบัญชี EA' . (ea_can('admin') ? ' — <a href="import.php">นำเข้าจากไฟล์ Excel</a>' : '') ?></td></tr><?php endif; ?>
+        <?= $pdo->query('SELECT COUNT(*) FROM ea_areas')->fetchColumn() ? 'ไม่พบ EA ตามเงื่อนไข' : 'ยังไม่มีบัญชี EA' . (ea_can('admin') ? ' — <a href="import">นำเข้าจากไฟล์ Excel</a>' : '') ?></td></tr><?php endif; ?>
       </tbody>
     </table>
   </div>

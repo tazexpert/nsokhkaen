@@ -21,7 +21,7 @@ $selfOnly = !cal_can('admin');                       // ผู้บันทึ
 $myId = (int)$me['id'];
 if ($selfOnly && !$plan) {
     flash('ยังไม่มีแผนการปฏิบัติงานเดือน' . plan_month_text($y, $m) . ' — รอผู้ดูแลปฏิทินสร้างแผนก่อน', 'warning');
-    redirect('plan.php?m=' . $ym);
+    redirect('plan?m=' . $ym);
 }
 // แถวของฉันในแผนปัจจุบัน (ช่องเดิม รวมเวรศาลากลาง)
 $myOld = [];
@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         plan_delete($y, $m, (int)$me['id']);
         audit_log('cal_plan_delete', 'ลบแผนการปฏิบัติงาน ' . plan_month_text($y, $m), CAL_MODULE);
         flash('ลบแผนการปฏิบัติงานเดือน' . plan_month_text($y, $m) . ' แล้ว');
-        redirect('plan.php?m=' . $ym);
+        redirect('plan?m=' . $ym);
     }
     $valid = array_map('intval', db()->query('SELECT id FROM core_users WHERE is_active = 1')->fetchAll(PDO::FETCH_COLUMN));
     $rows = [];
@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         plan_save($y, $m, $full, $plan['note'], $myId);
         audit_log('cal_plan_self', 'แก้ไขแผนการปฏิบัติงานของตนเอง ' . plan_month_text($y, $m), CAL_MODULE);
         flash('บันทึกแผนของคุณเดือน' . plan_month_text($y, $m) . ' แล้ว');
-        redirect('plan.php?m=' . $ym);
+        redirect('plan?m=' . $ym);
     }
     if (!$errors) {
         $r = plan_save($y, $m, $people, $note !== '' ? $note : null, (int)$me['id']);
@@ -119,7 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('บันทึกแผนการปฏิบัติงานเดือน' . plan_month_text($y, $m) . ' แล้ว'
             . ($gc + $gu + $gd ? ' · เวรศาลากลางในปฏิทิน: เพิ่ม ' . $gc . ' วัน ปรับ ' . $gu . ' วัน ลบ ' . $gd . ' วัน' : '')
             . ($dutyTyped ? ' · ช่อง "เวร" ' . $dutyTyped . ' ช่องไม่ได้บันทึก (เวรสำนักงานใช้ข้อมูลในปฏิทิน)' : ''));
-        redirect('plan.php?m=' . $ym);
+        redirect('plan?m=' . $ym);
     }
 } else {
     // เริ่มจากแผนเดือนนี้ / รายชื่อแผนเดือนก่อน / บุคลากรทั้งหมด
@@ -174,10 +174,10 @@ $wd = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
 
 $pageTitle = $selfOnly ? 'แก้ไขแผนการปฏิบัติงานของฉัน' : ($plan ? 'แก้ไข' : 'สร้าง') . 'แผนการปฏิบัติงาน';
 $active = 'plan';
-$pageActions = '<a href="plan.php?m=' . $ym . '" class="btn btn-light"><i class="bi bi-grid-3x3"></i> กลับไปหน้าแผน</a>';
+$pageActions = '<a href="plan?m=' . $ym . '" class="btn btn-light"><i class="bi bi-grid-3x3"></i> กลับไปหน้าแผน</a>';
 require __DIR__ . '/header.php';
 ?>
-<?php if ($errors): ?><div class="alert alert-danger"><b>ยังไม่ได้บันทึก</b> — แก้รหัสที่ไม่รู้จัก (ช่องสีแดง) หรือเพิ่มโครงการที่ <a href="<?= h(module_url('ea', 'projects.php')) ?>" target="_blank">โครงการที่รับผิดชอบ</a><br><?= implode('<br>', array_map('h', array_slice($errors, 0, 20))) ?><?= count($errors) > 20 ? '<br>…' : '' ?></div><?php endif; ?>
+<?php if ($errors): ?><div class="alert alert-danger"><b>ยังไม่ได้บันทึก</b> — แก้รหัสที่ไม่รู้จัก (ช่องสีแดง) หรือเพิ่มโครงการที่ <a href="<?= h(module_url('ea', 'projects')) ?>" target="_blank">โครงการที่รับผิดชอบ</a><br><?= implode('<br>', array_map('h', array_slice($errors, 0, 20))) ?><?= count($errors) > 20 ? '<br>…' : '' ?></div><?php endif; ?>
 <?php if ($notice): ?><div class="alert alert-info py-2 small"><i class="bi bi-info-circle"></i> <?= h($notice) ?></div><?php endif; ?>
 
 <form method="post" id="planForm">
@@ -186,7 +186,7 @@ require __DIR__ . '/header.php';
     <div class="card-header d-flex flex-wrap align-items-center gap-2">
       <h2 class="h5 mb-0 me-2"><?= h(plan_month_text($y, $m)) ?></h2>
       <span class="small text-muted me-1">เครื่องมือ:</span>
-      <?php if (count($activeCodes) <= ($selfOnly ? 0 : 1)): ?><span class="small text-danger">ไม่มีโครงการที่ดำเนินการในเดือนนี้ — <a href="<?= h(module_url('ea', 'projects.php')) ?>">เพิ่ม/แก้ช่วงเวลาโครงการ</a></span><?php endif; ?>
+      <?php if (count($activeCodes) <= ($selfOnly ? 0 : 1)): ?><span class="small text-danger">ไม่มีโครงการที่ดำเนินการในเดือนนี้ — <a href="<?= h(module_url('ea', 'projects')) ?>">เพิ่ม/แก้ช่วงเวลาโครงการ</a></span><?php endif; ?>
       <div class="btn-group btn-group-sm flex-wrap plan-palette" role="group" aria-label="เลือกรหัสแล้วคลิกช่อง">
         <input type="radio" class="btn-check" name="tool" id="tool-type" value="" checked><label class="btn btn-outline-secondary" for="tool-type" title="พิมพ์ในช่องเอง"><i class="bi bi-cursor-text"></i> พิมพ์</label>
         <?php foreach ($activeCodes as $c): ?>
@@ -255,7 +255,7 @@ require __DIR__ . '/header.php';
 
   <div class="d-flex gap-2">
     <?php if ($plan && !$selfOnly): ?><button type="submit" form="planDelete" class="btn btn-outline-danger"><i class="bi bi-trash"></i> ลบแผนเดือนนี้</button><?php endif; ?>
-    <a href="plan.php?m=<?= $ym ?>" class="btn btn-outline-secondary ms-auto">ยกเลิก</a>
+    <a href="plan?m=<?= $ym ?>" class="btn btn-outline-secondary ms-auto">ยกเลิก</a>
     <button class="btn btn-primary"><i class="bi bi-save"></i> <?= $selfOnly ? 'บันทึกแผนของฉัน' : 'บันทึกแผน' ?></button>
   </div>
 </form>

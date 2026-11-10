@@ -20,10 +20,10 @@ if ($emp) {
     }
 }
 if (!$emp && pay_is('manager')) {           // ไม่ใช่พนักงาน → ไปหน้าที่ตามหน้าที่
-    redirect('slips.php');
+    redirect('slips');
 }
 if (!$emp && pay_is('approver')) {
-    redirect('slips.php?status=pending');
+    redirect('slips?status=pending');
 }
 
 $active = 'my';

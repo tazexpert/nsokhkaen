@@ -45,7 +45,7 @@ require APP_ROOT . '/core/layout/header.php';
           <td class="text-nowrap"><?= $s['phone'] ? '<a href="tel:' . h(preg_replace('/[^0-9+]/', '', $s['phone'])) . '" class="text-decoration-none">' . h($s['phone']) . '</a>' : '<span class="text-muted">-</span>' ?></td>
           <td class="no-print text-center">
             <?php if ((int)$s['id'] !== (int)$me['id']): ?>
-              <a href="<?= h(url('message_compose.php?to=' . (int)$s['id'])) ?>" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip"
+              <a href="<?= h(url('message_compose?to=' . (int)$s['id'])) ?>" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip"
                  title="ส่งข้อความถึง <?= h(preg_replace('/\s+/u', ' ', $s['full_name'])) ?>" aria-label="ส่งข้อความ"><i class="bi bi-envelope"></i></a>
             <?php endif; ?>
           </td>

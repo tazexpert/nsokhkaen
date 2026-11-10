@@ -9,14 +9,14 @@ $s = array_fill_keys($fields, '') + ['photo' => '', 'sort_order' => 0, 'center_i
 if ($id) {
     $st = $pdo->prepare('SELECT * FROM dcc_center_staff WHERE id = ?');
     $st->execute([$id]);
-    $s = $st->fetch() ?: redirect('centers.php');
+    $s = $st->fetch() ?: redirect('centers');
 }
 $st = $pdo->prepare('SELECT id, name FROM dcc_centers WHERE id = ?');
 $st->execute([$s['center_id']]);
 $center = $st->fetch();
 if (!$center) {
     flash('ไม่พบศูนย์', 'danger');
-    redirect('centers.php');
+    redirect('centers');
 }
 $centerId = (int)$center['id'];
 
@@ -54,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 delete_upload($old);
             }
             flash('บันทึกข้อมูลผู้ดูแลเรียบร้อยแล้ว');
-            redirect("center_form.php?id=$centerId#staff");
+            redirect("center_form?id=$centerId#staff");
         } catch (Throwable $e) {
             delete_upload($photo);
             $errors[] = $e instanceof RuntimeException ? $e->getMessage() : 'บันทึกไม่สำเร็จ: ' . $e->getMessage();
@@ -100,7 +100,7 @@ require __DIR__ . '/header.php';
   </div>
   <div class="card-footer">
     <button class="btn btn-primary"><i class="bi bi-save"></i> บันทึก</button>
-    <a href="center_form.php?id=<?= $centerId ?>#staff" class="btn btn-light">กลับ</a>
+    <a href="center_form?id=<?= $centerId ?>#staff" class="btn btn-light">กลับ</a>
   </div>
 </form>
 <?php require __DIR__ . '/footer.php'; ?>

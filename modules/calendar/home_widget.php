@@ -50,8 +50,8 @@ $calQs = fn(array $p) => '?' . http_build_query(array_filter($p + ['cal_range' =
     <a href="<?= h($calQs(['cal_guard' => $calGuard ? null : 1])) ?>" class="btn btn-sm <?= $calGuard ? 'btn-danger' : 'btn-outline-danger' ?>" title="<?= $calGuard ? 'ซ่อน' : 'แสดง' ?>เวรศาลากลาง">
       <i class="bi <?= $calGuard ? 'bi-check-square' : 'bi-square' ?>"></i> เวรศาลากลาง</a>
     <div class="ms-auto d-flex gap-2">
-      <a href="<?= h(module_url('calendar', 'index.php')) ?>" class="btn btn-sm btn-light"><i class="bi bi-calendar3"></i> ปฏิทินรายเดือน</a>
-      <?php if (!$calGuest && user_can('calendar', 'editor', $calUser)): ?><a href="<?= h(module_url('calendar', 'event_form.php')) ?>" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มกิจกรรม</a><?php endif; ?>
+      <a href="<?= h(module_url('calendar', '')) ?>" class="btn btn-sm btn-light"><i class="bi bi-calendar3"></i> ปฏิทินรายเดือน</a>
+      <?php if (!$calGuest && user_can('calendar', 'editor', $calUser)): ?><a href="<?= h(module_url('calendar', 'event_form')) ?>" class="btn btn-sm btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มกิจกรรม</a><?php endif; ?>
     </div>
   </div>
   <div class="px-3 pt-2 small text-muted"><i class="bi bi-calendar-range"></i> <?= h($calLabel) ?> · <?= count($calEvents) ?> รายการ</div>

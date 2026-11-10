@@ -1,6 +1,6 @@
-const REQ_API = INV_URL_JS + 'api/requisition_api.php';
-const REQ_PRINT_URL = INV_URL_JS + 'requisition_print.php';
-const REQ_VIEW_URL = INV_URL_JS + 'requisition_view.php';
+const REQ_API = INV_URL_JS + 'api/requisition_api';
+const REQ_PRINT_URL = INV_URL_JS + 'requisition_print';
+const REQ_VIEW_URL = INV_URL_JS + 'requisition_view';
 
 function loadRequisitions() {
     const params = {

@@ -15,14 +15,14 @@ if ($id) {
     $visit = $st->fetch();
     if (!$visit) {
         flash('ไม่พบบันทึกการตรวจเยี่ยม', 'danger');
-        redirect('visits.php');
+        redirect('visits');
     }
 }
 $centerId = $visit ? (int)$visit['center_id'] : int_param('center_id');
 
 // ยังไม่ได้เลือกศูนย์ → ไปหน้าค้นหาศูนย์ (กรองตามอำเภอได้)
 if (!$centerId) {
-    redirect('visits.php#centers');
+    redirect('visits#centers');
 }
 
 $st = $pdo->prepare('SELECT * FROM dcc_centers WHERE id = ?');
@@ -30,7 +30,7 @@ $st->execute([$centerId]);
 $c = $st->fetch();
 if (!$c) {
     flash('ไม่พบศูนย์', 'danger');
-    redirect('visits.php');
+    redirect('visits');
 }
 $st = $pdo->prepare('SELECT * FROM dcc_center_staff WHERE center_id = ? ORDER BY sort_order, id');
 $st->execute([$centerId]);
@@ -216,7 +216,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->commit();
             array_map('delete_upload', $removed);
             flash('บันทึกการตรวจเยี่ยมเรียบร้อยแล้ว' . ($photos ? ' (เพิ่มภาพ ' . count($photos) . ' ภาพ)' : ''));
-            redirect("visit_view.php?id=$id");
+            redirect("visit_view?id=$id");
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
@@ -255,12 +255,12 @@ require __DIR__ . '/header.php';
       <?php if ($lastVisit): ?>
         <div class="alert alert-<?= $copied ? 'success' : 'info' ?> small py-2 d-flex flex-wrap gap-2 align-items-center">
           <span><i class="bi bi-clock-history"></i> ตรวจเยี่ยมครั้งล่าสุดเมื่อ <strong><?= thai_date($lastVisit['visit_date']) ?></strong>
-            (<a href="visit_view.php?id=<?= (int)$lastVisit['id'] ?>" target="_blank">ดูผล</a>)</span>
+            (<a href="visit_view?id=<?= (int)$lastVisit['id'] ?>" target="_blank">ดูผล</a>)</span>
           <?php if ($copied): ?>
             <span>— ใช้คำตอบส่วนที่ 1–3 จากครั้งล่าสุดเป็นค่าเริ่มต้นแล้ว ตรวจสอบและแก้ไขให้ตรงกับปัจจุบัน</span>
-            <a href="visit_form.php?center_id=<?= $centerId ?>" class="ms-auto">เริ่มจากแบบฟอร์มว่าง</a>
+            <a href="visit_form?center_id=<?= $centerId ?>" class="ms-auto">เริ่มจากแบบฟอร์มว่าง</a>
           <?php else: ?>
-            <a href="visit_form.php?center_id=<?= $centerId ?>&amp;copy=1" class="btn btn-sm btn-outline-primary ms-auto"><i class="bi bi-files"></i> ใช้คำตอบจากครั้งล่าสุดเป็นค่าเริ่มต้น</a>
+            <a href="visit_form?center_id=<?= $centerId ?>&amp;copy=1" class="btn btn-sm btn-outline-primary ms-auto"><i class="bi bi-files"></i> ใช้คำตอบจากครั้งล่าสุดเป็นค่าเริ่มต้น</a>
           <?php endif; ?>
         </div>
       <?php endif; ?>
@@ -456,7 +456,7 @@ require __DIR__ . '/header.php';
 
   <div class="sticky-actions">
     <button class="btn btn-primary btn-lg flex-grow-1 flex-md-grow-0"><i class="bi bi-save"></i> บันทึกการตรวจเยี่ยม</button>
-    <a href="<?= $visit ? 'visit_view.php?id=' . (int)$visit['id'] : 'visits.php' ?>" class="btn btn-light btn-lg">ยกเลิก</a>
+    <a href="<?= $visit ? 'visit_view?id=' . (int)$visit['id'] : 'visits' ?>" class="btn btn-light btn-lg">ยกเลิก</a>
   </div>
 </form>
 <?php require __DIR__ . '/footer.php'; ?>

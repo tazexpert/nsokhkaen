@@ -13,7 +13,7 @@ if ($id) {
     $e = $st->fetch();
     if (!$e) {
         flash('ไม่พบครุภัณฑ์', 'danger');
-        redirect('equipment.php');
+        redirect('equipment');
     }
 }
 
@@ -23,13 +23,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (post('action') === 'delete' && $id) {
         if (active_loans_by_equipment([$id])) {
             flash('ลบไม่ได้ — ครุภัณฑ์นี้อยู่ในใบยืมที่ยังไม่ปิด', 'danger');
-            redirect('equipment_view.php?id=' . $id);
+            redirect('equipment_view?id=' . $id);
         }
         $pdo->prepare('DELETE FROM inv_equipment WHERE id = ?')->execute([$id]);
         delete_upload($e['image_path']);
         audit_log('equipment_delete', '#' . $id . ' ' . ($e['asset_no'] ?? '') . ' ' . $e['model'], INV_MODULE);
         flash('ลบครุภัณฑ์เรียบร้อยแล้ว (ประวัติการยืมยังเก็บไว้ในใบยืม)');
-        redirect('equipment.php');
+        redirect('equipment');
     }
 
     $typeName = post('type_new');
@@ -107,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             audit_log('equipment_create', '#' . $id . ' ' . ($data['asset_no'] ?? ''), INV_MODULE);
         }
         flash('บันทึกข้อมูลครุภัณฑ์เรียบร้อยแล้ว');
-        redirect(post('save_new') ? 'equipment_form.php' : 'equipment_view.php?id=' . $id);
+        redirect(post('save_new') ? 'equipment_form' : 'equipment_view?id=' . $id);
     }
 }
 
@@ -175,7 +175,7 @@ require __DIR__ . '/header.php';
   <div class="col-12 sticky-actions">
     <button class="btn btn-primary btn-lg"><i class="bi bi-save"></i> บันทึก</button>
     <?php if (!$id): ?><button class="btn btn-outline-primary btn-lg" name="save_new" value="1">บันทึกและเพิ่มรายการต่อไป</button><?php endif; ?>
-    <a href="<?= $id ? 'equipment_view.php?id=' . $id : 'equipment.php' ?>" class="btn btn-light btn-lg">ยกเลิก</a>
+    <a href="<?= $id ? 'equipment_view?id=' . $id : 'equipment' ?>" class="btn btn-light btn-lg">ยกเลิก</a>
   </div>
 </form>
 <?php if ($id): ?>

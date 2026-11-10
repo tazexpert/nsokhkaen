@@ -52,7 +52,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
 <body class="<?= h($bodyClass ?? '') ?>">
 <nav class="navbar navbar-dark navbar-expand-xl app-nav sticky-top">
   <div class="container-fluid">
-    <a class="navbar-brand app-brand" href="<?= h(url('index.php')) ?>" title="ระบบบริหารจัดการ สำนักงานสถิติจังหวัดขอนแก่น">
+    <a class="navbar-brand app-brand" href="<?= h(url('')) ?>" title="ระบบบริหารจัดการ สำนักงานสถิติจังหวัดขอนแก่น">
       <img src="<?= h(url('assets/img/logo.png')) ?>" alt="" class="brand-logo">
       <span class="brand-text"><small>ระบบบริหารจัดการ</small><strong>สำนักงานสถิติจังหวัดขอนแก่น</strong></span>
     </a>
@@ -94,13 +94,13 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
         </button>
         <ul class="dropdown-menu dropdown-menu-end shadow">
           <li class="dropdown-header d-flex align-items-center gap-2"><?= user_avatar($user, 40) ?><span><?= h($user['full_name']) ?><?php if ($user['username']): ?><br><small class="font-monospace"><?= h($user['username']) ?></small><?php endif; ?></span></li>
-          <li><a class="dropdown-item<?= $navActive(!$module && $active === 'account') ?>" href="<?= h(url('account.php')) ?>"><i class="bi bi-person-gear"></i> บัญชีของฉัน</a></li>
-          <li><a class="dropdown-item<?= $navActive(!$module && $active === 'notebook') ?>" href="<?= h(url('notebook.php')) ?>"><i class="bi bi-journal-bookmark"></i> สมุดบันทึก</a></li>
-          <li><a class="dropdown-item d-flex align-items-center<?= $navActive(!$module && $active === 'messages') ?>" href="<?= h(url('messages.php')) ?>"><i class="bi bi-envelope me-1"></i> กล่องจดหมาย<?php if ($__mu = msg_unread_count((int)$user['id'])): ?><span class="badge rounded-pill text-bg-danger ms-auto"><?= $__mu > 99 ? '99+' : $__mu ?></span><?php endif; ?></a></li>
-          <li><a class="dropdown-item<?= $navActive(!$module && $active === 'staff') ?>" href="<?= h(url('staff.php')) ?>"><i class="bi bi-people"></i> บุคลากรสถิติขอนแก่น</a></li>
-          <li><a class="dropdown-item" href="<?= h(url('index.php#arrange')) ?>"><i class="bi bi-arrows-move"></i> จัดเรียงเมนูระบบ</a></li>
+          <li><a class="dropdown-item<?= $navActive(!$module && $active === 'account') ?>" href="<?= h(url('account')) ?>"><i class="bi bi-person-gear"></i> บัญชีของฉัน</a></li>
+          <li><a class="dropdown-item<?= $navActive(!$module && $active === 'notebook') ?>" href="<?= h(url('notebook')) ?>"><i class="bi bi-journal-bookmark"></i> สมุดบันทึก</a></li>
+          <li><a class="dropdown-item d-flex align-items-center<?= $navActive(!$module && $active === 'messages') ?>" href="<?= h(url('messages')) ?>"><i class="bi bi-envelope me-1"></i> กล่องจดหมาย<?php if ($__mu = msg_unread_count((int)$user['id'])): ?><span class="badge rounded-pill text-bg-danger ms-auto"><?= $__mu > 99 ? '99+' : $__mu ?></span><?php endif; ?></a></li>
+          <li><a class="dropdown-item<?= $navActive(!$module && $active === 'staff') ?>" href="<?= h(url('staff')) ?>"><i class="bi bi-people"></i> บุคลากรสถิติขอนแก่น</a></li>
+          <li><a class="dropdown-item" href="<?= h(url('#arrange')) ?>"><i class="bi bi-arrows-move"></i> จัดเรียงเมนูระบบ</a></li>
           <li><hr class="dropdown-divider"></li>
-          <li><a class="dropdown-item text-danger" href="<?= h(url('logout.php')) ?>"><i class="bi bi-box-arrow-right"></i> <?= $user['via_pin'] ? 'เปลี่ยนผู้ใช้' : 'ออกจากระบบ' ?></a></li>
+          <li><a class="dropdown-item text-danger" href="<?= h(url('logout')) ?>"><i class="bi bi-box-arrow-right"></i> <?= $user['via_pin'] ? 'เปลี่ยนผู้ใช้' : 'ออกจากระบบ' ?></a></li>
         </ul>
       </div>
       <button class="navbar-toggler ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="เมนู">
@@ -110,7 +110,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
     <?php else: /* ผู้เยี่ยมชม: ปุ่มเข้าสู่ระบบ */ ?>
     <div class="d-flex align-items-center gap-1 order-xl-last ms-auto">
       <?php if (!(!$module && $active === 'home')): /* หน้าหลักมีปุ่มเข้าสู่ระบบในส่วนทักทายแล้ว */ ?>
-      <a href="<?= h(url('login.php')) ?>" class="btn btn-light btn-login" data-login-modal><i class="bi bi-box-arrow-in-right"></i> <span class="d-none d-sm-inline">เข้าสู่ระบบ</span></a>
+      <a href="<?= h(url('login')) ?>" class="btn btn-light btn-login" data-login-modal><i class="bi bi-box-arrow-in-right"></i> <span class="d-none d-sm-inline">เข้าสู่ระบบ</span></a>
       <?php endif; ?>
       <button class="navbar-toggler ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="เมนู">
         <span class="navbar-toggler-icon"></span>
@@ -120,7 +120,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
 
     <div class="collapse navbar-collapse" id="mainNav">
       <ul class="navbar-nav me-auto">
-        <li class="nav-item"><a class="nav-link<?= $navActive(!$module && $active === 'home') ?>" href="<?= h(url('index.php')) ?>"><i class="bi bi-house-door"></i> หน้าหลัก</a></li>
+        <li class="nav-item"><a class="nav-link<?= $navActive(!$module && $active === 'home') ?>" href="<?= h(url('')) ?>"><i class="bi bi-house-door"></i> หน้าหลัก</a></li>
         <?php foreach ($navMain as $__m): $__isCur = $module === $__m['key']; ?>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle<?= $navActive($__isCur) ?>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -147,7 +147,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
                 <?php endforeach; ?>
                 <li><hr class="dropdown-divider"></li>
               <?php endforeach; ?>
-              <?php if ($user): ?><li><a class="dropdown-item small text-muted" href="<?= h(url('index.php#arrange')) ?>"><i class="bi bi-arrows-move"></i> จัดเรียงระบบในเมนู</a></li><?php endif; ?>
+              <?php if ($user): ?><li><a class="dropdown-item small text-muted" href="<?= h(url('#arrange')) ?>"><i class="bi bi-arrows-move"></i> จัดเรียงระบบในเมนู</a></li><?php endif; ?>
             </ul>
           </li>
         <?php endif; ?>
@@ -155,10 +155,10 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle<?= $navActive($__isAdm) ?>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><i class="bi bi-shield-lock"></i> ผู้ดูแลระบบ</a>
             <ul class="dropdown-menu shadow">
-              <li><a class="dropdown-item<?= $navActive(!$module && $active === 'users') ?>" href="<?= h(url('admin/users.php')) ?>"><i class="bi bi-people"></i> ผู้ใช้งานและสิทธิ์</a></li>
-              <li><a class="dropdown-item<?= $navActive(!$module && $active === 'links') ?>" href="<?= h(url('admin/links.php')) ?>"><i class="bi bi-link-45deg"></i> ลิงก์และเครื่องมือ</a></li>
-              <li><a class="dropdown-item<?= $navActive(!$module && $active === 'settings') ?>" href="<?= h(url('admin/settings.php')) ?>"><i class="bi bi-sliders"></i> ตั้งค่าระบบ</a></li>
-              <li><a class="dropdown-item<?= $navActive(!$module && $active === 'audit') ?>" href="<?= h(url('admin/audit.php')) ?>"><i class="bi bi-journal-text"></i> บันทึกการใช้งาน</a></li>
+              <li><a class="dropdown-item<?= $navActive(!$module && $active === 'users') ?>" href="<?= h(url('admin/users')) ?>"><i class="bi bi-people"></i> ผู้ใช้งานและสิทธิ์</a></li>
+              <li><a class="dropdown-item<?= $navActive(!$module && $active === 'links') ?>" href="<?= h(url('admin/links')) ?>"><i class="bi bi-link-45deg"></i> ลิงก์และเครื่องมือ</a></li>
+              <li><a class="dropdown-item<?= $navActive(!$module && $active === 'settings') ?>" href="<?= h(url('admin/settings')) ?>"><i class="bi bi-sliders"></i> ตั้งค่าระบบ</a></li>
+              <li><a class="dropdown-item<?= $navActive(!$module && $active === 'audit') ?>" href="<?= h(url('admin/audit')) ?>"><i class="bi bi-journal-text"></i> บันทึกการใช้งาน</a></li>
             </ul>
           </li>
         <?php endif; ?>
@@ -184,7 +184,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
 <?php if (!$user): /* popup เข้าสู่ระบบ (ผู้เยี่ยมชม) — ปุ่ม/ลิงก์ที่มี data-login-modal จะเปิด popup นี้ */ ?>
 <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalTitle" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered" style="max-width:420px">
-    <form class="modal-content login-modal" method="post" action="<?= h(url('login.php')) ?>" id="loginForm" novalidate>
+    <form class="modal-content login-modal" method="post" action="<?= h(url('login')) ?>" id="loginForm" novalidate>
       <button type="button" class="btn-close position-absolute top-0 end-0 m-3 z-3" data-bs-dismiss="modal" aria-label="ปิด"></button>
       <div class="modal-body p-4 pt-5">
         <div class="text-center mb-4">
@@ -209,7 +209,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
           <input name="password" id="loginPass" type="password" class="form-control form-control-lg" required autocomplete="current-password">
         </div>
         <button class="btn btn-primary btn-lg w-100" id="loginSubmit"><span class="spinner-border spinner-border-sm d-none me-1"></span>เข้าสู่ระบบ</button>
-        <div class="text-center mt-3 small"><a href="<?= h(url('pin.php')) ?>"><i class="bi bi-grid-3x3-gap"></i> เข้าใช้ด้วย PIN 6 หลัก</a></div>
+        <div class="text-center mt-3 small"><a href="<?= h(url('pin')) ?>"><i class="bi bi-grid-3x3-gap"></i> เข้าใช้ด้วย PIN 6 หลัก</a></div>
       </div>
     </form>
   </div>
@@ -273,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('shown.bs.dropdown', () => {
       const badge = document.getElementById('notifBadge');
       if (!badge) return;
-      $.post(BASE_URL_JS + 'api/notifications.php', { action: 'seen' });
+      $.post(BASE_URL_JS + 'api/notifications', { action: 'seen' });
       badge.remove();
       btn.querySelector('.bi').className = 'bi bi-bell';
     });

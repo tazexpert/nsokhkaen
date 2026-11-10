@@ -21,3 +21,4 @@
 - PHP 8.0+ (เซิร์ฟเวอร์จริง XAMPP Windows PHP 8.0.30, MariaDB 10.4) — ห้ามใช้ `: never` หรือฟีเจอร์ PHP 8.1+
 - แก้ schema: เพิ่มไฟล์ใน `database/migrations/` (รันซ้ำได้) + แก้ `database/schema.sql` + `python3 tools/build_migrate_all.py` + ตารางใน `docs/MIGRATION.md`
 - ข้อความในหน้าเว็บ/คอมเมนต์ใช้ภาษาไทย
+- ลิงก์ภายในไม่ใส่ `.php` (เช่น `plan?m=…`, `redirect('txns?type=spend')`, หน้า index ใช้ `./` หรือ `module_url('ea')`) — `.htaccess` แปลง URL ให้ (mod_rewrite) · ลิงก์เดิมที่มี .php ยังใช้ได้

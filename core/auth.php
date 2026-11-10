@@ -272,7 +272,7 @@ function forbidden(?string $module, string $minRole): void   // ไม่คื�
         . '<i class="bi bi-shield-lock display-4 text-danger"></i>'
         . '<h2 class="h5 mt-3">คุณไม่มีสิทธิ์เข้าถึงหน้านี้</h2>'
         . '<p class="text-muted mb-4">หากต้องการใช้งาน กรุณาติดต่อผู้ดูแลระบบเพื่อขอสิทธิ์</p>'
-        . '<a href="' . h(url('index.php')) . '" class="btn btn-primary">กลับหน้าหลัก</a></div></div>';
+        . '<a href="' . h(url('')) . '" class="btn btn-primary">กลับหน้าหลัก</a></div></div>';
     require APP_ROOT . '/core/layout/footer.php';
     exit;
 }

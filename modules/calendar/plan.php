@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'att_certify') {
     } else {
         flash('แก้ได้เฉพาะวันที่เป็น "ขาดราชการ" ของตนเองเท่านั้น', 'warning');
     }
-    redirect('plan.php?m=' . (preg_match('/^\d{4}-\d{2}/', $date) ? substr($date, 0, 7) : sprintf('%04d-%02d', $y, $m)));
+    redirect('plan?m=' . (preg_match('/^\d{4}-\d{2}/', $date) ? substr($date, 0, 7) : sprintf('%04d-%02d', $y, $m)));
 }
 $ym = sprintf('%04d-%02d', $y, $m);
 $prev = date('Y-m', strtotime($ym . '-01 -1 month'));
@@ -54,11 +54,11 @@ $fieldCodes = array_filter($codes, fn($c) => $c['kind'] === 'field' && (isset($m
 $pageTitle = 'แผนการปฏิบัติงาน';
 $active = 'plan';
 $pageActions = '<button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> พิมพ์</button>'
-    . ($isAdmin ? '<a href="plan_edit.php?m=' . $ym . '" class="btn btn-primary"><i class="bi bi-pencil-square"></i> ' . ($plan ? 'แก้ไขแผน' : 'สร้างแผน') . '</a>'
-        . '<a href="plan_import.php?m=' . $ym . '" class="btn btn-outline-primary"><i class="bi bi-file-earmark-excel"></i> นำเข้า Excel</a>'
-        . '<a href="att_import.php" class="btn btn-outline-primary"><i class="bi bi-clock-history"></i> นำเข้าเวลาปฏิบัติราชการ</a>'
-        . '<a href="' . h(module_url('ea', 'projects.php')) . '" class="btn btn-outline-secondary"><i class="bi bi-kanban"></i> โครงการ</a>'
-        : (cal_can('editor') && $plan ? '<a href="plan_edit.php?m=' . $ym . '" class="btn btn-primary"><i class="bi bi-pencil-square"></i> แก้ไขแผนของฉัน</a>' : ''));
+    . ($isAdmin ? '<a href="plan_edit?m=' . $ym . '" class="btn btn-primary"><i class="bi bi-pencil-square"></i> ' . ($plan ? 'แก้ไขแผน' : 'สร้างแผน') . '</a>'
+        . '<a href="plan_import?m=' . $ym . '" class="btn btn-outline-primary"><i class="bi bi-file-earmark-excel"></i> นำเข้า Excel</a>'
+        . '<a href="att_import" class="btn btn-outline-primary"><i class="bi bi-clock-history"></i> นำเข้าเวลาปฏิบัติราชการ</a>'
+        . '<a href="' . h(module_url('ea', 'projects')) . '" class="btn btn-outline-secondary"><i class="bi bi-kanban"></i> โครงการ</a>'
+        : (cal_can('editor') && $plan ? '<a href="plan_edit?m=' . $ym . '" class="btn btn-primary"><i class="bi bi-pencil-square"></i> แก้ไขแผนของฉัน</a>' : ''));
 $wd = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
 $today = date('Y-m-d');
 require __DIR__ . '/header.php';
@@ -77,8 +77,8 @@ require __DIR__ . '/header.php';
     <div class="card-body text-center text-muted py-5">
       <i class="bi bi-grid-3x3 fs-1 d-block mb-2"></i>ยังไม่มีแผนการปฏิบัติงานเดือน<?= h(plan_month_text($y, $m)) ?>
       <?php if ($isAdmin): ?><div class="mt-3 d-flex gap-2 justify-content-center">
-        <a href="plan_import.php?m=<?= $ym ?>" class="btn btn-primary"><i class="bi bi-file-earmark-excel"></i> นำเข้าจาก Excel</a>
-        <a href="plan_edit.php?m=<?= $ym ?>" class="btn btn-outline-primary"><i class="bi bi-pencil-square"></i> สร้างแผนในหน้าเว็บ</a></div><?php endif; ?>
+        <a href="plan_import?m=<?= $ym ?>" class="btn btn-primary"><i class="bi bi-file-earmark-excel"></i> นำเข้าจาก Excel</a>
+        <a href="plan_edit?m=<?= $ym ?>" class="btn btn-outline-primary"><i class="bi bi-pencil-square"></i> สร้างแผนในหน้าเว็บ</a></div><?php endif; ?>
     </div>
   <?php else: ?>
   <div class="table-responsive plan-scroll">

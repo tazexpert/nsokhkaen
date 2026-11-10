@@ -18,11 +18,11 @@ if ($id) {
     $c = $st->fetch();
     if (!$c || !claim_can_view($c)) {
         flash('ไม่พบใบเบิก', 'warning');
-        redirect('claims.php');
+        redirect('claims');
     }
     if (!claim_can_edit($c)) {
         flash('ใบเบิกนี้ออกใบสำคัญแล้ว แก้ไขได้เฉพาะผู้ดูแลระบบบริหารโครงการ', 'warning');
-        redirect('claim_print.php?id=' . $id);
+        redirect('claim_print?id=' . $id);
     }
     $st = $pdo->prepare('SELECT * FROM ea_claim_days WHERE claim_id = ? ORDER BY seq, trip_date, id');
     $st->execute([$id]);
@@ -123,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->commit();
         audit_log('ea_claim_save', 'บันทึกใบเบิกค่าเดินทาง #' . $id . ' ' . $c['full_name'] . ' ' . number_format($c['total_amount'], 2) . ' บาท', EA_MODULE);
         flash('บันทึกใบเบิกแล้ว — รวม ' . number_format($c['total_amount'], 2) . ' บาท');
-        redirect(post('go') === 'print' ? 'claim_print.php?id=' . $id : 'claim_form.php?id=' . $id);
+        redirect(post('go') === 'print' ? 'claim_print?id=' . $id : 'claim_form?id=' . $id);
     }
 }
 
@@ -149,8 +149,8 @@ $pageTitle = $c['id'] ? 'แก้ไขใบเบิกค่าเดิน�
 $active = 'claims';
 $headExtra = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" integrity="sha384-RkASv+6KfBMW9eknReJIJ6b3UnjKOKC5bOUaNgIY778NFbQ8MtWq9Lr/khUgqtTt" crossorigin="anonymous">'
     . '<link href="' . h(asset_v('modules/calendar/assets/css/calendar.css')) . '" rel="stylesheet">';
-$pageActions = '<a href="claims.php" class="btn btn-light"><i class="bi bi-arrow-left"></i> ใบเบิกทั้งหมด</a>'
-    . ($c['id'] ? ' <a href="claim_print.php?id=' . (int)$c['id'] . '" target="_blank" class="btn btn-outline-success"><i class="bi bi-printer"></i> พิมพ์</a>' : '');
+$pageActions = '<a href="claims" class="btn btn-light"><i class="bi bi-arrow-left"></i> ใบเบิกทั้งหมด</a>'
+    . ($c['id'] ? ' <a href="claim_print?id=' . (int)$c['id'] . '" target="_blank" class="btn btn-outline-success"><i class="bi bi-printer"></i> พิมพ์</a>' : '');
 require __DIR__ . '/header.php';
 ?>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>
