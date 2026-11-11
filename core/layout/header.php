@@ -14,9 +14,9 @@ $pageTitle = $pageTitle ?? APP_NAME;
 $module = $module ?? null;
 $active = $active ?? '';
 $navMods = accessible_modules($user);   // ไม่ได้ login = เฉพาะระบบที่เปิดให้ผู้เยี่ยมชม (guest_role) · ชื่อเฉพาะ — กันชนกับตัวแปรของหน้าที่เรียก (เช่น $mods ในหน้าผู้ใช้งาน)
-// มีมากกว่า 5 ระบบ: แสดง 4 ระบบแรก (ตามลำดับที่ผู้ใช้จัด) ที่เหลือรวมในเมนู "ระบบอื่นๆ"
-$navMore = count($navMods) > 5 ? array_slice($navMods, 4, null, true) : [];
-$navMain = $navMore ? array_slice($navMods, 0, 4, true) : $navMods;
+// แสดง 6 ระบบแรก (ตามลำดับที่ผู้ใช้จัด) ที่เหลือรวมในเมนู "ระบบอื่นๆ"
+$navMore = array_slice($navMods, 6, null, true);
+$navMain = array_slice($navMods, 0, 6, true);
 $cur = $module ? module_def($module) : null;
 $notifs = $user ? user_notifications($user) : [];
 $unread = $user ? unread_notification_count($notifs, $user) : 0;
@@ -124,7 +124,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
         <?php foreach ($navMain as $__m): $__isCur = $module === $__m['key']; ?>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle<?= $navActive($__isCur) ?>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <?= module_logo($__m, 22, 'me-1') ?> <?= h($__m['short']) ?></a>
+              <?= h($__m['short']) ?></a>
             <ul class="dropdown-menu shadow">
               <li class="dropdown-header"><?= h($__m['name']) ?></li>
               <?php foreach ($__m['menu'] as $__item): if (!menu_item_visible($__m['key'], $__item, $user)) continue; ?>
