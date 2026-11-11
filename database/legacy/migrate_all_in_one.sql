@@ -898,6 +898,35 @@ CREATE TABLE IF NOT EXISTS cal_attendance (
   CONSTRAINT fk_cal_att_user FOREIGN KEY (user_id) REFERENCES core_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- การจัดเวรกิจกรรม (ข้าราชการ 1 คน + กลุ่มกิจกรรม 1 กลุ่ม ต่อกิจกรรม) — รายชื่อเริ่มต้นอยู่ใน migration 20261207
+-- รายชื่อในการหมุนเวียน: official = ลำดับการเข้าร่วมกิจกรรมข้าราชการ · group = สมาชิกกลุ่มกิจกรรม (group_no)
+CREATE TABLE IF NOT EXISTS cal_rota_members (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  kind        ENUM('official', 'group') NOT NULL,
+  group_no    TINYINT UNSIGNED NOT NULL DEFAULT 0,   -- official = 0
+  user_id     INT UNSIGNED NULL,                     -- ผู้มีบัญชี (ได้รับแจ้งเตือน) · ว่าง = ชื่ออย่างเดียว
+  name        VARCHAR(150) NOT NULL,
+  sort_order  INT          NOT NULL DEFAULT 0,
+  KEY idx_cal_rota_members (kind, group_no, sort_order),
+  CONSTRAINT fk_cal_rota_members_user FOREIGN KEY (user_id) REFERENCES core_users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- เวรที่จัดแล้ว (1 กิจกรรม = 1 แถว) — ใช้คำนวณว่าถึงคิวใคร/กลุ่มใด
+CREATE TABLE IF NOT EXISTS cal_rota_turns (
+  id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  event_id          INT UNSIGNED NOT NULL,
+  official_user_id  INT UNSIGNED NULL,
+  official_name     VARCHAR(150) NOT NULL,
+  skipped_names     VARCHAR(500) NULL,                 -- ข้าราชการที่ถูกข้าม (ยังอยู่ในคิวถัดไป)
+  dress             VARCHAR(255) NULL,                 -- การแต่งกาย
+  group_no          TINYINT UNSIGNED NOT NULL,
+  created_by        INT UNSIGNED NULL,
+  created_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_cal_rota_turns_event (event_id),
+  CONSTRAINT fk_cal_rota_turns_event FOREIGN KEY (event_id) REFERENCES cal_events(id) ON DELETE CASCADE,
+  CONSTRAINT fk_cal_rota_turns_by FOREIGN KEY (created_by) REFERENCES core_users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ----------------------------------------------------------------------------
 -- bud_ : ระบบงบประมาณ (budget) — รับเข้างบประมาณ (ได้รับ) / เบิกจ่ายงบประมาณ
 -- ----------------------------------------------------------------------------
