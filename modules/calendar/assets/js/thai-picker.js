@@ -39,6 +39,7 @@
   document.querySelectorAll('input.thai-time').forEach(el => {
     flatpickr(el, {
       locale, enableTime: true, noCalendar: true, time_24hr: true, minuteIncrement: 5,
+      defaultHour: 8, defaultMinute: 30,           // ช่องว่าง: เปิดตัวเลือกแล้วเริ่มที่ 08.30 น. (เวลาเริ่มงาน)
       dateFormat: 'H.i', allowInput: true, disableMobile: true,
       parseDate: s => {                            // รับ "9.00", "09:00", "0900"
         const m = String(s).replace(/น\.?/g, '').trim().match(/^(\d{1,2})[.:]?(\d{2})$/);

@@ -5,7 +5,7 @@ $me = require_module(CAL_MODULE, 'editor');
 $pdo = db();
 $id = int_param('id');
 
-$e = ['event_date' => $_GET['date'] ?? date('Y-m-d'), 'end_date' => null, 'start_time' => '09:00:00', 'end_time' => '16:30:00',
+$e = ['event_date' => $_GET['date'] ?? date('Y-m-d'), 'end_date' => null, 'start_time' => '08:30:00', 'end_time' => '16:30:00',
       'title' => '', 'location' => '', 'link' => '', 'note' => '', 'created_by' => $me['id'], 'visibility' => 'public'];
 $assigned = [];
 $showAs = [];                       // ตำแหน่งที่แสดงในตาราง (ผู้มีหลายตำแหน่ง) [user_id => [abbr, ...]]
@@ -173,7 +173,7 @@ require __DIR__ . '/header.php';
           <div class="form-check form-switch mb-2"><input class="form-check-input" type="checkbox" name="all_day" value="1" id="allDay" <?= $allDay ? 'checked' : '' ?>>
             <label class="form-check-label" for="allDay">ทั้งวัน (ไม่ระบุเวลา)</label></div>
           <div class="row g-2" id="timeRow">
-            <div class="col-6"><label class="form-label">เวลาเริ่ม</label><div class="input-group"><input type="text" name="start_time" class="form-control thai-time" inputmode="decimal" value="<?= h(cal_time_thai($e['start_time'])) ?>" placeholder="เช่น 09.00"><span class="input-group-text">น.</span></div></div>
+            <div class="col-6"><label class="form-label">เวลาเริ่ม</label><div class="input-group"><input type="text" name="start_time" class="form-control thai-time" inputmode="decimal" value="<?= h(cal_time_thai($e['start_time'])) ?>" placeholder="เช่น 08.30"><span class="input-group-text">น.</span></div></div>
             <div class="col-6"><label class="form-label">เวลาสิ้นสุด</label><div class="input-group"><input type="text" name="end_time" class="form-control thai-time" inputmode="decimal" value="<?= h(cal_time_thai($e['end_time'])) ?>" placeholder="เช่น 16.30"><span class="input-group-text">น.</span></div></div>
           </div></div>
         <div class="col-12"><label class="form-label">สถานที่</label><input name="location" class="form-control" maxlength="255" value="<?= h($e['location']) ?>"></div>
