@@ -1,100 +1,141 @@
 <?php
 /**
- * นำเข้าเวรสำนักงานรายเดือน (CSV / Excel .xlsx) — ผู้บันทึกกิจกรรมขึ้นไป
- *   คอลัมน์: วันที่ | ผู้รับผิดชอบ  (หลายคนในวันเดียว: คั่นด้วย , หรือแยกหลายแถววันที่เดียวกันก็ได้)
+ * นำเข้าเวรสำนักงานรายเดือน (Excel .xlsx ตามแบบฟอร์มตารางเวร) — ผู้ดูแลปฏิทิน
+ *   แต่ละชีต = 1 เดือน (ชื่อชีตเป็นชื่อเดือน เช่น "ตุลาคม") · แถวแรก = วันที่ 1–31 · คอลัมน์ A = ชื่อผู้อยู่เวร
+ *   ช่องที่ใส่เครื่องหมาย (เช่น "/") = อยู่เวรวันนั้น · ปี: จากปีงบประมาณที่เลือก (ต.ค.–ธ.ค. = ปีก่อนหน้า) หรือปีในชื่อชีต
  *   ในปฏิทินแสดงเป็น "เวรสำนักงาน" ไม่ระบุเวลา/สถานที่ และใช้สีแถวต่างจากกิจกรรม
  *   วันที่มีเวรอยู่แล้ว → แทนที่ผู้รับผิดชอบด้วยข้อมูลใหม่ (นำเข้าซ้ำเพื่อแก้ไขได้)
  */
 require_once __DIR__ . '/bootstrap.php';
 require_once APP_ROOT . '/libs/simplexlsx/SimpleXLSX.php';
+require_once APP_ROOT . '/libs/simplexlsx/SimpleXLSXGen.php';
 $me = require_module(CAL_MODULE, 'admin');   // นำเข้าเวรสำนักงาน: เฉพาะผู้ดูแลปฏิทิน
 $pdo = db();
 $sessKey = 'cal_duty_import';
+$curFy = (int)date('Y') + 543 + ((int)date('n') >= 10 ? 1 : 0);      // ปีงบประมาณปัจจุบัน (พ.ศ.)
+const DUTY_FY_MONTHS = [10, 11, 12, 1, 2, 3, 4, 5, 6, 7, 8, 9];
 
-// ---------- ไฟล์ตัวอย่าง ----------
-if (isset($_GET['template'])) {
-    header('Content-Type: text/csv; charset=utf-8');
-    header('Content-Disposition: attachment; filename="duty_template.csv"');
-    $out = fopen('php://output', 'w');
-    fwrite($out, "\xEF\xBB\xBF");
-    fputcsv($out, ['วันที่', 'ผู้รับผิดชอบ']);
-    $users = array_values(cal_users());
-    $first = strtotime(date('Y-m-01', strtotime('first day of next month')));
-    for ($i = 0, $n = 0; $i < 31 && date('m', $first + $i * 86400) === date('m', $first); $i++) {
-        $ts = $first + $i * 86400;
-        if (in_array((int)date('w', $ts), [0, 6], true)) {          // ตัวอย่าง: เวรวันเสาร์-อาทิตย์
-            $name = $users ? preg_replace('/\s+/u', ' ', $users[$n++ % count($users)]['full_name']) : 'ชื่อ นามสกุล';
-            fputcsv($out, [date('j/n/', $ts) . ((int)date('Y', $ts) + 543), $name]);
-        }
-    }
-    fclose($out);
-    exit;
-}
-
-/** อ่านไฟล์ → [วันที่ => [date, users[], missing[], lines[], errors[]], errors] */
-function cal_duty_parse(string $path, string $name): array
+/** เดือน/ปี ค.ศ. จากชื่อชีต ("ตุลาคม", "ต.ค. 69", "พฤศจิกายน 2569") — ไม่มีปีในชื่อ = ตามปีงบประมาณ */
+function cal_duty_sheet_month(string $name, int $fy): ?array
 {
-    $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-    $table = [];
-    if ($ext === 'xlsx') {
-        $x = \Shuchkin\SimpleXLSX::parse($path);
-        if (!$x) {
-            return [[], ['อ่านไฟล์ Excel ไม่ได้: ' . \Shuchkin\SimpleXLSX::parseError()]];
-        }
-        $table = $x->rows(0);
-    } elseif ($ext === 'csv' || $ext === 'txt') {
-        $fh = fopen('php://temp', 'r+');
-        fwrite($fh, text_to_utf8(file_get_contents($path)));    // ตัด BOM + แปลง Windows-874
-        rewind($fh);
-        while (($r = fgetcsv($fh, 0, ',', '"', '')) !== false) {
-            $table[] = $r;
-        }
-    } else {
-        return [[], ['รองรับไฟล์ .csv หรือ .xlsx เท่านั้น']];
-    }
-    // หาคอลัมน์จากหัวตาราง — ไม่มีหัวตาราง = คอลัมน์ 1 วันที่, คอลัมน์ 2 ผู้รับผิดชอบ
-    $dateCol = 0;
-    $peopleCol = 1;
-    $start = 0;
-    foreach (array_slice($table, 0, 5, true) as $i => $r) {
-        $hd = array_map(fn($v) => preg_replace('/\s+/u', '', (string)$v), $r);
-        $dc = array_search('วันที่', $hd, true);
-        if ($dc !== false) {
-            $dateCol = $dc;
-            foreach ($hd as $c => $v) {
-                if ($c !== $dc && preg_match('/ผู้รับผิดชอบ|ผู้อยู่เวร|ผู้ปฏิบัติ|ชื่อ|เวร/u', $v)) {
-                    $peopleCol = $c;
-                    break;
-                }
-            }
-            $start = $i + 1;
+    $k = preg_replace('/[\s.]/u', '', $name);
+    $short = ['', 'มค', 'กพ', 'มีค', 'เมย', 'พค', 'มิย', 'กค', 'สค', 'กย', 'ตค', 'พย', 'ธค'];
+    $m = null;
+    for ($i = 1; $i <= 12; $i++) {
+        if (str_contains($k, thai_month_long($i)) || str_starts_with($k, $short[$i])) {
+            $m = $i;
             break;
         }
     }
+    if (!$m) {
+        return null;
+    }
+    if (preg_match('/(\d{4}|\d{2})(?!.*\d)/u', $name, $y)) {
+        $y = (int)$y[1];
+        $y = $y < 100 ? $y + 2500 : $y;              // 69 → 2569
+        return [$m, $y > 2400 ? $y - 543 : $y];
+    }
+    return [$m, $fy - 543 - ($m >= 10 ? 1 : 0)];
+}
+
+/** อ่านไฟล์ตารางเวร → [วันที่ => [date, users[], missing[], lines[]], errors] */
+function cal_duty_parse(string $path, string $name, int $fy): array
+{
+    if (strtolower(pathinfo($name, PATHINFO_EXTENSION)) !== 'xlsx') {
+        return [[], ['รองรับไฟล์ Excel (.xlsx) ตามแบบฟอร์มตารางเวรเท่านั้น']];
+    }
+    $x = \Shuchkin\SimpleXLSX::parse($path);
+    if (!$x) {
+        return [[], ['อ่านไฟล์ Excel ไม่ได้: ' . \Shuchkin\SimpleXLSX::parseError()]];
+    }
     $days = [];
     $errors = [];
-    foreach (array_slice($table, $start, null, true) as $i => $r) {
-        $line = $i + 1;
-        $dv = trim((string)($r[$dateCol] ?? ''));
-        $pv = trim((string)($r[$peopleCol] ?? ''));
-        if ($dv === '' && $pv === '') {
+    $people = [];                                     // ชื่อในไฟล์ → [ids, missing]
+    foreach ($x->sheetNames() as $si => $sheet) {
+        $ym = cal_duty_sheet_month((string)$sheet, $fy);
+        $rows = $x->rows($si);
+        if (!$ym) {
+            if (array_filter(array_map(fn($r) => implode('', $r), $rows))) {
+                $errors[] = "ชีต \"$sheet\": ไม่รู้ว่าเป็นเดือนใด — ตั้งชื่อชีตเป็นชื่อเดือน เช่น ตุลาคม (ข้ามชีตนี้)";
+            }
             continue;
         }
-        $date = parse_date_flexible($dv);
-        if (!$date) {
-            $errors[] = "แถว $line: วันที่ไม่ถูกต้อง \"$dv\"";
+        [$m, $y] = $ym;
+        // แถวหัวตาราง: แถวแรกที่มีเลขวันที่ 1, 2, 3 …
+        $head = null;
+        $dayCol = [];
+        foreach (array_slice($rows, 0, 5, true) as $ri => $r) {
+            $map = [];
+            foreach ($r as $ci => $v) {
+                if (is_numeric($v) && (float)$v == (int)$v && (int)$v >= 1 && (int)$v <= 31) {
+                    $map[$ci] = (int)$v;
+                }
+            }
+            if (count($map) >= 3) {
+                $head = $ri;
+                $dayCol = $map;
+                break;
+            }
+        }
+        if ($head === null) {
+            $errors[] = "ชีต \"$sheet\": ไม่พบแถววันที่ (1, 2, 3 …) ในแถวแรก";
             continue;
         }
-        [$ids, $missing] = cal_parse_people($pv);
-        $d = &$days[$date];
-        $d ??= ['date' => $date, 'users' => [], 'missing' => [], 'lines' => []];
-        $d['users'] = array_values(array_unique(array_merge($d['users'], $ids)));
-        $d['missing'] = array_merge($d['missing'], $missing);
-        $d['lines'][] = $line;
-        unset($d);
+        $nameCol = min(array_keys($dayCol)) > 0 ? 0 : null;
+        foreach (array_slice($rows, $head + 1, null, true) as $ri => $r) {
+            $person = trim(preg_replace('/\s+/u', ' ', (string)($r[$nameCol] ?? '')));
+            if ($nameCol === null || $person === '') {
+                continue;
+            }
+            $people[$person] ??= cal_parse_people($person);
+            [$ids, $missing] = $people[$person];
+            foreach ($dayCol as $ci => $day) {
+                $mark = trim((string)($r[$ci] ?? ''));
+                if ($mark === '' || $mark === '0' || $mark === '-') {
+                    continue;
+                }
+                if (!checkdate($m, $day, $y)) {
+                    $errors[] = "ชีต \"$sheet\" แถว " . ($ri + 1) . ": ไม่มีวันที่ $day ในเดือนนี้ (ข้าม)";
+                    continue;
+                }
+                $date = sprintf('%04d-%02d-%02d', $y, $m, $day);
+                $d = &$days[$date];
+                $d ??= ['date' => $date, 'users' => [], 'missing' => [], 'lines' => []];
+                $d['users'] = array_values(array_unique(array_merge($d['users'], $ids)));
+                $d['missing'] = array_values(array_unique(array_merge($d['missing'], $missing)));
+                $d['lines'][] = $sheet . ' แถว ' . ($ri + 1);
+                unset($d);
+            }
+        }
     }
     ksort($days);
     return [$days, $errors];
+}
+
+// ---------- ไฟล์ตัวอย่าง: ตารางเวร 12 เดือนของปีงบประมาณ (ชื่อผู้อยู่เวรย้อนหลัง 6 เดือน) ----------
+if (isset($_GET['template'])) {
+    $fy = (int)($_GET['fy'] ?? $curFy) ?: $curFy;
+    $users = cal_users();
+    $recent = $pdo->query("SELECT DISTINCT eu.user_id FROM cal_events e JOIN cal_event_users eu ON eu.event_id = e.id
+        WHERE e.kind = 'duty' AND e.event_date >= CURDATE() - INTERVAL 6 MONTH")->fetchAll(PDO::FETCH_COLUMN);
+    $names = [];
+    foreach ($users as $id => $u) {
+        if (in_array((string)$id, array_map('strval', $recent), true) || (!$recent && $u['type'] !== 'driver')) {
+            $names[] = preg_replace('/\s+/u', ' ', $u['full_name']);
+        }
+    }
+    $xlsx = null;
+    foreach (DUTY_FY_MONTHS as $m) {
+        $y = $fy - 543 - ($m >= 10 ? 1 : 0);
+        $rows = [array_merge([''], range(1, (int)date('t', mktime(0, 0, 0, $m, 1, $y))))];
+        foreach ($names as $n) {
+            $rows[] = [$n];
+        }
+        $xlsx = $xlsx ? $xlsx->addSheet($rows, thai_month_long($m)) : \Shuchkin\SimpleXLSXGen::fromArray($rows, thai_month_long($m));
+        $xlsx->setColWidth('A', 30)->setColWidth('B:AF', 4)->freezePanes('B2');
+    }
+    $xlsx->downloadAs('duty_template_FY' . $fy . '.xlsx');
+    exit;
 }
 
 $step = 'upload';
@@ -106,7 +147,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$f || $f['error'] !== UPLOAD_ERR_OK || !is_uploaded_file($f['tmp_name'])) {
             $errors[] = 'กรุณาเลือกไฟล์';
         } else {
-            [$days, $errors] = cal_duty_parse($f['tmp_name'], $f['name']);
+            $fy = (int)post('fy') ?: $curFy;
+            [$days, $errors] = cal_duty_parse($f['tmp_name'], $f['name'], $fy);
             if ($days) {
                 $ex = $pdo->prepare("SELECT id FROM cal_events WHERE kind = 'duty' AND event_date = ? ORDER BY id LIMIT 1");
                 foreach ($days as &$d) {
@@ -164,7 +206,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $active = 'duty';
 $pageTitle = 'นำเข้าเวรสำนักงาน';
-$pageActions = '<a href="?template=1" class="btn btn-outline-success"><i class="bi bi-download"></i> ดาวน์โหลดไฟล์ตัวอย่าง</a>';
+$pageActions = '<a href="?template=1&amp;fy=' . $curFy . '" class="btn btn-outline-success" id="tplLink"><i class="bi bi-download"></i> ดาวน์โหลดแบบฟอร์ม</a>';
 require __DIR__ . '/header.php';
 ?>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>
@@ -176,24 +218,33 @@ require __DIR__ . '/header.php';
       <div class="card-header"><strong><i class="bi bi-upload"></i> เลือกไฟล์เวรสำนักงาน</strong></div>
       <div class="card-body">
         <?= csrf_field() ?><input type="hidden" name="action" value="preview">
-        <input type="file" name="file" accept=".csv,.xlsx" class="form-control mb-3" required>
+        <label class="form-label">ปีงบประมาณ</label>
+        <select name="fy" class="form-select mb-3" id="fySel">
+          <?php for ($y = $curFy + 1; $y >= $curFy - 1; $y--): ?><option value="<?= $y ?>" <?= $y === $curFy ? 'selected' : '' ?>><?= $y ?> (ต.ค. <?= $y - 1 ?> – ก.ย. <?= $y ?>)</option><?php endfor; ?>
+        </select>
+        <label class="form-label">ไฟล์ตารางเวร (.xlsx)</label>
+        <input type="file" name="file" accept=".xlsx" class="form-control mb-3" required>
         <button class="btn btn-primary"><i class="bi bi-eye"></i> ตรวจสอบข้อมูลก่อนนำเข้า</button>
       </div>
     </form>
   </div>
   <div class="col-lg-7"><div class="card"><div class="card-body small">
-    <strong>รูปแบบไฟล์</strong> — 2 คอลัมน์ (แถวแรกเป็นหัวตาราง)
-    <table class="table table-sm table-bordered my-2 w-auto"><tr class="table-light"><td>วันที่</td><td>ผู้รับผิดชอบ</td></tr>
-      <tr><td>1/11/2569</td><td>นางสาวจงกล ยงค์สถิตย์สุข</td></tr>
-      <tr><td>2/11/2569</td><td>นายโสภณ เพ็งค่ำ, นางรุ่งกาล บุราณรักษ์</td></tr></table>
+    <strong>รูปแบบไฟล์</strong> — Excel 1 ชีตต่อ 1 เดือน (ชื่อชีต = ชื่อเดือน)
+    <div class="table-responsive"><table class="table table-sm table-bordered my-2 w-auto text-center"><tr class="table-light"><td></td><td>1</td><td>2</td><td>3</td><td>4</td><td>…</td><td>31</td></tr>
+      <tr><td class="text-start">นายสุวิทย์ นาโพธิ์</td><td></td><td></td><td>/</td><td></td><td></td><td></td></tr>
+      <tr><td class="text-start">นายธีรชัย หนูจิต</td><td>/</td><td></td><td></td><td></td><td></td><td>/</td></tr></table></div>
     <ul class="mb-0">
-      <li><strong>วันที่</strong>: 1/11/2569 · 1/11/2026 · 2026-11-01 · 1 พ.ย. 2569</li>
-      <li><strong>ผู้รับผิดชอบ</strong>: ชื่อ-นามสกุล (ไม่ใส่คำนำหน้าก็ได้) — หลายคนคั่นด้วย <code>,</code> หรือแยกหลายแถววันที่เดียวกัน</li>
+      <li><strong>ชื่อชีต</strong>: ชื่อเดือน เช่น ตุลาคม พฤศจิกายน — ปีตามปีงบประมาณที่เลือก (ต.ค.–ธ.ค. เป็นปีก่อนหน้า) หรือใส่ปีในชื่อชีต เช่น "ตุลาคม 2569"</li>
+      <li><strong>แถวแรก</strong>: วันที่ 1–31 · <strong>คอลัมน์ A</strong>: ชื่อ-นามสกุล (ไม่ใส่คำนำหน้าก็ได้)</li>
+      <li>ใส่เครื่องหมาย <code>/</code> (หรือข้อความใด ๆ) ในวันที่อยู่เวร — วันเดียวกันหลายคนได้</li>
       <li>ในปฏิทินแสดงเป็น <span class="cal-ev duty d-inline-block px-2">เวรสำนักงาน</span> ไม่ระบุเวลา/สถานที่</li>
       <li>นำเข้าเดือนเดิมซ้ำได้ — วันที่มีเวรอยู่แล้วจะ<strong>เปลี่ยนผู้อยู่เวร</strong>ตามไฟล์ใหม่</li>
     </ul>
   </div></div></div>
 </div>
+<script>
+document.getElementById('fySel').addEventListener('change', e => { document.getElementById('tplLink').href = '?template=1&fy=' + e.target.value; });
+</script>
 <?php else:
     $d = $_SESSION[$sessKey];
     $ok = array_filter($d['days'], fn($x) => $x['users']);
@@ -214,7 +265,7 @@ require __DIR__ . '/header.php';
         <?php foreach ($d['days'] as $x):
             $a = $x['old_users']; $b = $x['users']; sort($a); sort($b); ?>
           <tr class="<?= $x['users'] ? 'cal-duty' : 'table-danger' ?>">
-            <td class="text-nowrap"><?= h(cal_date_text($x['date'])) ?> <span class="small text-muted">(แถว <?= h(implode(', ', $x['lines'])) ?>)</span></td>
+            <td class="text-nowrap"><?= h(cal_date_text($x['date'])) ?> <span class="small text-muted">(<?= h(implode(', ', array_unique(array_map(fn($l) => explode(' แถว ', $l)[0], $x['lines'])))) ?>)</span></td>
             <td class="cal-people"><?= $x['users'] ? cal_assignee_html($x['users'], (int)$me['id'], 8) : '' ?>
               <?php if ($x['missing']): ?><div class="small text-danger">ไม่พบ: <?= h(implode(', ', $x['missing'])) ?></div><?php endif; ?>
               <?php if ($x['existing'] && $a !== $b && $a): ?><div class="small text-muted">เดิม: <?= h(implode(', ', array_map(fn($id) => isset($users[$id]) ? cal_person_text($users[$id]) : '#' . $id, $a))) ?></div><?php endif; ?></td>
