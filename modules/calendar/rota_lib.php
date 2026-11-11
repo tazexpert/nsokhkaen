@@ -4,6 +4,8 @@
  *   คิวคิดเป็น "รอบ": ทุกคน/ทุกกลุ่มได้ 1 ครั้งต่อรอบ ตามลำดับรายชื่อ — ครบแล้วเริ่มรอบใหม่
  *   ข้าราชการข้ามได้ 1–3 คิว: คนที่ถูกข้ามยังอยู่หน้าคิว (ได้คิวถัดไป) · คนที่ถูกเลือกแล้วออกจากรอบนั้น
  *   ลำดับคิวคำนวณจากประวัติ (cal_rota_turns) ทุกครั้ง → ลบกิจกรรมในปฏิทิน = คืนคิวให้อัตโนมัติ
+ *   จุดเริ่มต้น (ก่อนใช้ระบบ): คิวล่าสุดที่ได้ไปแล้ว — ข้าราชการ (core_settings.cal_rota_last_official = ชื่อ)
+ *   และกลุ่ม (cal_rota_last_group) → ถือว่าตั้งแต่ลำดับแรกถึงคน/กลุ่มนั้นได้ไปแล้ว คิวเริ่มที่ลำดับถัดไป
  */
 
 const ROTA_MAX_SKIP = 3;
@@ -90,8 +92,22 @@ function rota_state(?array $members = null, ?array $turns = null): array
         $k = rota_key($t['official_user_id'] ? (int)$t['official_user_id'] : null, $t['official_name']);
         return $alias[$k] ?? $k;
     }, $turns);
-    [$oRound, $oQueue] = rota_queue(array_keys($byKey), $hist);
-    [$gRound, $gQueue] = rota_queue(array_map('strval', array_keys($members['groups'])), array_map(fn($t) => (string)$t['group_no'], $turns));
+    // จุดเริ่มต้นคิว: ลำดับแรกถึงคน/กลุ่มล่าสุดที่ได้ไปแล้ว (ก่อนใช้ระบบ) นับเป็นเวรที่จัดแล้ว
+    $startO = [];
+    $last = rota_key(null, (string)setting('cal_rota_last_official', ''));
+    if (isset($alias[$last])) {
+        foreach (array_keys($byKey) as $k) {
+            $startO[] = $k;
+            if ($k === $alias[$last]) {
+                break;
+            }
+        }
+    }
+    $gOrder = array_map('strval', array_keys($members['groups']));
+    $lastG = (string)(int)setting('cal_rota_last_group', '0');
+    $startG = in_array($lastG, $gOrder, true) ? array_slice($gOrder, 0, array_search($lastG, $gOrder, true) + 1) : [];
+    [$oRound, $oQueue] = rota_queue(array_keys($byKey), array_merge($startO, $hist));
+    [$gRound, $gQueue] = rota_queue($gOrder, array_merge($startG, array_map(fn($t) => (string)$t['group_no'], $turns)));
     return ['official_round' => $oRound, 'officials' => array_map(fn($k) => $byKey[$k], $oQueue),
             'group_round' => $gRound, 'groups' => array_map('intval', $gQueue), 'members' => $members];
 }

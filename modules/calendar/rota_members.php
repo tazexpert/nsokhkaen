@@ -3,6 +3,7 @@
  * รายชื่อการจัดเวรกิจกรรม (ผู้ดูแลปฏิทิน): ลำดับข้าราชการ และสมาชิกกลุ่มกิจกรรม — พิมพ์ 1 ชื่อต่อบรรทัด
  *   จับคู่บัญชีจากชื่อ-สกุลอัตโนมัติ (ไม่มีบัญชี = ชื่ออย่างเดียว ไม่ได้รับแจ้งเตือน)
  *   เปลี่ยนรายชื่อไม่กระทบเวรที่จัดแล้ว · คิวคำนวณจากรายชื่อปัจจุบัน
+ *   คิวล่าสุด (ก่อนใช้ระบบ): ข้าราชการคนใดและกลุ่มใดได้คิวไปแล้วล่าสุด → คิวเริ่มที่ลำดับถัดไป
  */
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/rota_lib.php';
@@ -33,8 +34,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $ins->execute([$kind, $gno, rota_find_user($name), mb_substr($name, 0, 150), $sort]);
     }
     $pdo->commit();
+    $lastO = trim((string)post('last_official'));
+    $lastG = (int)post('last_group');
+    save_setting('cal_rota_last_official', in_array($lastO, array_column($rows, 2), true) ? $lastO : '');
+    save_setting('cal_rota_last_group', $lastG >= 1 && $lastG <= $g ? (string)$lastG : '');
     audit_log('cal_rota_members', count($rows) . ' รายชื่อ · ' . $g . ' กลุ่ม', CAL_MODULE);
-    flash('บันทึกรายชื่อการจัดเวรกิจกรรมแล้ว');
+    flash('บันทึกรายชื่อและคิวล่าสุดของเวรกิจกรรมแล้ว');
     redirect('rota_members');
 }
 
@@ -58,6 +63,27 @@ $status = function (array $list) {
   <div class="alert alert-info small"><i class="bi bi-info-circle"></i> พิมพ์ 1 ชื่อต่อบรรทัด ตามลำดับคิว · ระบบจับคู่บัญชีจากชื่อ-สกุลให้อัตโนมัติ
     (<i class="bi bi-check-circle-fill text-success"></i> มีบัญชี ได้รับแจ้งเตือน · <i class="bi bi-person-dash text-warning"></i> ไม่มีบัญชี แสดงชื่อในกิจกรรมอย่างเดียว)
     · ล้างทุกชื่อในช่องกลุ่ม = เอากลุ่มนั้นออก · เวรที่จัดแล้วไม่เปลี่ยน</div>
+  <?php $lastO = (string)setting('cal_rota_last_official', ''); $lastG = (int)setting('cal_rota_last_group', '0');
+        $state = rota_state($members); ?>
+  <div class="card mb-3">
+    <div class="card-header"><strong><i class="bi bi-skip-forward"></i> คิวล่าสุด</strong>
+      <span class="small text-muted ms-2">ข้าราชการคนใดและกลุ่มใดได้คิวไปแล้วล่าสุด (ก่อนเริ่มใช้ระบบ) — คิวจะเริ่มที่ลำดับถัดไป</span></div>
+    <div class="card-body row g-3 align-items-end">
+      <div class="col-md-5"><label class="form-label">ข้าราชการคนล่าสุดที่ได้คิวแล้ว</label>
+        <select name="last_official" class="form-select">
+          <option value="">— ยังไม่มี (เริ่มลำดับที่ 1) —</option>
+          <?php foreach ($members['officials'] as $i => $m): ?><option value="<?= h($m['name']) ?>" <?= rota_key(null, $m['name']) === rota_key(null, $lastO) ? 'selected' : '' ?>><?= $i + 1 ?>. <?= h($m['name']) ?></option><?php endforeach; ?>
+        </select></div>
+      <div class="col-md-3"><label class="form-label">กลุ่มล่าสุดที่ได้คิวแล้ว</label>
+        <select name="last_group" class="form-select">
+          <option value="">— ยังไม่มี (เริ่มกลุ่มที่ 1) —</option>
+          <?php foreach (array_keys($members['groups']) as $g): ?><option value="<?= (int)$g ?>" <?= $lastG === (int)$g ? 'selected' : '' ?>>กลุ่มที่ <?= (int)$g ?></option><?php endforeach; ?>
+        </select></div>
+      <div class="col-md-4 small">ถึงคิวตอนนี้: <strong><?= h($state['officials'][0]['name'] ?? '-') ?></strong>
+        · <strong><?= isset($state['groups'][0]) ? 'กลุ่มที่ ' . (int)$state['groups'][0] : '-' ?></strong>
+        <div class="text-muted">(รวมเวรที่จัดในระบบแล้ว)</div></div>
+    </div>
+  </div>
   <div class="row g-3">
     <div class="col-lg-4">
       <div class="card h-100"><div class="card-header"><strong>ลำดับการเข้าร่วมกิจกรรมข้าราชการ</strong></div>
