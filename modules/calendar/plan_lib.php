@@ -217,16 +217,6 @@ function plan_save(int $y, int $m, array $people, ?string $note, int $actorId): 
     }
 }
 
-/** ลบแผนทั้งเดือน (รวมเวรศาลากลางในปฏิทินของเดือนนั้น) */
-function plan_delete(int $y, int $m, int $actorId): void
-{
-    $pdo = db();
-    $pdo->beginTransaction();
-    $pdo->prepare('DELETE FROM cal_plans WHERE plan_year = ? AND plan_month = ?')->execute([$y, $m]);
-    plan_sync_guard($y, $m, $actorId);
-    $pdo->commit();
-}
-
 /**
  * เวรศาลากลางในแผน → กิจกรรม kind = 'guard' วันละ 1 รายการ
  * ผู้รับผิดชอบที่ไม่เปลี่ยน คงเวลามอบหมายเดิม (ไม่แจ้งเตือนซ้ำ) · ผู้ไม่มีบัญชีระบุชื่อไว้ในหมายเหตุ

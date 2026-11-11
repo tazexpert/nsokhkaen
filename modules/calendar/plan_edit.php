@@ -2,10 +2,10 @@
 /**
  * สร้าง/แก้ไขแผนการปฏิบัติงานรายเดือน (ผู้ดูแลปฏิทิน)
  * - ตารางคน × วัน: พิมพ์รหัสในช่องได้เหมือน Excel (เช่น สพค, สพค*, โพล สรง) หรือเลือกรหัสจากแถบด้านบนแล้วคลิก/ลากบนช่อง
- * - เพิ่ม/ลบรายชื่อ: ผู้มีบัญชีในระบบ หรือพิมพ์ชื่อ (ผู้ไม่มีบัญชี) · แผนใหม่เริ่มจากรายชื่อเดือนก่อน (ไม่มี = บุคลากรทั้งหมด)
+ * - เพิ่มรายชื่อ: ผู้มีบัญชีในระบบ หรือพิมพ์ชื่อ (ผู้ไม่มีบัญชี) · ไม่มีการลบรายชื่อ/ลบแผน (ป้องกันข้อมูลหาย) · แผนใหม่เริ่มจากรายชื่อเดือนก่อน (ไม่มี = บุคลากรทั้งหมด)
  * - บันทึก = แทนที่แผนของเดือนนั้น + ปรับเวรศาลากลางในปฏิทิน · เวรสำนักงานแสดงจากปฏิทิน (แก้ที่ "นำเข้าเวรสำนักงาน")
  * - ผู้บันทึกกิจกรรม (editor ที่ไม่ใช่ผู้ดูแล): "แผนของฉัน" แก้ได้เฉพาะแถวของตนในแผนที่ผู้ดูแลสร้างแล้ว
- *   (รายชื่อ/แถวของผู้อื่น/หมายเหตุ/เวรศาลากลาง คงเดิม · ลบแผนไม่ได้)
+ *   (รายชื่อ/แถวของผู้อื่น/หมายเหตุ/เวรศาลากลาง คงเดิม)
  */
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/plan_lib.php';
@@ -36,12 +36,6 @@ if ($selfOnly) {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
-    if (post('action') === 'delete' && $plan && !$selfOnly) {
-        plan_delete($y, $m, (int)$me['id']);
-        audit_log('cal_plan_delete', 'ลบแผนการปฏิบัติงาน ' . plan_month_text($y, $m), CAL_MODULE);
-        flash('ลบแผนการปฏิบัติงานเดือน' . plan_month_text($y, $m) . ' แล้ว');
-        redirect('plan?m=' . $ym);
-    }
     $valid = array_map('intval', db()->query('SELECT id FROM core_users WHERE is_active = 1')->fetchAll(PDO::FETCH_COLUMN));
     $rows = [];
     $people = [];
@@ -211,7 +205,6 @@ require __DIR__ . '/header.php';
         <?php foreach ($rows as $i => $r): ?>
           <tr data-uid="<?= (int)$r['user_id'] ?>">
             <td class="plan-name text-nowrap">
-              <?php if (!$selfOnly): ?><button type="button" class="btn btn-sm btn-link text-danger p-0 me-1 plan-del" title="ลบออกจากแผน" aria-label="ลบ"><i class="bi bi-x-circle"></i></button><?php endif; ?>
               <?= h(preg_replace('/\s+/u', ' ', $r['name'])) ?><?= $r['user_id'] ? '' : ' <i class="bi bi-person-dash text-muted small" title="ไม่มีบัญชีในระบบ"></i>' ?>
               <input type="hidden" name="p[<?= $i ?>][uid]" value="<?= (int)$r['user_id'] ?>"><input type="hidden" name="p[<?= $i ?>][name]" value="<?= h($r['name']) ?>">
             </td>
@@ -254,21 +247,14 @@ require __DIR__ . '/header.php';
   <?php endif; ?>
 
   <div class="d-flex gap-2">
-    <?php if ($plan && !$selfOnly): ?><button type="submit" form="planDelete" class="btn btn-outline-danger"><i class="bi bi-trash"></i> ลบแผนเดือนนี้</button><?php endif; ?>
     <a href="plan?m=<?= $ym ?>" class="btn btn-outline-secondary ms-auto">ยกเลิก</a>
     <button class="btn btn-primary"><i class="bi bi-save"></i> <?= $selfOnly ? 'บันทึกแผนของฉัน' : 'บันทึกแผน' ?></button>
   </div>
 </form>
-<?php if ($plan && !$selfOnly): ?>
-<form method="post" id="planDelete" onsubmit="return confirm(<?= js_attr('ลบแผนการปฏิบัติงานเดือน' . plan_month_text($y, $m) . " ทั้งหมด?\n(เวรศาลากลางของเดือนนี้ในปฏิทินจะถูกลบด้วย)") ?>)">
-  <?= csrf_field() ?><input type="hidden" name="action" value="delete">
-</form>
-<?php endif; ?>
 
 <template id="rowTpl">
   <tr data-uid="__UID__">
     <td class="plan-name text-nowrap">
-      <button type="button" class="btn btn-sm btn-link text-danger p-0 me-1 plan-del" title="ลบออกจากแผน" aria-label="ลบ"><i class="bi bi-x-circle"></i></button>
       <span class="nm"></span>
       <input type="hidden" name="p[__I__][uid]" value="__UID__"><input type="hidden" name="p[__I__][name]" class="nm-in">
     </td>
@@ -342,11 +328,7 @@ require __DIR__ . '/header.php';
   document.addEventListener('mouseup', () => { down = false; });
   body.addEventListener('input', e => { if (e.target.classList.contains('plan-in')) { paint(e.target); dirty = true; } });
 
-  // ลบแถว / เพิ่มแถว
-  body.addEventListener('click', e => {
-    const b = e.target.closest('.plan-del');
-    if (b && confirm('ลบรายชื่อนี้ออกจากแผน?')) { b.closest('tr').remove(); dirty = true; syncSelect(); }
-  });
+  // เพิ่มแถว (ไม่มีการลบรายชื่อ)
   let idx = body.rows.length + 1000;
   const addRow = (uid, name) => {
     const html = document.getElementById('rowTpl').innerHTML.replaceAll('__I__', idx++).replaceAll('__UID__', uid || 0);
