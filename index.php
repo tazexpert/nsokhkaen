@@ -34,7 +34,7 @@ require APP_ROOT . '/core/layout/header.php';
   <?php if ($isGuest): ?>
     <a href="<?= h(url('login')) ?>" class="btn btn-primary ms-auto" data-login-modal><i class="bi bi-box-arrow-in-right"></i> เข้าสู่ระบบเพื่อใช้งานระบบงาน</a>
   <?php else: ?>
-    <a href="<?= h(url('logout')) ?>" class="btn btn-outline-danger ms-auto"><i class="bi bi-box-arrow-right"></i> <?= !empty($viewer['via_pin']) ? 'เปลี่ยนผู้ใช้' : 'ออกจากระบบ' ?></a>
+    <a href="<?= h(url('logout')) ?>" class="btn btn-outline-danger ms-auto"><i class="bi bi-box-arrow-right"></i> ออกจากระบบ</a>
   <?php endif; ?>
 </section>
 

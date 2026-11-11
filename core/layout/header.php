@@ -100,7 +100,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
           <li><a class="dropdown-item<?= $navActive(!$module && $active === 'staff') ?>" href="<?= h(url('staff')) ?>"><i class="bi bi-people"></i> บุคลากรสถิติขอนแก่น</a></li>
           <li><a class="dropdown-item" href="<?= h(url('#arrange')) ?>"><i class="bi bi-arrows-move"></i> จัดเรียงเมนูระบบ</a></li>
           <li><hr class="dropdown-divider"></li>
-          <li><a class="dropdown-item text-danger" href="<?= h(url('logout')) ?>"><i class="bi bi-box-arrow-right"></i> <?= $user['via_pin'] ? 'เปลี่ยนผู้ใช้' : 'ออกจากระบบ' ?></a></li>
+          <li><a class="dropdown-item text-danger" href="<?= h(url('logout')) ?>"><i class="bi bi-box-arrow-right"></i> ออกจากระบบ</a></li>
         </ul>
       </div>
       <button class="navbar-toggler ms-1" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="เมนู">
