@@ -98,30 +98,38 @@ require __DIR__ . '/header.php';
 <div class="d-flex align-items-center mb-2"><h2 class="h6 mb-0"><i class="bi bi-box-arrow-up-right text-primary"></i> สรุปการยืม</h2>
   <span class="ms-auto small text-muted no-print">คลิกการ์ดเพื่อดูรายละเอียดและผู้ยืม</span></div>
 <div class="row g-3 mb-4" data-reveal>
-  <?php foreach ($models as $i => $m): $pct = $m['total'] ? round($m['borrowed'] / $m['total'] * 100) : 0; ?>
+  <?php $tileColors = [   // สีเดียวกับการ์ดแดชบอร์ดระบบงบประมาณ [สีหลัก, ไล่สี]
+      ['#2563eb', 'linear-gradient(135deg, #1d4ed8, #3b82f6)'], ['#ea580c', 'linear-gradient(135deg, #c2410c, #f97316)'],
+      ['#059669', 'linear-gradient(135deg, #047857, #10b981)'], ['#0891b2', 'linear-gradient(135deg, #0e7490, #06b6d4)']];
+  foreach ($models as $i => $m): $pct = $m['total'] ? round($m['borrowed'] / $m['total'] * 100) : 0; [$tc, $tg] = $tileColors[$i % 4]; ?>
   <div class="col-sm-6 col-xl-3 reveal-item" style="--d:<?= $i * 70 ?>ms">
-    <a href="equipment_group?g=<?= $i ?>" class="card eq-model h-100 text-decoration-none text-reset">
-      <div class="card-body p-3">
-        <div class="fw-semibold text-truncate fs-6"><?= h($m['label']) ?></div>
-        <div class="small text-muted text-truncate" title="<?= h(implode(', ', array_keys($m['models']))) ?>"><?= count($m['models']) ?> รุ่น</div>
-        <div class="d-flex gap-3 mt-2 eq-model-nums">
-          <div><div class="n text-primary"><?= number_format($m['borrowed']) ?></div><div class="l">ยืมอยู่</div></div>
-          <div><div class="n text-success"><?= number_format($m['available']) ?></div><div class="l">คงเหลือ</div></div>
-          <div><div class="n"><?= number_format($m['total']) ?></div><div class="l">ทั้งหมด</div></div>
-          <div class="ms-auto align-self-end small text-muted"><?= $pct ?>%</div>
-        </div>
-        <span class="bar-track d-block mt-1"><span class="bar-fill" style="width:<?= $pct ?>%"></span></span>
+    <a href="equipment_group?g=<?= $i ?>" class="eq-tile" style="--tc:<?= $tc ?>;--tg:<?= $tg ?>">
+      <div class="t-label"><span class="t-ico"><i class="bi <?= $m['label'] === 'โน้ตบุ๊ค' ? 'bi-laptop' : 'bi-tablet' ?>"></i></span>
+        <span class="text-truncate"><?= h($m['label']) ?></span>
+        <span class="ms-auto t-sub" title="<?= h(implode(', ', array_keys($m['models']))) ?>"><?= count($m['models']) ?> รุ่น</span></div>
+      <div class="d-flex gap-3 mt-2 eq-tile-nums">
+        <div><div class="n"><?= number_format($m['borrowed']) ?></div><div class="l">ยืมอยู่</div></div>
+        <div><div class="n"><?= number_format($m['available']) ?></div><div class="l">คงเหลือ</div></div>
+        <div><div class="n"><?= number_format($m['total']) ?></div><div class="l">ทั้งหมด</div></div>
+        <div class="ms-auto align-self-end t-sub">ยืม <?= $pct ?>%</div>
       </div>
+      <span class="eq-tile-bar"><span class="bar-fill" style="width:<?= $pct ?>%"></span></span>
     </a>
   </div>
   <?php endforeach; ?>
 </div>
 <style>
-.eq-model{border:1px solid var(--bs-border-color);background:var(--bs-body-bg);transition:box-shadow .15s,transform .15s}
-.eq-model:hover,.eq-model:focus-visible{box-shadow:0 .4rem 1rem rgba(30,60,120,.12);transform:translateY(-2px)}
-.eq-model-nums .n{font-size:1.45rem;font-weight:700;line-height:1.1}
-.eq-model-nums .l{font-size:.75rem;color:var(--bs-secondary-color)}
-@media print{.eq-model{transform:none!important;box-shadow:none!important}}
+.eq-tile{display:block;height:100%;border-radius:16px;padding:1rem 1.15rem;color:#fff;text-decoration:none;background:var(--tg);
+  box-shadow:0 6px 18px color-mix(in srgb,var(--tc) 30%,transparent);transition:transform .15s,box-shadow .15s}
+.eq-tile:hover,.eq-tile:focus-visible{color:#fff;transform:translateY(-2px);box-shadow:0 10px 24px color-mix(in srgb,var(--tc) 40%,transparent)}
+.eq-tile .t-label{font-size:.95rem;font-weight:600;display:flex;align-items:center;gap:.45rem;min-width:0}
+.eq-tile .t-ico{flex:none;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:rgba(255,255,255,.2)}
+.eq-tile .t-sub{font-size:.78rem;color:rgba(255,255,255,.85);white-space:nowrap}
+.eq-tile-nums .n{font-size:1.6rem;font-weight:800;line-height:1.15}
+.eq-tile-nums .l{font-size:.75rem;color:rgba(255,255,255,.85)}
+.eq-tile-bar{display:block;height:8px;margin-top:.5rem;border-radius:6px;background:rgba(255,255,255,.28);overflow:hidden}
+.eq-tile-bar .bar-fill{background:#fff}
+@media print{.eq-tile{transform:none!important;box-shadow:none!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 </style>
 <?php endif; ?>
 <div class="card mb-4">
