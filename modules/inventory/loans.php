@@ -17,8 +17,8 @@ $base = $where;
 $baseParams = $params;
 if ($q !== '') {
     $where[] = '(l.loan_no LIKE ? OR l.borrower_name LIKE ? OR l.doc_no LIKE ?
-        OR EXISTS (SELECT 1 FROM inv_loan_items i WHERE i.loan_id = l.id AND (i.asset_no LIKE ? OR i.brand_model LIKE ?)))';
-    array_push($params, ...array_fill(0, 5, "%$q%"));
+        OR EXISTS (SELECT 1 FROM inv_loan_items i WHERE i.loan_id = l.id AND (i.asset_no LIKE ? OR i.brand_model LIKE ? OR i.item_name LIKE ?)))';
+    array_push($params, ...array_fill(0, 6, "%$q%"));
 }
 $today = date('Y-m-d');
 if ($tab === 'overdue') {
@@ -41,7 +41,7 @@ foreach ($cst as $r) {
 }
 
 $st = $pdo->prepare('SELECT l.*, (SELECT COUNT(*) FROM inv_loan_items i WHERE i.loan_id = l.id) AS item_count,
-    (SELECT GROUP_CONCAT(COALESCE(i.asset_no, i.brand_model, i.item_name) ORDER BY i.sort_order SEPARATOR ", ") FROM inv_loan_items i WHERE i.loan_id = l.id) AS item_list
+    (SELECT GROUP_CONCAT(COALESCE(i.item_name, i.brand_model, i.asset_no) ORDER BY i.sort_order SEPARATOR ", ") FROM inv_loan_items i WHERE i.loan_id = l.id) AS item_list
     FROM inv_loans l' . ($where ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY l.id DESC LIMIT 500');
 $st->execute($params);
 $loans = $st->fetchAll();
@@ -60,7 +60,7 @@ require __DIR__ . '/header.php';
 <div class="card">
   <div class="card-header">
     <form class="row g-2"><input type="hidden" name="tab" value="<?= h($tab) ?>">
-      <div class="col-md-5"><input name="q" class="form-control" placeholder="ค้นหาเลขครุภัณฑ์ / ผู้ยืม / เลขที่หนังสือ / รุ่น" value="<?= h($q) ?>"></div>
+      <div class="col-md-5"><input name="q" class="form-control" placeholder="ค้นหาเลขครุภัณฑ์ / รายการ / ผู้ยืม / เลขที่หนังสือ / รุ่น" value="<?= h($q) ?>"></div>
       <div class="col-auto"><button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button></div>
     </form>
   </div>
