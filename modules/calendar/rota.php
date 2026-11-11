@@ -10,7 +10,7 @@ require_once __DIR__ . '/rota_lib.php';
 $me = require_module(CAL_MODULE, 'admin');
 $pdo = db();
 
-$f = ['title' => '', 'event_date' => date('Y-m-d'), 'start_time' => '08:30', 'end_time' => '16:30', 'location' => '', 'dress' => '', 'note' => '', 'pick' => ''];
+$f = ['title' => '', 'event_date' => date('Y-m-d'), 'start_time' => '08:30', 'end_time' => '16:30', 'location' => '', 'dress' => '', 'pick' => ''];
 $errors = [];
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
@@ -23,6 +23,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $groupNo = $state['groups'][0] ?? null;
     if ($f['title'] === '') {
         $errors[] = 'กรุณาระบุชื่อกิจกรรม';
+    }
+    if ($f['dress'] === '') {
+        $errors[] = 'กรุณาระบุการแต่งกาย';
     }
     if (!DateTime::createFromFormat('!Y-m-d', $f['event_date'])) {
         $errors[] = 'กรุณาเลือกวันที่';
@@ -44,12 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $official = $choices[$pickIdx];
         $skipped = array_column(array_slice($choices, 0, $pickIdx), 'name');
         $group = $state['members']['groups'][$groupNo];
-        $noAcct = array_column(array_filter($group, fn($m) => !$m['user_id']), 'name');
-        $note = 'การแต่งกาย: ' . ($f['dress'] ?: '-') . "\n"
-              . 'ข้าราชการ: ' . $official['name'] . "\n"
-              . 'กลุ่มกิจกรรมที่ ' . $groupNo . ': ' . rota_group_names($state['members'], $groupNo)
-              . ($noAcct ? "\n(ไม่มีบัญชีในระบบ: " . implode(', ', $noAcct) . ')' : '')
-              . ($f['note'] !== '' ? "\n" . $f['note'] : '');
+        $note = 'การแต่งกาย: ' . $f['dress'];             // หมายเหตุในตาราง: การแต่งกายอย่างเดียว (รายชื่ออยู่ในผู้รับผิดชอบ)
         $users = array_values(array_unique(array_filter(array_merge([$official['user_id']], array_column($group, 'user_id')))));
         $pdo->beginTransaction();
         try {
@@ -147,7 +145,6 @@ require __DIR__ . '/header.php';
           <input name="location" class="form-control" maxlength="255" required value="<?= h($f['location']) ?>"></div>
         <div class="col-12"><label class="form-label">การแต่งกาย <span class="text-danger">*</span></label>
           <input name="dress" class="form-control" maxlength="255" required value="<?= h($f['dress']) ?>" placeholder="เช่น ชุดกีฬาสีขาว / เครื่องแบบปกติขาว"></div>
-        <div class="col-12"><label class="form-label">รายละเอียดเพิ่มเติม</label><textarea name="note" class="form-control" rows="2"><?= h($f['note']) ?></textarea></div>
       </div>
     </div>
     <div class="col-lg-6">
