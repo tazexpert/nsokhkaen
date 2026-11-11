@@ -22,7 +22,7 @@ return [
         ['id' => 'month', 'label' => 'ปฏิทินรายเดือน',   'href' => '',          'icon' => 'bi-calendar3',      'role' => 'viewer'],
         ['id' => 'list',  'label' => 'ตารางกิจกรรม',      'href' => 'list',           'icon' => 'bi-list-task',      'role' => 'viewer'],
         ['id' => 'plan',  'label' => 'แผนการปฏิบัติงาน',  'href' => 'plan',           'icon' => 'bi-grid-3x3',       'role' => 'viewer', 'guest' => false],
-        ['id' => 'rota',  'label' => 'การจัดเวรกิจกรรม',   'href' => 'rota',           'icon' => 'bi-arrow-repeat',   'role' => 'admin'],
+        ['id' => 'rota',  'label' => 'เวรกิจกรรม',          'href' => 'rota',           'icon' => 'bi-arrow-repeat',   'role' => 'admin'],
         ['id' => 'mine',  'label' => 'งานของฉัน',         'href' => 'list?mine=1',    'icon' => 'bi-person-check',   'role' => 'viewer', 'guest' => false],
         ['id' => 'add',   'label' => 'เพิ่มกิจกรรม',       'href' => 'event_form',     'icon' => 'bi-plus-circle',    'role' => 'editor'],
         ['id' => 'import', 'label' => 'นำเข้า CSV',        'href' => 'import',         'icon' => 'bi-filetype-csv',   'role' => 'admin'],
