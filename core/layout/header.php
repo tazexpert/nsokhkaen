@@ -14,9 +14,9 @@ $pageTitle = $pageTitle ?? APP_NAME;
 $module = $module ?? null;
 $active = $active ?? '';
 $navMods = accessible_modules($user);   // ไม่ได้ login = เฉพาะระบบที่เปิดให้ผู้เยี่ยมชม (guest_role) · ชื่อเฉพาะ — กันชนกับตัวแปรของหน้าที่เรียก (เช่น $mods ในหน้าผู้ใช้งาน)
-// แสดง 6 ระบบแรก (ตามลำดับที่ผู้ใช้จัด) ที่เหลือรวมในเมนู "ระบบอื่นๆ"
-$navMore = array_slice($navMods, 6, null, true);
-$navMain = array_slice($navMods, 0, 6, true);
+// แสดง 7 ระบบแรก (ตามลำดับที่ผู้ใช้จัด) ที่เหลือรวมในเมนู "ระบบอื่นๆ"
+$navMore = array_slice($navMods, 7, null, true);
+$navMain = array_slice($navMods, 0, 7, true);
 $cur = $module ? module_def($module) : null;
 $notifs = $user ? user_notifications($user) : [];
 $unread = $user ? unread_notification_count($notifs, $user) : 0;
