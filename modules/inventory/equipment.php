@@ -1,5 +1,5 @@
 <?php
-/** ครุภัณฑ์: สรุปการยืม 4 กลุ่ม (Samsung Galaxy Tab / โน้ตบุ๊ค / แท็บเล็ต Lenovo / Microsoft) + สรุปตามประเภท + รายการทั้งหมด พร้อมสภาพการใช้งาน และผู้ยืม/ผู้ถือครอง */
+/** ครุภัณฑ์ (เจ้าหน้าที่เห็นเฉพาะสรุปการยืม + สรุปตามประเภท ไม่มีลิงก์ · ตารางครุภัณฑ์เฉพาะผู้ดูแล): สรุปการยืม 4 กลุ่ม (Samsung Galaxy Tab / โน้ตบุ๊ค / แท็บเล็ต Lenovo / Microsoft) + สรุปตามประเภท + รายการทั้งหมด พร้อมสภาพการใช้งาน และผู้ยืม/ผู้ถือครอง */
 require_once __DIR__ . '/bootstrap.php';
 require_module(INV_MODULE);
 $pdo = db();
@@ -96,14 +96,14 @@ require __DIR__ . '/header.php';
 ?>
 <?php if ($models): ?>
 <div class="d-flex align-items-center mb-2"><h2 class="h6 mb-0"><i class="bi bi-box-arrow-up-right text-primary"></i> สรุปการยืม</h2>
-  <span class="ms-auto small text-muted no-print">คลิกการ์ดเพื่อดูรายละเอียดและผู้ยืม</span></div>
+  <?php if ($isAdmin): ?><span class="ms-auto small text-muted no-print">คลิกการ์ดเพื่อดูรายละเอียดและผู้ยืม</span><?php endif; ?></div>
 <div class="row g-3 mb-4" data-reveal>
   <?php $tileColors = [   // สีเดียวกับการ์ดแดชบอร์ดระบบงบประมาณ [สีหลัก, ไล่สี]
       ['#2563eb', 'linear-gradient(135deg, #1d4ed8, #3b82f6)'], ['#ea580c', 'linear-gradient(135deg, #c2410c, #f97316)'],
       ['#059669', 'linear-gradient(135deg, #047857, #10b981)'], ['#0891b2', 'linear-gradient(135deg, #0e7490, #06b6d4)']];
   foreach ($models as $i => $m): $pct = $m['total'] ? round($m['borrowed'] / $m['total'] * 100) : 0; [$tc, $tg] = $tileColors[$i % 4]; ?>
   <div class="col-sm-6 col-xl-3 reveal-item" style="--d:<?= $i * 70 ?>ms">
-    <a href="equipment_group?g=<?= $i ?>" class="eq-tile" style="--tc:<?= $tc ?>;--tg:<?= $tg ?>">
+    <<?= $isAdmin ? 'a href="equipment_group?g=' . $i . '"' : 'div' ?> class="eq-tile<?= $isAdmin ? ' eq-tile-link' : '' ?>" style="--tc:<?= $tc ?>;--tg:<?= $tg ?>">
       <div class="t-label"><span class="t-ico"><i class="bi <?= $m['label'] === 'โน้ตบุ๊ค' ? 'bi-laptop' : 'bi-tablet' ?>"></i></span>
         <span class="text-truncate"><?= h($m['label']) ?></span>
         <span class="ms-auto t-sub" title="<?= h(implode(', ', array_keys($m['models']))) ?>"><?= count($m['models']) ?> รุ่น</span></div>
@@ -114,14 +114,14 @@ require __DIR__ . '/header.php';
         <div class="ms-auto align-self-end t-sub">ยืม <?= $pct ?>%</div>
       </div>
       <span class="eq-tile-bar"><span class="bar-fill" style="width:<?= $pct ?>%"></span></span>
-    </a>
+    </<?= $isAdmin ? 'a' : 'div' ?>>
   </div>
   <?php endforeach; ?>
 </div>
 <style>
 .eq-tile{display:block;height:100%;border-radius:16px;padding:1rem 1.15rem;color:#fff;text-decoration:none;background:var(--tg);
   box-shadow:0 6px 18px color-mix(in srgb,var(--tc) 30%,transparent);transition:transform .15s,box-shadow .15s}
-.eq-tile:hover,.eq-tile:focus-visible{color:#fff;transform:translateY(-2px);box-shadow:0 10px 24px color-mix(in srgb,var(--tc) 40%,transparent)}
+.eq-tile-link:hover,.eq-tile-link:focus-visible{color:#fff;transform:translateY(-2px);box-shadow:0 10px 24px color-mix(in srgb,var(--tc) 40%,transparent)}
 .eq-tile .t-label{font-size:.95rem;font-weight:600;display:flex;align-items:center;gap:.45rem;min-width:0}
 .eq-tile .t-ico{flex:none;width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:rgba(255,255,255,.2)}
 .eq-tile .t-sub{font-size:.78rem;color:rgba(255,255,255,.85);white-space:nowrap}
@@ -134,7 +134,7 @@ require __DIR__ . '/header.php';
 <?php endif; ?>
 <div class="card mb-4">
   <div class="card-header d-flex align-items-center"><strong><i class="bi bi-pie-chart"></i> สรุปครุภัณฑ์ตามประเภท</strong>
-    <span class="ms-auto small text-muted no-print">คลิกตัวเลขเพื่อดูรายการ</span></div>
+    <?php if ($isAdmin): ?><span class="ms-auto small text-muted no-print">คลิกตัวเลขเพื่อดูรายการ</span><?php endif; ?></div>
   <div class="table-responsive">
     <table class="table align-middle mb-0 text-center eq-summary">
       <thead><tr>
@@ -144,8 +144,10 @@ require __DIR__ . '/header.php';
       </tr></thead>
       <tbody>
       <?php
-      $sumRow = function (string $label, array $s, ?int $typeId) use ($link) {
-          $c = fn($k, $f) => $s[$k] ? '<a href="' . h($link(['type' => $typeId] + $f)) . '">' . number_format($s[$k]) . '</a>' : '<span class="text-muted">0</span>';
+      $sumRow = function (string $label, array $s, ?int $typeId) use ($link, $isAdmin) {
+          // เจ้าหน้าที่: เห็นเฉพาะตัวเลข (ไม่มีลิงก์ไปตารางครุภัณฑ์)
+          $c = fn($k, $f) => !$s[$k] ? '<span class="text-muted">0</span>'
+              : ($isAdmin ? '<a href="' . h($link(['type' => $typeId] + $f)) . '">' . number_format($s[$k]) . '</a>' : number_format($s[$k]));
           echo '<tr' . ($typeId === null ? ' class="table-light fw-semibold"' : '') . '><td class="text-start">' . h($label) . '</td>'
               . '<td class="fw-semibold">' . $c('total', []) . '</td>'
               . '<td>' . $c('normal', ['status' => 'normal']) . '</td>'
@@ -173,6 +175,7 @@ require __DIR__ . '/header.php';
   </div>
 </div>
 
+<?php if ($isAdmin): /* ตารางครุภัณฑ์: เฉพาะผู้ดูแล */ ?>
 <div class="card" id="list">
   <div class="card-header no-print">
     <form class="row g-2 align-items-center" action="equipment#list">
@@ -255,4 +258,5 @@ require __DIR__ . '/header.php';
   document.addEventListener('change', e => { if (e.target.classList.contains('row-check')) count(); });
 })();
 </script>
+<?php endif; ?>
 <?php require __DIR__ . '/footer.php'; ?>

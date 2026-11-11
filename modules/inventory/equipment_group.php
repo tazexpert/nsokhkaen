@@ -1,7 +1,7 @@
 <?php
 /** สรุปการยืมรายกลุ่ม (คลิกจากการ์ด "สรุปการยืม" หน้าครุภัณฑ์): ยอดตามรุ่น · ผู้ยืม · เลขที่คงเหลือ */
 require_once __DIR__ . '/bootstrap.php';
-require_module(INV_MODULE);
+require_module(INV_MODULE, 'admin');   // รายละเอียดผู้ยืม: เฉพาะผู้ดูแล
 $groups = eq_loan_groups();
 $gi = int_param('g');
 if (!isset($groups[$gi])) {
