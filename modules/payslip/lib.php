@@ -10,11 +10,12 @@ const PAY_MODULE = 'payslip';
 /** รายการในสลิป: คอลัมน์ => ชื่อที่แสดง */
 const PAY_INCOME = ['salary' => 'อัตราเงินเดือน', 'arrears' => 'เงินตกเบิก', 'cola' => 'ค่าครองชีพชั่วคราว'];
 const PAY_DEDUCT = ['tax' => 'ภาษี', 'social_security' => 'เงินประกันสังคม', 'loan_welfare' => 'เงินกู้สวัสดิการ',
-                    'loan_ghb' => 'เงินกู้ ธอส.', 'loan_slf' => 'เงินกู้ กยศ.', 'loan_islamic' => 'เงินกู้ธนาคารอิสลาม'];
+                    'loan_ghb' => 'เงินกู้ ธอส.', 'loan_slf' => 'เงินกู้ กยศ.', 'loan_islamic' => 'เงินกู้ธนาคารอิสลาม',
+                    'loan_gsb' => 'เงินกู้ธนาคารออมสิน'];
 const PAY_TOTALS = ['total_income' => 'รวมรายได้', 'total_deduct' => 'รวมรายจ่าย', 'net_pay' => 'เงินเดือนคงเหลือ'];
 
 /** รายการที่แสดงเสมอแม้เป็น 0 (แบบสลิปเดิม) — ค่าครองชีพแสดงเฉพาะเมื่อมีค่า */
-const PAY_ALWAYS_SHOW = ['salary', 'arrears', 'tax', 'social_security', 'loan_welfare', 'loan_ghb', 'loan_slf', 'loan_islamic'];
+const PAY_ALWAYS_SHOW = ['salary', 'arrears', 'tax', 'social_security', 'loan_welfare', 'loan_ghb', 'loan_slf', 'loan_islamic', 'loan_gsb'];
 
 const PAY_SETTING_DEFAULTS = [];
 /** ผู้ลงนามเมื่อยังไม่ได้ตั้งค่า */

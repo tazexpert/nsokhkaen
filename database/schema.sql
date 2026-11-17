@@ -567,6 +567,7 @@ CREATE TABLE IF NOT EXISTS pay_slips (
   loan_ghb        DECIMAL(12,2) NULL,                  -- เงินกู้ ธอส.
   loan_slf        DECIMAL(12,2) NULL,                  -- เงินกู้ กยศ.
   loan_islamic    DECIMAL(12,2) NULL,                  -- เงินกู้ธนาคารอิสลาม
+  loan_gsb        DECIMAL(12,2) NULL,                  -- เงินกู้ธนาคารออมสิน
   total_deduct    DECIMAL(12,2) NULL,                  -- รวมรายจ่าย
   net_pay         DECIMAL(12,2) NULL,                  -- เงินเดือนคงเหลือ
   status          ENUM('pending', 'approved') NOT NULL DEFAULT 'pending',

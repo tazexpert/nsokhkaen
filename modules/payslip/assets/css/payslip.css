@@ -1,21 +1,24 @@
-/* สลิปเงินเดือน */
+/* สลิปเงินเดือน — ฟอนต์ TH Sarabun New (assets/fonts)
+   ขนาดเทียบฟอนต์เดิมจากความสูงตัวอักษรไทยที่วัดจริง: Sarabun ÷ TH Sarabun New = 1.475 (จอ) · Prompt 300 ÷ TH Sarabun New = 1.375 (พิมพ์) */
+@font-face { font-family: 'TH Sarabun New'; src: url('../../../../assets/fonts/THSarabunNew.ttf') format('truetype'); font-weight: 400; font-style: normal; }
+@font-face { font-family: 'TH Sarabun New'; src: url('../../../../assets/fonts/THSarabunNew-Bold.ttf') format('truetype'); font-weight: 700; font-style: normal; }
 .payslip { position: relative; max-width: 640px; margin: 0 auto; background: #fff; border: 1px solid #e5e9f0; border-radius: 14px;
-  padding: 28px 36px 32px; font-size: 1.02rem; }
+  padding: 28px 36px 32px; font-family: 'TH Sarabun New', 'Sarabun', sans-serif; font-size: 1.5rem; line-height: 1.05; }
 .ps-no { text-align: right; }
-.ps-head { text-align: center; line-height: 1.7; margin-bottom: 14px; }
-.ps-title { font-weight: 600; font-size: 1.12rem; }
+.ps-head { text-align: center; line-height: 1.2; margin-bottom: 14px; }
+.ps-title { font-weight: 700; font-size: 1.65rem; }
 .ps-table { width: 100%; }
-.ps-table th { padding-top: 6px; }
+.ps-table th { padding-top: 6px; font-weight: 700; }
 .ps-table td { padding: 2px 0; }
 .ps-table td:first-child { padding-left: 14px; }
 .ps-table tr.fw-bold td:first-child, .ps-table tr.ps-net td:first-child { padding-left: 0; }
 .ps-table .amt { text-align: right; width: 130px; font-variant-numeric: tabular-nums; }
 .ps-table .unit { width: 44px; text-align: right; }
 .ps-table tr.ps-net td { font-weight: 700; padding-top: 12px; border-top: 1px solid #cbd5e1; }
-.ps-sign { text-align: center; margin-top: 36px; line-height: 1.7; }
+.ps-sign { text-align: center; margin-top: 36px; line-height: 1.2; }
 .sig-img { height: 54px; width: auto; }
 .sig-line { display: inline-block; width: 160px; border-bottom: 1px dotted #000; height: 30px; }
-.ps-draft { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-18deg); font-size: 3rem; font-weight: 700;
+.ps-draft { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) rotate(-18deg); font-size: 4.4rem; font-weight: 700;
   color: rgba(220, 38, 38, .18); border: 6px solid rgba(220, 38, 38, .18); padding: 4px 24px; border-radius: 12px; pointer-events: none; white-space: nowrap; }
 .pay-table td, .pay-table th { white-space: nowrap; font-variant-numeric: tabular-nums; }
 .pay-table td.num, .pay-table th.num, .pay-diff .num { text-align: right; }
@@ -27,16 +30,16 @@
   .content, .content-body { padding: 0 !important; margin: 0 !important; }
   .ps-wrap { flex: 0 0 100% !important; max-width: 100% !important; width: 100% !important; }
   .payslip { width: 112mm; max-width: none; margin: 26mm auto 0 !important; border: 0; border-radius: 0; padding: 0;
-    font-family: 'Prompt', 'Sarabun', sans-serif; font-weight: 300; font-size: 8.5pt; line-height: 1.55; color: #000; }
-  .payslip .ps-head { margin-bottom: 8px; line-height: 1.6; }
-  .payslip .ps-title { font-size: 8.5pt; font-weight: 400; }
-  .payslip .ps-table th, .payslip .ps-table tr.fw-bold td, .payslip .ps-table tr.ps-net td { font-weight: 500; }
+    font-family: 'TH Sarabun New', sans-serif; font-weight: 400; font-size: 12pt; line-height: 1.1; color: #000; }
+  .payslip .ps-head { margin-bottom: 8px; line-height: 1.12; }
+  .payslip .ps-title { font-size: 12pt; font-weight: 400; }
+  .payslip .ps-table th, .payslip .ps-table tr.fw-bold td, .payslip .ps-table tr.ps-net td { font-weight: 700; }
   .payslip .ps-table td { padding: 0; }
   .payslip .ps-table td:first-child { padding-left: 0; }
   .payslip .ps-table .amt { width: 28mm; }
   .payslip .ps-table .unit { width: 14mm; text-align: center; }
   .payslip .ps-table tr.ps-net td { border-top: 0; padding-top: 6px; }
-  .payslip .ps-sign { margin-top: 22px; line-height: 1.6; }
+  .payslip .ps-sign { margin-top: 22px; line-height: 1.12; }
   .payslip .sig-img { height: 34px; }
-  .payslip .ps-draft { font-size: 2rem; }
+  .payslip .ps-draft { font-size: 2.8rem; }
 }
