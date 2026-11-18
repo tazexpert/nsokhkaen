@@ -122,7 +122,7 @@ define('DB_HOST', 'localhost');
 define('DB_NAME', 'db_khkaen');
 define('DB_USER', 'nsokhkaen');
 define('DB_PASS', 'รหัสผ่านจากข้อ 3');
-define('DEFAULT_APP_URL', 'http://ชื่อเครื่องหรือ IP/nsokhkaen/');
+define('DEFAULT_APP_URL', 'http://ชื่อเครื่องหรือ IP/nsokhkaen/');   // ใช้ที่ root ของเว็บ = 'http://ชื่อเครื่องหรือ IP/' (ดูข้อ 9)
 ```
 หลังเข้าระบบได้ ตั้ง **URL ของระบบ** ที่ ผู้ดูแลระบบกลาง → ตั้งค่าระบบ (ใช้กับลิงก์ใน QR Code)
 
@@ -185,3 +185,22 @@ mysql -u root -p --default-character-set=utf8mb4 < storage\sql\ชื่อไ�
   (Bootstrap ไอคอน ฟอนต์ ตัวอ่าน PDF) — อย่าบล็อกที่ firewall/proxy
 - URL ระบบเดิมและสติ๊กเกอร์ QR ที่พิมพ์ไว้ (`/nsokhkaen_inventory/public/scan.php?qr=…`) — ตัว redirect ใน `legacy-redirects` เขียนสำหรับ Apache
   ถ้าย้ายมาเครื่องนี้ ให้ตั้ง HTTP Redirect ใน IIS จาก `/nsokhkaen_inventory/public/scan.php` ไป `/nsokhkaen/modules/inventory/scan.php` (ส่งต่อ query string)
+
+## 9. ใช้ `http://server/` แทน `http://server/nsokhkaen/` (ไม่บังคับ)
+
+ระบบหา path ของตัวเองอัตโนมัติ — ไม่ต้องแก้โค้ด แค่ให้ IIS ชี้ root ของเว็บไปที่โฟลเดอร์ระบบ
+
+1. IIS Manager → Sites → Default Web Site → คลิกขวา Application `nsokhkaen` (ใต้ Default Web Site) → **Remove**
+   (ลบเฉพาะการตั้งค่าใน IIS — ไฟล์ไม่หาย)
+2. คลิก **Default Web Site** → แผงขวา **Basic Settings…**
+   - Physical path: `C:\inetpub\wwwroot\nsokhkaen`
+   - Application pool: **Select…** → `nsokhkaen` → OK
+3. `config.local.php`: `define('DEFAULT_APP_URL', 'http://ชื่อเครื่องหรือ IP/');`
+4. `iisreset` แล้วเปิด `http://localhost/` → เข้าสู่ระบบ → ผู้ดูแลระบบกลาง → ตั้งค่าระบบ → **URL ของระบบ** เปลี่ยนเป็น `http://ชื่อเครื่องหรือ IP/`
+   (ใช้กับลิงก์ใน QR Code ที่พิมพ์ใหม่ — ถ้าเข้าหน้าตั้งค่าไม่ได้ ใช้ SQL:
+   ``UPDATE core_settings SET `value` = 'http://ชื่อเครื่องหรือ IP/' WHERE `key` = 'app_url';``)
+
+- ลิงก์และ QR Code ที่พิมพ์ไว้แล้วแบบ `http://server/nsokhkaen/…` ยังใช้ได้ — `web.config` พาไป URL ใหม่ให้ (กฎ "ย้ายจาก /nsokhkaen/")
+- Default Web Site ทั้งเว็บจะเป็นระบบนี้ — ถ้าเครื่องนี้มีเว็บอื่นอยู่ใต้ Default Web Site ด้วย ให้สร้าง **Site ใหม่** แทน
+  (Sites → Add Website… · Physical path = โฟลเดอร์ระบบ · Application pool `nsokhkaen` · Binding: ระบุ Host name เช่น `nso-khonkaen.local` หรือพอร์ตอื่น)
+- สิทธิ์โฟลเดอร์ (ข้อ 5) ใช้ได้เหมือนเดิม เพราะยังเป็นโฟลเดอร์และ Application Pool เดิม
