@@ -22,7 +22,7 @@ if ($id) {
         redirect(url('shares'));
     }
 }
-$data = ['body' => $share['body'] ?? '', 'audience' => $share['audience'] ?? 'all', 'users' => $share ? share_user_ids($id) : []];
+$data = ['body' => $share['body'] ?? '', 'audience' => $share['audience'] ?? 'select', 'users' => $share ? share_user_ids($id) : []];
 $oldFiles = $share ? (share_files([$id])[$id] ?? []) : [];
 $errors = [];
 
