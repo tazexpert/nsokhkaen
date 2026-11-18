@@ -12,6 +12,10 @@ if ($data === '') {
 while (ob_get_level() > 0) {
     ob_end_clean();                      // ข้อความหรือช่องว่างที่ค้างใน buffer ทำให้ไฟล์รูปเสีย
 }
+if (headers_sent($sentFile, $sentLine)) {
+    // มีตัวอักษรหลุดออกไปแล้ว (เช่น แท็กปิด PHP + บรรทัดว่างท้ายไฟล์ หรือ BOM หัวไฟล์ config.local.php) — รูปจะเสีย
+    error_log("[nsokhkaen] qr_image: มีข้อความถูกส่งก่อนรูป QR จาก $sentFile บรรทัด $sentLine — ลบแท็กปิด PHP และบรรทัดว่างท้ายไฟล์ / บันทึกเป็น UTF-8 (ไม่มี BOM)");
+}
 header('Cache-Control: private, max-age=86400');
 
 if (function_exists('imagecreate')) {

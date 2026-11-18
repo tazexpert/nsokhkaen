@@ -115,7 +115,8 @@ FLUSH PRIVILEGES;
 
 ## 4. ตั้งค่าระบบ — `config.local.php`
 
-สร้างไฟล์ `config.local.php` ในโฟลเดอร์ระบบ (ไม่ต้องแก้ `config.php` — `git pull` จะไม่ทับไฟล์นี้):
+สร้างไฟล์ `config.local.php` ในโฟลเดอร์ระบบ (ไม่ต้องแก้ `config.php` — `git pull` จะไม่ทับไฟล์นี้)
+— **บันทึกเป็น UTF-8 (ไม่มี BOM)** และ **ไม่ต้องปิดท้ายด้วย `?>`** (ตัวอักษร/บรรทัดว่างที่หลุดออกไปทำให้รูป QR ไฟล์ดาวน์โหลด และ PDF เสีย):
 ```php
 <?php
 define('DB_HOST', 'localhost');
