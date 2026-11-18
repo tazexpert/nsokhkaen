@@ -23,8 +23,42 @@
    - หรือใช้คำสั่ง: `%windir%\system32\inetsrv\appcmd add apppool /name:nsokhkaen /managedRuntimeVersion:"" /managedPipelineMode:Integrated`
 3. Default Web Site → คลิกขวาโฟลเดอร์ `nsokhkaen` → **Convert to Application** (หรือ Add Application) → **Select…** เลือก pool `nsokhkaen`
    — ถ้าใช้ DefaultAppPool แทน ให้เปลี่ยนชื่อบัญชีในข้อ 5 เป็น `IIS AppPool\DefaultAppPool`
-4. ผูกนามสกุล `.php` กับ PHP (Handler Mappings → Add Module Mapping: `*.php` · FastCgiModule · `C:\PHP\php-cgi.exe`)
-   — ถ้าติดตั้ง PHP ผ่าน Web Platform Installer / PHP Manager จะทำให้แล้ว
+4. ผูกนามสกุล `.php` กับ PHP — ดูขั้นตอนละเอียดที่หัวข้อ **"ผูก .php กับ PHP (FastCGI)"** ด้านล่าง
+
+### ผูก .php กับ PHP (FastCGI)
+
+**ก่อนเริ่ม**: PHP ต้องเป็นรุ่น **NTS x64** (มีไฟล์ `php-cgi.exe` · `php -v` แสดงคำว่า NTS) ·
+ติดตั้ง **Visual C++ Redistributable 2015–2022 (x64)** แล้ว (ทดสอบ `C:\PHP\php-cgi.exe -v` ต้องแสดงเวอร์ชัน) · ติดตั้งฟีเจอร์ CGI แล้ว
+
+1. IIS Manager → คลิก **ชื่อเครื่อง** (ระดับเซิร์ฟเวอร์) → **Handler Mappings** — ถ้ามี `*.php` อยู่แล้ว (เช่น `PHP_via_FastCGI`)
+   ตรวจว่า Executable ชี้ไป `php-cgi.exe` ของ PHP 8.5 แล้วข้ามไปข้อ 3
+2. แผงขวา **Add Module Mapping…**
+   - Request path `*.php` · Module **FastCgiModule** · Executable `C:\PHP\php-cgi.exe` · Name `PHP_via_FastCGI`
+   - **Request Restrictions…** → Mapping: ติ๊ก "Invoke handler only if request is mapped to" = **File** · Verbs: **All verbs** · Access: **Script**
+   - OK → ถามสร้าง FastCGI application ตอบ **Yes**
+3. ชื่อเครื่อง → **FastCGI Settings** → ดับเบิลคลิก `C:\PHP\php-cgi.exe`
+   - Activity Timeout `120` · Request Timeout `300` · Instance MaxRequests `10000`
+   - Environment Variables เพิ่ม `PHP_FCGI_MAX_REQUESTS` = `10000`
+
+หรือใช้คำสั่งแทนข้อ 2–3 (ถ้าขึ้นว่า duplicate = มีอยู่แล้ว ข้ามได้):
+```bat
+%windir%\system32\inetsrv\appcmd set config /section:system.webServer/fastCgi /+[fullPath='C:\PHP\php-cgi.exe',activityTimeout='120',requestTimeout='300',instanceMaxRequests='10000']
+%windir%\system32\inetsrv\appcmd set config /section:system.webServer/fastCgi /+[fullPath='C:\PHP\php-cgi.exe'].environmentVariables.[name='PHP_FCGI_MAX_REQUESTS',value='10000']
+%windir%\system32\inetsrv\appcmd set config /section:system.webServer/handlers /+[name='PHP_via_FastCGI',path='*.php',verb='*',modules='FastCgiModule',scriptProcessor='C:\PHP\php-cgi.exe',resourceType='File',requireAccess='Script']
+```
+
+**ทดสอบ**: สร้าง `test_php.php` (เนื้อหา `<?php phpinfo();`) ในโฟลเดอร์ระบบ → เปิด `http://localhost/nsokhkaen/test_php.php`
+- ต้องเห็นตาราง PHP 8.5 · Server API = `CGI/FastCGI` · Loaded Configuration File = `C:\PHP\php.ini`
+  (ถ้า `(none)` ให้คัดลอก `php.ini-production` เป็น `php.ini` แล้วแก้ตามข้อ 2)
+- ค้นหา `pdo_mysql` `mbstring` `gd` `fileinfo` `openssl` `intl` ต้องเจอครบ
+- **ลบ `test_php.php` ทิ้งเมื่อเสร็จ**
+
+| อาการ | สาเหตุ / แก้ |
+|---|---|
+| 500.0 "FastCGI process exited unexpectedly" | ไม่มี Visual C++ Redistributable หรือ php.ini เปิด extension ที่ไม่มีไฟล์ DLL |
+| 404.3 หรือเบราว์เซอร์ดาวน์โหลดไฟล์ .php | ยังไม่ได้ผูก `*.php` |
+| 500.21 "Module FastCgiModule could not be found" | ยังไม่ได้ติดตั้งฟีเจอร์ CGI |
+| แก้ php.ini แล้วไม่เปลี่ยน | Application Pools → `nsokhkaen` → **Recycle** (หรือ `iisreset`) |
 
 `web.config` ในโปรเจกต์ตั้งค่าเหล่านี้ให้แล้ว (ไม่ต้องทำเอง):
 - หน้าแรก `index.php` · ปิดการแสดงรายการไฟล์ในโฟลเดอร์
@@ -61,10 +95,7 @@ log_errors = On
 ```
 ขีดจำกัดอัปโหลด (10 MB/ไฟล์ · 64 MB/ครั้ง) ตั้งไว้แล้วใน `.user.ini` ของโปรเจกต์ (PHP แบบ FastCGI อ่านไฟล์นี้)
 
-FastCGI ให้รอนานพอสำหรับนำเข้า Excel/PDF (ปรับ path ของ php-cgi.exe ให้ตรง):
-```bat
-%windir%\system32\inetsrv\appcmd set config -section:system.webServer/fastCgi /[fullPath='C:\PHP\php-cgi.exe'].activityTimeout:120 /[fullPath='C:\PHP\php-cgi.exe'].requestTimeout:300 /commit:apphost
-```
+FastCGI ให้รอนานพอสำหรับนำเข้า Excel/PDF — ตั้งในหัวข้อ "ผูก .php กับ PHP (FastCGI)" ข้อ 3 (Activity Timeout 120 · Request Timeout 300)
 
 > ระบบทดสอบกับ PHP 8.0–8.3 · PHP 8.5 ยังไม่ได้ทดสอบบนเครื่องจริง — หลังติดตั้งให้ตรวจตามข้อ 7
 > ข้อผิดพลาดถูกบันทึกที่ `storage\logs\php_error.log` (ไม่แสดงบนหน้าเว็บ)
