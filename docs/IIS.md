@@ -177,7 +177,8 @@ mysql -u root -p --default-character-set=utf8mb4 < storage\sql\ชื่อไ�
 | เปิด `…/modules/calendar/plan.php` | ถูกพาไป `…/plan` อัตโนมัติ |
 | เปิด `…/config.php` `…/docs/IIS.md` `…/database/schema.sql` `…/uploads/payslip/` | **404** (เปิดไม่ได้) |
 | อัปโหลดรูปโปรไฟล์ / แนบไฟล์ในข้อความ | สำเร็จ (สิทธิ์โฟลเดอร์ถูกต้อง) |
-| พิมพ์ QR Code วัสดุ · นำเข้า Excel สลิปเงินเดือน · อ่าน PDF ใบยืม | ใช้ได้ (gd / zlib / pdf.js) |
+| พิมพ์ QR Code วัสดุ · นำเข้า Excel สลิปเงินเดือน · อ่าน PDF ใบยืม | ใช้ได้ (gd / zlib / pdf.js) — QR ไม่ขึ้น: คลิกขวารูป → เปิดในแท็บใหม่ ดูข้อความ และดู `storage\logs\php_error.log` |
+| สแกน QR Code ที่พิมพ์ใหม่ | เปิด URL ของเครื่องใหม่ — ถ้ายังเป็น IP/URL เดิม ให้แก้ **URL ของระบบ** ที่ ผู้ดูแลระบบกลาง → ตั้งค่าระบบ |
 | `storage\logs\php_error.log` | ไม่มีข้อผิดพลาดใหม่ (มีคำเตือน Deprecated ของ PHP 8.5 ได้ ไม่กระทบการใช้งาน) |
 
 ## 8. อื่น ๆ

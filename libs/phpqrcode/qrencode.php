@@ -417,6 +417,7 @@
         public $margin = 4;
         public $back_color = 0xFFFFFF;
         public $fore_color = 0x000000;
+        public $cmyk = false;        // ปรับ: ประกาศไว้ (PHP 8.2+ เตือน dynamic property)
         
         public $structured = 0; // not supported yet
         
