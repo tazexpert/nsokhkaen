@@ -232,8 +232,7 @@ function resize_image(string $src, string $dest, array $info, int $max): bool
         IMAGETYPE_PNG  => imagepng($out, $dest, 6),
         IMAGETYPE_WEBP => imagewebp($out, $dest, 85),
     };
-    imagedestroy($img);
-    imagedestroy($out);
+    unset($img, $out);                 // คืนหน่วยความจำ (imagedestroy() เลิกใช้ใน PHP 8.5)
     return $ok;
 }
 
@@ -283,8 +282,7 @@ function save_avatar(array $file): ?string
         }
         $rel = $jpg;
     }
-    imagedestroy($img);
-    imagedestroy($out);
+    unset($img, $out);
     return $rel;
 }
 

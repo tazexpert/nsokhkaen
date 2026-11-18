@@ -4,6 +4,10 @@
 !/uploads/inventory/loans/.htaccess
 !/uploads/payslip/.htaccess
 !/uploads/messages/.htaccess
+!/uploads/web.config
+!/uploads/inventory/loans/web.config
+!/uploads/payslip/web.config
+!/uploads/messages/web.config
 !/uploads/**/
 !/uploads/**/.gitkeep
 /libs/phpqrcode/cache/*
@@ -13,3 +17,4 @@
 .DS_Store
 /storage/*
 !/storage/.htaccess
+!/storage/web.config

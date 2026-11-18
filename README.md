@@ -66,6 +66,8 @@
 
 ## ติดตั้งใหม่
 
+> ติดตั้งบน **Windows Server + IIS** (เช่น PHP 8.5 + MariaDB ฐานข้อมูลชื่ออื่น เช่น `db_khkaen`): ดู **[docs/IIS.md](docs/IIS.md)**
+
 ต้องการ PHP 8.0+ (`pdo_mysql`, `gd`, `zip`, `simplexml`) และ MySQL 5.7+ / MariaDB 10.3+ — ไม่ต้องใช้ Composer
 
 ```bash

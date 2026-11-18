@@ -44,7 +44,7 @@
                 }
             }
 
-            ImageDestroy($image);
+            unset($image);   // ปรับ: ImageDestroy() เลิกใช้ใน PHP 8.5
         }
 
         //----------------------------------------------------------------------
@@ -59,7 +59,7 @@
                 ImageJpeg($image, $filename, $q);
             }
 
-            ImageDestroy($image);
+            unset($image);   // ปรับ: ImageDestroy() เลิกใช้ใน PHP 8.5
         }
 
         //----------------------------------------------------------------------
@@ -100,7 +100,7 @@
 
             $target_image =ImageCreate($imgW * $pixelPerPoint, $imgH * $pixelPerPoint);
             ImageCopyResized($target_image, $base_image, 0, 0, 0, 0, $imgW * $pixelPerPoint, $imgH * $pixelPerPoint, $imgW, $imgH);
-            ImageDestroy($base_image);
+            unset($base_image);
 
             return $target_image;
         }

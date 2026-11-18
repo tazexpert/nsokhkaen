@@ -73,7 +73,7 @@ session เก็บเฉพาะ `uid` และโหลดสิทธิ�
 - ทุกฟอร์ม POST ใช้ `csrf_field()` + `check_csrf()`; AJAX ของ jQuery ส่ง header `X-CSRF-Token` ให้อัตโนมัติ (ตั้งใน layout)
 - SQL ใช้ prepared statement ทั้งหมด
 - รหัสผ่าน/PIN เก็บด้วย `password_hash()`; หน่วงเวลาเมื่อกรอกผิดหลายครั้ง; บันทึกการ login ใน `core_audit_log`
-- `core/ database/ libs/ tools/ docs/` และ `config*.php` ถูกปิดด้วย `.htaccess` (Apache) — ถ้าใช้ Nginx ต้องตั้ง deny เอง
+- `core/ database/ libs/ tools/ docs/` และ `config*.php` ถูกปิดด้วย `.htaccess` (Apache) และ `web.config` (IIS — ดู `docs/IIS.md`) — ถ้าใช้ Nginx ต้องตั้ง deny เอง
 - `uploads/` ห้ามรันสคริปต์
 
 ## เพิ่มระบบใหม่ (ตัวอย่าง: ระบบจองห้องประชุม `room`)
