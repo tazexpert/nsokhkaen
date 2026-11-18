@@ -163,8 +163,7 @@ function login_user(int $userId, bool $viaPin = false): void
 {
     session_regenerate_id(true);
     $redirect = $_SESSION['redirect_after_login'] ?? null;
-    $_SESSION = ['uid' => $userId, 'via_pin' => $viaPin, 'redirect_after_login' => $redirect,
-                 'show_notifications' => !$viaPin];   // เปิดรายการแจ้งเตือนให้เห็นทันทีหลัง login
+    $_SESSION = ['uid' => $userId, 'via_pin' => $viaPin, 'redirect_after_login' => $redirect];   // แจ้งเตือน: แสดงตัวเลขที่กระดิ่ง ผู้ใช้คลิกดูเอง
     db()->prepare('UPDATE core_users SET last_login_at = NOW() WHERE id = ?')->execute([$userId]);
     current_user(true);
     audit_log($viaPin ? 'login_pin' : 'login', '', 'core', $userId);

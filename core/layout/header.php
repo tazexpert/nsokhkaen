@@ -20,8 +20,6 @@ $navMain = array_slice($navMods, 0, 7, true);
 $cur = $module ? module_def($module) : null;
 $notifs = $user ? user_notifications($user) : [];
 $unread = $user ? unread_notification_count($notifs, $user) : 0;
-$showNotifs = !empty($_SESSION['show_notifications']) && $notifs;
-unset($_SESSION['show_notifications']);
 $navActive = fn(bool $on) => $on ? ' active' : '';
 ?><!doctype html>
 <html lang="th">
@@ -266,7 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
   <?php endforeach; ?>
 <?php if ($user): ?>
 <script>
-  // การแจ้งเตือน: เปิดดูแล้ว → บันทึกเวลา (ตัวเลขบนกระดิ่งหายไป); หลัง login เปิดรายการให้เห็นทันที
+  // การแจ้งเตือน: ผู้ใช้คลิกกระดิ่งเปิดดูเอง → บันทึกเวลา (ตัวเลขบนกระดิ่งหายไป) · หลัง login ไม่เปิดรายการให้อัตโนมัติ
   document.addEventListener('DOMContentLoaded', () => {
     const btn = document.getElementById('notifBtn');
     if (!btn) return;
@@ -277,7 +275,6 @@ document.addEventListener('DOMContentLoaded', () => {
       badge.remove();
       btn.querySelector('.bi').className = 'bi bi-bell';
     });
-    <?php if ($showNotifs): ?>bootstrap.Dropdown.getOrCreateInstance(btn).show();<?php endif; ?>
   });
 </script>
 <?php endif; ?>
