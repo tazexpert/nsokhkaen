@@ -17,9 +17,13 @@
 
 **สร้างเว็บ**
 1. คัดลอกโฟลเดอร์ระบบไปไว้ เช่น `C:\inetpub\wwwroot\nsokhkaen`
-2. IIS Manager → Default Web Site → คลิกขวาโฟลเดอร์ `nsokhkaen` → **Convert to Application**
-   - Application Pool: สร้างใหม่ชื่อ `nsokhkaen` · .NET CLR version = **No Managed Code**
-3. ผูกนามสกุล `.php` กับ PHP (Handler Mappings → Add Module Mapping: `*.php` · FastCgiModule · `C:\PHP\php-cgi.exe`)
+2. **สร้าง Application Pool ก่อน** (หน้าต่างเลือก pool ตอนสร้าง Application แสดงเฉพาะ pool ที่มีอยู่แล้ว)
+   IIS Manager → คลิกชื่อเครื่อง → **Application Pools** → **Add Application Pool…**
+   - Name: `nsokhkaen` · .NET CLR version: **No Managed Code** · Managed pipeline mode: Integrated
+   - หรือใช้คำสั่ง: `%windir%\system32\inetsrv\appcmd add apppool /name:nsokhkaen /managedRuntimeVersion:"" /managedPipelineMode:Integrated`
+3. Default Web Site → คลิกขวาโฟลเดอร์ `nsokhkaen` → **Convert to Application** (หรือ Add Application) → **Select…** เลือก pool `nsokhkaen`
+   — ถ้าใช้ DefaultAppPool แทน ให้เปลี่ยนชื่อบัญชีในข้อ 5 เป็น `IIS AppPool\DefaultAppPool`
+4. ผูกนามสกุล `.php` กับ PHP (Handler Mappings → Add Module Mapping: `*.php` · FastCgiModule · `C:\PHP\php-cgi.exe`)
    — ถ้าติดตั้ง PHP ผ่าน Web Platform Installer / PHP Manager จะทำให้แล้ว
 
 `web.config` ในโปรเจกต์ตั้งค่าเหล่านี้ให้แล้ว (ไม่ต้องทำเอง):
