@@ -71,3 +71,6 @@ a.dz-tile:hover { transform: translateY(-2px); box-shadow: 0 10px 24px color-mix
 .dz-scroll { scrollbar-width: thin; }
 @media (max-width: 1199px) { .dz-fix-l { height: 520px; } .dz-fix-r { height: auto; } .dz-fix-r > .dz-fix-p { height: 380px; flex: none; } }
 @media print { .dz-fix-l, .dz-fix-r, .dz-fix-r > .dz-fix-p { height: auto !important; } .dz-fix > .dz-scroll { overflow: visible; } .dz-scroll thead th, .dz-scroll tfoot td { position: static; } }
+/* โอนเปลี่ยนแปลงครั้งที่ … (คลิกดูรายการ) */
+.dz-transfer { display: block; height: 100%; padding: .6rem .8rem; border: 1px solid #e2e8f0; border-radius: 10px; background: #f8fafc; }
+.dz-transfer:hover { border-color: #93c5fd; background: #eff6ff; }

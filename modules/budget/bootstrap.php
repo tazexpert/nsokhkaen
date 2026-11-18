@@ -313,3 +313,33 @@ function bud_work_options(array $works, ?int $sel, string $empty = '— เล�
     }
     return $o . ($g !== null ? '</optgroup>' : '');
 }
+
+/**
+ * โอนเปลี่ยนแปลง: รายการ (รับเข้า/เบิกจ่าย) ที่ช่อง "รายการ" ขึ้นต้นด้วย "โอนเปลี่ยนแปลงครั้งที่ N/ปี" ของปีงบประมาณ
+ * คืน [N => ['n', 'year', 'label' => '3/2570', 'count', 'receive', 'spend', 'from', 'to', 'txns' => [...]]] เรียงตามครั้งที่
+ */
+function bud_transfers(int $fy): array
+{
+    $digits = ['๐' => '0', '๑' => '1', '๒' => '2', '๓' => '3', '๔' => '4', '๕' => '5', '๖' => '6', '๗' => '7', '๘' => '8', '๙' => '9'];
+    $st = db()->prepare("SELECT * FROM bud_txns WHERE fiscal_year = ? AND description LIKE '%โอนเปลี่ยนแปลง%' ORDER BY txn_date, id");
+    $st->execute([$fy]);
+    $out = [];
+    foreach ($st as $t) {
+        if (!preg_match('/โอนเปลี่ยนแปลง\s*ครั้งที่\s*([0-9]+)\s*(?:\/\s*([0-9]{2,4}))?/u', strtr($t['description'], $digits), $m)) {
+            continue;
+        }
+        $n = (int)$m[1];
+        $y = isset($m[2]) && $m[2] !== '' ? (int)$m[2] : $fy;
+        $y = $y < 100 ? $y + 2500 : $y;                     // 70 → 2570
+        $g = &$out[$n];
+        $g ??= ['n' => $n, 'year' => $y, 'label' => $n . '/' . $y, 'count' => 0, 'receive' => 0.0, 'spend' => 0.0, 'from' => $t['txn_date'], 'to' => $t['txn_date'], 'txns' => []];
+        $g['count']++;
+        $g[$t['txn_type'] === 'spend' ? 'spend' : 'receive'] += (float)$t['amount'];
+        $g['from'] = min($g['from'], $t['txn_date']);
+        $g['to'] = max($g['to'], $t['txn_date']);
+        $g['txns'][] = $t;
+        unset($g);
+    }
+    ksort($out);
+    return $out;
+}

@@ -570,7 +570,7 @@ function cal_modal_script(): string
   const box = document.getElementById('calEventModalContent');
   const loading = '<div class="modal-body text-center py-5 text-muted"><div class="spinner-border text-primary mb-2"></div><div>กำลังโหลด…</div></div>';
   document.addEventListener('click', ev => {
-    const a = ev.target.closest('.cal-table a[href*="event_view"], .cal-grid a[href*="event_view"]');
+    const a = ev.target.closest('.cal-table a[href*="event_view"], .cal-grid a[href*="event_view"], .cal-day-panel a[href*="event_view"]');
     if (!a || ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button !== 0 || typeof bootstrap === 'undefined') return;
     ev.preventDefault();
     box.innerHTML = loading;

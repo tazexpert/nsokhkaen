@@ -27,6 +27,29 @@ uasort($rank, fn($a, $b) => $b['receive'] <=> $a['receive']);
   </div>
 </div>
 
+<?php if ($transfers): ?>
+<div class="dz-card mb-3">
+  <div class="dz-card-h"><i class="bi bi-arrow-left-right text-primary"></i> โอนเปลี่ยนแปลง
+    <span class="ms-auto small fw-normal dz-muted"><?= count($transfers) ?> ครั้ง · คลิกเพื่อดูรายการ</span></div>
+  <div class="dz-card-b">
+    <div class="row g-2" data-reveal>
+      <?php foreach ($transfers as $i => $tr): ?>
+      <div class="col-sm-6 col-lg-4 col-xxl-3 reveal-item" style="--d:<?= min($i, 8) * 60 ?>ms">
+        <a class="dz-transfer dz-link" href="transfer?<?= h(http_build_query(['fy' => $fy, 'n' => $tr['n']])) ?>">
+          <div class="fw-semibold">โอนเปลี่ยนแปลงครั้งที่ <?= h($tr['label']) ?></div>
+          <div class="small dz-muted"><?= h(thai_date($tr['from'])) ?><?= $tr['to'] !== $tr['from'] ? ' – ' . h(thai_date($tr['to'])) : '' ?> · <?= (int)$tr['count'] ?> รายการ</div>
+          <div class="dz-num mt-1">
+            <?php if ($tr['receive']): ?><span style="color:<?= BUD_COLORS['receive'] ?>">ได้รับ <?= bud_money($tr['receive']) ?></span><?php endif; ?>
+            <?php if ($tr['spend']): ?><span class="ms-2" style="color:<?= BUD_COLORS['spend'] ?>">เบิกจ่าย <?= bud_money($tr['spend']) ?></span><?php endif; ?>
+          </div>
+        </a>
+      </div>
+      <?php endforeach; ?>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
 <div class="row g-3" data-reveal>
   <div class="col-xl-8 reveal-item">
     <div class="dz-card dz-fix dz-fix-l">

@@ -1,5 +1,5 @@
 <?php
-/** ปฏิทินรายเดือน: กิจกรรมของทุกคนในสำนักงาน (กิจกรรมที่ตนรับผิดชอบเน้นสี) */
+/** ปฏิทินรายเดือน: กิจกรรมของทุกคนในสำนักงาน (กิจกรรมที่ตนรับผิดชอบเน้นสี) · คลิกวันที่ = แผงสรุปรายวันด้านขวา (ใครมีกิจกรรมบ้าง) */
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/att_lib.php';
 $me = require_module_or_guest(CAL_MODULE);
@@ -32,6 +32,41 @@ if (!$guest) {
         // ยังไม่ได้รัน migration cal_attendance
     }
 }
+// สรุปรายวัน (คลิกวันที่ → แผงด้านขวา): 1. เวรสำนักงาน / เวรศาลากลาง · 2. กิจกรรมแยกตามคน (เรียงตามลำดับบุคลากร)
+$staffOrder = array_flip(array_keys(cal_users()));
+$nameOf = [];
+if ($allIds = array_unique(array_merge([], ...array_values($assignees)))) {
+    foreach (db()->query('SELECT id, full_name FROM core_users WHERE id IN (' . implode(',', array_map('intval', $allIds)) . ')') as $u) {
+        $nameOf[(int)$u['id']] = preg_replace('/\s+/u', ' ', trim($u['full_name']));
+    }
+}
+$dayInfo = [];
+foreach ($byDay as $d => $list) {
+    $info = ['duty' => [], 'guard' => [], 'people' => [], 'none' => []];
+    usort($list, fn($a, $b) => [(string)$a['start_time'], (int)$a['id']] <=> [(string)$b['start_time'], (int)$b['id']]);
+    foreach ($list as $e) {
+        $ids = $assignees[(int)$e['id']] ?? [];
+        $names = array_values(array_filter(array_map(fn($id) => $nameOf[$id] ?? null, $ids)));
+        if (cal_is_duty($e) || cal_is_guard($e)) {
+            $k = cal_is_duty($e) ? 'duty' : 'guard';
+            $info[$k] = array_values(array_unique(array_merge($info[$k], $names ?: [$e['title']])));
+            continue;
+        }
+        $item = ['id' => (int)$e['id'], 'title' => $e['title'], 'loc' => (string)$e['location'], 'priv' => cal_is_private($e),
+                 't' => ($e['end_date'] && $e['end_date'] !== $e['event_date'] ? cal_range_text($e) . ' · ' : '') . cal_time_text($e)];
+        if (!$ids) {
+            $info['none'][] = $item;
+        }
+        foreach ($ids as $id) {
+            $info['people'][$id]['name'] = $nameOf[$id] ?? ('#' . $id);
+            $info['people'][$id]['items'][] = $item;
+        }
+    }
+    uksort($info['people'], fn($a, $b) => [$staffOrder[$a] ?? PHP_INT_MAX, $a] <=> [$staffOrder[$b] ?? PHP_INT_MAX, $b]);
+    $info['people'] = array_values($info['people']);
+    $dayInfo[$d] = $info;
+}
+
 $ts = strtotime($first);
 $prev = date('Y-m', strtotime($first . ' -1 month'));
 $next = date('Y-m', strtotime($first . ' +1 month'));
@@ -61,7 +96,7 @@ require __DIR__ . '/header.php';
     <?php foreach (CAL_WEEKDAYS_SHORT as $i => $w): ?><div class="cal-wd<?= $i === 0 ? ' sun' : '' ?>"><?= $w ?></div><?php endforeach; ?>
     <?php for ($d = $gridStart; $d <= $gridEnd; $d = date('Y-m-d', strtotime($d . ' +1 day'))):
         $out = substr($d, 0, 7) !== $m; ?>
-      <div class="cal-cell<?= $out ? ' out' : '' ?><?= $d === $today ? ' today' : '' ?>">
+      <div class="cal-cell<?= $out ? ' out' : '' ?><?= $d === $today ? ' today' : '' ?>" data-date="<?= $d ?>" data-label="<?= h(cal_date_text($d)) ?>">
         <div class="cal-dnum"><?php if (cal_can('editor')): ?><a href="event_form?date=<?= $d ?>" class="cal-add" title="เพิ่มกิจกรรมวันนี้"><i class="bi bi-plus"></i></a><?php endif; ?><?= (int)substr($d, 8, 2) ?></div>
         <?php foreach ($byDay[$d] ?? [] as $e): $isMine = in_array($me['id'], $assignees[(int)$e['id']] ?? [], true); ?>
           <a href="event_view?id=<?= (int)$e['id'] ?>" class="cal-ev<?= cal_is_duty($e) ? ' duty' : '' ?><?= cal_is_guard($e) ? ' guard' : '' ?><?= $isMine ? ' mine' : '' ?>" title="<?= h(cal_time_text($e) . ' ' . $e['title'] . ($e['location'] ? ' @ ' . $e['location'] : '')) ?>">
@@ -75,5 +110,55 @@ require __DIR__ . '/header.php';
   </div>
   <div class="card-footer small text-muted"><?php if (!$guest): ?><span class="cal-ev mine d-inline-block px-2">งานของคุณ</span> <?php endif; ?><span class="cal-ev d-inline-block px-2">งานของผู้อื่น</span> <span class="cal-ev duty d-inline-block px-2">เวรสำนักงาน</span> <span class="cal-ev guard d-inline-block px-2">เวรศาลากลาง</span><?php if (!$guest): ?> <span class="cal-ev att-ev d-inline-block px-2"><i class="bi bi-lock-fill me-1"></i>ขาดราชการ/ลงเวลาไม่ครบ (เห็นเฉพาะคุณ)</span> <span class="cal-ev att-ev late d-inline-block px-2">มาสาย</span> <span class="cal-ev att-ev done d-inline-block px-2">รับรองการมาปฏิบัติราชการ</span><?php endif; ?> · คลิกกิจกรรมเพื่อดูรายละเอียด</div>
 </div>
+<div class="cal-day-panel d-none" id="dayPanel" role="dialog" aria-labelledby="dayPanelTitle">
+  <div class="cal-day-head" id="dayPanelHead" title="ลากเพื่อย้ายตำแหน่ง">
+    <i class="bi bi-grip-vertical text-muted"></i>
+    <div class="min-w-0 flex-grow-1"><div class="small text-muted">สรุปรายวัน · ใครมีกิจกรรมบ้าง</div><div class="fw-semibold text-truncate" id="dayPanelTitle"></div></div>
+    <button type="button" class="btn-close" id="dayPanelClose" aria-label="ปิด"></button>
+  </div>
+  <div class="cal-day-body" id="dayPanelBody"></div>
+</div>
+<script>
+(() => {
+  // คลิกวันที่ในปฏิทิน → แผงสรุปรายวัน (ลากย้ายได้ · เริ่มที่มุมบนขวา สูงเต็มจอ กว้าง 1/4)
+  const data = <?= json_encode($dayInfo, JSON_UNESCAPED_UNICODE) ?>;
+  const panel = document.getElementById('dayPanel'), body = document.getElementById('dayPanelBody'), head = document.getElementById('dayPanelHead');
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const item = it => `<a href="event_view?id=${it.id}" class="cal-day-item"><span class="t">${esc(it.t)}</span> ${it.priv ? '<i class="bi bi-lock-fill" title="ส่วนตัว"></i> ' : ''}${esc(it.title)}${it.loc ? `<span class="loc"> @ ${esc(it.loc)}</span>` : ''}</a>`;
+  let cur = null;
+  const open = cell => {
+    const d = data[cell.dataset.date] || { duty: [], guard: [], people: [], none: [] };
+    document.getElementById('dayPanelTitle').textContent = cell.dataset.label;
+    let html = `<div class="cal-day-sec"><div class="cal-day-h">1. เวรสำนักงาน</div><div>${d.duty.length ? d.duty.map(esc).join(', ') : '<span class="text-muted">-</span>'}</div>`
+      + (d.guard.length ? `<div class="mt-1"><span class="text-muted">เวรศาลากลาง:</span> ${d.guard.map(esc).join(', ')}</div>` : '') + '</div>';
+    html += `<div class="cal-day-sec"><div class="cal-day-h">2. ผู้มีกิจกรรม <span class="badge text-bg-primary">${d.people.length} คน</span></div>`
+      + (d.people.length ? d.people.map((p, i) => `<div class="cal-day-person"><div class="fw-semibold">${i + 1}. ${esc(p.name)}</div>${p.items.map(item).join('')}</div>`).join('')
+         : '<div class="text-muted">ไม่มีกิจกรรม</div>')
+      + (d.none.length ? `<div class="cal-day-person"><div class="fw-semibold text-muted">ไม่ระบุผู้รับผิดชอบ</div>${d.none.map(item).join('')}</div>` : '') + '</div>';
+    body.innerHTML = html;
+    panel.classList.remove('d-none');
+    cur?.classList.remove('cal-picked'); cur = cell; cell.classList.add('cal-picked');
+  };
+  document.querySelector('.cal-grid').addEventListener('click', ev => {
+    const cell = ev.target.closest('.cal-cell[data-date]');
+    if (!cell || ev.target.closest('a, button')) return;          // คลิกกิจกรรม/ปุ่มเพิ่ม = ทำงานตามเดิม
+    open(cell);
+  });
+  document.getElementById('dayPanelClose').addEventListener('click', () => { panel.classList.add('d-none'); cur?.classList.remove('cal-picked'); cur = null; });
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !panel.classList.contains('d-none') && !document.querySelector('.modal.show')) document.getElementById('dayPanelClose').click(); });
+  // ลากย้าย (เมาส์/นิ้ว) — ไม่ให้หลุดขอบจอ
+  head.addEventListener('pointerdown', ev => {
+    if (ev.target.closest('button')) return;
+    const r = panel.getBoundingClientRect(), dx = ev.clientX - r.left, dy = ev.clientY - r.top;
+    head.setPointerCapture(ev.pointerId); panel.classList.add('dragging');
+    const move = e => {
+      const x = Math.min(Math.max(0, e.clientX - dx), innerWidth - r.width), y = Math.min(Math.max(0, e.clientY - dy), innerHeight - 60);
+      Object.assign(panel.style, { left: x + 'px', top: y + 'px', right: 'auto' });
+    };
+    const up = () => { head.removeEventListener('pointermove', move); head.removeEventListener('pointerup', up); panel.classList.remove('dragging'); };
+    head.addEventListener('pointermove', move); head.addEventListener('pointerup', up);
+  });
+})();
+</script>
 <?= cal_modal_script() ?>
 <?php require __DIR__ . '/footer.php'; ?>

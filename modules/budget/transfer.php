@@ -1,0 +1,71 @@
+<?php
+/**
+ * รายละเอียดโอนเปลี่ยนแปลงครั้งที่ N/ปี (คลิกจากภาพรวมงบประมาณ)
+ *   รายการที่ช่อง "รายการ" ขึ้นต้นด้วย "โอนเปลี่ยนแปลงครั้งที่ N/ปี" — แสดง วันที่ · ที่เอกสาร · หมวด · รายการ + รายละเอียด · ได้รับ / เบิกจ่าย
+ */
+require_once __DIR__ . '/bootstrap.php';
+require_module(BUD_MODULE, 'viewer');
+$fy = bud_fy_param();
+$transfers = bud_transfers($fy);
+$n = int_param('n');
+if (!isset($transfers[$n])) {
+    $n = (int)(array_key_first($transfers) ?? 0);
+}
+$tr = $transfers[$n] ?? null;
+$sources = bud_sources(true);
+
+$pageTitle = $tr ? 'โอนเปลี่ยนแปลงครั้งที่ ' . $tr['label'] : 'โอนเปลี่ยนแปลง ปีงบประมาณ ' . $fy;
+$active = 'dashboard';
+$pageActions = '<a href="./?fy=' . $fy . '" class="btn btn-light"><i class="bi bi-arrow-left"></i> ภาพรวมงบประมาณ</a>'
+    . '<button type="button" class="btn btn-outline-secondary" onclick="print()"><i class="bi bi-printer"></i> พิมพ์</button>';
+require __DIR__ . '/header.php';
+?>
+<?php if (!$tr): ?>
+  <div class="alert alert-info">ปีงบประมาณ <?= $fy ?> ยังไม่มีรายการ "โอนเปลี่ยนแปลงครั้งที่ …"</div>
+<?php else: ?>
+<ul class="nav nav-pills mb-3 no-print">
+  <?php foreach ($transfers as $x): ?>
+    <li class="nav-item"><a class="nav-link<?= $x['n'] === $n ? ' active' : '' ?>" href="transfer?<?= h(http_build_query(['fy' => $fy, 'n' => $x['n']])) ?>">ครั้งที่ <?= h($x['label']) ?></a></li>
+  <?php endforeach; ?>
+</ul>
+
+<div class="row g-3 mb-3" data-reveal>
+  <?php foreach ([['จำนวนรายการ', number_format($tr['count']), 'bi-list-ol', '#475569'],
+                  ['ได้รับ (บาท)', bud_money($tr['receive']), 'bi-box-arrow-in-down', BUD_COLORS['receive']],
+                  ['เบิกจ่าย (บาท)', bud_money($tr['spend']), 'bi-box-arrow-up', BUD_COLORS['spend']]] as $i => [$lbl, $v, $ic, $c]): ?>
+    <div class="col-sm-4 reveal-item" style="--d:<?= $i * 70 ?>ms">
+      <div class="card h-100"><div class="card-body py-2">
+        <div class="small text-muted"><i class="bi <?= $ic ?>" style="color:<?= $c ?>"></i> <?= $lbl ?></div>
+        <div class="fs-4 fw-bold" style="color:<?= $c ?>"><?= $v ?></div>
+      </div></div>
+    </div>
+  <?php endforeach; ?>
+</div>
+
+<div class="card">
+  <div class="card-header"><strong>โอนเปลี่ยนแปลงครั้งที่ <?= h($tr['label']) ?></strong>
+    <span class="small text-muted ms-2"><?= h(thai_date($tr['from'])) ?><?= $tr['to'] !== $tr['from'] ? ' – ' . h(thai_date($tr['to'])) : '' ?></span></div>
+  <div class="table-responsive">
+    <table class="table table-sm align-middle mb-0 bud-transfer">
+      <thead class="table-light"><tr><th style="width:8.5em">วันที่</th><th>ที่เอกสาร</th><th>หมวด</th><th>รายการ</th>
+        <th class="text-end">ได้รับ</th><th class="text-end">เบิกจ่าย</th><?php if (bud_can('editor')): ?><th class="no-print"></th><?php endif; ?></tr></thead>
+      <tbody>
+      <?php foreach ($tr['txns'] as $t): $s = $sources[bud_source_key($t)] ?? null; $sp = $t['txn_type'] === 'spend'; ?>
+        <tr>
+          <td class="text-nowrap"><?= h(thai_date($t['txn_date'])) ?></td>
+          <td class="font-monospace text-nowrap"><?= h($t['doc_no']) ?></td>
+          <td class="small"><?php if ($s): ?><span class="bud-src" style="--c:<?= h($s['color']) ?>"><?= h($s['label']) ?></span><?php endif; ?></td>
+          <td><?= h($t['description']) ?><?php if ((string)$t['detail'] !== ''): ?><div class="small text-muted"><?= nl2br(h($t['detail'])) ?></div><?php endif; ?></td>
+          <td class="text-end text-nowrap"><?= $sp ? '' : bud_money($t['amount']) ?></td>
+          <td class="text-end text-nowrap"><?= $sp ? bud_money($t['amount']) : '' ?></td>
+          <?php if (bud_can('editor')): ?><td class="no-print"><a href="txn_form?id=<?= (int)$t['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a></td><?php endif; ?>
+        </tr>
+      <?php endforeach; ?>
+      </tbody>
+      <tfoot><tr class="table-light fw-bold"><td colspan="4" class="text-end">รวม</td>
+        <td class="text-end"><?= bud_money($tr['receive']) ?></td><td class="text-end"><?= bud_money($tr['spend']) ?></td><?php if (bud_can('editor')): ?><td class="no-print"></td><?php endif; ?></tr></tfoot>
+    </table>
+  </div>
+</div>
+<?php endif; ?>
+<?php require __DIR__ . '/footer.php'; ?>

@@ -177,3 +177,21 @@ button.att-chip:hover { outline: 2px solid #1d4ed8; }
 .cal-ev.att-ev.done:hover { background: #bfdbfe; }
 .cal-ev.att-ev.late { background: #fef3c7; color: #b45309; box-shadow: inset 3px 0 0 #f59e0b; }
 .cal-ev.att-ev.late:hover { background: #fde68a; }
+/* แผงสรุปรายวัน (คลิกวันที่ในปฏิทิน) — มุมบนขวา สูงเต็มจอ กว้าง 1/4 · ลากย้ายได้ */
+.cal-grid .cal-cell[data-date] { cursor: pointer; }
+.cal-cell.cal-picked { box-shadow: inset 0 0 0 2px var(--brand, #0284c7); }
+.cal-day-panel { position: fixed; top: 0; right: 0; width: 25vw; min-width: 320px; height: 100vh; z-index: 1045; display: flex; flex-direction: column;
+  background: #fff; border-left: 1px solid #e2e8f0; box-shadow: -8px 0 24px rgba(15, 23, 42, .12); }
+.cal-day-panel.dragging { user-select: none; opacity: .95; }
+.cal-day-head { display: flex; align-items: center; gap: .5rem; padding: .7rem .9rem; border-bottom: 1px solid #e2e8f0; background: #f8fafc; cursor: move; touch-action: none; }
+.cal-day-body { flex: 1; overflow-y: auto; padding: .5rem .9rem 1rem; }
+.cal-day-sec { padding: .5rem 0; border-bottom: 1px dashed #e2e8f0; }
+.cal-day-sec:last-child { border-bottom: 0; }
+.cal-day-h { font-weight: 700; margin-bottom: .35rem; }
+.cal-day-person { margin: .45rem 0 .6rem; }
+.cal-day-item { display: block; padding: .15rem 0 .15rem .9rem; color: inherit; text-decoration: none; font-size: .92rem; }
+.cal-day-item:hover { color: var(--brand, #0284c7); }
+.cal-day-item .t { color: #64748b; white-space: nowrap; }
+.cal-day-item .loc { color: #64748b; }
+@media (max-width: 767.98px) { .cal-day-panel { width: 100vw; min-width: 0; } }
+@media print { .cal-day-panel { display: none !important; } }
