@@ -7,7 +7,7 @@
  *   'title' => หัวข้อ, 'text' => รายละเอียด, 'href' => ลิงก์, 'time' => 'Y-m-d H:i:s'
  *   'sticky' => true สำหรับเรื่องที่ยังรอดำเนินการ (รออนุมัติ เกินกำหนด ฯลฯ) — ไม่ถูกซ่อนเมื่อผู้ดูแล "ล้างการแจ้งเตือน"
  *   'icon'  => ไอคอน Bootstrap เช่น 'bi-box-seam', 'color' => success|warning|danger|primary|info|secondary
- * ข้อความใหม่ในกล่องจดหมาย (core/messages.php) รวมอยู่ด้วยเสมอ
+ * ข้อความใหม่ในกล่องจดหมาย (core/messages.php) และข้อความที่แชร์ถึงผู้ใช้ (core/shares.php) รวมอยู่ด้วยเสมอ
  * ระบบกลางเรียกเฉพาะระบบที่ผู้ใช้มีสิทธิ์ และนับ "ยังไม่อ่าน" จากเวลาที่ใหม่กว่า core_users.notif_seen_at
  */
 
@@ -28,6 +28,13 @@ function user_notifications(?array $user = null): array
         }
     } catch (Throwable $e) {
         error_log('notifications messages: ' . $e->getMessage());
+    }
+    try {                                      // ระบบกลาง: ข้อความที่แชร์ถึงผู้ใช้ (core/shares.php)
+        foreach (share_notifications($user) as $n) {
+            $items[] = $n + ['icon' => 'bi-bell', 'color' => 'info', 'text' => '', 'href' => '#'];
+        }
+    } catch (Throwable $e) {
+        error_log('notifications shares: ' . $e->getMessage());     // ยังไม่ได้รัน migration 20261209
     }
     foreach (accessible_modules($user) as $m) {
         $file = APP_ROOT . '/modules/' . $m['key'] . '/notifications.php';

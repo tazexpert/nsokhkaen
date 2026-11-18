@@ -8,6 +8,8 @@
 !/uploads/inventory/loans/web.config
 !/uploads/payslip/web.config
 !/uploads/messages/web.config
+!/uploads/shares/.htaccess
+!/uploads/shares/web.config
 !/uploads/**/
 !/uploads/**/.gitkeep
 /libs/phpqrcode/cache/*

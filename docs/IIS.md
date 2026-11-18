@@ -64,7 +64,7 @@
 - หน้าแรก `index.php` · ปิดการแสดงรายการไฟล์ในโฟลเดอร์
 - URL ไม่มี `.php` (ลิงก์เดิม/QR Code ที่มี `.php` ยังใช้ได้ — GET ถูกพาไป URL ใหม่)
 - ขนาดคำขอสูงสุด 64 MB (ค่าเริ่มต้น IIS 30 MB)
-- ปิดโฟลเดอร์ `core` `libs` `database` `storage` `tools` `docs` `uploads/payslip` `uploads/inventory/loans` `uploads/messages`
+- ปิดโฟลเดอร์ `core` `libs` `database` `storage` `tools` `docs` `uploads/payslip` `uploads/inventory/loans` `uploads/messages` `uploads/shares`
   และห้ามรันสคริปต์ใน `uploads` · ห้ามเปิด `config.php` `config.local.php` `.sql` `.md` `.log` `.ini`
 - ชนิดไฟล์ฟอนต์ `.ttf` `.woff2` และรูป `.webp`
 

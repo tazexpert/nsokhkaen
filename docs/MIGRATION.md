@@ -279,6 +279,7 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 | `20261203_budget_item_drop_name.sql` | ระบบงบประมาณ: ลบ `bud_items.name` (ชื่อหมวดประกอบจาก งบรายจ่าย (รายการ) ค่าใช้จ่าย) — **ต้องรัน 20261202 ก่อน** |
 | `20261205_cal_drop_ical_tokens.sql` | ปฏิทิน: ลบตาราง `cal_ical_tokens` (ลิงก์สมัครรับที่ยกเลิกแล้ว — ส่งออก "งานของฉัน" เป็นไฟล์ .ics อย่างเดียว) · รันได้แม้ไม่เคยรัน 20261204 |
 | `20261206_budget_utility_activity.sql` | ระบบงบประมาณ: หมวด งบดำเนินงาน (ค่าสาธารณูปโภค) ที่ไม่ระบุค่าใช้จ่าย → ค่าไฟฟ้า ค่าไปรษณีย์ |
+| `20261209_core_shares.sql` | แชร์ข้อความ (`core_shares`, `core_share_users`, `core_share_files`) — เมนูบัญชีผู้ใช้ → แชร์ข้อความ · ไฟล์แนบเก็บที่ `uploads/shares/` (ให้เว็บเซิร์ฟเวอร์เขียนได้) |
 | `20261208_payslip_loan_gsb.sql` | สลิปเงินเดือน: รายการหักข้อ 7 เงินกู้ธนาคารออมสิน (`pay_slips.loan_gsb`) · นำเข้าไฟล์ได้จากคอลัมน์ "เงินกู้ธนาคารออมสิน" |
 | `20261207_cal_rota.sql` | ปฏิทิน: การจัดเวรกิจกรรม (`cal_rota_members`, `cal_rota_turns`) — ลำดับข้าราชการ 6 คน + กลุ่มกิจกรรม 3 กลุ่ม (ใส่รายชื่อเริ่มต้นให้เมื่อยังว่าง) |
 
@@ -326,6 +327,7 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261206_budget_utility_activity.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261207_cal_rota.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261208_payslip_loan_gsb.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261209_core_shares.sql
 ```
 
 หลังอัปเดต:

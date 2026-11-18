@@ -20,6 +20,7 @@ require_once __DIR__ . '/auth.php';
 require_once __DIR__ . '/notifications.php';
 require_once __DIR__ . '/richtext.php';
 require_once __DIR__ . '/messages.php';
+require_once __DIR__ . '/shares.php';
 require_once __DIR__ . '/links.php';
 require_once __DIR__ . '/projects.php';
 
