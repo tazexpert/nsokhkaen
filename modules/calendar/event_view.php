@@ -57,9 +57,19 @@ ob_start();
 $detail = ob_get_clean();
 if ($modal) {                     // popup: หัว + เนื้อหา + ปุ่ม (ไม่มี layout)
     $base = module_url(CAL_MODULE);
-    echo '<div class="modal-header"><h5 class="modal-title">' . (cal_is_duty($e) ? '<i class="bi bi-shield-check text-success"></i> ' : (cal_is_guard($e) ? '<i class="bi bi-shield-shaded text-danger"></i> ' : '<i class="bi bi-calendar-event text-primary"></i> '))
-        . h($e['title']) . '</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button></div>'
-        . '<div class="modal-body">' . $detail . '</div>'
+    // หัวแบบโปสเตอร์: สีตามประเภท (ของฉัน บานเย็น · เวรสำนักงาน เขียว · เวรศาลากลาง แดง · อื่น ๆ ฟ้า) + บล็อกวันที่
+    $isMine = in_array($me['id'], $assignedIds, true);      // ผู้รับผิดชอบทั้งหมด (เหมือนสีในปฏิทิน)
+    [$ec, $kind, $icon] = cal_is_duty($e) ? ['#16a34a', 'เวรสำนักงาน', 'bi-shield-check'] : (cal_is_guard($e) ? ['#dc2626', 'เวรศาลากลาง', 'bi-shield-shaded']
+        : ($isMine ? ['#db2777', 'งานของคุณ', 'bi-person-check'] : ['#0284c7', 'กิจกรรม', 'bi-calendar-event']));
+    $mon = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'][(int)substr($e['event_date'], 5, 2)];
+    $dayNo = (int)substr($e['event_date'], 8, 2) . ($e['end_date'] && $e['end_date'] !== $e['event_date'] && substr($e['end_date'], 0, 7) === substr($e['event_date'], 0, 7) ? '–' . (int)substr($e['end_date'], 8, 2) : '');
+    $sub = cal_is_shift($e) ? cal_range_text($e) : cal_range_text($e) . ' · ' . cal_time_text($e) . ($e['location'] ? ' · ' . $e['location'] : '');
+    echo '<div class="modal-header ev-poster" style="--ec:' . $ec . '">'
+        . '<div class="ev-date"><div class="d">' . h($dayNo) . '</div><div class="m">' . h($mon) . '</div></div>'
+        . '<div class="min-w-0 flex-grow-1"><div class="ev-kind"><i class="bi ' . $icon . '"></i> ' . $kind . (cal_is_private($e) ? ' · <i class="bi bi-lock-fill"></i> ส่วนตัว' : '') . '</div>'
+        . '<h5 class="modal-title">' . h($e['title']) . '</h5><div class="ev-sub">' . h($sub) . '</div></div>'
+        . '<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="ปิด"></button></div>'
+        . '<div class="modal-body ev-poster-body" style="--ec:' . $ec . '">' . $detail . '</div>'
         . '<div class="modal-footer">'
         . '<a href="' . h($base . '?m=' . substr($e['event_date'], 0, 7)) . '" class="btn btn-light me-auto"><i class="bi bi-calendar3"></i> ดูในปฏิทิน</a>'
         . (cal_can_edit($e) ? '<a href="' . h($base . 'event_form?id=' . (int)$e['id']) . '" class="btn btn-outline-primary"><i class="bi bi-pencil"></i> แก้ไข</a>' : '')

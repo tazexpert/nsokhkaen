@@ -13,13 +13,16 @@
 .cal-cell.today .cal-dnum { color: var(--brand); }
 .cal-add { margin-right: auto; color: #94a3b8; opacity: 0; text-decoration: none; line-height: 1; }
 .cal-cell:hover .cal-add { opacity: 1; }
-.cal-ev { display: block; font-size: .78rem; line-height: 1.3; padding: 2px 5px 2px 8px; margin-bottom: 3px; border-radius: 5px; background: #dbeafe;
-  color: #1e3a8a; font-weight: 500; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  box-shadow: inset 4px 0 0 var(--ev-bar, #2563eb); }        /* แถบสีซ้าย = ประเภทกิจกรรม (ให้แยกออกจากพื้นขาวชัด) */
-.cal-ev:hover { background: #bfdbfe; color: #172554; }
-.cal-ev.mine { --ev-bar: #d97706; background: #fde68a; color: #78350f; font-weight: 700; }
-.cal-ev.mine:hover { background: #fcd34d; color: #451a03; }
-.cal-ev .t { font-variant-numeric: tabular-nums; margin-right: 3px; font-weight: 700; }
+/* แถบกิจกรรมแบบโปสเตอร์: พื้นขาว กรอบสี ชื่อตัวหนาสีเดียวกัน · เวลาอยู่ในบล็อกสีทึบตัวอักษรขาว (--ec = สีประเภท)
+   เต็มสี (.mine งานของฉัน · ขาดราชการ) = เด่นที่สุด */
+.cal-ev { --ec: #0284c7; display: block; font-size: .78rem; line-height: 1.35; padding: 1px 6px 1px 9px; margin-bottom: 3px; border-radius: 6px;
+  background: #fff; color: var(--ec); font-weight: 700; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  border: 1.5px solid var(--ec); box-shadow: inset 4px 0 0 var(--ec); }
+.cal-ev:hover { background: color-mix(in srgb, var(--ec) 12%, #fff); color: var(--ec); }
+.cal-ev .t { display: inline-block; font-variant-numeric: tabular-nums; margin: -1px 5px -1px -9px; padding: 1px 5px 1px 7px; background: var(--ec); color: #fff; }
+.cal-ev.mine { --ec: #db2777; background: var(--ec); color: #fff; }                    /* งานของฉัน: บานเย็นเต็มสี */
+.cal-ev.mine:hover { background: color-mix(in srgb, var(--ec) 85%, #000); color: #fff; }
+.cal-ev.mine .t { background: rgba(0, 0, 0, .2); }
 @media (max-width: 767.98px) {
   .cal-cell { min-height: 70px; padding: 2px; }
   .cal-ev { font-size: .68rem; padding: 1px 3px 1px 6px; }
@@ -52,13 +55,11 @@
 .cal-table tr.cal-duty td:first-child { box-shadow: inset 4px 0 0 #10b981; }
 .cal-table tr.cal-duty a { color: #047857; }
 .cal-table tr.cal-duty.cal-mine td { background: #d1fae5; }
-.cal-ev.duty { --ev-bar: #16a34a; background: #bbf7d0; color: #14532d; }
-.cal-ev.duty:hover { background: #86efac; color: #052e16; }
-.cal-ev.duty.mine { background: #4ade80; color: #052e16; }
+.cal-ev.duty { --ec: #16a34a; }
+.cal-ev.duty.mine { background: var(--ec); color: #fff; }
 /* เวรศาลากลาง (จากแผนการปฏิบัติงาน) — ในตารางไม่ไฮไลต์แถว (ปฏิทินรายเดือนใช้สีป้าย) */
-.cal-ev.guard { --ev-bar: #e11d48; background: #fecdd3; color: #881337; }
-.cal-ev.guard:hover { background: #fda4af; color: #4c0519; }
-.cal-ev.guard.mine { background: #fb7185; color: #4c0519; }
+.cal-ev.guard { --ec: #dc2626; }
+.cal-ev.guard.mine { background: var(--ec); color: #fff; }
 /* กิจกรรมวันนี้ที่จบแล้ว: ยังแสดงจนสิ้นวัน แต่จางลง */
 .cal-table tr.cal-done td { opacity: .6; }
 .cal-table tr.cal-done td:last-child { opacity: 1; }
@@ -173,39 +174,62 @@ button.att-chip { border: 0; cursor: pointer; }
 button.att-chip:hover { outline: 2px solid #1d4ed8; }
 @media print { .att-chip { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 /* รายการเวลาปฏิบัติราชการส่วนตัวในปฏิทิน (เห็นเฉพาะเจ้าของ) */
-.cal-ev.att-ev { --ev-bar: #dc2626; background: #fecaca; color: #991b1b; font-weight: 700; }
-.cal-ev.att-ev:hover { background: #fca5a5; color: #7f1d1d; }
-.cal-ev.att-ev.done { --ev-bar: #4f46e5; background: #e0e7ff; color: #3730a3; font-weight: 600; }      /* รับรองแล้ว: ม่วงคราม (ไม่ซ้ำฟ้าของกิจกรรม) */
-.cal-ev.att-ev.done:hover { background: #c7d2fe; }
-.cal-ev.att-ev.late { --ev-bar: #ea580c; background: #fed7aa; color: #9a3412; }                       /* มาสาย: ส้ม (ไม่ซ้ำเหลืองของงานของฉัน) */
-.cal-ev.att-ev.late:hover { background: #fdba74; }
+.cal-ev.att-ev { --ec: #b91c1c; background: var(--ec); color: #fff; }                 /* ขาดราชการ/ลงเวลาไม่ครบ: แดงเข้มเต็มสี */
+.cal-ev.att-ev:hover { background: color-mix(in srgb, var(--ec) 85%, #000); color: #fff; }
+.cal-ev.att-ev.done { --ec: #7c3aed; background: #fff; color: var(--ec); }            /* รับรองแล้ว: ม่วง */
+.cal-ev.att-ev.late { --ec: #ea580c; background: #fff; color: var(--ec); }            /* มาสาย: ส้ม */
+.cal-ev.att-ev.done:hover, .cal-ev.att-ev.late:hover { background: color-mix(in srgb, var(--ec) 12%, #fff); color: var(--ec); }
 /* แผงสรุปรายวัน (คลิกวันที่ในปฏิทิน) — การ์ดลอยมุมบนขวา สูงเกือบเต็มจอ กว้าง 1/4 (col-3) ไม่ต่ำกว่า 400px · ลากย้ายได้ */
 .cal-grid .cal-cell[data-date] { cursor: pointer; }
 .cal-cell.cal-picked { box-shadow: inset 0 0 0 2px var(--brand, #0284c7); }
 .cal-day-panel { position: fixed; top: 8px; right: 8px; width: 25vw; min-width: 400px; height: calc(100vh - 16px); z-index: 1045; display: flex; flex-direction: column;
   background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 18px 48px rgba(2, 132, 199, .28), 0 2px 8px rgba(15, 23, 42, .12); }
 .cal-day-panel.dragging { user-select: none; opacity: .96; }
-.cal-day-head { display: flex; align-items: center; gap: .6rem; padding: .85rem 1rem; color: #fff; cursor: move; touch-action: none;
-  background: linear-gradient(135deg, #0369a1, #0284c7 55%, #38bdf8); }
-.cal-day-head .small { color: rgba(255, 255, 255, .85) !important; }
+.cal-day-head { display: flex; align-items: center; gap: .7rem; padding: .85rem 1rem; color: #fff; cursor: move; touch-action: none;
+  background: linear-gradient(120deg, #6d28d9, #c026d3 55%, #db2777); }      /* สดกว่าปฏิทิน: ม่วง → บานเย็น */
+.cal-day-head .small { color: rgba(255, 255, 255, .9) !important; }
 .cal-day-head .bi-grip-vertical { color: rgba(255, 255, 255, .8) !important; }
-.cal-day-head #dayPanelTitle { font-size: 1.1rem; }
-.cal-day-body { flex: 1; overflow-y: auto; padding: .9rem; background: #f8fafc; display: flex; flex-direction: column; gap: .8rem; }
-.cal-day-sec { background: #fff; border-radius: 12px; overflow: hidden; border: 1px solid var(--sc-bd); box-shadow: 0 1px 3px rgba(15, 23, 42, .05); }
-.cal-day-sec.duty { --sc: #059669; --sc-bg: #ecfdf5; --sc-bd: #a7f3d0; }
-.cal-day-sec.people { --sc: #2563eb; --sc-bg: #eff6ff; --sc-bd: #bfdbfe; }
-.cal-day-h { display: flex; align-items: center; gap: .45rem; padding: .5rem .8rem; font-weight: 700; color: #fff; background: var(--sc); }
-.cal-day-h .badge { background: rgba(255, 255, 255, .25) !important; color: #fff; }
-.cal-day-c { padding: .6rem .8rem; background: var(--sc-bg); }
-.cal-day-guard { margin-top: .35rem; padding-top: .35rem; border-top: 1px dashed #a7f3d0; color: #9f1239; }
-.cal-day-person { background: #fff; border-left: 4px solid var(--sc); border-radius: 8px; padding: .45rem .6rem; margin-bottom: .5rem; box-shadow: 0 1px 2px rgba(15, 23, 42, .06); }
+.cal-day-head #dayPanelTitle { font-size: 1.1rem; font-weight: 800; }
+.cal-day-date { flex: none; min-width: 58px; padding: .3rem .45rem; border-radius: 12px; background: #fff; color: #c026d3; text-align: center; line-height: 1.05;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .18); }
+.cal-day-date .d { font-size: 1.6rem; font-weight: 800; }
+.cal-day-date .m { font-size: .8rem; font-weight: 700; }
+.cal-day-body { flex: 1; overflow-y: auto; padding: .9rem; background: #faf5ff; display: flex; flex-direction: column; gap: .8rem; }
+.cal-day-sec { background: #fff; border-radius: 12px; overflow: hidden; border: 2px solid var(--sc); box-shadow: 0 2px 8px rgba(15, 23, 42, .08); }
+.cal-day-sec.duty { --sc: #16a34a; }
+.cal-day-sec.people { --sc: #6d28d9; }
+.cal-day-h { display: flex; align-items: center; gap: .45rem; padding: .55rem .8rem; font-weight: 800; color: #fff; background: var(--sc); letter-spacing: .01em; }
+.cal-day-h .badge { background: #fff !important; color: var(--sc); }
+.cal-day-c { padding: .65rem .75rem; }
+.cal-day-sec.duty .cal-day-c { font-weight: 700; color: #166534; }
+.cal-day-guard { margin-top: .35rem; padding-top: .35rem; border-top: 1px dashed #bbf7d0; color: #dc2626; }
+/* รายคน: การ์ดสีวนตามลำดับ (แดง ส้ม บานเย็น ฟ้า ม่วง เขียว) — บล็อกสีทึบซ้าย + ชื่อสีเดียวกัน */
+.cal-day-person { --pc: #ef4444; display: flex; background: #fff; border: 2px solid var(--pc); border-radius: 10px; overflow: hidden; margin-bottom: .55rem; }
 .cal-day-person:last-child { margin-bottom: 0; }
-.cal-day-person.none { border-left-color: #94a3b8; }
-.cal-day-name { display: flex; align-items: center; gap: .45rem; font-weight: 600; }
-.cal-day-no { flex: none; width: 1.45rem; height: 1.45rem; border-radius: 50%; display: grid; place-items: center; font-size: .75rem; color: #fff; background: var(--sc); }
-.cal-day-item { display: block; padding: .15rem 0 .1rem 1.9rem; color: inherit; text-decoration: none; font-size: .92rem; }
-.cal-day-item:hover { color: var(--sc, #0284c7); }
-.cal-day-item .t { color: #0369a1; font-weight: 600; white-space: nowrap; }
+.cal-day-person:nth-child(6n+2) { --pc: #f97316; }
+.cal-day-person:nth-child(6n+3) { --pc: #c026d3; }
+.cal-day-person:nth-child(6n+4) { --pc: #0891b2; }
+.cal-day-person:nth-child(6n+5) { --pc: #6d28d9; }
+.cal-day-person:nth-child(6n+6) { --pc: #65a30d; }
+.cal-day-person.none { --pc: #64748b; }
+.cal-day-no { flex: none; width: 2.4rem; display: grid; place-items: center; font-size: 1.15rem; font-weight: 800; color: #fff; background: var(--pc); }
+.cal-day-pbody { min-width: 0; flex: 1; padding: .4rem .6rem; }
+.cal-day-name { font-weight: 800; color: var(--pc); }
+.cal-day-item { display: block; padding: .1rem 0; color: #334155; text-decoration: none; font-size: .9rem; }
+.cal-day-item:hover { color: var(--pc); }
+.cal-day-item .t { display: inline-block; padding: 0 .35rem; margin-right: .2rem; border-radius: 4px; color: #fff; background: var(--pc); font-size: .8rem; font-weight: 700; white-space: nowrap; }
 .cal-day-item .loc { color: #64748b; }
 @media (max-width: 767.98px) { .cal-day-panel { top: 0; right: 0; width: 100vw; min-width: 0; height: 100vh; border-radius: 0; } }
 @media print { .cal-day-panel { display: none !important; } }
+/* หน้าต่างรายละเอียดกิจกรรม (คลิกรายการ) — หัวแบบโปสเตอร์: บล็อกวันที่ + แถบสีตามประเภท */
+.ev-poster { align-items: center; gap: .9rem; color: #fff; border-bottom: 0; background: linear-gradient(120deg, var(--ec), color-mix(in srgb, var(--ec) 70%, #fff)); }
+.ev-poster .ev-date { flex: none; min-width: 64px; padding: .35rem .5rem; border-radius: 12px; background: #fff; color: var(--ec); text-align: center; line-height: 1.05;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, .15); }
+.ev-poster .ev-date .d { font-size: 1.7rem; font-weight: 800; }
+.ev-poster .ev-date .m { font-size: .85rem; font-weight: 700; }
+.ev-poster .ev-kind { font-size: .8rem; font-weight: 600; opacity: .92; }
+.ev-poster .modal-title { font-weight: 800; line-height: 1.25; }
+.ev-poster .ev-sub { font-size: .88rem; opacity: .95; }
+.ev-poster-body .card { border: 1.5px solid color-mix(in srgb, var(--ec) 35%, #fff); }
+.ev-poster-body .card-header { background: color-mix(in srgb, var(--ec) 10%, #fff); color: var(--ec); }
+.ev-poster-body dt { color: var(--ec); }
