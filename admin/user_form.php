@@ -154,6 +154,7 @@ $headExtra = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpick
     . '<link href="' . h(asset_v('modules/calendar/assets/css/calendar.css')) . '" rel="stylesheet">';
 // ตำแหน่งที่ใช้บ่อย (แนะนำในช่องตำแหน่งเพิ่มเติม)
 $posSuggest = array_merge(['สถิติจังหวัด' . preg_replace('/^สำนักงานสถิติจังหวัด/u', '', ORG_NAME)], array_map(fn($g) => 'ผู้อำนวยการ' . $g, array_values(work_groups())));
+$bodyClass = trim(($bodyClass ?? '') . ' mod-theme theme-admin');   // ผู้ดูแลระบบ: สีน้ำเงินเดียวกับเมนูหลัก
 require APP_ROOT . '/core/layout/header.php';
 ?>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>

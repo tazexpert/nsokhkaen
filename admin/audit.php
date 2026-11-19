@@ -105,6 +105,7 @@ if ($tab === 'stats') {
 
 $pageTitle = 'บันทึกการใช้งาน';
 $active = 'audit';
+$bodyClass = trim(($bodyClass ?? '') . ' mod-theme theme-admin');   // ผู้ดูแลระบบ: สีน้ำเงินเดียวกับเมนูหลัก
 require APP_ROOT . '/core/layout/header.php';
 $qs = fn(array $p) => h(url('admin/audit?' . http_build_query(array_filter($p + ['period' => $period !== '30' ? $period : null, 'sort' => $sort !== 'staff' ? $sort : null]))));
 ?>

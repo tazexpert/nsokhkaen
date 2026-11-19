@@ -117,6 +117,7 @@ $auditInfo = db()->query('SELECT COUNT(*) n, MIN(created_at) first_at FROM core_
 
 $pageTitle = 'ตั้งค่าระบบ';
 $active = 'settings';
+$bodyClass = trim(($bodyClass ?? '') . ' mod-theme theme-admin');   // ผู้ดูแลระบบ: สีน้ำเงินเดียวกับเมนูหลัก
 require APP_ROOT . '/core/layout/header.php';
 ?>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>

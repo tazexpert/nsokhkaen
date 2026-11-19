@@ -64,6 +64,7 @@ $mods = modules();
 $pageTitle = 'ผู้ใช้งานและสิทธิ์';
 $active = 'users';
 $pageActions = '<a href="' . h(url('staff')) . '" class="btn btn-outline-primary"><i class="bi bi-person-lines-fill"></i> บุคลากรสถิติขอนแก่น</a>';
+$bodyClass = trim(($bodyClass ?? '') . ' mod-theme theme-admin');   // ผู้ดูแลระบบ: สีน้ำเงินเดียวกับเมนูหลัก
 require APP_ROOT . '/core/layout/header.php';
 ?>
 <div class="card">

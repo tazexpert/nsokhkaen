@@ -87,6 +87,7 @@ $links = $pdo->query('SELECT * FROM core_links ORDER BY sort_order, id')->fetchA
 $pageTitle = 'ลิงก์และเครื่องมือ';
 $active = 'links';
 $pageActions = '<a href="' . h(url('')) . '" class="btn btn-outline-secondary"><i class="bi bi-house"></i> ดูหน้าแรก</a>';
+$bodyClass = trim(($bodyClass ?? '') . ' mod-theme theme-admin');   // ผู้ดูแลระบบ: สีน้ำเงินเดียวกับเมนูหลัก
 require APP_ROOT . '/core/layout/header.php';
 ?>
 <div class="row g-3 align-items-start">
