@@ -14,6 +14,10 @@
 .cal-cell { min-height: 112px; padding: 4px 5px 6px; border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; min-width: 0; background: #fff; }
 .cal-cell:nth-child(7n) { border-right: 0; }
 .cal-cell.out { background: #f1f5f9; }
+/* เสาร์-อาทิตย์ (วันหยุด) = สีเทา — คอลัมน์แรก/สุดท้ายของปฏิทิน */
+.cal-wd:nth-child(1), .cal-wd:nth-child(7) { background: #94a3b8; }
+.cal-cell:nth-child(7n+1), .cal-cell:nth-child(7n) { background: #e2e8f0; }
+.cal-cell.out:nth-child(7n+1), .cal-cell.out:nth-child(7n) { background: #d5dce5; }
 /* เลขวันที่: บล็อกสีทึบ ตัวเลขขาวสองหลัก — สีประจำวัน (อา แดง · จ เหลือง · อ ชมพู · พ เขียว · พฤ ส้ม · ศ ฟ้า · ส ม่วง)
    (7 ช่องแรกของ grid เป็นหัววัน → ช่องที่ 8, 15, … = วันอาทิตย์) */
 .cal-n { display: inline-grid; place-items: center; min-width: 1.85rem; height: 1.6rem; padding: 0 .3rem; border-radius: 6px;
