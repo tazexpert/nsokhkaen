@@ -3,5 +3,5 @@
 require_once __DIR__ . '/bootstrap.php';
 $module = CAL_MODULE;
 $headExtra = ($headExtra ?? '') . '<link href="' . h(asset_v('modules/calendar/assets/css/calendar.css')) . '" rel="stylesheet">';
-$bodyClass = trim(($bodyClass ?? '') . ' cal-theme');          // โทนสีเดียวกับปฏิทินรายเดือนทุกหน้าในเมนูปฏิทินงาน
+$bodyClass = trim(($bodyClass ?? '') . ' mod-theme theme-calendar cal-theme');   // โทนสีของระบบ (assets/css/app.css)
 require APP_ROOT . '/core/layout/header.php';

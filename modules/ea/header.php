@@ -4,4 +4,5 @@ require_once __DIR__ . '/bootstrap.php';
 $module = EA_MODULE;
 $headExtra = ($headExtra ?? '') . '<link href="' . h(asset_v('modules/ea/assets/css/ea.css')) . '" rel="stylesheet">';
 $footerScripts = array_merge([asset_v('modules/ea/assets/js/ea.js')], $footerScripts ?? []);
+$bodyClass = trim(($bodyClass ?? '') . ' mod-theme theme-ea');   // โทนสีของระบบ (assets/css/app.css)
 require APP_ROOT . '/core/layout/header.php';

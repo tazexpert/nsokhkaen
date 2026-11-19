@@ -38,6 +38,7 @@ if ($currentPage === 'scan.php') {
 $module = INV_MODULE;
 $headExtra = '<link href="' . h(INV_URL . 'assets/css/inventory.css' . assetVersion('assets/css/inventory.css')) . '" rel="stylesheet">'
     . '<script>const INV_URL_JS = ' . json_encode(INV_URL) . ';</script>';
+$bodyClass = trim(($bodyClass ?? '') . ' mod-theme theme-inventory');   // โทนสีของระบบ (assets/css/app.css)
 require APP_ROOT . '/core/layout/header.php';
 
 $user = currentUser();

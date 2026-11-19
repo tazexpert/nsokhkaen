@@ -292,3 +292,32 @@ h1,h2,h3,h4,h5,.brand,.stat-num,.btn,.card-header,.nav-tabs{font-family:'Prompt'
   .app-brand .brand-text{display:none}
   .app-brand{margin-right:6px}
 }
+
+/* ===== โทนสีประจำระบบ (body.mod-theme + theme-<ระบบ> จาก header.php ของแต่ละระบบ) — เฉพาะบนจอ =====
+   --mh = สีหัวการ์ด (ตัวอักษรขาว) · --mh2 = สีหัวตาราง (อ่อนกว่า) */
+.theme-calendar { --mh: #0ea5c9; --mh2: #5cc4dd; }
+.theme-ea { --mh: #fe5fb1; --mh2: #fe8cc6; }            /* บริหารโครงการ: ชมพู */
+.theme-budget { --mh: #ed7922; --mh2: #f39a55; }        /* งบประมาณ: ส้ม */
+.theme-inventory { --mh: #c34397; --mh2: #d16fae; }     /* วัสดุและครุภัณฑ์: บานเย็น */
+.theme-payslip { --mh: #5e4e95; --mh2: #8072b0; }       /* สลิปเงินเดือน: ม่วงคราม */
+.theme-digitalcc { --mh: #96c93e; --mh2: #8bc34a; }     /* ศูนย์ดิจิทัลชุมชน: เขียว */
+@media screen {
+  .mod-theme .card { border: 0; border-radius: 14px; box-shadow: 0 4px 16px color-mix(in srgb, var(--mh) 14%, transparent), 0 1px 3px rgba(15, 23, 42, .08); }
+  .mod-theme .card-header:not([class*="bg-"]):not(.cal-month-head) { background: var(--mh); color: #fff; border-bottom: 0; text-shadow: 0 1px 1px rgba(0, 0, 0, .18); }
+  .mod-theme .card > .card-header:first-child { border-radius: 14px 14px 0 0 !important; }
+  .mod-theme .card > .card-header:only-child { border-radius: 14px !important; }
+  .mod-theme .card-header:not([class*="bg-"]) :is(strong, h5, h6, label), .mod-theme .card-header:not([class*="bg-"]) a:not(.btn):not(.dropdown-item),
+  .mod-theme .card-header:not([class*="bg-"]) .bi:not(.btn .bi):not(.dropdown-menu .bi) { color: #fff !important; }   /* ไอคอนในปุ่มใช้สีของปุ่ม */
+  .mod-theme .card-header:not([class*="bg-"]) :is(.text-muted, small, .small) { color: rgba(255, 255, 255, .88) !important; }
+  .mod-theme .card-header:not([class*="bg-"]) .btn-light { background: #fff; border-color: transparent; color: var(--mh); text-shadow: none; }
+  .mod-theme .card-header:not([class*="bg-"]) :is(.btn-outline-primary, .btn-outline-secondary, .btn-outline-success, .btn-outline-danger, .btn-outline-dark) {
+    color: #fff; border-color: rgba(255, 255, 255, .8); background: transparent; }
+  .mod-theme .card-header:not([class*="bg-"]) :is(.btn-outline-primary, .btn-outline-secondary, .btn-outline-success, .btn-outline-danger, .btn-outline-dark):is(:hover, .active) {
+    background: #fff; border-color: #fff; color: var(--mh); text-shadow: none; }
+  .mod-theme .card-header:not([class*="bg-"]) .badge.text-bg-primary, .mod-theme .card-header:not([class*="bg-"]) .badge.bg-primary { background: #fff !important; color: var(--mh) !important; text-shadow: none; }
+  .mod-theme .card-header .dropdown-menu, .mod-theme .card-header .dropdown-menu * { text-shadow: none; }
+  /* หัวตาราง: สีอ่อนของระบบ ตัวอักษรขาว (ไม่รวมคอลัมน์สรุปของแผนการปฏิบัติงานที่มีสีของตัวเอง) */
+  .mod-theme .table > thead th:not(.plan-sum):not(.plan-sum-head) { background: var(--mh2); color: #fff !important; font-weight: 700; border-color: rgba(255, 255, 255, .35); text-shadow: 0 1px 1px rgba(0, 0, 0, .15); }
+  .mod-theme .table > thead th :is(.text-muted, .plan-wdn, a:not(.btn)) { color: rgba(255, 255, 255, .92) !important; }
+  .mod-theme .table tr.table-light > * { --bs-table-bg: color-mix(in srgb, var(--mh) 14%, #fff); color: color-mix(in srgb, var(--mh) 75%, #000); font-weight: 600; }
+}

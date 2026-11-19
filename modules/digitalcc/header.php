@@ -8,4 +8,5 @@ $headExtra = '<link href="' . h(asset_v('modules/digitalcc/assets/css/dcc-admin.
     . '<script>const DCC_URL_JS = ' . json_encode(DCC_URL) . ';</script>';
 $footerScripts = [asset_v('modules/digitalcc/assets/js/dcc-admin.js')];
 unset($__page);
+$bodyClass = trim(($bodyClass ?? '') . ' mod-theme theme-digitalcc');   // โทนสีของระบบ (assets/css/app.css)
 require APP_ROOT . '/core/layout/header.php';
