@@ -1,24 +1,35 @@
 /* ปฏิทินรายเดือน */
-/* แถบเดือน (หัวการ์ด): ไล่สีม่วง → บานเย็น · ปุ่มบนแถบเป็นขอบขาว */
-.cal-month-head { color: #fff; border-bottom: 0; background: linear-gradient(120deg, #5b21b6, #a21caf 55%, #db2777); }
+/* แถบเดือน (หัวการ์ด): ม่วงบานเย็นทึบ (แบบบล็อกวันที่ในโปสเตอร์) · ปุ่มบนแถบเป็นขอบขาว */
+.cal-month-head { --mh: #b0309f; color: #fff; border-bottom: 0; background: var(--mh); }
 .cal-month-head h2 { color: #fff; font-weight: 800; }
-.cal-month-head .btn-light { background: rgba(255, 255, 255, .92); border-color: transparent; color: #5b21b6; }
-.cal-month-head .btn-outline-primary, .cal-month-head .btn-outline-secondary, .cal-month-head .btn-outline-success { color: #fff; border-color: rgba(255, 255, 255, .75); }
+.cal-month-head .btn-light { background: #fff; border-color: transparent; color: var(--mh); }
+.cal-month-head .btn-outline-primary, .cal-month-head .btn-outline-secondary, .cal-month-head .btn-outline-success { color: #fff; border-color: rgba(255, 255, 255, .8); }
 .cal-month-head .btn-outline-primary:hover, .cal-month-head .btn-outline-secondary:hover, .cal-month-head .btn-outline-success:hover,
-.cal-month-head .btn-outline-primary.active { background: #fff; border-color: #fff; color: #a21caf; }
-/* ตาราง: เส้นแบ่งช่องชัด · แถบชื่อวันม่วงเข้ม */
+.cal-month-head .btn-outline-primary.active { background: #fff; border-color: #fff; color: var(--mh); }
+/* ตาราง: เส้นแบ่งช่องชัด · แถบชื่อวัน โทนเดียวกับแถบเดือนแต่อ่อนลง */
 .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 0; }
-.cal-wd { padding: 7px 8px; font-weight: 700; font-size: .88rem; color: #fff; background: #4c1d95; border-right: 1px solid rgba(255, 255, 255, .18); text-align: center; }
+.cal-wd { padding: 7px 8px; font-weight: 700; font-size: .88rem; color: #fff; background: #cc6bbf; border-right: 1px solid rgba(255, 255, 255, .3); text-align: center; }
 .cal-wd:nth-child(7) { border-right: 0; }
-.cal-wd.sun { color: #fda4af; }
+.cal-wd.sun { color: #fff; }
 .cal-cell { min-height: 112px; padding: 4px 5px 6px; border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; min-width: 0; background: #fff; }
 .cal-cell:nth-child(7n) { border-right: 0; }
 .cal-cell.out { background: #f1f5f9; }
-.cal-cell.out .cal-dnum { color: #94a3b8; }
-/* วันนี้: พื้นชมพูอ่อน กรอบบานเย็น เลขวันในวงกลมทึบ + ป้าย "วันนี้" */
+/* เลขวันที่: บล็อกสีทึบ ตัวเลขขาวสองหลัก — สีประจำวัน (อา แดง · จ เหลือง · อ ชมพู · พ เขียว · พฤ ส้ม · ศ ฟ้า · ส ม่วง)
+   (7 ช่องแรกของ grid เป็นหัววัน → ช่องที่ 8, 15, … = วันอาทิตย์) */
+.cal-n { display: inline-grid; place-items: center; min-width: 1.85rem; height: 1.6rem; padding: 0 .3rem; border-radius: 6px;
+  background: var(--dc, #64748b); color: #fff; font-weight: 800; font-size: .92rem; font-variant-numeric: tabular-nums; box-shadow: 0 2px 4px rgba(15, 23, 42, .15); }
+.cal-cell:nth-child(7n+1) { --dc: #e11d48; }
+.cal-cell:nth-child(7n+2) { --dc: #ca8a04; }
+.cal-cell:nth-child(7n+3) { --dc: #db2777; }
+.cal-cell:nth-child(7n+4) { --dc: #16a34a; }
+.cal-cell:nth-child(7n+5) { --dc: #ea580c; }
+.cal-cell:nth-child(7n+6) { --dc: #2563eb; }
+.cal-cell:nth-child(7n) { --dc: #7c3aed; }
+.cal-cell.out .cal-n { background: #cbd5e1; box-shadow: none; }
+/* วันนี้: พื้นชมพูอ่อน กรอบบานเย็น บล็อกเลขวันใหญ่ขึ้นมีขอบขาว + ป้าย "วันนี้" */
 .cal-cell.today { background: #fdf2f8; box-shadow: inset 0 0 0 2.5px #db2777; }
-.cal-cell.today .cal-n { display: inline-grid; place-items: center; min-width: 1.75rem; height: 1.75rem; padding: 0 .3rem; border-radius: 999px; background: #db2777; color: #fff; }
-.cal-today-tag { font-size: .72rem; font-weight: 700; color: #db2777; }
+.cal-cell.today .cal-n { min-width: 2.2rem; height: 1.9rem; font-size: 1.05rem; box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--dc), 0 3px 8px rgba(15, 23, 42, .25); }
+.cal-today-tag { font-size: .72rem; font-weight: 700; color: #db2777; margin-right: .3rem; }
 
 
 .cal-dnum { font-weight: 600; font-size: .9rem; margin-bottom: 3px; display: flex; justify-content: flex-end; align-items: center; gap: 4px; }
@@ -39,6 +50,8 @@
   .cal-cell { min-height: 70px; padding: 2px; }
   .cal-ev { font-size: .68rem; padding: 1px 3px 1px 6px; }
   .cal-ev .t { display: none; }
+  .cal-n, .cal-cell.today .cal-n { min-width: 1.35rem; height: 1.2rem; font-size: .7rem; padding: 0 .15rem; }
+  .cal-today-tag { display: none; }
 }
 /* ตารางกิจกรรม */
 .cal-table tr.cal-day th { background: #f1f5f9; font-family: 'Prompt', sans-serif; font-weight: 500; font-size: .95rem; }
