@@ -323,3 +323,21 @@ h1,h2,h3,h4,h5,.brand,.stat-num,.btn,.card-header,.nav-tabs{font-family:'Prompt'
   .mod-theme .table > thead th :is(.text-muted, .plan-wdn, a:not(.btn)) { color: rgba(255, 255, 255, .92) !important; }
   .mod-theme .table tr.table-light > * { --bs-table-bg: color-mix(in srgb, var(--mh) 14%, #fff); color: color-mix(in srgb, var(--mh) 75%, #000); font-weight: 600; }
 }
+
+/* ===== การ์ดสรุปตัวเลขหน้าภาพรวมทุกระบบ: รูปแบบเดียวกับภาพรวมระบบงบประมาณ (ไล่สีทึบ ตัวอักษรขาว มุมโค้ง)
+   สีตาม .stat-icon.text-bg-*: primary น้ำเงิน · warning ส้ม · success เขียว · info ฟ้าน้ำทะเล · danger แดง · secondary ม่วง · dark เทา ===== */
+.stat-card { --tc: #2563eb; --tg: linear-gradient(135deg, #1d4ed8, #3b82f6); background: var(--tg); color: #fff; border-radius: 16px; padding: 1rem 1.15rem;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--tc) 30%, transparent); }
+.stat-card:has(.stat-icon.text-bg-warning) { --tc: #ea580c; --tg: linear-gradient(135deg, #c2410c, #f97316); }
+.stat-card:has(.stat-icon.text-bg-success) { --tc: #059669; --tg: linear-gradient(135deg, #047857, #10b981); }
+.stat-card:has(.stat-icon.text-bg-info) { --tc: #0891b2; --tg: linear-gradient(135deg, #0e7490, #06b6d4); }
+.stat-card:has(.stat-icon.text-bg-danger) { --tc: #dc2626; --tg: linear-gradient(135deg, #b91c1c, #ef4444); }
+.stat-card:has(.stat-icon.text-bg-secondary) { --tc: #7c3aed; --tg: linear-gradient(135deg, #6d28d9, #8b5cf6); }
+.stat-card:has(.stat-icon.text-bg-dark) { --tc: #475569; --tg: linear-gradient(135deg, #334155, #64748b); }
+.stat-card .stat-icon { width: 44px; height: 44px; border-radius: 12px; font-size: 1.25rem; background: rgba(255, 255, 255, .2) !important; }
+.stat-card .stat-num { font-size: 1.75rem; font-weight: 800; color: #fff; }
+.stat-card .stat-label, .stat-card .small, .stat-card .text-muted { color: rgba(255, 255, 255, .88) !important; }
+.stat-card strong { color: #fff; }
+a.stat-card, a.stat-link { text-decoration: none; transition: transform .15s, box-shadow .15s; }
+a.stat-card:hover { color: #fff; transform: translateY(-2px); box-shadow: 0 10px 24px color-mix(in srgb, var(--tc) 40%, transparent); }
+@media print { .stat-card { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }

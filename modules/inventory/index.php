@@ -26,30 +26,30 @@ $recentRequisitions = $reqStmt->fetchAll();
 
 // Every logged-in user can open materials.php now (read-only for staff -
 // the page itself hides the add/edit/delete/import controls for non-admin).
-function dashboardCard(string $colorClass, int $value, string $label, string $href): void
+/** การ์ดสรุปตัวเลข (รูปแบบเดียวกับภาพรวมระบบงบประมาณ — .stat-card ใน assets/css/app.css) */
+function dashboardCard(string $tone, string $icon, int $value, string $label, string $href): void
 {
-    $inner = '<div class="card ' . $colorClass . ' h-100 dashboard-clickable"><div class="card-body">'
-        . '<div class="fs-2 fw-bold">' . $value . '</div><div>' . htmlspecialchars($label) . '</div></div></div>';
-    echo '<a href="' . htmlspecialchars($href) . '" class="text-decoration-none">' . $inner . '</a>';
+    echo '<a href="' . htmlspecialchars($href) . '" class="stat-card stat-link h-100"><span class="stat-icon text-bg-' . $tone . '"><i class="bi ' . $icon . '"></i></span>'
+        . '<div><div class="stat-num">' . number_format($value) . '</div><div class="stat-label">' . htmlspecialchars($label) . '</div></div></a>';
 }
 ?>
 
 
 <div class="row g-3 mb-4" data-reveal>
     <div class="col-6 col-lg reveal-item">
-        <?php dashboardCard('text-bg-primary', (int) $materialCount, 'วัสดุสิ้นเปลืองทั้งหมด', INV_URL . 'materials') ?>
+        <?php dashboardCard('primary', 'bi-box-seam', (int) $materialCount, 'วัสดุสิ้นเปลืองทั้งหมด', INV_URL . 'materials') ?>
     </div>
     <div class="col-6 col-lg reveal-item">
-        <?php dashboardCard('text-bg-warning', (int) $lowStockCount, 'วัสดุใกล้หมดสต๊อก', INV_URL . 'materials?filter=low_stock') ?>
+        <?php dashboardCard('warning', 'bi-exclamation-triangle', (int) $lowStockCount, 'วัสดุใกล้หมดสต๊อก', INV_URL . 'materials?filter=low_stock') ?>
     </div>
     <div class="col-6 col-lg reveal-item">
-        <?php dashboardCard('text-bg-success', (int) $equipmentCount, 'ครุภัณฑ์ทั้งหมด', INV_URL . 'equipment') ?>
+        <?php dashboardCard('success', 'bi-pc-display', (int) $equipmentCount, 'ครุภัณฑ์ทั้งหมด', INV_URL . 'equipment') ?>
     </div>
     <div class="col-6 col-lg reveal-item">
-        <?php dashboardCard('text-bg-info', (int) $loanCounts['borrowed'], 'ครุภัณฑ์ที่กำลังยืม', INV_URL . 'loans?tab=borrowed') ?>
+        <?php dashboardCard('info', 'bi-box-arrow-up-right', (int) $loanCounts['borrowed'], 'ครุภัณฑ์ที่กำลังยืม', INV_URL . 'loans?tab=borrowed') ?>
     </div>
     <div class="col-6 col-lg reveal-item">
-        <?php dashboardCard((int) $loanCounts['overdue'] ? 'text-bg-danger' : 'text-bg-light border', (int) $loanCounts['overdue'], 'เกินกำหนดคืน', INV_URL . 'loans?tab=overdue') ?>
+        <?php dashboardCard((int) $loanCounts['overdue'] ? 'danger' : 'secondary', 'bi-alarm', (int) $loanCounts['overdue'], 'เกินกำหนดคืน', INV_URL . 'loans?tab=overdue') ?>
     </div>
 </div>
 

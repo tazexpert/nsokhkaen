@@ -8,7 +8,7 @@ require_once __DIR__ . '/bootstrap.php';
 $currentPage = basename($_SERVER['PHP_SELF']);
 // หน้า => [เมนูที่เลือก, หัวข้อ, สิทธิ์ขั้นต่ำ]
 $__invPages = [
-    'index.php'            => ['dashboard', 'แดชบอร์ด', ''],
+    'index.php'            => ['dashboard', 'ภาพรวม', ''],
     'scan.php'             => ['scan', 'สแกน QR Code เพื่อเบิกวัสดุ', ''],
     'requisitions.php'     => ['requisitions', 'ใบเบิกวัสดุ', ''],
     'requisition_view.php' => ['requisitions', 'รายละเอียดใบเบิก', ''],

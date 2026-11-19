@@ -17,7 +17,7 @@ return [
     // บทบาทที่ระบบจะชวนให้ตั้ง PIN หลัง login (ใช้หน้าสแกนโดยไม่ต้องพิมพ์รหัสผ่าน)
     'prompt_pin_roles' => ['staff'],
     'menu' => [
-        ['id' => 'dashboard',    'label' => 'แดชบอร์ด',        'href' => '',        'icon' => 'bi-speedometer2',   'role' => 'staff'],
+        ['id' => 'dashboard',    'label' => 'ภาพรวม',           'href' => '',        'icon' => 'bi-speedometer2',   'role' => 'staff'],
         ['id' => 'scan',         'label' => 'สแกน QR Code',    'href' => 'scan',         'icon' => 'bi-qr-code-scan',   'role' => 'staff'],
         ['id' => 'requisitions', 'label' => 'ใบเบิกวัสดุ',      'href' => 'requisitions', 'icon' => 'bi-receipt',        'role' => 'staff'],
         ['id' => 'materials',    'label' => 'วัสดุสิ้นเปลือง',   'href' => 'materials',    'icon' => 'bi-boxes',          'role' => 'staff'],
