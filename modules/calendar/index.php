@@ -74,13 +74,13 @@ foreach ($byDay as $d => $list) {
     $dayInfo[$d] = $info;
 }
 
-// เวรสำนักงานในช่องวันที่: "เวร สนง. : ชื่อ, ชื่อ" (ชื่อต้น ไม่มีคำนำหน้า/นามสกุล · ชี้เมาส์เห็นชื่อเต็ม)
+// เวรในช่องวันที่: "เวร สนง. : ชื่อ, ชื่อ" / "เวรศาลากลาง : ชื่อ" (ชื่อต้น ไม่มีคำนำหน้า/นามสกุล · ชี้เมาส์เห็นชื่อเต็ม)
 $firstName = fn(string $n) => explode(' ', preg_replace('/^(นางสาว|นาง|นาย|ว่าที่ร้อยตรี|ว่าที่ ร\.ต\.|ว่าที่ร\.ต\.|ดร\.)\s*/u', '', $n))[0];
 $dutyLabel = function (array $e) use ($assignees, $staffOrder, $nameOf, $firstName) {
     $ids = $assignees[(int)$e['id']] ?? [];
     usort($ids, fn($a, $b) => [$staffOrder[$a] ?? PHP_INT_MAX, $a] <=> [$staffOrder[$b] ?? PHP_INT_MAX, $b]);
     $names = array_filter(array_map(fn($id) => isset($nameOf[$id]) ? $firstName($nameOf[$id]) : null, $ids));
-    return 'เวร สนง. : ' . ($names ? implode(', ', $names) : '-');
+    return (cal_is_duty($e) ? 'เวร สนง.' : CAL_GUARD_TITLE) . ' : ' . ($names ? implode(', ', $names) : '-');
 };
 
 $ts = strtotime($first);
@@ -115,8 +115,8 @@ require __DIR__ . '/header.php';
       <div class="cal-cell<?= $out ? ' out' : '' ?><?= $d === $today ? ' today' : '' ?>" data-date="<?= $d ?>" data-label="<?= h(cal_date_text($d)) ?>">
         <div class="cal-dnum"><?php if (cal_can('editor')): ?><a href="event_form?date=<?= $d ?>" class="cal-add" title="เพิ่มกิจกรรมวันนี้"><i class="bi bi-plus"></i></a><?php endif; ?><?= $d === $today ? '<span class="cal-today-tag">วันนี้</span>' : '' ?><span class="cal-n"><?= substr($d, 8, 2) ?></span></div>
         <?php foreach ($byDay[$d] ?? [] as $e): $isMine = in_array($me['id'], $assignees[(int)$e['id']] ?? [], true); ?>
-          <a href="event_view?id=<?= (int)$e['id'] ?>" class="cal-ev<?= cal_is_duty($e) ? ' duty' : '' ?><?= cal_is_guard($e) ? ' guard' : '' ?><?= $isMine ? ' mine' : '' ?>" title="<?= h(cal_is_duty($e) ? $e['title'] . ': ' . implode(', ', array_map(fn($id) => $nameOf[$id] ?? '', $assignees[(int)$e['id']] ?? [])) : cal_time_text($e) . ' ' . $e['title'] . ($e['location'] ? ' @ ' . $e['location'] : '')) ?>">
-            <?php if ($e['start_time'] && $d === $e['event_date']): ?><span class="t"><?= cal_time_thai($e['start_time']) ?></span><?php endif; ?><?= cal_is_private($e) ? '<i class="bi bi-lock-fill me-1" title="ส่วนตัว"></i>' : '' ?><?= h(cal_is_duty($e) ? $dutyLabel($e) : $e['title']) ?></a>
+          <a href="event_view?id=<?= (int)$e['id'] ?>" class="cal-ev<?= cal_is_duty($e) ? ' duty' : '' ?><?= cal_is_guard($e) ? ' guard' : '' ?><?= $isMine ? ' mine' : '' ?>" title="<?= h(cal_is_shift($e) ? $e['title'] . ': ' . implode(', ', array_map(fn($id) => $nameOf[$id] ?? '', $assignees[(int)$e['id']] ?? [])) : cal_time_text($e) . ' ' . $e['title'] . ($e['location'] ? ' @ ' . $e['location'] : '')) ?>">
+            <?php if ($e['start_time'] && $d === $e['event_date']): ?><span class="t"><?= cal_time_thai($e['start_time']) ?></span><?php endif; ?><?= cal_is_private($e) ? '<i class="bi bi-lock-fill me-1" title="ส่วนตัว"></i>' : '' ?><?= h(cal_is_shift($e) ? $dutyLabel($e) : $e['title']) ?></a>
         <?php endforeach; ?>
         <?php if (isset($attItems[$d])): $ai = $attItems[$d]; ?>
           <a href="att_view?date=<?= $d ?>" class="cal-ev att-ev<?= $ai['cls'] === 'att-cert' ? ' done' : ($ai['cls'] === 'att-late' ? ' late' : '') ?>" title="<?= h($ai['title']) ?> (เห็นเฉพาะคุณ)"><i class="bi bi-lock-fill me-1"></i><?= h(att_item_title($ai)) ?></a>
@@ -141,7 +141,7 @@ require __DIR__ . '/header.php';
   const data = <?= json_encode($dayInfo, JSON_UNESCAPED_UNICODE) ?>;
   const panel = document.getElementById('dayPanel'), body = document.getElementById('dayPanelBody'), head = document.getElementById('dayPanelHead');
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const item = it => `<a href="event_view?id=${it.id}" class="cal-day-item"><span class="t">${esc(it.t)}</span> ${it.priv ? '<i class="bi bi-lock-fill" title="ส่วนตัว"></i> ' : ''}${esc(it.title)}${it.loc ? `<span class="loc"> @ ${esc(it.loc)}</span>` : ''}${it.with && it.with.length ? `<span class="with"><i class="bi bi-people"></i> ร่วมกับ ${it.with.map(esc).join(', ')}</span>` : ''}</a>`;
+  const item = it => `<a href="event_view?id=${it.id}" class="cal-day-item"><span class="t">${esc(it.t)}</span> ${it.priv ? '<i class="bi bi-lock-fill" title="ส่วนตัว"></i> ' : ''}${esc(it.title)}${it.loc ? `<span class="loc"> @ ${esc(it.loc)}</span>` : ''}${it.with && it.with.length ? `<span class="with"><span class="lbl"><i class="bi bi-people"></i> ร่วมกับ</span>${it.with.map(n => `<span class="cal-day-name">${esc(n)}</span>`).join('')}</span>` : ''}</a>`;
   let cur = null;
   const open = cell => {
     const d = data[cell.dataset.date] || { duty: [], guard: [], people: [], none: [], count: 0 };

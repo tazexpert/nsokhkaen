@@ -246,7 +246,9 @@ button.att-chip:hover { outline: 2px solid #1d4ed8; }
 .cal-day-item:hover { color: var(--pc); }
 .cal-day-item .t { display: inline-block; padding: 0 .35rem; margin-right: .2rem; border-radius: 4px; color: #fff; background: var(--pc); font-size: .8rem; font-weight: 700; white-space: nowrap; }
 .cal-day-item .loc { color: #64748b; }
-.cal-day-item .with { display: block; margin-top: .1rem; color: #475569; font-size: .82rem; }
+.cal-day-item .with { display: block; margin-top: .15rem; }
+.cal-day-item .with .lbl { display: block; color: #64748b; font-size: .82rem; }
+.cal-day-item .with .cal-day-name { display: block; font-size: 1rem; }          /* ชื่อผู้ร่วม 1 คน/บรรทัด ขนาด/สีเดียวกับชื่อคนแรก */
 @media (max-width: 767.98px) { .cal-day-panel { top: 0; right: 0; width: 100vw; min-width: 0; height: 100vh; border-radius: 0; } }
 @media print { .cal-day-panel { display: none !important; } }
 /* หน้าต่างรายละเอียดกิจกรรม (คลิกรายการ) — หัวแบบโปสเตอร์: บล็อกวันที่ + แถบสีตามประเภท */
