@@ -2,7 +2,7 @@
 /**
  * รายการสลิปรายเดือน
  *   ผู้จัดการสลิป = จัดการสลิป (ดูทั้งหมด เพิ่ม/แก้ไข/ลบ)
- *   ผู้อนุมัติ    = เฉพาะสลิปรออนุมัติ (ดู/อนุมัติ)
+ *   ผู้อนุมัติ    = ดูสลิปทั้งหมดได้ (เมนูจัดการสลิป — ดูอย่างเดียว) และอนุมัติสลิปรออนุมัติ
  *   ผู้ดูแลระบบสลิป = ทุกอย่าง
  */
 require_once __DIR__ . '/bootstrap.php';
@@ -62,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $periods = $pdo->query('SELECT year, month, COUNT(*) n, SUM(status = \'pending\') pending FROM pay_slips
     GROUP BY year, month ORDER BY year DESC, month DESC')->fetchAll();
-$status = $canManage ? ($_GET['status'] ?? '') : 'pending';     // ผู้อนุมัติเห็นเฉพาะรออนุมัติ
+$status = (string)($_GET['status'] ?? '');                        // ผู้อนุมัติดูได้ทุกสถานะ (แก้ไข/ลบ เฉพาะผู้จัดการสลิป)
 $year = int_param('year');
 $month = int_param('month');
 $q = trim($_GET['q'] ?? '');
@@ -122,14 +122,12 @@ require __DIR__ . '/header.php';
         <?php foreach ($periods as $p): ?><option value="<?= (int)$p['year'] ?>-<?= (int)$p['month'] ?>" <?= $year === (int)$p['year'] && $month === (int)$p['month'] ? 'selected' : '' ?>>
           <?= h(pay_period((int)$p['year'], (int)$p['month'])) ?> (<?= (int)$p['n'] ?><?= $p['pending'] ? ' · รอ ' . (int)$p['pending'] : '' ?>)</option><?php endforeach; ?>
       </select><input type="hidden" name="year" value="<?= $year ?: '' ?>"><input type="hidden" name="month" value="<?= $month ?: '' ?>"></div>
-      <?php if ($canManage): ?>
       <div class="col-md-2"><select name="status" class="form-select" onchange="this.form.submit()">
         <option value="">ทุกสถานะ</option>
         <option value="pending" <?= $status === 'pending' ? 'selected' : '' ?>>รออนุมัติ</option>
         <option value="approved" <?= $status === 'approved' ? 'selected' : '' ?>>อนุมัติแล้ว</option>
         <option value="comments" <?= $status === 'comments' ? 'selected' : '' ?>>มีแจ้งแก้ไขค้าง<?= $openTotal ? " ($openTotal)" : '' ?></option>
       </select></div>
-      <?php else: ?><input type="hidden" name="status" value="pending"><?php endif; ?>
       <div class="col-md-3"><input name="q" class="form-control" placeholder="ค้นหาชื่อ / เลขที่" value="<?= h($q) ?>"></div>
       <div class="col-auto"><button class="btn btn-outline-secondary"><i class="bi bi-search"></i></button></div>
       <?php if ($canApprove && $pendingTotal): ?>
@@ -174,7 +172,7 @@ require __DIR__ . '/header.php';
             </td>
           </tr>
         <?php endforeach; ?>
-        <?php if (!$slips): ?><tr><td colspan="<?= count($cols) + 6 ?>" class="text-center text-muted py-5"><?= $canManage ? 'ไม่มีข้อมูล' . ($periods ? '' : ' — เริ่มจากเมนู "นำเข้าข้อมูล"') : 'ไม่มีสลิปรออนุมัติ' ?></td></tr><?php endif; ?>
+        <?php if (!$slips): ?><tr><td colspan="<?= count($cols) + 6 ?>" class="text-center text-muted py-5"><?= $status === 'pending' ? 'ไม่มีสลิปรออนุมัติ' : 'ไม่มีข้อมูล' . ($periods || !$canManage ? '' : ' — เริ่มจากเมนู "นำเข้าข้อมูล"') ?></td></tr><?php endif; ?>
         </tbody>
         <?php if (count($slips) > 1): ?>
           <tfoot class="table-light fw-semibold"><tr><td></td><td colspan="<?= $month ? 2 : 3 ?>">รวม <?= count($slips) ?> รายการ</td>
