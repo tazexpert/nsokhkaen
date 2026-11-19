@@ -117,8 +117,8 @@ function cal_assignees(array $eventIds): array
     return $out;
 }
 
-/** ตำแหน่งย่อในตาราง: สถิติจังหวัด / ผอ.กว / ผอ.กป / ผอ.กข (รักษาการ = "รก." นำหน้า) — ไม่ใช่ตำแหน่งเหล่านี้คืน null */
-const CAL_POS_ABBR = ['chief' => 'สถิติจังหวัด', 'dir1' => 'ผอ.กว', 'dir2' => 'ผอ.กป', 'dir3' => 'ผอ.กข'];
+/** ตำแหน่งย่อในตาราง: สถิติจังหวัด / ผอ.กว / ผอ.กป / ผอ.กด (รักษาการ = "รก." นำหน้า) — ไม่ใช่ตำแหน่งเหล่านี้คืน null */
+const CAL_POS_ABBR = ['chief' => 'สถิติจังหวัด', 'dir1' => 'ผอ.กว', 'dir2' => 'ผอ.กป', 'dir3' => 'ผอ.กด'];
 
 function cal_position_abbr(string $position, string $kind = ''): ?string
 {
@@ -167,7 +167,7 @@ function cal_has_show_as(): bool
     return $has;
 }
 
-/** ตำแหน่งที่เลือกให้แสดง ต่อกิจกรรม [event_id][user_id] => "ผอ.กว / ผอ.กข" (เฉพาะที่เลือกไว้) */
+/** ตำแหน่งที่เลือกให้แสดง ต่อกิจกรรม [event_id][user_id] => "ผอ.กว / ผอ.กด" (เฉพาะที่เลือกไว้) */
 function cal_assignee_show_as(array $eventIds): array
 {
     $ids = array_filter(array_map('intval', $eventIds));
