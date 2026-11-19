@@ -153,7 +153,7 @@ if ($links): ?>
 <?php endif; ?>
 
 <?php if (!empty($viewer['is_superadmin'])): ?>
-  <div class="col-lg reveal-item"><div class="card h-100 home-tool tone-red"><div class="card-body">
+  <div class="col-lg reveal-item"><div class="card h-100 home-tool tone-blue"><div class="card-body">
   <div class="home-tool-title"><i class="bi bi-shield-lock"></i> ผู้ดูแลระบบกลาง</div>
   <div class="d-flex flex-wrap gap-2">
     <a href="<?= h(url('admin/users')) ?>" class="btn btn-outline-primary btn-sm"><i class="bi bi-people"></i> ผู้ใช้งานและสิทธิ์</a>

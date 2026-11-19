@@ -240,6 +240,7 @@ h1,h2,h3,h4,h5,.brand,.stat-num,.btn,.card-header,.nav-tabs{font-family:'Prompt'
 .home-tool{color:#fff;position:relative;overflow:hidden}
 .home-tool.tone-orange{background:var(--g-orange);box-shadow:0 6px 18px rgba(255,182,77,.35)}
 .home-tool.tone-red{background:var(--g-red);box-shadow:0 6px 18px rgba(255,83,112,.3)}
+.home-tool.tone-blue{background:linear-gradient(to right,#4099ff,#73b4ff);box-shadow:0 6px 18px rgba(64,153,255,.35)}   /* ผู้ดูแลระบบกลาง: น้ำเงินเดียวกับเมนูหลัก */
 .home-tool::after{content:"";position:absolute;right:-30px;bottom:-50px;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.14);pointer-events:none}
 .home-tool-title{font-family:'Prompt',sans-serif;font-weight:500;margin-bottom:10px}
 .home-tool .btn{--bs-btn-color:#fff;--bs-btn-border-color:rgba(255,255,255,.7);--bs-btn-hover-color:#37474f;--bs-btn-hover-bg:#fff;--bs-btn-hover-border-color:#fff;--bs-btn-active-color:#37474f;--bs-btn-active-bg:#fff;position:relative;z-index:1}
