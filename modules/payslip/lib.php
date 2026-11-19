@@ -92,7 +92,42 @@ function pay_employee_of(int $userId): ?array
 {
     $st = db()->prepare('SELECT * FROM pay_employees WHERE user_id = ? AND is_active = 1');
     $st->execute([$userId]);
-    return $st->fetch() ?: null;
+    $emp = $st->fetch() ?: null;
+    if (!$emp && pay_link_self($userId)) {            // ยังไม่ผูก → ลองผูกจากชื่อ-นามสกุลที่ตรงกัน (ผู้ใช้ที่เพิ่ม/ได้สิทธิ์หลังนำเข้า)
+        $st->execute([$userId]);
+        $emp = $st->fetch() ?: null;
+    }
+    return $emp;
+}
+
+/**
+ * ผูกบัญชีผู้ใช้นี้กับรหัสพนักงานที่ยังไม่ผูก เมื่อชื่อ-นามสกุลตรงกัน (ไม่สนคำนำหน้า/ช่องว่าง)
+ * ผูกเฉพาะกรณีตรงกันคนเดียวทั้งสองฝั่ง (ชื่อซ้ำ = ไม่ผูก ให้ผู้จัดการสลิปเลือกเองที่รายชื่อพนักงาน)
+ */
+function pay_link_self(int $userId): bool
+{
+    $pdo = db();
+    $st = $pdo->prepare('SELECT full_name FROM core_users WHERE id = ? AND is_active = 1');
+    $st->execute([$userId]);
+    $name = pay_norm_name((string)$st->fetchColumn());
+    if ($name === '') {
+        return false;
+    }
+    $sameUsers = 0;
+    foreach ($pdo->query('SELECT full_name FROM core_users WHERE is_active = 1')->fetchAll(PDO::FETCH_COLUMN) as $n) {
+        $sameUsers += pay_norm_name($n) === $name ? 1 : 0;
+    }
+    $match = [];
+    foreach ($pdo->query('SELECT id, full_name FROM pay_employees WHERE user_id IS NULL AND is_active = 1') as $e) {
+        if (pay_norm_name($e['full_name']) === $name) {
+            $match[] = (int)$e['id'];
+        }
+    }
+    if ($sameUsers !== 1 || count($match) !== 1) {
+        return false;
+    }
+    pay_link_user($match[0], $userId);
+    return true;
 }
 
 /** ผู้ใช้ปัจจุบันดูสลิปนี้ได้หรือไม่: ผู้จัดการ/ผู้อนุมัติ = ทุกใบ, พนักงาน = ของตนเองที่อนุมัติแล้ว */
@@ -149,7 +184,8 @@ function pay_fill_totals(array $row): array
 /** ชื่อสำหรับเทียบ (ตัดช่องว่างทั้งหมด) */
 function pay_norm_name(string $s): string
 {
-    return preg_replace('/\s+/u', '', $s);
+    // ตัดช่องว่างและคำนำหน้า (นาย/นาง/นางสาว/ว่าที่ ร.ต./ดร.) — ในไฟล์เงินเดือนกับบัญชีผู้ใช้อาจใส่ต่างกัน
+    return preg_replace('/^(นางสาว|น\.ส\.|นาง|นาย|ว่าที่ร้อยตรี|ว่าที่ร\.ต\.|ดร\.)/u', '', preg_replace('/\s+/u', '', $s));
 }
 
 /**

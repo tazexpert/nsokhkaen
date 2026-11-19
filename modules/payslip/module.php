@@ -19,9 +19,12 @@ return [
         'admin'    => 'ผู้ดูแลระบบสลิป — ทำได้ทุกอย่าง รวมถึงตั้งค่าสลิป (ผู้ลงนาม/ลายมือชื่อ)',
     ],
     'menu' => [
-        // แสดงเฉพาะผู้ที่ผูกกับรหัสพนักงาน (มีสลิป)
+        // แสดงให้ผู้มีสิทธิ์ "พนักงาน" เสมอ (ยังไม่ผูกรหัส = หน้าแจ้งให้ติดต่อผู้จัดการสลิป) และผู้ที่ผูกกับรหัสพนักงาน (มีสลิป)
         ['id' => 'my',        'label' => 'สลิปของฉัน',       'href' => '',               'icon' => 'bi-receipt',            'role' => 'employee',
          'visible' => function (array $user): bool {
+             if (module_role('payslip', $user) === 'employee') {
+                 return true;
+             }
              static $cache = [];
              if (!isset($cache[$user['id']])) {
                  $st = db()->prepare('SELECT 1 FROM pay_employees WHERE user_id = ? AND is_active = 1');
