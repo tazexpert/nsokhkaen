@@ -64,12 +64,12 @@ $today = date('Y-m-d');
 require __DIR__ . '/header.php';
 ?>
 <div class="card plan-card">
-  <div class="card-header d-flex flex-wrap align-items-center gap-2 no-print">
+  <div class="card-header cal-month-head d-flex flex-wrap align-items-center gap-2 no-print">
     <a href="?m=<?= $prev ?>" class="btn btn-light btn-sm" aria-label="เดือนก่อน"><i class="bi bi-chevron-left"></i></a>
     <h2 class="h5 mb-0 mx-1"><?= h(plan_month_text($y, $m)) ?></h2>
     <a href="?m=<?= $next ?>" class="btn btn-light btn-sm" aria-label="เดือนถัดไป"><i class="bi bi-chevron-right"></i></a>
     <a href="?m=<?= date('Y-m') ?>" class="btn btn-outline-secondary btn-sm">เดือนนี้</a>
-    <?php if ($plan): ?><span class="ms-auto small text-muted">ปรับปรุงล่าสุด <?= h(thai_date($plan['updated_at'])) ?> <?= h(substr($plan['updated_at'], 11, 5)) ?> น.<?= $plan['updated_by_name'] ? ' โดย ' . h($plan['updated_by_name']) : '' ?></span><?php endif; ?>
+    <?php if ($plan): ?><span class="ms-auto small">ปรับปรุงล่าสุด <?= h(thai_date($plan['updated_at'])) ?> <?= h(substr($plan['updated_at'], 11, 5)) ?> น.<?= $plan['updated_by_name'] ? ' โดย ' . h($plan['updated_by_name']) : '' ?></span><?php endif; ?>
   </div>
   <h1 class="plan-print-title d-none d-print-block">แผนการปฏิบัติงานสนามโครงการต่าง ๆ ประจำเดือน <?= h(plan_month_text($y, $m)) ?><br><?= h(ORG_NAME) ?></h1>
 
@@ -213,6 +213,18 @@ require __DIR__ . '/header.php';
   tr.plan-me .plan-name { font-weight: 700; background: #fffbeb; }
   .plan-total td { font-weight: 600; background: #f8fafc; }
   .plan-chip { display: inline-block; padding: 0 .4rem; border-radius: .3rem; font-weight: 600; color: var(--c); background: color-mix(in srgb, var(--c) 16%, white); }
+  /* โทนเดียวกับปฏิทินรายเดือน (จอเท่านั้น): หัววันฟ้า · เสาร์-อาทิตย์เทา · วันนี้ชมพู · แถวของฉันชมพูอ่อน */
+  @media screen {
+    .plan-grid thead th:not(.plan-sum):not(.plan-sum-head) { background: #5cc4dd; color: #fff; border-color: rgba(255, 255, 255, .35); }
+    .plan-grid thead th.we { background: #a9b7c6 !important; }
+    .plan-grid thead th.today { background: #db2777 !important; box-shadow: none; }
+    .plan-grid td.we { background-color: #f4f6f9; }
+    .plan-grid td.today { box-shadow: inset 2px 0 0 #db2777, inset -2px 0 0 #db2777; background-color: #fdf2f8; }
+    .plan-grid td.plan-cell.has.today { background: color-mix(in srgb, var(--c) 16%, #fdf2f8); }
+    tr.plan-me td { background-color: #fdf2f8; }
+    tr.plan-me td.plan-cell.has { background: color-mix(in srgb, var(--c) 22%, #fdf2f8); }
+    tr.plan-me .plan-name { background: #fdf2f8; color: #be185d; }
+  }
   @media print {
     @page { size: A4 landscape; margin: 8mm; }
     .plan-scroll { max-height: none; overflow: visible; }

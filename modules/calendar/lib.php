@@ -458,8 +458,10 @@ function cal_render_table(array $events, string $from, int $meId, bool $showActi
     $html = '<div class="table-responsive"><table class="table align-top mb-0 cal-table"><thead><tr>'
         . '<th style="width:120px">เวลา</th><th>กิจกรรม</th><th>สถานที่</th><th>ผู้รับผิดชอบ</th><th>ลิงก์ / หมายเหตุ</th></tr></thead><tbody>';
     foreach ($groups as $day => $list) {
-        $tag = $day === $today ? ' <span class="badge text-bg-danger">วันนี้</span>' : ($day === $tomorrow ? ' <span class="badge text-bg-warning">พรุ่งนี้</span>' : '');
-        $html .= '<tr class="cal-day"><th colspan="5"><i class="bi bi-calendar-event"></i> ' . h(cal_date_text($day)) . $tag . '</th></tr>';
+        $tag = $day === $today ? ' <span class="badge cal-badge-today">วันนี้</span>' : ($day === $tomorrow ? ' <span class="badge text-bg-warning">พรุ่งนี้</span>' : '');
+        $w = (int)date('w', strtotime($day));                // สีประจำวันเหมือนปฏิทินรายเดือน · เสาร์-อาทิตย์ = เทา · วันนี้ = ชมพู
+        $html .= '<tr class="cal-day wd' . $w . ($w === 0 || $w === 6 ? ' we' : '') . ($day === $today ? ' today' : '') . '"><th colspan="5"><span class="cal-n">' . substr($day, 8, 2) . '</span> '
+            . h(cal_date_text($day)) . $tag . '</th></tr>';
         foreach ($list as $e) {
             $ids = $assignees[(int)$e['id']] ?? [];
             $mine = in_array($meId, $ids, true);
@@ -472,7 +474,7 @@ function cal_render_table(array $events, string $from, int $meId, bool $showActi
                 . '<td class="text-nowrap">' . ($duty || $guard ? '<span class="text-muted">-</span>' : h(cal_time_text($e))) . ($multi ? '<div class="small text-muted">' . h(cal_range_text($e)) . '</div>' : '') . '</td>'
                 . '<td><a href="' . h($base . 'event_view?id=' . (int)$e['id']) . '" class="fw-semibold text-decoration-none">' . ($duty ? '<i class="bi bi-shield-check"></i> ' : '') . ($guard ? '<i class="bi bi-shield-shaded"></i> ' : '') . h($e['title']) . '</a>'
                 . (cal_is_private($e) ? ' <span class="badge text-bg-secondary" title="เห็นเฉพาะผู้บันทึกและผู้รับผิดชอบ"><i class="bi bi-lock-fill"></i> ส่วนตัว</span>' : '')
-                . ($mine ? ' <span class="badge text-bg-warning">งานของคุณ</span>' : '')
+                . ($mine ? ' <span class="badge cal-badge-mine">งานของคุณ</span>' : '')
                 . ($done ? ' <span class="badge text-bg-secondary"><i class="bi bi-check2"></i> จบแล้ว</span>' : '') . '</td>'
                 . '<td>' . ($e['location'] ? '<i class="bi bi-geo-alt text-muted"></i> ' . h($e['location']) : '<span class="text-muted">-</span>') . '</td>'
                 . '<td class="cal-people">' . cal_assignee_html($ids, $meId, 6, $showAs[(int)$e['id']] ?? []) . '</td>'

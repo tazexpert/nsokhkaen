@@ -21,7 +21,7 @@ $pageActions = (cal_can('admin') ? '<a href="import" class="btn btn-outline-succ
 require __DIR__ . '/header.php';
 ?>
 <div class="card">
-  <div class="card-header no-print">
+  <div class="card-header cal-month-head no-print">
     <form class="row g-2 align-items-center">
       <div class="col-auto"><input type="date" name="from" class="form-control form-control-sm" value="<?= h($from) ?>"></div>
       <div class="col-auto">ถึง</div>
@@ -32,7 +32,7 @@ require __DIR__ . '/header.php';
         <label class="form-check-label" for="duty">แสดงเวรสำนักงาน</label></div></div>
       <div class="col-auto"><div class="form-check"><input class="form-check-input" type="checkbox" name="guard" value="1" id="guard" <?= $guard ? 'checked' : '' ?> onchange="this.form.submit()">
         <label class="form-check-label" for="guard">แสดงเวรศาลากลาง</label></div></div>
-      <div class="col-auto"><button class="btn btn-sm btn-outline-secondary"><i class="bi bi-search"></i> แสดง</button></div>
+      <div class="col-auto"><button class="btn btn-sm btn-light"><i class="bi bi-search"></i> แสดง</button></div>
       <div class="col-auto ms-auto"><button type="button" class="btn btn-sm btn-light" onclick="window.print()"><i class="bi bi-printer"></i> พิมพ์</button></div>
     </form>
   </div>

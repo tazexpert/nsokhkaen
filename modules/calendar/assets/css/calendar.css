@@ -58,10 +58,31 @@
   .cal-today-tag { display: none; }
 }
 /* ตารางกิจกรรม */
-.cal-table tr.cal-day th { background: #f1f5f9; font-family: 'Prompt', sans-serif; font-weight: 500; font-size: .95rem; }
-.cal-table tr.cal-mine td { background: #fffbeb; }
+/* โทนเดียวกับปฏิทินรายเดือน: หัวตารางฟ้า · แถววันที่มีบล็อกเลขวันสีประจำวัน (เสาร์-อาทิตย์เทา · วันนี้ชมพู)
+   แถบซ้ายตามประเภท: งานของคุณ ชมพู · งานของผู้อื่น ฟ้า · เวรสำนักงาน เขียว · เวรศาลากลาง แดง */
+.cal-table thead th { background: #5cc4dd; color: #fff; font-weight: 700; border-bottom: 0; }
+.cal-table tr.cal-day th { background: #e0f4fa; color: #0e7490; font-family: 'Prompt', sans-serif; font-weight: 600; font-size: .95rem; }
+.cal-table tr.cal-day.we th { background: #eef1f5; color: #475569; }
+.cal-table tr.cal-day.today th { background: #fdf2f8; color: #be185d; box-shadow: inset 4px 0 0 #db2777; }
+.cal-table tr.cal-day .cal-n { margin-right: .35rem; }
+.cal-table tr.wd0 { --dc: #e11d48; } .cal-table tr.wd1 { --dc: #ca8a04; } .cal-table tr.wd2 { --dc: #db2777; } .cal-table tr.wd3 { --dc: #16a34a; }
+.cal-table tr.wd4 { --dc: #ea580c; } .cal-table tr.wd5 { --dc: #2563eb; } .cal-table tr.wd6 { --dc: #7c3aed; }
+.cal-table tbody tr:not(.cal-day) td:first-child { box-shadow: inset 4px 0 0 #0284c7; }
+.cal-table tbody tr:not(.cal-day) td a.fw-semibold { color: #0369a1; }
+.cal-table tr.cal-mine td { background: #fdf2f8; }
+.cal-table tbody tr.cal-mine td:first-child { box-shadow: inset 4px 0 0 #db2777; }
+.cal-table tbody tr.cal-mine td a.fw-semibold { color: #be185d; }
+.cal-table tbody tr.cal-guard td:first-child { box-shadow: inset 4px 0 0 #dc2626; }
+.cal-table tbody tr.cal-guard td a.fw-semibold { color: #b91c1c; }
+.cal-badge-today { background: #db2777; color: #fff; }
+.cal-badge-mine { background: #db2777; color: #fff; }
+.cal-month-head .form-check-label { color: #fff; }
+@media print {
+  .cal-table thead th, .cal-table tr.cal-day th { background: #f1f5f9 !important; color: #000 !important; box-shadow: none !important; }
+  .cal-table tbody td { box-shadow: none !important; background: transparent !important; }
+}
 .cal-person { display: inline-block; font-size: .8rem; padding: 1px 7px; border-radius: 10px; background: #f1f5f9; margin: 1px 0; white-space: nowrap; }
-.cal-person.me { background: #fde68a; font-weight: 600; }
+.cal-person.me { background: #fbcfe8; color: #9d174d; font-weight: 600; }
 .cal-people { min-width: 200px; }
 .cal-userpick { max-height: 380px; overflow-y: auto; }
 .cal-userpick .grp { position: sticky; top: 0; background: #eef1f6; font-size: .85rem; font-weight: 600; padding: 4px 10px; z-index: 1; }
@@ -81,8 +102,8 @@
 .cal-plus { color: #94a3b8; font-size: .8rem; margin: 0 1px; }   /* ตัวเชื่อม "+" ระหว่างผู้อำนวยการกับบุคลากรกลุ่ม */
 /* เวรสำนักงาน: สีแถว/ป้ายต่างจากกิจกรรม */
 .cal-table tr.cal-duty td { background: #ecfdf5; }
-.cal-table tr.cal-duty td:first-child { box-shadow: inset 4px 0 0 #10b981; }
-.cal-table tr.cal-duty a { color: #047857; }
+.cal-table tbody tr.cal-duty td:first-child { box-shadow: inset 4px 0 0 #16a34a; }
+.cal-table tbody tr.cal-duty td a.fw-semibold, .cal-table tr.cal-duty a { color: #047857; }
 .cal-table tr.cal-duty.cal-mine td { background: #d1fae5; }
 .cal-ev.duty { --ec: #16a34a; }
 .cal-ev.duty.mine { background: var(--ec); color: #fff; }
