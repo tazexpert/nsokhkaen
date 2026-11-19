@@ -103,6 +103,7 @@ $pageTitle = $share ? 'แก้ไขข้อความที่แชร์
 $active = 'shares';
 $headExtra = richtext_assets();
 $pageActions = '<a href="' . h(url('shares')) . '" class="btn btn-outline-secondary"><i class="bi bi-megaphone"></i> กระดานแชร์ข้อความ</a>';
+$bodyClass = trim(($bodyClass ?? '') . ' mod-theme theme-admin');   // เมนูบัญชีผู้ใช้: สีน้ำเงินเดียวกับเมนูหลัก
 require APP_ROOT . '/core/layout/header.php';
 ?>
 <div class="row justify-content-center">

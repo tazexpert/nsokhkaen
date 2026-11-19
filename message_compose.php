@@ -89,6 +89,7 @@ $pageTitle = $replyTo ? 'ตอบกลับข้อความ' : 'เข�
 $active = 'messages';
 $headExtra = richtext_assets();
 $pageActions = '<a href="' . h(url('messages')) . '" class="btn btn-outline-secondary"><i class="bi bi-inbox"></i> กล่องจดหมาย</a>';
+$bodyClass = trim(($bodyClass ?? '') . ' mod-theme theme-admin');   // เมนูบัญชีผู้ใช้: สีน้ำเงินเดียวกับเมนูหลัก
 require APP_ROOT . '/core/layout/header.php';
 ?>
 <div class="row justify-content-center">

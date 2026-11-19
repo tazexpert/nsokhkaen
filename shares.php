@@ -35,6 +35,7 @@ $pageTitle = 'แชร์ข้อความ';
 $active = 'shares';
 $headExtra = richtext_assets(false);
 $pageActions = '<a href="' . h(url('share_form')) . '" class="btn btn-primary"><i class="bi bi-megaphone"></i> แชร์ข้อความ</a>';
+$bodyClass = trim(($bodyClass ?? '') . ' mod-theme theme-admin');   // เมนูบัญชีผู้ใช้: สีน้ำเงินเดียวกับเมนูหลัก
 require APP_ROOT . '/core/layout/header.php';
 $link = fn(array $p) => h(url('shares?' . http_build_query(array_filter(['tab' => $tab === 'mine' ? 'mine' : null, 'q' => $q ?: null] + $p))));
 ?>

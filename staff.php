@@ -20,6 +20,7 @@ $staff = array_values(sort_staff($st->fetchAll()));     // เรียงตา
 $pageTitle = 'บุคลากรสถิติขอนแก่น';
 $active = 'staff';
 $pageActions = '<button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> พิมพ์</button>';
+$bodyClass = trim(($bodyClass ?? '') . ' mod-theme theme-admin');   // เมนูบัญชีผู้ใช้: สีน้ำเงินเดียวกับเมนูหลัก
 require APP_ROOT . '/core/layout/header.php';
 ?>
 <div class="card">

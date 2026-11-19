@@ -301,7 +301,7 @@ h1,h2,h3,h4,h5,.brand,.stat-num,.btn,.card-header,.nav-tabs{font-family:'Prompt'
 .theme-inventory { --mh: #c34397; --mh2: #d16fae; }     /* วัสดุและครุภัณฑ์: บานเย็น */
 .theme-payslip { --mh: #5e4e95; --mh2: #8072b0; }       /* สลิปเงินเดือน: ม่วงคราม */
 .theme-digitalcc { --mh: #96c93e; --mh2: #8bc34a; }     /* ศูนย์ดิจิทัลชุมชน: เขียว */
-.theme-admin { --mh: #4099ff; --mh2: #73b4ff; }         /* ผู้ดูแลระบบ: น้ำเงินเดียวกับเมนูหลัก */
+.theme-admin { --mh: #4099ff; --mh2: #73b4ff; }         /* ผู้ดูแลระบบ + เมนูบัญชีผู้ใช้ (รูปโปรไฟล์): น้ำเงินเดียวกับเมนูหลัก */
 @media screen {
   .mod-theme .card { border: 0; border-radius: 14px; box-shadow: 0 4px 16px color-mix(in srgb, var(--mh) 14%, transparent), 0 1px 3px rgba(15, 23, 42, .08); }
   .mod-theme .card-header:not([class*="bg-"]):not(.cal-month-head) { background: var(--mh); color: #fff; border-bottom: 0; text-shadow: 0 1px 1px rgba(0, 0, 0, .18); }

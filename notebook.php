@@ -94,6 +94,7 @@ $pageTitle = 'สมุดบันทึก';
 $headExtra = richtext_assets($editing && !$broken);
 $active = 'notebook';
 $pageActions = $editing || $broken ? '' : '<a href="' . h(url('notebook?edit=1')) . '" class="btn btn-primary"><i class="bi bi-pencil-square"></i> แก้ไข</a>';
+$bodyClass = trim(($bodyClass ?? '') . ' mod-theme theme-admin');   // เมนูบัญชีผู้ใช้: สีน้ำเงินเดียวกับเมนูหลัก
 require APP_ROOT . '/core/layout/header.php';
 ?>
 <div class="alert alert-light border small py-2"><i class="bi bi-shield-lock text-success"></i> สมุดบันทึกส่วนตัว — เห็นได้เฉพาะคุณ เนื้อหาถูกเข้ารหัสก่อนจัดเก็บ ผู้อื่น (รวมถึงผู้ดูแลระบบ) เปิดอ่านไม่ได้</div>

@@ -34,6 +34,7 @@ $unread = msg_unread_count($uid);
 $pageTitle = 'กล่องจดหมาย';
 $active = 'messages';
 $pageActions = '<a href="' . h(url('message_compose')) . '" class="btn btn-primary"><i class="bi bi-pencil-square"></i> เขียนข้อความ</a>';
+$bodyClass = trim(($bodyClass ?? '') . ' mod-theme theme-admin');   // เมนูบัญชีผู้ใช้: สีน้ำเงินเดียวกับเมนูหลัก
 require APP_ROOT . '/core/layout/header.php';
 $link = fn(array $p) => h(url('messages?' . http_build_query(array_filter(['tab' => $tab === 'sent' ? 'sent' : null, 'q' => $q ?: null] + $p))));
 ?>

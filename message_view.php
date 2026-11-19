@@ -44,6 +44,7 @@ $pageTitle = 'ข้อความ';
 $headExtra = richtext_assets(false);
 $active = 'messages';
 $pageActions = '<a href="' . h(url('messages' . ($isRecipient ? '' : '?tab=sent'))) . '" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> กล่องจดหมาย</a>';
+$bodyClass = trim(($bodyClass ?? '') . ' mod-theme theme-admin');   // เมนูบัญชีผู้ใช้: สีน้ำเงินเดียวกับเมนูหลัก
 require APP_ROOT . '/core/layout/header.php';
 $from = ['photo' => $msg['sender_photo']];
 ?>
