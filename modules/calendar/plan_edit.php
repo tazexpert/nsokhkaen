@@ -197,7 +197,7 @@ require __DIR__ . '/header.php';
           <tr>
             <th class="plan-name">รายชื่อผู้ปฏิบัติงาน</th>
             <?php for ($d = 1; $d <= $days; $d++): $w = (int)date('w', strtotime(sprintf('%s-%02d', $ym, $d))); ?>
-              <th class="text-center<?= $w === 0 || $w === 6 ? ' we' : '' ?>"><?= $d ?><div class="small fw-normal text-muted"><?= $wd[$w] ?></div></th>
+              <th class="text-center<?= $w === 0 || $w === 6 ? ' we' : '' ?>"><?= $d ?><div class="small fw-normal plan-wdn"><?= $wd[$w] ?></div></th>
             <?php endfor; ?>
           </tr>
         </thead>

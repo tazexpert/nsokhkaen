@@ -291,3 +291,26 @@ a.cal-day-person:hover { box-shadow: 0 4px 14px rgba(15, 23, 42, .15); transform
 .ev-poster-body .card { border: 1.5px solid color-mix(in srgb, var(--ec) 35%, #fff); }
 .ev-poster-body .card-header { background: color-mix(in srgb, var(--ec) 10%, #fff); color: var(--ec); }
 .ev-poster-body dt { color: var(--ec); }
+
+/* ===== โทนเดียวกับปฏิทินรายเดือน ทุกหน้าในเมนูปฏิทินงาน (body.cal-theme จาก header.php) — เฉพาะบนจอ ===== */
+@media screen {
+  .cal-theme .card { border: 0; border-radius: 14px; box-shadow: 0 4px 16px rgba(14, 165, 201, .12), 0 1px 3px rgba(15, 23, 42, .08); }
+  .cal-theme .card-header:not(.cal-month-head) { --mh: #0ea5c9; background: var(--mh); color: #fff; border-bottom: 0; }
+  .cal-theme .card > .card-header:first-child { border-radius: 14px 14px 0 0; }
+  .cal-theme .card > .card-header:only-child { border-radius: 14px; }
+  .cal-theme .card-header:not(.cal-month-head) strong, .cal-theme .card-header:not(.cal-month-head) .bi,
+  .cal-theme .card-header:not(.cal-month-head) a:not(.btn), .cal-theme .card-header:not(.cal-month-head) label { color: #fff !important; }
+  .cal-theme .card-header:not(.cal-month-head) .text-muted, .cal-theme .card-header:not(.cal-month-head) small { color: rgba(255, 255, 255, .85) !important; }
+  .cal-theme .card-header .btn-light { background: #fff; border-color: transparent; color: var(--mh, #0ea5c9); }
+  .cal-theme .card-header .btn-outline-primary, .cal-theme .card-header .btn-outline-secondary, .cal-theme .card-header .btn-outline-success,
+  .cal-theme .card-header .btn-outline-danger { color: #fff; border-color: rgba(255, 255, 255, .8); background: transparent; }
+  .cal-theme .card-header .btn-outline-primary:hover, .cal-theme .card-header .btn-outline-secondary:hover,
+  .cal-theme .card-header .btn-outline-success:hover, .cal-theme .card-header .btn-outline-danger:hover { background: #fff; color: var(--mh, #0ea5c9); }
+  .cal-theme .card-header .badge.text-bg-primary { background: #fff !important; color: #0ea5c9 !important; }
+  /* หัวตาราง: ฟ้าอ่อน ตัวอักษรขาว (ไม่รวมตารางตัวอย่างรูปแบบไฟล์ที่ใช้ tr.table-light) */
+  .cal-theme .table > thead th:not(.plan-sum):not(.plan-sum-head) { background: #5cc4dd; color: #fff; font-weight: 700; border-color: rgba(255, 255, 255, .35); }
+  .cal-theme .table > thead th .text-muted, .cal-theme .table > thead th .plan-wdn { color: rgba(255, 255, 255, .9) !important; }
+  .cal-theme .table > thead th.we:not(.plan-sum):not(.plan-sum-head) { background: #a9b7c6; }
+  .cal-theme .table td.we { background-color: #f4f6f9; }
+  .cal-theme .table tr.table-light > * { --bs-table-bg: #e0f4fa; color: #0e7490; font-weight: 600; }
+}
