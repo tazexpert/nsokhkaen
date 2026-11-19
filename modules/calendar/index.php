@@ -80,7 +80,7 @@ $pageActions = (cal_can('admin') ? '<a href="import" class="btn btn-outline-succ
 require __DIR__ . '/header.php';
 ?>
 <div class="card">
-  <div class="card-header d-flex flex-wrap align-items-center gap-2">
+  <div class="card-header cal-month-head d-flex flex-wrap align-items-center gap-2">
     <a href="<?= h($qs(['m' => $prev])) ?>" class="btn btn-light btn-sm"><i class="bi bi-chevron-left"></i></a>
     <h2 class="h5 mb-0 mx-1"><?= h(thai_month_long((int)date('n', $ts))) ?> <?= (int)date('Y', $ts) + 543 ?></h2>
     <a href="<?= h($qs(['m' => $next])) ?>" class="btn btn-light btn-sm"><i class="bi bi-chevron-right"></i></a>
@@ -97,7 +97,7 @@ require __DIR__ . '/header.php';
     <?php for ($d = $gridStart; $d <= $gridEnd; $d = date('Y-m-d', strtotime($d . ' +1 day'))):
         $out = substr($d, 0, 7) !== $m; ?>
       <div class="cal-cell<?= $out ? ' out' : '' ?><?= $d === $today ? ' today' : '' ?>" data-date="<?= $d ?>" data-label="<?= h(cal_date_text($d)) ?>">
-        <div class="cal-dnum"><?php if (cal_can('editor')): ?><a href="event_form?date=<?= $d ?>" class="cal-add" title="เพิ่มกิจกรรมวันนี้"><i class="bi bi-plus"></i></a><?php endif; ?><?= (int)substr($d, 8, 2) ?></div>
+        <div class="cal-dnum"><?php if (cal_can('editor')): ?><a href="event_form?date=<?= $d ?>" class="cal-add" title="เพิ่มกิจกรรมวันนี้"><i class="bi bi-plus"></i></a><?php endif; ?><?= $d === $today ? '<span class="cal-today-tag">วันนี้</span>' : '' ?><span class="cal-n"><?= (int)substr($d, 8, 2) ?></span></div>
         <?php foreach ($byDay[$d] ?? [] as $e): $isMine = in_array($me['id'], $assignees[(int)$e['id']] ?? [], true); ?>
           <a href="event_view?id=<?= (int)$e['id'] ?>" class="cal-ev<?= cal_is_duty($e) ? ' duty' : '' ?><?= cal_is_guard($e) ? ' guard' : '' ?><?= $isMine ? ' mine' : '' ?>" title="<?= h(cal_time_text($e) . ' ' . $e['title'] . ($e['location'] ? ' @ ' . $e['location'] : '')) ?>">
             <?php if ($e['start_time'] && $d === $e['event_date']): ?><span class="t"><?= cal_time_thai($e['start_time']) ?></span><?php endif; ?><?= cal_is_private($e) ? '<i class="bi bi-lock-fill me-1" title="ส่วนตัว"></i>' : '' ?><?= h($e['title']) ?></a>

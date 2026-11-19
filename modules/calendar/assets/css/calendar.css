@@ -1,16 +1,28 @@
 /* ปฏิทินรายเดือน */
-.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid #e5e9f0; }
-.cal-wd { padding: 6px 8px; font-weight: 600; font-size: .85rem; background: #f8fafc; border-bottom: 1px solid #e5e9f0; text-align: center; }
-.cal-wd.sun { color: #dc2626; }
-.cal-cell { min-height: 112px; padding: 4px 5px 6px; border-right: 1px solid #eef1f5; border-bottom: 1px solid #eef1f5; min-width: 0; }
+/* แถบเดือน (หัวการ์ด): ไล่สีม่วง → บานเย็น · ปุ่มบนแถบเป็นขอบขาว */
+.cal-month-head { color: #fff; border-bottom: 0; background: linear-gradient(120deg, #5b21b6, #a21caf 55%, #db2777); }
+.cal-month-head h2 { color: #fff; font-weight: 800; }
+.cal-month-head .btn-light { background: rgba(255, 255, 255, .92); border-color: transparent; color: #5b21b6; }
+.cal-month-head .btn-outline-primary, .cal-month-head .btn-outline-secondary, .cal-month-head .btn-outline-success { color: #fff; border-color: rgba(255, 255, 255, .75); }
+.cal-month-head .btn-outline-primary:hover, .cal-month-head .btn-outline-secondary:hover, .cal-month-head .btn-outline-success:hover,
+.cal-month-head .btn-outline-primary.active { background: #fff; border-color: #fff; color: #a21caf; }
+/* ตาราง: เส้นแบ่งช่องชัด · แถบชื่อวันม่วงเข้ม */
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 0; }
+.cal-wd { padding: 7px 8px; font-weight: 700; font-size: .88rem; color: #fff; background: #4c1d95; border-right: 1px solid rgba(255, 255, 255, .18); text-align: center; }
+.cal-wd:nth-child(7) { border-right: 0; }
+.cal-wd.sun { color: #fda4af; }
+.cal-cell { min-height: 112px; padding: 4px 5px 6px; border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; min-width: 0; background: #fff; }
 .cal-cell:nth-child(7n) { border-right: 0; }
-.cal-cell.out { background: #fafbfc; }
-.cal-cell.out .cal-dnum { color: #cbd5e1; }
-.cal-cell.today { background: #eff6ff; }
+.cal-cell.out { background: #f1f5f9; }
+.cal-cell.out .cal-dnum { color: #94a3b8; }
+/* วันนี้: พื้นชมพูอ่อน กรอบบานเย็น เลขวันในวงกลมทึบ + ป้าย "วันนี้" */
+.cal-cell.today { background: #fdf2f8; box-shadow: inset 0 0 0 2.5px #db2777; }
+.cal-cell.today .cal-n { display: inline-grid; place-items: center; min-width: 1.75rem; height: 1.75rem; padding: 0 .3rem; border-radius: 999px; background: #db2777; color: #fff; }
+.cal-today-tag { font-size: .72rem; font-weight: 700; color: #db2777; }
 
 
 .cal-dnum { font-weight: 600; font-size: .9rem; margin-bottom: 3px; display: flex; justify-content: flex-end; align-items: center; gap: 4px; }
-.cal-cell.today .cal-dnum { color: var(--brand); }
+
 .cal-add { margin-right: auto; color: #94a3b8; opacity: 0; text-decoration: none; line-height: 1; }
 .cal-cell:hover .cal-add { opacity: 1; }
 /* แถบกิจกรรมแบบโปสเตอร์: พื้นขาว กรอบสี ชื่อตัวหนาสีเดียวกัน · เวลาอยู่ในบล็อกสีทึบตัวอักษรขาว (--ec = สีประเภท)
@@ -181,7 +193,8 @@ button.att-chip:hover { outline: 2px solid #1d4ed8; }
 .cal-ev.att-ev.done:hover, .cal-ev.att-ev.late:hover { background: color-mix(in srgb, var(--ec) 12%, #fff); color: var(--ec); }
 /* แผงสรุปรายวัน (คลิกวันที่ในปฏิทิน) — การ์ดลอยมุมบนขวา สูงเกือบเต็มจอ กว้าง 1/4 (col-3) ไม่ต่ำกว่า 400px · ลากย้ายได้ */
 .cal-grid .cal-cell[data-date] { cursor: pointer; }
-.cal-cell.cal-picked { box-shadow: inset 0 0 0 2px var(--brand, #0284c7); }
+.cal-cell.cal-picked { box-shadow: inset 0 0 0 3px #7c3aed; }
+.cal-cell.today.cal-picked { box-shadow: inset 0 0 0 3px #7c3aed, inset 0 0 0 5px #db2777; }
 .cal-day-panel { position: fixed; top: 8px; right: 8px; width: 25vw; min-width: 400px; height: calc(100vh - 16px); z-index: 1045; display: flex; flex-direction: column;
   background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 18px 48px rgba(2, 132, 199, .28), 0 2px 8px rgba(15, 23, 42, .12); }
 .cal-day-panel.dragging { user-select: none; opacity: .96; }
