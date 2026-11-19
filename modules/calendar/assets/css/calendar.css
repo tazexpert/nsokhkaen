@@ -1,6 +1,6 @@
 /* ปฏิทินรายเดือน */
-/* แถบเดือน (หัวการ์ด): ม่วงบานเย็นทึบ (แบบบล็อกวันที่ในโปสเตอร์) · ปุ่มบนแถบเป็นขอบขาว */
-.cal-month-head { --mh: #b0309f; color: #fff; border-bottom: 0; background: var(--mh); }
+/* แถบเดือน (หัวการ์ด): ฟ้าทึบ (แบบบล็อกวันที่ "19 FEB" ในโปสเตอร์) · ปุ่มบนแถบเป็นขอบขาว */
+.cal-month-head { --mh: #0ea5c9; color: #fff; border-bottom: 0; background: var(--mh); }
 .cal-month-head h2 { color: #fff; font-weight: 800; }
 .cal-month-head .btn-light { background: #fff; border-color: transparent; color: var(--mh); }
 .cal-month-head .btn-outline-primary, .cal-month-head .btn-outline-secondary, .cal-month-head .btn-outline-success { color: #fff; border-color: rgba(255, 255, 255, .8); }
@@ -8,7 +8,7 @@
 .cal-month-head .btn-outline-primary.active { background: #fff; border-color: #fff; color: var(--mh); }
 /* ตาราง: เส้นแบ่งช่องชัด · แถบชื่อวัน โทนเดียวกับแถบเดือนแต่อ่อนลง */
 .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 0; }
-.cal-wd { padding: 7px 8px; font-weight: 700; font-size: .88rem; color: #fff; background: #cc6bbf; border-right: 1px solid rgba(255, 255, 255, .3); text-align: center; }
+.cal-wd { padding: 7px 8px; font-weight: 700; font-size: .88rem; color: #fff; background: #5cc4dd; border-right: 1px solid rgba(255, 255, 255, .35); text-align: center; }
 .cal-wd:nth-child(7) { border-right: 0; }
 .cal-wd.sun { color: #fff; }
 .cal-cell { min-height: 112px; padding: 4px 5px 6px; border-right: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; min-width: 0; background: #fff; }
