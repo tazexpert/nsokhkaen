@@ -179,3 +179,67 @@ function rota_group_names(array $members, int $groupNo): string
 {
     return implode(', ', array_column($members['groups'][$groupNo] ?? [], 'name'));
 }
+
+/** ชื่อต้น (ไม่มีคำนำหน้า/นามสกุล) — ใช้ในข้อความไลน์ */
+function rota_first_name(string $name): string
+{
+    $n = preg_replace('/^(นางสาว|น\.ส\.|นาง|นาย|ว่าที่ร้อยตรี|ว่าที่\s*ร\.ต\.|ดร\.)\s*/u', '', trim($name));
+    return preg_split('/\s+/u', $n)[0] ?? $n;
+}
+
+/**
+ * ข้อความสำหรับคัดลอกไปวางในไลน์กลุ่ม (1 เวรกิจกรรม)
+ *   เรียน <ตำแหน่งย่อ/ชื่อ> และเจ้าหน้าที่กลุ่มที่ N · กิจกรรม วันที่ เวลา · สถานที่ · การแต่งกาย · ผู้ปฏิบัติ (ชื่อต้นของสมาชิกกลุ่ม)
+ *   ข้าราชการ: ตำแหน่งย่อ (ผอ.กว / ผอ.กป / ผอ.กด) ถ้ามี ไม่มี = ชื่อ-สกุล · สถิติจังหวัดเข้าร่วม = "สถิติจังหวัด" / "รก.สถิติจังหวัด"
+ */
+function rota_line_text(array $t, array $members): string
+{
+    static $users = null;
+    if ($users === null) {
+        $users = array_column(db()->query('SELECT id, username, full_name, position FROM core_users')->fetchAll(), null, 'id');
+    }
+    $label = function (?int $uid, string $name, bool $asChief = false) use ($users): string {
+        $u = $uid ? ($users[$uid] ?? null) : null;
+        if ($asChief) {
+            if ($u && staff_category($u['position']) === 'chief') {
+                return 'สถิติจังหวัด';
+            }
+            foreach ($u ? staff_extras_of($u) : [] as $x) {
+                if (staff_category($x['position']) === 'chief') {
+                    return cal_position_abbr($x['position'], $x['kind']) ?? 'สถิติจังหวัด';
+                }
+            }
+            return 'สถิติจังหวัด';
+        }
+        return ($u ? cal_person_abbr($u) : null) ?? preg_replace('/\s+/u', ' ', trim($name));
+    };
+    $heads = [];
+    if (!empty($t['chief_name'])) {
+        $heads[] = $label($t['chief_user_id'] ? (int)$t['chief_user_id'] : null, (string)$t['chief_name'], true);
+    }
+    $heads[] = $label($t['official_user_id'] ? (int)$t['official_user_id'] : null, (string)$t['official_name']);
+    $g = (int)$t['group_no'];
+    $title = trim((string)$t['title']);
+    $date = (int)substr($t['event_date'], 8, 2) . ' ' . thai_month_long((int)substr($t['event_date'], 5, 2)) . ' ' . ((int)substr($t['event_date'], 0, 4) + 543);
+    $lines = [
+        'เรียน ' . implode(', ', $heads) . ' และเจ้าหน้าที่กลุ่มที่ ' . $g,
+        '           ' . (preg_match('/^เข้าร่วม/u', $title) ? '' : 'เข้าร่วม') . $title . ' ในวันที่ ' . $date
+            . ($t['start_time'] ? ' เวลา ' . substr($t['start_time'], 0, 5) . ' น.' : ''),
+    ];
+    if (trim((string)$t['location']) !== '') {
+        $lines[] = 'ณ ' . trim($t['location']);
+    }
+    if (trim((string)$t['dress']) !== '') {
+        $lines[] = 'การแต่งกาย';
+        $lines[] = trim($t['dress']);
+    }
+    $lines[] = 'ผู้ปฏิบัติ';
+    foreach ($heads as $h) {
+        $lines[] = '  ' . $h;
+    }
+    $lines[] = ' เจ้าหน้าที่กลุ่มที่ ' . $g;
+    foreach ($members['groups'][$g] ?? [] as $m) {
+        $lines[] = '  - ' . rota_first_name($m['name']);
+    }
+    return implode("\n", $lines);
+}

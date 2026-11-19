@@ -78,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $chiefText = $chiefJoins ? ' · สถิติจังหวัด ' . $chief['name'] . ($chiefCounted ? ' (นับเป็นคิวข้าราชการแล้ว)' : '') : '';
         audit_log('cal_rota', '#' . $eid . ' ' . $f['title'] . $chiefText . ' · ' . $official['name'] . ($skipped ? ' (ข้าม ' . implode(', ', $skipped) . ')' : '') . ' · กลุ่ม ' . $groupNo, CAL_MODULE);
         flash('จัดเวรกิจกรรม "' . $f['title'] . '" แล้ว: ' . ($chiefJoins ? ltrim($chiefText, ' ·') . ' · ข้าราชการ ' : '') . $official['name'] . ' และกลุ่มที่ ' . $groupNo . ' — เพิ่มลงปฏิทินและแจ้งเตือน ' . count($users) . ' คน');
-        redirect('rota');
+        redirect('rota?line=' . $eid);                    // เปิดข้อความไลน์ของเวรที่เพิ่งจัดให้ทันที
     }
 }
 
@@ -156,7 +156,7 @@ require __DIR__ . '/header.php';
         <div class="col-12"><label class="form-label">สถานที่ <span class="text-danger">*</span></label>
           <input name="location" class="form-control" maxlength="255" required value="<?= h($f['location']) ?>"></div>
         <div class="col-12"><label class="form-label">การแต่งกาย <span class="text-danger">*</span></label>
-          <input name="dress" class="form-control" maxlength="255" required value="<?= h($f['dress']) ?>" placeholder="เช่น ชุดกีฬาสีขาว / เครื่องแบบปกติขาว"></div>
+          <textarea name="dress" class="form-control" rows="3" maxlength="255" required placeholder="เช่น ชุดกีฬาสีขาว / เครื่องแบบปกติขาว (ขึ้นบรรทัดใหม่ได้)"><?= h($f['dress']) ?></textarea></div>
       </div>
     </div>
     <div class="col-lg-6">
@@ -208,7 +208,7 @@ require __DIR__ . '/header.php';
   <div class="card-header"><strong><i class="bi bi-clock-history"></i> เวรกิจกรรมที่จัดแล้ว (<?= count($turns) ?>)</strong></div>
   <div class="table-responsive">
     <table class="table table-sm align-middle mb-0">
-      <thead><tr><th>วันที่</th><th>กิจกรรม</th><th>สถานที่</th><th>การแต่งกาย</th><th>สถิติจังหวัด</th><th>ข้าราชการ</th><th>กลุ่ม</th></tr></thead>
+      <thead><tr><th>วันที่</th><th>กิจกรรม</th><th>สถานที่</th><th>การแต่งกาย</th><th>สถิติจังหวัด</th><th>ข้าราชการ</th><th>กลุ่ม</th><th class="text-end">ไลน์กลุ่ม</th></tr></thead>
       <tbody>
       <?php foreach ($turns as $t): ?>
         <tr>
@@ -219,13 +219,24 @@ require __DIR__ . '/header.php';
           <td class="small"><?= !empty($t['chief_name']) ? h($t['chief_name']) . (!empty($t['chief_counted']) ? '<div class="text-success">นับเป็นคิวข้าราชการแล้ว</div>' : '') : '<span class="text-muted">-</span>' ?></td>
           <td><?= h($t['official_name']) ?><?= $t['skipped_names'] ? '<div class="small text-warning-emphasis">ข้าม: ' . h($t['skipped_names']) . '</div>' : '' ?></td>
           <td class="text-nowrap">กลุ่มที่ <?= (int)$t['group_no'] ?></td>
+          <td class="text-end"><button type="button" class="btn btn-sm btn-success text-nowrap" data-event="<?= (int)$t['event_id'] ?>" data-line="<?= h(rota_line_text($t, $members)) ?>" data-title="<?= h($t['title']) ?>"><i class="bi bi-chat-dots"></i> ข้อความไลน์</button></td>
         </tr>
       <?php endforeach; ?>
-      <?php if (!$turns): ?><tr><td colspan="7" class="text-center text-muted py-4">ยังไม่มีการจัดเวรกิจกรรม</td></tr><?php endif; ?>
+      <?php if (!$turns): ?><tr><td colspan="8" class="text-center text-muted py-4">ยังไม่มีการจัดเวรกิจกรรม</td></tr><?php endif; ?>
       </tbody>
     </table>
   </div>
 </div>
+<!-- ข้อความสำหรับวางในไลน์กลุ่ม -->
+<div class="modal fade" id="lineModal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title"><i class="bi bi-chat-dots text-success"></i> ข้อความไลน์กลุ่ม</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button></div>
+  <div class="modal-body"><div class="small text-muted mb-1" id="lineTitle"></div>
+    <textarea class="form-control" id="lineText" rows="14" style="font-size:.95rem"></textarea>
+    <div class="small text-muted mt-1">แก้ไขข้อความได้ก่อนคัดลอก</div></div>
+  <div class="modal-footer"><span class="small text-success me-auto d-none" id="lineDone"><i class="bi bi-check2-circle"></i> คัดลอกแล้ว — ไปวางในไลน์กลุ่มได้เลย</span>
+    <button type="button" class="btn btn-light" data-bs-dismiss="modal">ปิด</button>
+    <button type="button" class="btn btn-success" id="lineCopy"><i class="bi bi-clipboard"></i> คัดลอกข้อความ</button></div>
+</div></div></div>
 <style>
 .rota-list .rota-next{background:var(--bs-primary-bg-subtle);font-weight:600}
 .rota-group{border:1px solid var(--bs-border-color);border-radius:.5rem;padding:.5rem .75rem}
@@ -261,6 +272,20 @@ const rotaChoices = () => {
   });
   if (!document.querySelector('#officialChoices input:checked')) document.querySelector('#officialChoices [data-key]:not(.d-none) input')?.click();
 };
+// ปุ่ม "ข้อความไลน์" → หน้าต่างข้อความ + คัดลอก (clipboard API · ไม่รองรับ = เลือกข้อความแล้ว execCommand)
+document.querySelectorAll('[data-line]').forEach(b => b.addEventListener('click', () => {
+  document.getElementById('lineText').value = b.dataset.line;
+  document.getElementById('lineTitle').textContent = b.dataset.title;
+  document.getElementById('lineDone').classList.add('d-none');
+  bootstrap.Modal.getOrCreateInstance(document.getElementById('lineModal')).show();
+}));
+document.getElementById('lineCopy').addEventListener('click', async () => {
+  const ta = document.getElementById('lineText');
+  try { await navigator.clipboard.writeText(ta.value); } catch (e) { ta.select(); document.execCommand('copy'); }
+  document.getElementById('lineDone').classList.remove('d-none');
+});
+const lineEv = new URLSearchParams(location.search).get('line');
+if (lineEv) document.querySelector('[data-line][data-event="' + CSS.escape(lineEv) + '"]')?.click();
 document.querySelectorAll('[name=chief]').forEach(r => r.addEventListener('change', rotaChoices));
 rotaChoices();
 document.getElementById('rotaForm')?.addEventListener('submit', e => {
