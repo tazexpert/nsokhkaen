@@ -112,9 +112,9 @@ require __DIR__ . '/header.php';
 </div>
 <div class="cal-day-panel d-none" id="dayPanel" role="dialog" aria-labelledby="dayPanelTitle">
   <div class="cal-day-head" id="dayPanelHead" title="ลากเพื่อย้ายตำแหน่ง">
-    <i class="bi bi-grip-vertical text-muted"></i>
-    <div class="min-w-0 flex-grow-1"><div class="small text-muted">สรุปรายวัน · ใครมีกิจกรรมบ้าง</div><div class="fw-semibold text-truncate" id="dayPanelTitle"></div></div>
-    <button type="button" class="btn-close" id="dayPanelClose" aria-label="ปิด"></button>
+    <i class="bi bi-grip-vertical"></i>
+    <div class="min-w-0 flex-grow-1"><div class="small"><i class="bi bi-calendar-day"></i> สรุปรายวัน · ใครมีกิจกรรมบ้าง</div><div class="fw-semibold text-truncate" id="dayPanelTitle"></div></div>
+    <button type="button" class="btn-close btn-close-white" id="dayPanelClose" aria-label="ปิด"></button>
   </div>
   <div class="cal-day-body" id="dayPanelBody"></div>
 </div>
@@ -129,12 +129,13 @@ require __DIR__ . '/header.php';
   const open = cell => {
     const d = data[cell.dataset.date] || { duty: [], guard: [], people: [], none: [] };
     document.getElementById('dayPanelTitle').textContent = cell.dataset.label;
-    let html = `<div class="cal-day-sec"><div class="cal-day-h">1. เวรสำนักงาน</div><div>${d.duty.length ? d.duty.map(esc).join(', ') : '<span class="text-muted">-</span>'}</div>`
-      + (d.guard.length ? `<div class="mt-1"><span class="text-muted">เวรศาลากลาง:</span> ${d.guard.map(esc).join(', ')}</div>` : '') + '</div>';
-    html += `<div class="cal-day-sec"><div class="cal-day-h">2. ผู้มีกิจกรรม <span class="badge text-bg-primary">${d.people.length} คน</span></div>`
-      + (d.people.length ? d.people.map((p, i) => `<div class="cal-day-person"><div class="fw-semibold">${i + 1}. ${esc(p.name)}</div>${p.items.map(item).join('')}</div>`).join('')
+    let html = `<div class="cal-day-sec duty"><div class="cal-day-h"><i class="bi bi-shield-check"></i> 1. เวรสำนักงาน</div><div class="cal-day-c">`
+      + (d.duty.length ? d.duty.map(esc).join(', ') : '<span class="text-muted">-</span>')
+      + (d.guard.length ? `<div class="cal-day-guard"><i class="bi bi-building"></i> เวรศาลากลาง: ${d.guard.map(esc).join(', ')}</div>` : '') + '</div></div>';
+    html += `<div class="cal-day-sec people"><div class="cal-day-h"><i class="bi bi-people-fill"></i> 2. ผู้มีกิจกรรม <span class="badge rounded-pill ms-auto">${d.people.length} คน</span></div><div class="cal-day-c">`
+      + (d.people.length ? d.people.map((p, i) => `<div class="cal-day-person"><div class="cal-day-name"><span class="cal-day-no">${i + 1}</span>${esc(p.name)}</div>${p.items.map(item).join('')}</div>`).join('')
          : '<div class="text-muted">ไม่มีกิจกรรม</div>')
-      + (d.none.length ? `<div class="cal-day-person"><div class="fw-semibold text-muted">ไม่ระบุผู้รับผิดชอบ</div>${d.none.map(item).join('')}</div>` : '') + '</div>';
+      + (d.none.length ? `<div class="cal-day-person none"><div class="cal-day-name text-muted"><i class="bi bi-question-circle"></i> ไม่ระบุผู้รับผิดชอบ</div>${d.none.map(item).join('')}</div>` : '') + '</div></div>';
     body.innerHTML = html;
     panel.classList.remove('d-none');
     cur?.classList.remove('cal-picked'); cur = cell; cell.classList.add('cal-picked');

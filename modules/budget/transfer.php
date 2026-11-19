@@ -1,7 +1,8 @@
 <?php
 /**
  * รายละเอียดโอนเปลี่ยนแปลงครั้งที่ N/ปี (คลิกจากภาพรวมงบประมาณ)
- *   รายการที่ช่อง "รายการ" ขึ้นต้นด้วย "โอนเปลี่ยนแปลงครั้งที่ N/ปี" — แสดง วันที่ · ที่เอกสาร · หมวด · รายการ + รายละเอียด · ได้รับ / เบิกจ่าย
+ *   รายการที่ช่อง "รายการ" ขึ้นต้นด้วย "โอนเปลี่ยนแปลงครั้งที่ N/ปี" — แสดง วันที่ · ที่เอกสาร · หมวด · รายการ · ได้รับ / เบิกจ่าย
+ *   ช่องรายการ: ข้อความในรายละเอียด (ถ้ามี) ไม่มี = ค่าใช้จ่ายของหมวด
  */
 require_once __DIR__ . '/bootstrap.php';
 require_module(BUD_MODULE, 'viewer');
@@ -55,7 +56,8 @@ require __DIR__ . '/header.php';
           <td class="text-nowrap"><?= h(thai_date($t['txn_date'])) ?></td>
           <td class="font-monospace text-nowrap"><?= h($t['doc_no']) ?></td>
           <td class="small"><?php if ($s): ?><span class="bud-src" style="--c:<?= h($s['color']) ?>"><?= h($s['label']) ?></span><?php endif; ?></td>
-          <td><?= h($t['description']) ?><?php if ((string)$t['detail'] !== ''): ?><div class="small text-muted"><?= nl2br(h($t['detail'])) ?></div><?php endif; ?></td>
+          <td><?php if (trim((string)$t['detail']) !== ''): ?><?= nl2br(h(trim($t['detail']))) ?>
+            <?php else: /* ไม่ใส่รายละเอียด → ค่าใช้จ่ายของหมวด (ไม่มี = รายการ / ชื่อหมวด) */ ?><span class="text-muted"><?= h(($s['activity'] ?? '') !== '' ? $s['activity'] : (($s['expense'] ?? '') !== '' ? $s['expense'] : ($s['label'] ?? '-'))) ?></span><?php endif; ?></td>
           <td class="text-end text-nowrap"><?= $sp ? '' : bud_money($t['amount']) ?></td>
           <td class="text-end text-nowrap"><?= $sp ? bud_money($t['amount']) : '' ?></td>
           <?php if (bud_can('editor')): ?><td class="no-print"><a href="txn_form?id=<?= (int)$t['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a></td><?php endif; ?>
