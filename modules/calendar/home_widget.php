@@ -2,7 +2,7 @@
 /**
  * ปฏิทินการปฏิบัติงาน (รายเดือน) บนหน้าหลัก (/index.php) — แสดงก่อนกล่องเลือกระบบ · ใช้ month_view.php ร่วมกับหน้าปฏิทินรายเดือน
  * พารามิเตอร์บนหน้าหลัก: cal_m (เดือน Y-m) / cal_mine (งานของฉัน) · ผู้เยี่ยมชม (ไม่ได้ login): ดูได้อย่างเดียว
- * คลิกวันที่ = popup สรุปรายวัน (หน้าหลักไม่เปิดเองอัตโนมัติ เพื่อไม่บังกล่องเลือกระบบ)
+ * เปิดหน้า = popup สรุปรายวันของวันนี้ (เหมือนหน้าปฏิทินรายเดือน) · คลิกวันที่เพื่อเปลี่ยนวัน
  */
 require_once __DIR__ . '/lib.php';
 (function () {                                    // แยกตัวแปรออกจากหน้าหลัก
@@ -18,7 +18,7 @@ require_once __DIR__ . '/lib.php';
         'cal_mine' => array_key_exists('mine', $p) ? $p['mine'] : ($mine ? 1 : null),
     ])) . '#calendar';
     $calBase = module_url('calendar', '');
-    $calAutoOpen = false;
+    $calAutoOpen = true;
     ?>
 <link href="<?= h(asset_v('modules/calendar/assets/css/calendar.css')) ?>" rel="stylesheet">
 <div id="calendar" class="cal-home-month mb-4">
