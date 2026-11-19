@@ -208,10 +208,9 @@ button.att-chip:hover { outline: 2px solid #1d4ed8; }
 .cal-grid .cal-cell[data-date] { cursor: pointer; }
 .cal-cell.cal-picked { box-shadow: inset 0 0 0 3px #7c3aed; }
 .cal-cell.today.cal-picked { box-shadow: inset 0 0 0 3px #7c3aed, inset 0 0 0 5px #db2777; }
-.cal-day-panel { position: fixed; top: 8px; right: 8px; width: 25vw; min-width: 400px; height: calc(100vh - 16px); z-index: 1045; display: flex; flex-direction: column;
-  background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 18px 48px rgba(2, 132, 199, .28), 0 2px 8px rgba(15, 23, 42, .12); }
-.cal-day-panel.dragging { user-select: none; opacity: .96; }
-.cal-day-head { display: flex; align-items: center; gap: .7rem; padding: .85rem 1rem; color: #fff; cursor: move; touch-action: none;
+.cal-day-panel { position: sticky; top: 12px; max-height: calc(100vh - 24px); display: flex; flex-direction: column;
+  background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 30px rgba(2, 132, 199, .18), 0 2px 8px rgba(15, 23, 42, .1); }
+.cal-day-head { display: flex; align-items: center; gap: .7rem; padding: .85rem 1rem; color: #fff;
   background: linear-gradient(120deg, #6d28d9, #c026d3 55%, #db2777); }      /* สดกว่าปฏิทิน: ม่วง → บานเย็น */
 .cal-day-head .small { color: rgba(255, 255, 255, .9) !important; }
 .cal-day-head .bi-grip-vertical { color: rgba(255, 255, 255, .8) !important; }
@@ -245,7 +244,7 @@ button.att-chip:hover { outline: 2px solid #1d4ed8; }
 .cal-day-item:hover { color: var(--pc); }
 .cal-day-item .t { display: inline-block; padding: 0 .35rem; margin-right: .2rem; border-radius: 4px; color: #fff; background: var(--pc); font-size: .8rem; font-weight: 700; white-space: nowrap; }
 .cal-day-item .loc { color: #64748b; }
-@media (max-width: 767.98px) { .cal-day-panel { top: 0; right: 0; width: 100vw; min-width: 0; height: 100vh; border-radius: 0; } }
+@media (max-width: 1199.98px) { .cal-day-panel { position: static; max-height: none; } }   /* จอเล็ก: การ์ดอยู่ใต้ปฏิทิน */
 @media print { .cal-day-panel { display: none !important; } }
 /* หน้าต่างรายละเอียดกิจกรรม (คลิกรายการ) — หัวแบบโปสเตอร์: บล็อกวันที่ + แถบสีตามประเภท */
 .ev-poster { align-items: center; gap: .9rem; color: #fff; border-bottom: 0; background: linear-gradient(120deg, var(--ec), color-mix(in srgb, var(--ec) 70%, #fff)); }
