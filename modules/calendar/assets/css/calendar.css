@@ -13,14 +13,16 @@
 .cal-cell.today .cal-dnum { color: var(--brand); }
 .cal-add { margin-right: auto; color: #94a3b8; opacity: 0; text-decoration: none; line-height: 1; }
 .cal-cell:hover .cal-add { opacity: 1; }
-.cal-ev { display: block; font-size: .78rem; line-height: 1.3; padding: 2px 5px; margin-bottom: 2px; border-radius: 5px; background: #e0f2fe;
-  color: #075985; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.cal-ev:hover { background: #bae6fd; color: #0c4a6e; }
-.cal-ev.mine { background: #fef3c7; color: #92400e; font-weight: 600; }
-.cal-ev .t { font-variant-numeric: tabular-nums; margin-right: 3px; opacity: .8; }
+.cal-ev { display: block; font-size: .78rem; line-height: 1.3; padding: 2px 5px 2px 8px; margin-bottom: 3px; border-radius: 5px; background: #dbeafe;
+  color: #1e3a8a; font-weight: 500; text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  box-shadow: inset 4px 0 0 var(--ev-bar, #2563eb); }        /* แถบสีซ้าย = ประเภทกิจกรรม (ให้แยกออกจากพื้นขาวชัด) */
+.cal-ev:hover { background: #bfdbfe; color: #172554; }
+.cal-ev.mine { --ev-bar: #d97706; background: #fde68a; color: #78350f; font-weight: 700; }
+.cal-ev.mine:hover { background: #fcd34d; color: #451a03; }
+.cal-ev .t { font-variant-numeric: tabular-nums; margin-right: 3px; font-weight: 700; }
 @media (max-width: 767.98px) {
   .cal-cell { min-height: 70px; padding: 2px; }
-  .cal-ev { font-size: .68rem; padding: 1px 3px; }
+  .cal-ev { font-size: .68rem; padding: 1px 3px 1px 6px; }
   .cal-ev .t { display: none; }
 }
 /* ตารางกิจกรรม */
@@ -50,13 +52,13 @@
 .cal-table tr.cal-duty td:first-child { box-shadow: inset 4px 0 0 #10b981; }
 .cal-table tr.cal-duty a { color: #047857; }
 .cal-table tr.cal-duty.cal-mine td { background: #d1fae5; }
-.cal-ev.duty { background: #d1fae5; color: #065f46; }
-.cal-ev.duty:hover { background: #a7f3d0; color: #064e3b; }
-.cal-ev.duty.mine { background: #6ee7b7; color: #064e3b; }
+.cal-ev.duty { --ev-bar: #16a34a; background: #bbf7d0; color: #14532d; }
+.cal-ev.duty:hover { background: #86efac; color: #052e16; }
+.cal-ev.duty.mine { background: #4ade80; color: #052e16; }
 /* เวรศาลากลาง (จากแผนการปฏิบัติงาน) — ในตารางไม่ไฮไลต์แถว (ปฏิทินรายเดือนใช้สีป้าย) */
-.cal-ev.guard { background: #ffe4e6; color: #9f1239; }
-.cal-ev.guard:hover { background: #fecdd3; color: #881337; }
-.cal-ev.guard.mine { background: #fda4af; color: #881337; }
+.cal-ev.guard { --ev-bar: #e11d48; background: #fecdd3; color: #881337; }
+.cal-ev.guard:hover { background: #fda4af; color: #4c0519; }
+.cal-ev.guard.mine { background: #fb7185; color: #4c0519; }
 /* กิจกรรมวันนี้ที่จบแล้ว: ยังแสดงจนสิ้นวัน แต่จางลง */
 .cal-table tr.cal-done td { opacity: .6; }
 .cal-table tr.cal-done td:last-child { opacity: 1; }
@@ -171,12 +173,12 @@ button.att-chip { border: 0; cursor: pointer; }
 button.att-chip:hover { outline: 2px solid #1d4ed8; }
 @media print { .att-chip { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 /* รายการเวลาปฏิบัติราชการส่วนตัวในปฏิทิน (เห็นเฉพาะเจ้าของ) */
-.cal-ev.att-ev { background: #fee2e2; color: #b91c1c; font-weight: 600; box-shadow: inset 3px 0 0 #dc2626; }
-.cal-ev.att-ev:hover { background: #fecaca; color: #991b1b; }
-.cal-ev.att-ev.done { background: #dbeafe; color: #1d4ed8; box-shadow: inset 3px 0 0 #1d4ed8; font-weight: 500; }
-.cal-ev.att-ev.done:hover { background: #bfdbfe; }
-.cal-ev.att-ev.late { background: #fef3c7; color: #b45309; box-shadow: inset 3px 0 0 #f59e0b; }
-.cal-ev.att-ev.late:hover { background: #fde68a; }
+.cal-ev.att-ev { --ev-bar: #dc2626; background: #fecaca; color: #991b1b; font-weight: 700; }
+.cal-ev.att-ev:hover { background: #fca5a5; color: #7f1d1d; }
+.cal-ev.att-ev.done { --ev-bar: #4f46e5; background: #e0e7ff; color: #3730a3; font-weight: 600; }      /* รับรองแล้ว: ม่วงคราม (ไม่ซ้ำฟ้าของกิจกรรม) */
+.cal-ev.att-ev.done:hover { background: #c7d2fe; }
+.cal-ev.att-ev.late { --ev-bar: #ea580c; background: #fed7aa; color: #9a3412; }                       /* มาสาย: ส้ม (ไม่ซ้ำเหลืองของงานของฉัน) */
+.cal-ev.att-ev.late:hover { background: #fdba74; }
 /* แผงสรุปรายวัน (คลิกวันที่ในปฏิทิน) — การ์ดลอยมุมบนขวา สูงเกือบเต็มจอ กว้าง 1/4 (col-3) ไม่ต่ำกว่า 400px · ลากย้ายได้ */
 .cal-grid .cal-cell[data-date] { cursor: pointer; }
 .cal-cell.cal-picked { box-shadow: inset 0 0 0 2px var(--brand, #0284c7); }
