@@ -4,21 +4,25 @@
  *   แสดงว่าถึงคิวข้าราชการคนใด และกลุ่มกิจกรรมใด → กรอกชื่อกิจกรรม วันที่ สถานที่ การแต่งกาย แล้วยืนยัน
  *   ยืนยัน = เพิ่มกิจกรรมลงปฏิทิน (ผู้รับผิดชอบ = ข้าราชการ + สมาชิกกลุ่มที่มีบัญชี → ได้รับการแจ้งเตือน)
  *   ข้าราชการข้ามได้ 1–3 คิว (คนที่ถูกข้ามได้คิวถัดไป) · ลบกิจกรรมในปฏิทิน = คืนคิว
+ *   กล่องแรก: สถิติจังหวัดเข้าร่วมด้วยหรือไม่ — ผู้รักษาการที่ถึงคิวข้าราชการพอดี = นับเป็นคิวแล้ว เลือกข้าราชการคิวถัดไป
  */
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/rota_lib.php';
 $me = require_module(CAL_MODULE, 'admin');
 $pdo = db();
 
-$f = ['title' => '', 'event_date' => date('Y-m-d'), 'start_time' => '08:30', 'end_time' => '16:30', 'location' => '', 'dress' => '', 'pick' => ''];
+$f = ['title' => '', 'event_date' => date('Y-m-d'), 'start_time' => '08:30', 'end_time' => '16:30', 'location' => '', 'dress' => '', 'pick' => '', 'chief' => ''];
 $errors = [];
+$hasChief = rota_has_chief();
+$chief = $hasChief ? rota_chief() : null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
     foreach (array_keys($f) as $k) {
         $f[$k] = trim((string)post($k));
     }
     $state = rota_state();
-    $choices = array_slice($state['officials'], 0, ROTA_MAX_SKIP + 1);
+    $chiefJoins = $chief && $f['chief'] === '1';
+    [$choices, $chiefCounted] = rota_choices($state['officials'], $chief, $chiefJoins);
     $pickIdx = array_search($f['pick'], array_column($choices, 'key'), true);
     $groupNo = $state['groups'][0] ?? null;
     if ($f['title'] === '') {
@@ -48,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $skipped = array_column(array_slice($choices, 0, $pickIdx), 'name');
         $group = $state['members']['groups'][$groupNo];
         $note = 'การแต่งกาย: ' . $f['dress'];             // หมายเหตุในตาราง: การแต่งกายอย่างเดียว (รายชื่ออยู่ในผู้รับผิดชอบ)
-        $users = array_values(array_unique(array_filter(array_merge([$official['user_id']], array_column($group, 'user_id')))));
+        $users = array_values(array_unique(array_filter(array_merge([$chiefJoins ? $chief['user_id'] : null, $official['user_id']], array_column($group, 'user_id')))));
         $pdo->beginTransaction();
         try {
             $pdo->prepare("INSERT INTO cal_events (kind, visibility, event_date, start_time, end_time, title, location, note, created_by)
@@ -62,13 +66,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare('INSERT INTO cal_rota_turns (event_id, official_user_id, official_name, skipped_names, dress, group_no, created_by)
                 VALUES (?, ?, ?, ?, ?, ?, ?)')
                 ->execute([$eid, $official['user_id'], $official['name'], $skipped ? implode(', ', $skipped) : null, $f['dress'] ?: null, $groupNo, $me['id']]);
+            if ($chiefJoins) {
+                $pdo->prepare('UPDATE cal_rota_turns SET chief_user_id = ?, chief_name = ?, chief_counted = ? WHERE event_id = ?')
+                    ->execute([$chief['user_id'], $chief['name'], $chiefCounted ? 1 : 0, $eid]);
+            }
             $pdo->commit();
         } catch (Throwable $ex) {
             $pdo->rollBack();
             throw $ex;
         }
-        audit_log('cal_rota', '#' . $eid . ' ' . $f['title'] . ' · ' . $official['name'] . ($skipped ? ' (ข้าม ' . implode(', ', $skipped) . ')' : '') . ' · กลุ่ม ' . $groupNo, CAL_MODULE);
-        flash('จัดเวรกิจกรรม "' . $f['title'] . '" แล้ว: ' . $official['name'] . ' และกลุ่มที่ ' . $groupNo . ' — เพิ่มลงปฏิทินและแจ้งเตือน ' . count($users) . ' คน');
+        $chiefText = $chiefJoins ? ' · สถิติจังหวัด ' . $chief['name'] . ($chiefCounted ? ' (นับเป็นคิวข้าราชการแล้ว)' : '') : '';
+        audit_log('cal_rota', '#' . $eid . ' ' . $f['title'] . $chiefText . ' · ' . $official['name'] . ($skipped ? ' (ข้าม ' . implode(', ', $skipped) . ')' : '') . ' · กลุ่ม ' . $groupNo, CAL_MODULE);
+        flash('จัดเวรกิจกรรม "' . $f['title'] . '" แล้ว: ' . ($chiefJoins ? ltrim($chiefText, ' ·') . ' · ข้าราชการ ' : '') . $official['name'] . ' และกลุ่มที่ ' . $groupNo . ' — เพิ่มลงปฏิทินและแจ้งเตือน ' . count($users) . ' คน');
         redirect('rota');
     }
 }
@@ -76,8 +85,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $state = rota_state();
 $members = $state['members'];
 $turns = array_reverse(rota_turns());
-$choices = array_slice($state['officials'], 0, ROTA_MAX_SKIP + 1);
-$f['pick'] = in_array($f['pick'], array_column($choices, 'key'), true) ? $f['pick'] : ($choices[0]['key'] ?? '');
+$chiefKey = $chief ? rota_key($chief['user_id'], $chief['name']) : '';
+$chiefPos = $chief ? array_search($chiefKey, array_column($state['officials'], 'key'), true) : false;
+$choices = array_slice($state['officials'], 0, ROTA_MAX_SKIP + 2);       // +1 เผื่อผู้รักษาการถูกตัดออกเมื่อเข้าร่วมในฐานะสถิติจังหวัด (JS เลือกแสดง)
+[$visible] = rota_choices($state['officials'], $chief, $chief && $f['chief'] === '1');
+$f['pick'] = in_array($f['pick'], array_column($visible, 'key'), true) ? $f['pick'] : ($visible[0]['key'] ?? '');
 $groupNo = $state['groups'][0] ?? null;
 $doneOfficials = array_filter($members['officials'], fn($m) => !in_array($m['key'], array_column($state['officials'], 'key'), true));
 
@@ -148,13 +160,36 @@ require __DIR__ . '/header.php';
       </div>
     </div>
     <div class="col-lg-6">
+      <?php if ($chief): ?>
+      <label class="form-label">สถิติจังหวัด <span class="small text-muted">— เข้าร่วมกิจกรรมด้วยหรือไม่</span></label>
+      <div class="border rounded p-2 mb-3 rota-chief">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+          <div class="me-auto"><strong><?= h($chief['name']) ?></strong>
+            <div class="small text-muted"><?= h($chief['label']) ?></div></div>
+          <div class="btn-group btn-group-sm" role="group">
+            <input type="radio" class="btn-check" name="chief" id="chief0" value="" <?= $f['chief'] === '1' ? '' : 'checked' ?>>
+            <label class="btn btn-outline-secondary" for="chief0">ไม่เข้าร่วม</label>
+            <input type="radio" class="btn-check" name="chief" id="chief1" value="1" <?= $f['chief'] === '1' ? 'checked' : '' ?>>
+            <label class="btn btn-outline-primary" for="chief1"><i class="bi bi-check2"></i> เข้าร่วมด้วย</label>
+          </div>
+        </div>
+        <?php if ($chiefPos === 0): ?>
+          <div class="small text-success mt-2 d-none" id="chiefNote"><i class="bi bi-info-circle"></i> <?= h($chief['name']) ?> ถึงคิวข้าราชการพอดี
+            — เข้าร่วมในฐานะ<?= $chief['acting'] ? 'รักษาการ' : '' ?>สถิติจังหวัด นับเป็นคิวแล้ว · เลือกข้าราชการคิวถัดไปด้านล่าง</div>
+        <?php elseif ($chiefPos !== false): ?>
+          <div class="small text-muted mt-2 d-none" id="chiefNote"><i class="bi bi-info-circle"></i> เข้าร่วมในฐานะสถิติจังหวัด (ไม่นับเป็นคิวข้าราชการ — ยังไม่ถึงคิว)</div>
+        <?php endif; ?>
+      </div>
+      <?php elseif (!$hasChief): ?>
+      <div class="alert alert-warning small py-2">ตัวเลือก "สถิติจังหวัดเข้าร่วมด้วย" ต้องรัน migration <code>20261211_cal_rota_chief.sql</code> ก่อน</div>
+      <?php endif; ?>
       <label class="form-label">ข้าราชการ <span class="small text-muted">— เลือกข้ามได้ 1–<?= ROTA_MAX_SKIP ?> คิว (คนที่ถูกข้ามได้คิวถัดไป)</span></label>
-      <div class="list-group mb-3">
+      <div class="list-group mb-3" id="officialChoices">
         <?php foreach ($choices as $i => $m): ?>
-          <label class="list-group-item d-flex align-items-center gap-2">
-            <input class="form-check-input m-0" type="radio" name="pick" value="<?= h($m['key']) ?>" data-name="<?= h($m['name']) ?>" data-skip="<?= h(implode(', ', array_column(array_slice($choices, 0, $i), 'name'))) ?>" <?= $f['pick'] === $m['key'] ? 'checked' : '' ?>>
+          <label class="list-group-item d-flex align-items-center gap-2" data-key="<?= h($m['key']) ?>"<?= $m['key'] === $chiefKey ? ' data-chief="1"' : '' ?>>
+            <input class="form-check-input m-0" type="radio" name="pick" value="<?= h($m['key']) ?>" data-name="<?= h($m['name']) ?>" <?= $f['pick'] === $m['key'] ? 'checked' : '' ?>>
             <span><?= h($m['name']) ?></span>
-            <span class="ms-auto small <?= $i ? 'text-warning-emphasis' : 'text-primary fw-semibold' ?>"><?= $i ? 'ข้าม ' . $i . ' คิว' : 'ถึงคิว' ?></span>
+            <span class="ms-auto small rota-q"></span>
           </label>
         <?php endforeach; ?>
       </div>
@@ -173,7 +208,7 @@ require __DIR__ . '/header.php';
   <div class="card-header"><strong><i class="bi bi-clock-history"></i> เวรกิจกรรมที่จัดแล้ว (<?= count($turns) ?>)</strong></div>
   <div class="table-responsive">
     <table class="table table-sm align-middle mb-0">
-      <thead><tr><th>วันที่</th><th>กิจกรรม</th><th>สถานที่</th><th>การแต่งกาย</th><th>ข้าราชการ</th><th>กลุ่ม</th></tr></thead>
+      <thead><tr><th>วันที่</th><th>กิจกรรม</th><th>สถานที่</th><th>การแต่งกาย</th><th>สถิติจังหวัด</th><th>ข้าราชการ</th><th>กลุ่ม</th></tr></thead>
       <tbody>
       <?php foreach ($turns as $t): ?>
         <tr>
@@ -181,11 +216,12 @@ require __DIR__ . '/header.php';
           <td><a href="event_view?id=<?= (int)$t['event_id'] ?>"><?= h($t['title']) ?></a></td>
           <td class="small"><?= h($t['location'] ?: '-') ?></td>
           <td class="small"><?= h($t['dress'] ?: '-') ?></td>
+          <td class="small"><?= !empty($t['chief_name']) ? h($t['chief_name']) . (!empty($t['chief_counted']) ? '<div class="text-success">นับเป็นคิวข้าราชการแล้ว</div>' : '') : '<span class="text-muted">-</span>' ?></td>
           <td><?= h($t['official_name']) ?><?= $t['skipped_names'] ? '<div class="small text-warning-emphasis">ข้าม: ' . h($t['skipped_names']) . '</div>' : '' ?></td>
           <td class="text-nowrap">กลุ่มที่ <?= (int)$t['group_no'] ?></td>
         </tr>
       <?php endforeach; ?>
-      <?php if (!$turns): ?><tr><td colspan="6" class="text-center text-muted py-4">ยังไม่มีการจัดเวรกิจกรรม</td></tr><?php endif; ?>
+      <?php if (!$turns): ?><tr><td colspan="7" class="text-center text-muted py-4">ยังไม่มีการจัดเวรกิจกรรม</td></tr><?php endif; ?>
       </tbody>
     </table>
   </div>
@@ -195,15 +231,43 @@ require __DIR__ . '/header.php';
 .rota-group{border:1px solid var(--bs-border-color);border-radius:.5rem;padding:.5rem .75rem}
 .rota-group.rota-next{border-color:var(--bs-success);background:var(--bs-success-bg-subtle)}
 .rota-group.rota-done{opacity:.6}
+#officialChoices>.d-none:first-child+.list-group-item{border-top-width:var(--bs-list-group-border-width);border-top-left-radius:inherit;border-top-right-radius:inherit}
+.rota-chief:has(#chief1:checked){border-color:var(--bs-primary)!important;background:var(--bs-primary-bg-subtle)}
 .rota-chip{display:inline-block;background:var(--bs-body-bg);border:1px solid var(--bs-border-color);border-radius:1rem;padding:0 .55rem;margin:0 .25rem .25rem 0}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" integrity="sha384-5JqMv4L/Xa0hfvtF06qboNdhvuYXUku9ZrhZh3bSk8VXF0A/RuSLHpLsSV9Zqhl6" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/th.js" integrity="sha384-E6OVFg1zUc/pckGxry0YZ6VeZ1E17l7Jl8ZQx58jbEfxxkz9LqknQhiIrA9zg/8b" crossorigin="anonymous"></script>
 <script src="<?= h(asset_v('modules/calendar/assets/js/thai-picker.js')) ?>"></script>
 <script>
+// สถิติจังหวัดเข้าร่วม → ตัดผู้รักษาการออกจากตัวเลือกข้าราชการ (ถึงคิวพอดี = นับเป็นคิวแล้ว) · แสดงถึงคิว + ข้ามได้ <?= ROTA_MAX_SKIP ?> คิว
+const rotaChoices = () => {
+  const joins = document.getElementById('chief1')?.checked;
+  document.getElementById('chiefNote')?.classList.toggle('d-none', !joins);
+  let n = 0;
+  const shown = [];
+  document.querySelectorAll('#officialChoices [data-key]').forEach(el => {
+    const show = !(joins && el.dataset.chief) && n <= <?= ROTA_MAX_SKIP ?>;
+    el.classList.toggle('d-none', !show);
+    const q = el.querySelector('.rota-q'), r = el.querySelector('input');
+    if (show) {
+      q.textContent = n ? 'ข้าม ' + n + ' คิว' : 'ถึงคิว';
+      q.className = 'ms-auto small rota-q ' + (n ? 'text-warning-emphasis' : 'text-primary fw-semibold');
+      r.dataset.skip = shown.join(', ');
+      shown.push(r.dataset.name);
+      n++;
+    } else if (r.checked) {
+      r.checked = false;
+    }
+  });
+  if (!document.querySelector('#officialChoices input:checked')) document.querySelector('#officialChoices [data-key]:not(.d-none) input')?.click();
+};
+document.querySelectorAll('[name=chief]').forEach(r => r.addEventListener('change', rotaChoices));
+rotaChoices();
 document.getElementById('rotaForm')?.addEventListener('submit', e => {
   const p = document.querySelector('[name=pick]:checked');
+  const c = document.getElementById('chief1');
   const msg = 'ยืนยันจัดเวรกิจกรรม "' + document.querySelector('[name=title]').value + '"\n'
+    + (c?.checked ? 'สถิติจังหวัด: ' + <?= json_encode($chief['name'] ?? '', JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT) ?> + '\n' : '')
     + 'ข้าราชการ: ' + p.dataset.name + (p.dataset.skip ? '\n(ข้าม: ' + p.dataset.skip + ' — ได้คิวถัดไป)' : '')
     + '\nกลุ่มที่ <?= (int)$groupNo ?>\n\nเพิ่มลงปฏิทินและแจ้งเตือนผู้รับผิดชอบ?';
   if (!confirm(msg)) e.preventDefault();

@@ -952,6 +952,9 @@ CREATE TABLE IF NOT EXISTS cal_rota_members (
 CREATE TABLE IF NOT EXISTS cal_rota_turns (
   id                INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   event_id          INT UNSIGNED NOT NULL,
+  chief_user_id     INT UNSIGNED NULL,                 -- สถิติจังหวัด (หรือผู้รักษาการ) ที่เข้าร่วม · ว่าง = ไม่เข้าร่วม
+  chief_name        VARCHAR(150) NULL,
+  chief_counted     TINYINT(1)   NOT NULL DEFAULT 0,   -- 1 = ผู้รักษาการถึงคิวข้าราชการพอดี → นับเป็นคิวของคนนั้นแล้ว
   official_user_id  INT UNSIGNED NULL,
   official_name     VARCHAR(150) NOT NULL,
   skipped_names     VARCHAR(500) NULL,                 -- ข้าราชการที่ถูกข้าม (ยังอยู่ในคิวถัดไป)

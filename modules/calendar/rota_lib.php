@@ -6,6 +6,8 @@
  *   ลำดับคิวคำนวณจากประวัติ (cal_rota_turns) ทุกครั้ง → ลบกิจกรรมในปฏิทิน = คืนคิวให้อัตโนมัติ
  *   จุดเริ่มต้น (ก่อนใช้ระบบ): คิวล่าสุดที่ได้ไปแล้ว — ข้าราชการ (core_settings.cal_rota_last_official = ชื่อ)
  *   และกลุ่ม (cal_rota_last_group) → ถือว่าตั้งแต่ลำดับแรกถึงคน/กลุ่มนั้นได้ไปแล้ว คิวเริ่มที่ลำดับถัดไป
+ *   สถิติจังหวัดเข้าร่วมด้วย (เลือกต่อกิจกรรม): ถ้ายังไม่มีสถิติจังหวัดและผู้รักษาการเป็นข้าราชการที่ "ถึงคิว" พอดี
+ *   → นับเป็นคิวของผู้รักษาการแล้ว (chief_counted) และเลือกข้าราชการคิวถัดไปเป็นข้าราชการของกิจกรรม
  */
 
 const ROTA_MAX_SKIP = 3;
@@ -45,6 +47,61 @@ function rota_members(): array
     }
     ksort($out['groups']);
     return $out;
+}
+
+/** มีคอลัมน์สถิติจังหวัดเข้าร่วม (migration 20261211) แล้วหรือยัง */
+function rota_has_chief(): bool
+{
+    static $has = null;
+    if ($has === null) {
+        try {
+            $has = (bool)db()->query("SHOW COLUMNS FROM cal_rota_turns LIKE 'chief_counted'")->fetch();
+        } catch (PDOException $e) {
+            $has = false;
+        }
+    }
+    return $has;
+}
+
+/**
+ * สถิติจังหวัด: ผู้มีตำแหน่งหลัก "สถิติจังหวัด…" — ไม่มี = ผู้รักษาการ/ควบตำแหน่ง (core_user_positions)
+ * คืน ['user_id', 'name', 'acting' => bool, 'label'] หรือ null (ไม่มีทั้งสองแบบ)
+ */
+function rota_chief(): ?array
+{
+    $acting = null;
+    foreach (sort_staff(db()->query('SELECT id, username, full_name, position, sort_order FROM core_users WHERE is_active = 1')->fetchAll()) as $u) {
+        $name = preg_replace('/\s+/u', ' ', trim($u['full_name']));
+        if (staff_category($u['position']) === 'chief') {
+            return ['user_id' => (int)$u['id'], 'name' => $name, 'acting' => false, 'label' => trim($u['position'])];
+        }
+        foreach (staff_extras_of($u) as $x) {
+            if (!$acting && staff_category($x['position']) === 'chief') {
+                $acting = ['user_id' => (int)$u['id'], 'name' => $name, 'acting' => true, 'label' => $x['label']];
+            }
+        }
+    }
+    return $acting;
+}
+
+/**
+ * ข้าราชการที่เลือกได้ในกิจกรรมนี้ (ถึงคิว + ข้ามได้ 1–ROTA_MAX_SKIP คิว)
+ * สถิติจังหวัดเข้าร่วม และผู้รักษาการอยู่ในคิวข้าราชการ → ตัดออกจากตัวเลือก (เป็นสถิติจังหวัดในกิจกรรมนี้แล้ว)
+ *   ถ้าผู้รักษาการ "ถึงคิว" พอดี → นับเป็นคิวของคนนั้น (counted) — ตัวเลือกเริ่มที่คิวถัดไป
+ * คืน [choices, counted]
+ */
+function rota_choices(array $queue, ?array $chief, bool $chiefJoins): array
+{
+    $counted = false;
+    if ($chiefJoins && $chief) {
+        $ck = rota_key($chief['user_id'], $chief['name']);
+        $idx = array_search($ck, array_column($queue, 'key'), true);
+        if ($idx !== false) {
+            $counted = $idx === 0;
+            array_splice($queue, $idx, 1);
+        }
+    }
+    return [array_slice($queue, 0, ROTA_MAX_SKIP + 1), $counted];
 }
 
 /** เวรที่จัดแล้ว เรียงตามลำดับที่จัด (เก่า → ใหม่) พร้อมข้อมูลกิจกรรม */
@@ -88,10 +145,15 @@ function rota_state(?array $members = null, ?array $turns = null): array
     foreach ($members['officials'] as $m) {
         $alias[rota_key(null, $m['name'])] = $m['key'];
     }
-    $hist = array_map(function ($t) use ($alias) {
+    $hist = [];
+    foreach ($turns as $t) {                       // ผู้รักษาการที่นับเป็นคิวแล้ว (chief_counted) มาก่อนข้าราชการของกิจกรรมนั้น
+        if (!empty($t['chief_counted'])) {
+            $k = rota_key($t['chief_user_id'] ? (int)$t['chief_user_id'] : null, (string)$t['chief_name']);
+            $hist[] = $alias[$k] ?? $k;
+        }
         $k = rota_key($t['official_user_id'] ? (int)$t['official_user_id'] : null, $t['official_name']);
-        return $alias[$k] ?? $k;
-    }, $turns);
+        $hist[] = $alias[$k] ?? $k;
+    }
     // จุดเริ่มต้นคิว: ลำดับแรกถึงคน/กลุ่มล่าสุดที่ได้ไปแล้ว (ก่อนใช้ระบบ) นับเป็นเวรที่จัดแล้ว
     $startO = [];
     $last = rota_key(null, (string)setting('cal_rota_last_official', ''));
