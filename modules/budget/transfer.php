@@ -1,7 +1,7 @@
 <?php
 /**
  * รายละเอียดโอนเปลี่ยนแปลงครั้งที่ N/ปี (คลิกจากภาพรวมงบประมาณ)
- *   รายการที่ช่อง "รายการ" ขึ้นต้นด้วย "โอนเปลี่ยนแปลงครั้งที่ N/ปี" — แสดง วันที่ · ที่เอกสาร · หมวด · รายการ · ได้รับ / เบิกจ่าย
+ *   รายการที่ช่อง "รายการ" ขึ้นต้นด้วย "โอนเปลี่ยนแปลงครั้งที่ N/ปี" — แสดง วันที่ · ที่เอกสาร · รายการ · ได้รับ / เบิกจ่าย
  *   ช่องรายการ: ข้อความในรายละเอียด (ถ้ามี) ไม่มี = ค่าใช้จ่ายของหมวด
  */
 require_once __DIR__ . '/bootstrap.php';
@@ -48,14 +48,13 @@ require __DIR__ . '/header.php';
     <span class="small text-muted ms-2"><?= h(thai_date($tr['from'])) ?><?= $tr['to'] !== $tr['from'] ? ' – ' . h(thai_date($tr['to'])) : '' ?></span></div>
   <div class="table-responsive">
     <table class="table table-sm align-middle mb-0 bud-transfer">
-      <thead class="table-light"><tr><th style="width:8.5em">วันที่</th><th>ที่เอกสาร</th><th>หมวด</th><th>รายการ</th>
+      <thead class="table-light"><tr><th style="width:8.5em">วันที่</th><th>ที่เอกสาร</th><th>รายการ</th>
         <th class="text-end">ได้รับ</th><th class="text-end">เบิกจ่าย</th><?php if (bud_can('editor')): ?><th class="no-print"></th><?php endif; ?></tr></thead>
       <tbody>
       <?php foreach ($tr['txns'] as $t): $s = $sources[bud_source_key($t)] ?? null; $sp = $t['txn_type'] === 'spend'; ?>
         <tr>
           <td class="text-nowrap"><?= h(thai_date($t['txn_date'])) ?></td>
           <td class="font-monospace text-nowrap"><?= h($t['doc_no']) ?></td>
-          <td class="small"><?php if ($s): ?><span class="bud-src" style="--c:<?= h($s['color']) ?>"><?= h($s['label']) ?></span><?php endif; ?></td>
           <td><?php if (trim((string)$t['detail']) !== ''): ?><?= nl2br(h(trim($t['detail']))) ?>
             <?php else: /* ไม่ใส่รายละเอียด → ค่าใช้จ่ายของหมวด (ไม่มี = รายการ / ชื่อหมวด) */ ?><span class="text-muted"><?= h(($s['activity'] ?? '') !== '' ? $s['activity'] : (($s['expense'] ?? '') !== '' ? $s['expense'] : ($s['label'] ?? '-'))) ?></span><?php endif; ?></td>
           <td class="text-end text-nowrap"><?= $sp ? '' : bud_money($t['amount']) ?></td>
@@ -64,7 +63,7 @@ require __DIR__ . '/header.php';
         </tr>
       <?php endforeach; ?>
       </tbody>
-      <tfoot><tr class="table-light fw-bold"><td colspan="4" class="text-end">รวม</td>
+      <tfoot><tr class="table-light fw-bold"><td colspan="3" class="text-end">รวม</td>
         <td class="text-end"><?= bud_money($tr['receive']) ?></td><td class="text-end"><?= bud_money($tr['spend']) ?></td><?php if (bud_can('editor')): ?><td class="no-print"></td><?php endif; ?></tr></tfoot>
     </table>
   </div>
