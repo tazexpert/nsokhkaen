@@ -21,6 +21,13 @@ foreach ($events as $e) {
         $byDay[$d][] = $e;
     }
 }
+// ในช่องวันที่: เวร สนง. เป็นรายการแรก → เวรศาลากลาง → กิจกรรมอื่นตามเวลา
+$shiftRank = fn(array $e) => cal_is_duty($e) ? 0 : (cal_is_guard($e) ? 1 : 2);
+foreach ($byDay as &$list) {
+    uksort($list, fn($i, $j) => [$shiftRank($list[$i]), $i] <=> [$shiftRank($list[$j]), $j]);
+    $list = array_values($list);
+}
+unset($list);
 // เวลาปฏิบัติราชการของตนเอง (ส่วนตัว): มาสาย / ขาดราชการ / ลงเวลาไม่ครบ / รับรองแล้ว
 $attItems = [];
 if (!$guest) {
@@ -30,7 +37,7 @@ if (!$guest) {
         // ยังไม่ได้รัน migration cal_attendance
     }
 }
-// สรุปรายวัน (คลิกวันที่ → แผงด้านขวา): 1. เวรสำนักงาน / เวรศาลากลาง · 2. กิจกรรมแยกตามคน (เรียงตามลำดับบุคลากร)
+// สรุปรายวัน (คลิกวันที่ → popup): 1. เวรสำนักงาน / เวรศาลากลาง · 2. กิจกรรม (หัว = ชื่อกิจกรรม ตามเวลา + ผู้รับผิดชอบเรียงตามลำดับบุคลากร)
 $staffOrder = array_flip(array_keys(cal_users()));
 $nameOf = [];
 if ($allIds = array_unique(array_merge([], ...array_values($assignees)))) {
@@ -40,8 +47,7 @@ if ($allIds = array_unique(array_merge([], ...array_values($assignees)))) {
 }
 $dayInfo = [];
 foreach ($byDay as $d => $list) {
-    $info = ['duty' => [], 'guard' => [], 'people' => [], 'none' => [], 'count' => 0];
-    $everyone = [];                                  // ทุกคนที่มีกิจกรรมวันนั้น (นับในหัว "ผู้มีกิจกรรม")
+    $info = ['duty' => [], 'guard' => [], 'events' => []];
     usort($list, fn($a, $b) => [(string)$a['start_time'], (int)$a['id']] <=> [(string)$b['start_time'], (int)$b['id']]);
     foreach ($list as $e) {
         $ids = $assignees[(int)$e['id']] ?? [];
@@ -53,22 +59,10 @@ foreach ($byDay as $d => $list) {
         }
         $item = ['id' => (int)$e['id'], 'title' => $e['title'], 'loc' => (string)$e['location'], 'priv' => cal_is_private($e),
                  't' => ($e['end_date'] && $e['end_date'] !== $e['event_date'] ? cal_range_text($e) . ' · ' : '') . cal_time_text($e)];
-        if (!$ids) {
-            $info['none'][] = $item;
-        }
-        // หลายคนรับผิดชอบกิจกรรมเดียวกัน → แสดงครั้งเดียวที่คนแรก (ตามลำดับบุคลากร) + ชื่อคนอื่นต่อท้าย
         usort($ids, fn($a, $b) => [$staffOrder[$a] ?? PHP_INT_MAX, $a] <=> [$staffOrder[$b] ?? PHP_INT_MAX, $b]);
-        if ($ids) {
-            $lead = $ids[0];
-            $item['with'] = array_map(fn($id) => $nameOf[$id] ?? ('#' . $id), array_slice($ids, 1));
-            $info['people'][$lead]['name'] = $nameOf[$lead] ?? ('#' . $lead);
-            $info['people'][$lead]['items'][] = $item;
-            $everyone += array_flip($ids);
-        }
+        $item['names'] = array_map(fn($id) => $nameOf[$id] ?? ('#' . $id), $ids);
+        $info['events'][] = $item;
     }
-    $info['count'] = count($everyone);
-    uksort($info['people'], fn($a, $b) => [$staffOrder[$a] ?? PHP_INT_MAX, $a] <=> [$staffOrder[$b] ?? PHP_INT_MAX, $b]);
-    $info['people'] = array_values($info['people']);
     $dayInfo[$d] = $info;
 }
 
@@ -132,10 +126,15 @@ $today = date('Y-m-d');
   const data = <?= json_encode($dayInfo, JSON_UNESCAPED_UNICODE) ?>;
   const panel = document.getElementById('dayPanel'), body = document.getElementById('dayPanelBody'), head = document.getElementById('dayPanelHead');
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const item = it => `<a href="<?= h($calBase) ?>event_view?id=${it.id}" class="cal-day-item"><span class="t">${esc(it.t)}</span> ${it.priv ? '<i class="bi bi-lock-fill" title="ส่วนตัว"></i> ' : ''}${esc(it.title)}${it.loc ? `<span class="loc"> @ ${esc(it.loc)}</span>` : ''}${it.with && it.with.length ? `<span class="with"><span class="lbl"><i class="bi bi-people"></i> ร่วมกับ</span>${it.with.map(n => `<span class="cal-day-name">${esc(n)}</span>`).join('')}</span>` : ''}</a>`;
+  // กิจกรรม: หัว = ชื่อกิจกรรม · เวลา @ สถานที่ · ผู้รับผิดชอบ 1 คน/บรรทัด
+  const evCard = (it, i) => `<a href="<?= h($calBase) ?>event_view?id=${it.id}" class="cal-day-person"><div class="cal-day-no">${i + 1}</div><div class="cal-day-pbody">`
+    + `<div class="cal-day-name">${it.priv ? '<i class="bi bi-lock-fill" title="ส่วนตัว"></i> ' : ''}${esc(it.title)}</div>`
+    + `<div class="cal-day-item"><span class="t">${esc(it.t)}</span>${it.loc ? `<span class="loc"> @ ${esc(it.loc)}</span>` : ''}</div>`
+    + (it.names.length ? `<div class="cal-day-who">${it.names.map(n => `<div><i class="bi bi-person-fill"></i> ${esc(n)}</div>`).join('')}</div>`
+                       : '<div class="cal-day-who text-muted">ไม่ระบุผู้รับผิดชอบ</div>') + '</div></a>';
   let cur = null;
   const open = cell => {
-    const d = data[cell.dataset.date] || { duty: [], guard: [], people: [], none: [], count: 0 };
+    const d = data[cell.dataset.date] || { duty: [], guard: [], events: [] };
     document.getElementById('dayPanelTitle').textContent = cell.dataset.label;
     const [, mm, dd] = cell.dataset.date.split('-').map(Number);
     document.getElementById('dayPanelD').textContent = dd;
@@ -143,10 +142,8 @@ $today = date('Y-m-d');
     let html = `<div class="cal-day-sec duty"><div class="cal-day-h"><i class="bi bi-shield-check"></i> 1. เวรสำนักงาน</div><div class="cal-day-c">`
       + (d.duty.length ? d.duty.map(esc).join(', ') : '<span class="text-muted">-</span>')
       + (d.guard.length ? `<div class="cal-day-guard"><i class="bi bi-building"></i> เวรศาลากลาง: ${d.guard.map(esc).join(', ')}</div>` : '') + '</div></div>';
-    html += `<div class="cal-day-sec people"><div class="cal-day-h"><i class="bi bi-people-fill"></i> 2. ผู้มีกิจกรรม <span class="badge rounded-pill ms-auto">${d.count || 0} คน</span></div><div class="cal-day-c">`
-      + (d.people.length ? d.people.map((p, i) => `<div class="cal-day-person"><div class="cal-day-no">${i + 1}</div><div class="cal-day-pbody"><div class="cal-day-name">${esc(p.name)}</div>${p.items.map(item).join('')}</div></div>`).join('')
-         : '<div class="text-muted">ไม่มีกิจกรรม</div>')
-      + (d.none.length ? `<div class="cal-day-person none"><div class="cal-day-no"><i class="bi bi-question-lg"></i></div><div class="cal-day-pbody"><div class="cal-day-name">ไม่ระบุผู้รับผิดชอบ</div>${d.none.map(item).join('')}</div></div>` : '') + '</div></div>';
+    html += `<div class="cal-day-sec people"><div class="cal-day-h"><i class="bi bi-list-check"></i> 2. กิจกรรม <span class="badge rounded-pill ms-auto">${d.events.length} รายการ</span></div><div class="cal-day-c">`
+      + (d.events.length ? d.events.map(evCard).join('') : '<div class="text-muted">ไม่มีกิจกรรม</div>') + '</div></div>';
     body.innerHTML = html;
     panel.classList.remove('d-none');
     cur?.classList.remove('cal-picked'); cur = cell; cell.classList.add('cal-picked');

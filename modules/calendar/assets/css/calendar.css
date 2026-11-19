@@ -233,6 +233,11 @@ button.att-chip:hover { outline: 2px solid #1d4ed8; }
 /* รายคน: การ์ดสีวนตามลำดับ (แดง ส้ม บานเย็น ฟ้า ม่วง เขียว) — บล็อกสีทึบซ้าย + ชื่อสีเดียวกัน */
 .cal-day-person { --pc: #ef4444; display: flex; background: #fff; border: 2px solid var(--pc); border-radius: 10px; overflow: hidden; margin-bottom: .55rem; }
 .cal-day-person:last-child { margin-bottom: 0; }
+a.cal-day-person { color: inherit; text-decoration: none; transition: box-shadow .15s, transform .15s; }
+a.cal-day-person:hover { box-shadow: 0 4px 14px rgba(15, 23, 42, .15); transform: translateY(-1px); }
+.cal-day-person .cal-day-name { font-size: 1.02rem; line-height: 1.3; }
+.cal-day-who { margin-top: .2rem; font-size: .9rem; font-weight: 600; color: #334155; }
+.cal-day-who .bi { color: var(--pc); }
 .cal-day-person:nth-child(6n+2) { --pc: #f97316; }
 .cal-day-person:nth-child(6n+3) { --pc: #c026d3; }
 .cal-day-person:nth-child(6n+4) { --pc: #0891b2; }
@@ -246,9 +251,6 @@ button.att-chip:hover { outline: 2px solid #1d4ed8; }
 .cal-day-item:hover { color: var(--pc); }
 .cal-day-item .t { display: inline-block; padding: 0 .35rem; margin-right: .2rem; border-radius: 4px; color: #fff; background: var(--pc); font-size: .8rem; font-weight: 700; white-space: nowrap; }
 .cal-day-item .loc { color: #64748b; }
-.cal-day-item .with { display: block; margin-top: .15rem; }
-.cal-day-item .with .lbl { display: block; color: #64748b; font-size: .82rem; }
-.cal-day-item .with .cal-day-name { display: block; font-size: 1rem; }          /* ชื่อผู้ร่วม 1 คน/บรรทัด ขนาด/สีเดียวกับชื่อคนแรก */
 @media (max-width: 767.98px) { .cal-day-panel { top: 0; right: 0; width: 100vw; min-width: 0; height: 100vh; border-radius: 0; } }
 @media print { .cal-day-panel { display: none !important; } }
 /* หน้าต่างรายละเอียดกิจกรรม (คลิกรายการ) — หัวแบบโปสเตอร์: บล็อกวันที่ + แถบสีตามประเภท */
