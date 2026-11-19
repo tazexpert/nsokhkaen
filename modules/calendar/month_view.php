@@ -119,6 +119,7 @@ $today = date('Y-m-d');
     <button type="button" class="btn-close btn-close-white" id="dayPanelClose" aria-label="ปิด"></button>
   </div>
   <div class="cal-day-body" id="dayPanelBody"></div>
+  <div class="cal-day-foot"><button type="button" class="btn btn-secondary w-100" id="dayPanelHide" title="ไม่เปิดหน้าต่างนี้เองเมื่อเข้าหน้า จนกว่าจะคลิกวันที่ในปฏิทิน"><i class="bi bi-x-circle"></i> ปิด (ไม่ต้องแสดงอัตโนมัติ)</button></div>
 </div>
 <script>
 (() => {
@@ -133,6 +134,10 @@ $today = date('Y-m-d');
     + (it.names.length ? `<div class="cal-day-who">${it.names.map(n => `<div><i class="bi bi-person-fill"></i> ${esc(n)}</div>`).join('')}</div>`
                        : '<div class="cal-day-who text-muted">ไม่ระบุผู้รับผิดชอบ</div>') + '</div></a>';
   let cur = null;
+  // ปุ่มปิดด้านล่าง: ไม่เปิด popup เองเมื่อเข้าหน้าอีก จนกว่าผู้ใช้คลิกวันที่ในปฏิทิน (จำในเบราว์เซอร์นี้)
+  const KEY = 'cal_day_panel_off';
+  const store = v => { try { v ? localStorage.setItem(KEY, v) : localStorage.removeItem(KEY); } catch (e) {} };
+  const isOff = () => { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } };
   const open = cell => {
     const d = data[cell.dataset.date] || { duty: [], guard: [], events: [] };
     document.getElementById('dayPanelTitle').textContent = cell.dataset.label;
@@ -152,7 +157,9 @@ $today = date('Y-m-d');
     const cell = ev.target.closest('.cal-cell[data-date]');
     if (!cell || ev.target.closest('a, button')) return;          // คลิกกิจกรรม/ปุ่มเพิ่ม = ทำงานตามเดิม
     open(cell);
+    store(null);                                                    // คลิกปฏิทิน = กลับมาแสดงอัตโนมัติ
   });
+  document.getElementById('dayPanelHide').addEventListener('click', () => { store('1'); document.getElementById('dayPanelClose').click(); });
   document.getElementById('dayPanelClose').addEventListener('click', () => { panel.classList.add('d-none'); cur?.classList.remove('cal-picked'); cur = null; });
   document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !panel.classList.contains('d-none') && !document.querySelector('.modal.show')) document.getElementById('dayPanelClose').click(); });
   // ลากย้าย (เมาส์/นิ้ว) — ไม่ให้หลุดขอบจอ
@@ -169,7 +176,7 @@ $today = date('Y-m-d');
   });
   <?php if ($calAutoOpen): ?>// เปิดหน้า = แสดง popup สรุปรายวันทันที (วันนี้ · ดูเดือนอื่น = วันที่ 1)
   const start = document.querySelector('.cal-cell[data-date="<?= substr($today, 0, 7) === $m ? $today : $first ?>"]');
-  if (start) open(start);
+  if (start && !isOff()) open(start);
   <?php endif; ?>
 })();
 </script>

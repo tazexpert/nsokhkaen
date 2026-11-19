@@ -15,9 +15,9 @@
 .cal-cell:nth-child(7n) { border-right: 0; }
 .cal-cell.out { background: #f1f5f9; }
 /* เสาร์-อาทิตย์ (วันหยุด) = สีเทา — คอลัมน์แรก/สุดท้ายของปฏิทิน */
-.cal-wd:nth-child(1), .cal-wd:nth-child(7) { background: #94a3b8; }
-.cal-cell:nth-child(7n+1), .cal-cell:nth-child(7n) { background: #e2e8f0; }
-.cal-cell.out:nth-child(7n+1), .cal-cell.out:nth-child(7n) { background: #d5dce5; }
+.cal-wd:nth-child(1), .cal-wd:nth-child(7) { background: #a9b7c6; }
+.cal-cell:nth-child(7n+1), .cal-cell:nth-child(7n) { background: #f4f6f9; }
+.cal-cell.out:nth-child(7n+1), .cal-cell.out:nth-child(7n) { background: #eaeef3; }
 /* เลขวันที่: บล็อกสีทึบ ตัวเลขขาวสองหลัก — สีประจำวัน (อา แดง · จ เหลือง · อ ชมพู · พ เขียว · พฤ ส้ม · ศ ฟ้า · ส ม่วง)
    (7 ช่องแรกของ grid เป็นหัววัน → ช่องที่ 8, 15, … = วันอาทิตย์) */
 .cal-n { display: inline-grid; place-items: center; min-width: 1.85rem; height: 1.6rem; padding: 0 .3rem; border-radius: 6px;
@@ -225,6 +225,7 @@ button.att-chip:hover { outline: 2px solid #1d4ed8; }
 .cal-day-date .d { font-size: 1.6rem; font-weight: 800; }
 .cal-day-date .m { font-size: .8rem; font-weight: 700; }
 .cal-day-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: .9rem; background: #faf5ff; display: flex; flex-direction: column; gap: .8rem; }
+.cal-day-foot { flex: none; padding: .6rem .9rem; background: #faf5ff; border-top: 1px solid #e9d5ff; }
 .cal-day-body > * { flex-shrink: 0; }          /* ห้ามการ์ดหดตัว — เนื้อหายาวให้เลื่อน (scroll) ในหน้าต่างแทน */
 .cal-day-sec { background: #fff; border-radius: 12px; overflow: hidden; border: 2px solid var(--sc); box-shadow: 0 2px 8px rgba(15, 23, 42, .08); }
 .cal-day-sec.duty { --sc: #16a34a; }
