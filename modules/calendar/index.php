@@ -1,5 +1,5 @@
 <?php
-/** ปฏิทินรายเดือน: กิจกรรมของทุกคนในสำนักงาน (กิจกรรมที่ตนรับผิดชอบเน้นสี) · การ์ดสรุปรายวันด้านขวา (ใครมีกิจกรรมบ้าง) แสดงวันนี้ตั้งแต่เปิดหน้า คลิกวันอื่นเพื่อเปลี่ยน */
+/** ปฏิทินรายเดือน: กิจกรรมของทุกคนในสำนักงาน (กิจกรรมที่ตนรับผิดชอบเน้นสี) · คลิกวันที่ = แผงสรุปรายวันด้านขวา (ใครมีกิจกรรมบ้าง) */
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/att_lib.php';
 $me = require_module_or_guest(CAL_MODULE);
@@ -79,8 +79,6 @@ $pageActions = (cal_can('admin') ? '<a href="import" class="btn btn-outline-succ
     . (cal_can('editor') ? '<a href="event_form" class="btn btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มกิจกรรม</a>' : '');
 require __DIR__ . '/header.php';
 ?>
-<div class="row g-3">
-<div class="col-xl-9">
 <div class="card">
   <div class="card-header cal-month-head d-flex flex-wrap align-items-center gap-2">
     <a href="<?= h($qs(['m' => $prev])) ?>" class="btn btn-light btn-sm"><i class="bi bi-chevron-left"></i></a>
@@ -112,22 +110,20 @@ require __DIR__ . '/header.php';
   </div>
   <div class="card-footer small text-muted"><?php if (!$guest): ?><span class="cal-ev mine d-inline-block px-2">งานของคุณ</span> <?php endif; ?><span class="cal-ev d-inline-block px-2">งานของผู้อื่น</span> <span class="cal-ev duty d-inline-block px-2">เวรสำนักงาน</span> <span class="cal-ev guard d-inline-block px-2">เวรศาลากลาง</span><?php if (!$guest): ?> <span class="cal-ev att-ev d-inline-block px-2"><i class="bi bi-lock-fill me-1"></i>ขาดราชการ/ลงเวลาไม่ครบ (เห็นเฉพาะคุณ)</span> <span class="cal-ev att-ev late d-inline-block px-2">มาสาย</span> <span class="cal-ev att-ev done d-inline-block px-2">รับรองการมาปฏิบัติราชการ</span><?php endif; ?> · คลิกกิจกรรมเพื่อดูรายละเอียด</div>
 </div>
-</div>
-<div class="col-xl-3">
-<div class="cal-day-panel" id="dayPanel" aria-labelledby="dayPanelTitle">
-  <div class="cal-day-head" id="dayPanelHead">
+<div class="cal-day-panel d-none" id="dayPanel" role="dialog" aria-labelledby="dayPanelTitle">
+  <div class="cal-day-head" id="dayPanelHead" title="ลากเพื่อย้ายตำแหน่ง">
+    <i class="bi bi-grip-vertical"></i>
     <div class="cal-day-date"><div class="d" id="dayPanelD"></div><div class="m" id="dayPanelM"></div></div>
-    <div class="min-w-0 flex-grow-1"><div class="small"><i class="bi bi-calendar-day"></i> สรุปรายวัน · คลิกวันที่เพื่อเปลี่ยน</div><div class="fw-semibold text-truncate" id="dayPanelTitle"></div></div>
+    <div class="min-w-0 flex-grow-1"><div class="small"><i class="bi bi-calendar-day"></i> สรุปรายวัน · ใครมีกิจกรรมบ้าง</div><div class="fw-semibold text-truncate" id="dayPanelTitle"></div></div>
+    <button type="button" class="btn-close btn-close-white" id="dayPanelClose" aria-label="ปิด"></button>
   </div>
   <div class="cal-day-body" id="dayPanelBody"></div>
 </div>
-</div>
-</div>
 <script>
 (() => {
-  // การ์ดสรุปรายวันข้างปฏิทิน: เวรสำนักงาน + ผู้มีกิจกรรมแยกตามคน · คลิกวันที่ในปฏิทินเพื่อเปลี่ยนวัน
+  // คลิกวันที่ในปฏิทิน → แผงสรุปรายวัน (ลากย้ายได้ · เริ่มที่มุมบนขวา สูงเต็มจอ กว้าง 1/4)
   const data = <?= json_encode($dayInfo, JSON_UNESCAPED_UNICODE) ?>;
-  const panel = document.getElementById('dayPanel'), body = document.getElementById('dayPanelBody');
+  const panel = document.getElementById('dayPanel'), body = document.getElementById('dayPanelBody'), head = document.getElementById('dayPanelHead');
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const item = it => `<a href="event_view?id=${it.id}" class="cal-day-item"><span class="t">${esc(it.t)}</span> ${it.priv ? '<i class="bi bi-lock-fill" title="ส่วนตัว"></i> ' : ''}${esc(it.title)}${it.loc ? `<span class="loc"> @ ${esc(it.loc)}</span>` : ''}</a>`;
   let cur = null;
@@ -145,6 +141,7 @@ require __DIR__ . '/header.php';
          : '<div class="text-muted">ไม่มีกิจกรรม</div>')
       + (d.none.length ? `<div class="cal-day-person none"><div class="cal-day-no"><i class="bi bi-question-lg"></i></div><div class="cal-day-pbody"><div class="cal-day-name">ไม่ระบุผู้รับผิดชอบ</div>${d.none.map(item).join('')}</div></div>` : '') + '</div></div>';
     body.innerHTML = html;
+    panel.classList.remove('d-none');
     cur?.classList.remove('cal-picked'); cur = cell; cell.classList.add('cal-picked');
   };
   document.querySelector('.cal-grid').addEventListener('click', ev => {
@@ -152,8 +149,23 @@ require __DIR__ . '/header.php';
     if (!cell || ev.target.closest('a, button')) return;          // คลิกกิจกรรม/ปุ่มเพิ่ม = ทำงานตามเดิม
     open(cell);
   });
-  // เปิดหน้า: แสดงวันนี้ (ดูเดือนอื่น = วันที่ 1 ของเดือนนั้น)
-  open(document.querySelector('.cal-cell[data-date="<?= substr($today, 0, 7) === $m ? $today : $first ?>"]'));
+  document.getElementById('dayPanelClose').addEventListener('click', () => { panel.classList.add('d-none'); cur?.classList.remove('cal-picked'); cur = null; });
+  document.addEventListener('keydown', ev => { if (ev.key === 'Escape' && !panel.classList.contains('d-none') && !document.querySelector('.modal.show')) document.getElementById('dayPanelClose').click(); });
+  // ลากย้าย (เมาส์/นิ้ว) — ไม่ให้หลุดขอบจอ
+  head.addEventListener('pointerdown', ev => {
+    if (ev.target.closest('button')) return;
+    const r = panel.getBoundingClientRect(), dx = ev.clientX - r.left, dy = ev.clientY - r.top;
+    head.setPointerCapture(ev.pointerId); panel.classList.add('dragging');
+    const move = e => {
+      const x = Math.min(Math.max(0, e.clientX - dx), innerWidth - r.width), y = Math.min(Math.max(0, e.clientY - dy), innerHeight - 60);
+      Object.assign(panel.style, { left: x + 'px', top: y + 'px', right: 'auto' });
+    };
+    const up = () => { head.removeEventListener('pointermove', move); head.removeEventListener('pointerup', up); panel.classList.remove('dragging'); };
+    head.addEventListener('pointermove', move); head.addEventListener('pointerup', up);
+  });
+  // เปิดหน้า = แสดง popup สรุปรายวันทันที (วันนี้ · ดูเดือนอื่น = วันที่ 1)
+  const start = document.querySelector('.cal-cell[data-date="<?= substr($today, 0, 7) === $m ? $today : $first ?>"]');
+  if (start) open(start);
 })();
 </script>
 <?= cal_modal_script() ?>
