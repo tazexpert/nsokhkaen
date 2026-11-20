@@ -260,17 +260,18 @@ function submitRequisition() {
         .fail((xhr) => showAlert(xhr.responseJSON?.message || 'เกิดข้อผิดพลาด'));
 }
 
-// Initial cart state, rendered server-side from the session (works even if
-// this page load came from scanning another sticker with the phone's own
-// camera app, which opens scan.php?qr=... as a brand-new page).
-renderCart(<?= json_encode(array_values($draft['items'])) ?>);
-
-// Opened directly from a printed QR code sticker (scan.php?qr=...) - look it up
-// immediately instead of waiting for the camera or manual entry.
-if (QR_FROM_LINK) {
-    $('#manualQr').val(QR_FROM_LINK);
-    $(document).ready(() => lookupQr(QR_FROM_LINK));
-}
+// รอให้หน้าโหลดครบก่อน: escapeHtml() อยู่ใน assets/js/app.js ที่โหลดท้ายหน้า (footer)
+// — เดิมเรียก renderCart() ทันที ถ้าใบเบิกมีรายการอยู่แล้ว (สแกน QR ครั้งที่ 2 เป็นต้นไป) จะ error
+//   ตารางรายการว่าง และไม่แสดงรายละเอียดของ QR ที่สแกน
+$(function () {
+    // รายการในใบเบิกจาก session (สแกนสติ๊กเกอร์ถัดไปด้วยแอปกล้อง = เปิด scan.php?qr=... เป็นหน้าใหม่)
+    renderCart(<?= json_encode(array_values($draft['items']), JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>);
+    // เปิดจาก QR สติ๊กเกอร์ (scan.php?qr=...) → ค้นหารายการทันที
+    if (QR_FROM_LINK) {
+        $('#manualQr').val(QR_FROM_LINK);
+        lookupQr(QR_FROM_LINK);
+    }
+});
 </script>
 
 <?php require_once __DIR__ . '/footer.php'; ?>
