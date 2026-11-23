@@ -317,9 +317,9 @@ function bud_work_options(array $works, ?int $sel, string $empty = '— เล�
 /**
  * โอนเปลี่ยนแปลง: ผูกด้วย "ที่เอกสาร" — 1 เลขที่เอกสาร = 1 รายการโอน (ทุกแถวที่ใช้เลขที่เอกสารเดียวกัน ไม่ว่าช่องรายการจะเขียนอย่างไร)
  *   นับเป็นการโอนเมื่อมีอย่างน้อย 1 แถวในเอกสารนั้นที่ช่องรายการมีคำว่า "โอน" (โอนเปลี่ยนแปลงครั้งที่ N/ปี, โอนครั้งที่ N …)
- *   แถวที่ไม่มีเลขที่เอกสาร: จัดกลุ่มตาม "ครั้งที่ N/ปี" ในช่องรายการ (แบบเดิม)
+ *   แถวที่ไม่มีเลขที่เอกสาร ไม่แสดง
  * คืน [key => ['k', 'doc', 'n', 'label' => '3/2570', 'title' => 'โอนเปลี่ยนแปลงครั้งที่ 3/2570', 'count', 'receive', 'spend', 'from', 'to', 'txns']]
- *   key = เลขที่เอกสาร (ไม่มี = "x" + ครั้งที่/ปี) · เรียงตามครั้งที่ แล้ววันที่ แล้วเลขที่เอกสาร
+ *   key = เลขที่เอกสาร · เรียงตามครั้งที่ แล้ววันที่ แล้วเลขที่เอกสาร
  */
 function bud_transfers(int $fy): array
 {
@@ -337,13 +337,10 @@ function bud_transfers(int $fy): array
     foreach ($st as $t) {
         $doc = trim((string)$t['doc_no']);
         $isTr = str_contains((string)$t['description'], 'โอน');
-        if ($doc !== '') {
-            $key = $doc;
-        } elseif ($isTr && ($p = $parse((string)$t['description']))) {
-            $key = 'x' . $p[0] . '/' . $p[1];
-        } else {
-            continue;
+        if ($doc === '') {
+            continue;                                                     // ไม่มีที่เอกสาร = ไม่แสดง
         }
+        $key = $doc;
         $g = &$groups[$key];
         $g ??= ['k' => $key, 'doc' => $doc, 'n' => null, 'year' => null, 'label' => '', 'title' => '', 'is' => false,
                 'count' => 0, 'receive' => 0.0, 'spend' => 0.0, 'from' => $t['txn_date'], 'to' => $t['txn_date'], 'txns' => []];
