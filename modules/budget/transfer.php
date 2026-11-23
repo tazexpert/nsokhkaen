@@ -145,9 +145,10 @@ require __DIR__ . '/header.php';
   .bud-transfer .bt-spend .bt-sec th { background: <?= BUD_COLORS['spend'] ?>; }
   .bud-transfer .bt-recv td.bt-first, .bud-transfer .bt-recv tr:not(.bt-row):not(.bt-sub) td:first-child { box-shadow: inset 4px 0 0 <?= BUD_COLORS['receive'] ?>; }
   .bud-transfer .bt-spend td.bt-first, .bud-transfer .bt-spend tr:not(.bt-row):not(.bt-sub) td:first-child { box-shadow: inset 4px 0 0 <?= BUD_COLORS['spend'] ?>; }
-  /* รายละเอียดหลายบรรทัด: บรรทัดละแถว มีเส้นแบ่งบาง ๆ · เส้นหนาคั่นระหว่างรายการ · วันที่/ที่เอกสารชิดบน · ยอดเงินกึ่งกลาง */
+  /* รายละเอียดหลายบรรทัด: บรรทัดละแถว มีเส้นแบ่งบาง ๆ · เส้นหนาคั่นระหว่างรายการ · วันที่/ที่เอกสาร/ยอดเงินชิดบน */
   .bud-transfer tr.bt-multi > td[rowspan] { vertical-align: middle; }
-  .bud-transfer tr.bt-multi > td.bt-first, .bud-transfer tr.bt-multi > td.bt-doc { vertical-align: top; }   /* วันที่ · ที่เอกสาร ชิดบรรทัดแรก */
+  .bud-transfer tr.bt-multi > td.bt-first, .bud-transfer tr.bt-multi > td.bt-doc,
+  .bud-transfer tr.bt-multi > td.bt-amt-r, .bud-transfer tr.bt-multi > td.bt-amt-s { vertical-align: top; }   /* วันที่ · ที่เอกสาร · ยอดเงิน ชิดบรรทัดแรก */
   .bud-transfer tr.bt-multi > td:not([rowspan]), .bud-transfer tr.bt-sub > td { border-bottom: 1px dashed #dbe3ee; }
   .bud-transfer tr.bt-sub > td, .bud-transfer td.bt-bullet { padding-left: 1.4rem; position: relative; }
   .bud-transfer tr.bt-sub > td::before, .bud-transfer td.bt-bullet::before { content: '•'; position: absolute; left: .6rem; color: #94a3b8; }
