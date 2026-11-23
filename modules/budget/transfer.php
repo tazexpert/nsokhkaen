@@ -64,7 +64,7 @@ $txnRows = function (array $t, string $first, array $more, string $side) use ($e
     $rs = $n > 1 ? ' rowspan="' . $n . '"' : '';
     $amt = '<td class="text-end text-nowrap bt-amt-' . $side . '"' . $rs . '>' . bud_money($t['amount']) . '</td>';
     $html = '<tr class="bt-row' . ($n > 1 ? ' bt-multi' : '') . '"><td class="text-nowrap bt-first"' . $rs . '>' . h(thai_date($t['txn_date'])) . '</td>'
-        . '<td class="font-monospace text-nowrap"' . $rs . '>' . h($t['doc_no']) . '</td><td' . ($side === 'r' && $more ? ' class="bt-bullet"' : '') . '>' . $first . '</td>'   // รับเข้า: ทุกบรรทัดเป็นรายการย่อยเท่ากัน
+        . '<td class="font-monospace text-nowrap bt-doc"' . $rs . '>' . h($t['doc_no']) . '</td><td' . ($side === 'r' && $more ? ' class="bt-bullet"' : '') . '>' . $first . '</td>'   // รับเข้า: ทุกบรรทัดเป็นรายการย่อยเท่ากัน
         . ($side === 'r' ? $amt . '<td' . $rs . '></td>' : '<td' . $rs . '></td>' . $amt)
         . ($edit ? '<td class="no-print"' . $rs . '><a href="txn_form?id=' . (int)$t['id'] . '" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a></td>' : '')
         . '</tr>';
@@ -145,8 +145,9 @@ require __DIR__ . '/header.php';
   .bud-transfer .bt-spend .bt-sec th { background: <?= BUD_COLORS['spend'] ?>; }
   .bud-transfer .bt-recv td.bt-first, .bud-transfer .bt-recv tr:not(.bt-row):not(.bt-sub) td:first-child { box-shadow: inset 4px 0 0 <?= BUD_COLORS['receive'] ?>; }
   .bud-transfer .bt-spend td.bt-first, .bud-transfer .bt-spend tr:not(.bt-row):not(.bt-sub) td:first-child { box-shadow: inset 4px 0 0 <?= BUD_COLORS['spend'] ?>; }
-  /* รายละเอียดหลายบรรทัด: บรรทัดละแถว มีเส้นแบ่งบาง ๆ · เส้นหนาคั่นระหว่างรายการ · วันที่/ที่เอกสาร/ยอดเงินกึ่งกลาง */
+  /* รายละเอียดหลายบรรทัด: บรรทัดละแถว มีเส้นแบ่งบาง ๆ · เส้นหนาคั่นระหว่างรายการ · วันที่/ที่เอกสารชิดบน · ยอดเงินกึ่งกลาง */
   .bud-transfer tr.bt-multi > td[rowspan] { vertical-align: middle; }
+  .bud-transfer tr.bt-multi > td.bt-first, .bud-transfer tr.bt-multi > td.bt-doc { vertical-align: top; }   /* วันที่ · ที่เอกสาร ชิดบรรทัดแรก */
   .bud-transfer tr.bt-multi > td:not([rowspan]), .bud-transfer tr.bt-sub > td { border-bottom: 1px dashed #dbe3ee; }
   .bud-transfer tr.bt-sub > td, .bud-transfer td.bt-bullet { padding-left: 1.4rem; position: relative; }
   .bud-transfer tr.bt-sub > td::before, .bud-transfer td.bt-bullet::before { content: '•'; position: absolute; left: .6rem; color: #94a3b8; }
