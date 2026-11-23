@@ -10,6 +10,8 @@
 !/uploads/messages/web.config
 !/uploads/shares/.htaccess
 !/uploads/shares/web.config
+!/uploads/kpi/.htaccess
+!/uploads/kpi/web.config
 !/uploads/**/
 !/uploads/**/.gitkeep
 /libs/phpqrcode/cache/*

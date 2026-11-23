@@ -1,0 +1,30 @@
+/* ระบบตัวชี้วัด */
+/* แถบความก้าวหน้า: .bar-fill ในกลุ่ม data-reveal ยืดออกเมื่อเลื่อนมาเห็น (สคริปต์กลาง assets/js/app.js) */
+.kpi-bar { height: 8px; border-radius: 99px; background: color-mix(in srgb, #ee1c29 12%, #fff); overflow: hidden; }
+.kpi-bar .bar-fill { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ee1c29, #f97316); }
+.stat-card .kpi-bar { background: rgba(255, 255, 255, .3); }
+.stat-card .kpi-bar .bar-fill { background: #fff; }
+.kpi-table tr.kpi-mine td { background: #fff5f5; }
+.kpi-badge-mine { background: #ee1c29; color: #fff; }
+.kpi-desc { white-space: normal; line-height: 1.7; }
+/* ฟอร์มเกณฑ์การให้คะแนน */
+.kpi-level .card-header .form-control { text-shadow: none; }
+.kpi-act { border: 1px dashed #f3a6ab; border-radius: 10px; padding: .6rem .75rem; margin-bottom: .6rem; background: #fffafa; }
+.kpi-chip { border: 1px solid #f3a6ab; background: #fff; color: #9f1239; border-radius: 99px; padding: 0 .6rem; font-size: .8rem; }
+.kpi-chip.on { background: #ee1c29; border-color: #ee1c29; color: #fff; }
+/* หน้ารายละเอียด */
+.kpi-level-view .card-header .kpi-issue { font-weight: 600; }
+.kpi-level-view .card-header .badge.text-bg-light { color: #9f1239 !important; text-shadow: none; }
+.kpi-act-view.mine { box-shadow: inset 4px 0 0 #ee1c29; }
+.kpi-act-view.kpi-flash { animation: kpiFlash 2s ease-out; }
+@keyframes kpiFlash { from { background: #fee2e2; } to { background: transparent; } }
+.kpi-progress { border-left: 3px solid #fecdd3; padding-left: .75rem; }
+.kpi-prog-item + .kpi-prog-item { margin-top: .5rem; padding-top: .5rem; border-top: 1px dashed #e2e8f0; }
+.kpi-subform { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: .75rem; }
+.kpi-subform.review { background: #f0fdf4; border-color: #bbf7d0; }
+@media (prefers-reduced-motion: reduce) { .kpi-act-view.kpi-flash { animation: none; } }
+@media print {
+  .kpi-bar .bar-fill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .kpi-act-view.mine { box-shadow: none; }
+  .kpi-act-view.kpi-flash { animation: none; }
+}
