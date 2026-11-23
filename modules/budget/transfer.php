@@ -1,21 +1,21 @@
 <?php
 /**
- * รายละเอียดโอนเปลี่ยนแปลงครั้งที่ N/ปี (คลิกจากภาพรวมงบประมาณ)
- *   รายการที่ช่อง "รายการ" ขึ้นต้นด้วย "โอนเปลี่ยนแปลงครั้งที่ N/ปี" — แสดง วันที่ · ที่เอกสาร · รายการ · ได้รับ / เบิกจ่าย
+ * รายละเอียดโอนเปลี่ยนแปลง (คลิกจากภาพรวมงบประมาณ) — 1 ที่เอกสาร = 1 รายการโอน (bud_transfers)
+ *   แสดง วันที่ · ที่เอกสาร · รายการ · ได้รับ / เบิกจ่าย ของทุกแถวที่ใช้เลขที่เอกสารนั้น
  *   ช่องรายการ: ข้อความในรายละเอียด (ถ้ามี) ไม่มี = ค่าใช้จ่ายของหมวด
  */
 require_once __DIR__ . '/bootstrap.php';
 require_module(BUD_MODULE, 'viewer');
 $fy = bud_fy_param();
 $transfers = bud_transfers($fy);
-$n = int_param('n');
-if (!isset($transfers[$n])) {
-    $n = (int)(array_key_first($transfers) ?? 0);
+$k = (string)($_GET['k'] ?? '');
+if (!isset($transfers[$k])) {
+    $k = (string)(array_key_first($transfers) ?? '');
 }
-$tr = $transfers[$n] ?? null;
+$tr = $transfers[$k] ?? null;
 $sources = bud_sources(true);
 
-$pageTitle = $tr ? 'โอนเปลี่ยนแปลงครั้งที่ ' . $tr['label'] : 'โอนเปลี่ยนแปลง ปีงบประมาณ ' . $fy;
+$pageTitle = $tr ? $tr['title'] : 'โอนเปลี่ยนแปลง ปีงบประมาณ ' . $fy;
 $active = 'dashboard';
 $pageActions = '<a href="./?fy=' . $fy . '" class="btn btn-light"><i class="bi bi-arrow-left"></i> ภาพรวมงบประมาณ</a>'
     . '<button type="button" class="btn btn-outline-secondary" onclick="print()"><i class="bi bi-printer"></i> พิมพ์</button>';
@@ -26,7 +26,7 @@ require __DIR__ . '/header.php';
 <?php else: ?>
 <ul class="nav nav-pills mb-3 no-print">
   <?php foreach ($transfers as $x): ?>
-    <li class="nav-item"><a class="nav-link<?= $x['n'] === $n ? ' active' : '' ?>" href="transfer?<?= h(http_build_query(['fy' => $fy, 'n' => $x['n']])) ?>">ครั้งที่ <?= h($x['label']) ?></a></li>
+    <li class="nav-item"><a class="nav-link<?= (string)$x['k'] === $k ? ' active' : '' ?>" href="transfer?<?= h(http_build_query(['fy' => $fy, 'k' => $x['k']])) ?>" title="<?= h($x['title']) ?>"><?= h($x['label'] !== '' ? 'ครั้งที่ ' . $x['label'] : mb_strimwidth($x['title'], 0, 30, '…')) ?><?= $x['doc'] !== '' ? ' <span class="small font-monospace opacity-75">' . h($x['doc']) . '</span>' : '' ?></a></li>
   <?php endforeach; ?>
 </ul>
 
@@ -44,7 +44,7 @@ require __DIR__ . '/header.php';
 </div>
 
 <div class="card">
-  <div class="card-header"><strong>โอนเปลี่ยนแปลงครั้งที่ <?= h($tr['label']) ?></strong>
+  <div class="card-header"><strong><?= h($tr['title']) ?></strong><?= $tr['doc'] !== '' ? ' <span class="ms-2">ที่เอกสาร <span class="font-monospace">' . h($tr['doc']) . '</span></span>' : '' ?>
     <span class="small text-muted ms-2"><?= h(thai_date($tr['from'])) ?><?= $tr['to'] !== $tr['from'] ? ' – ' . h(thai_date($tr['to'])) : '' ?></span></div>
   <div class="table-responsive">
     <table class="table table-sm align-middle mb-0 bud-transfer">
@@ -56,7 +56,7 @@ require __DIR__ . '/header.php';
           <td class="text-nowrap"><?= h(thai_date($t['txn_date'])) ?></td>
           <td class="font-monospace text-nowrap"><?= h($t['doc_no']) ?></td>
           <td><?php if (trim((string)$t['detail']) !== ''): ?><?= nl2br(h(trim($t['detail']))) ?>
-            <?php else: /* ไม่ใส่รายละเอียด → ค่าใช้จ่ายของหมวด (ไม่มี = รายการ / ชื่อหมวด) */ ?><span class="text-muted"><?= h(($s['activity'] ?? '') !== '' ? $s['activity'] : (($s['expense'] ?? '') !== '' ? $s['expense'] : ($s['label'] ?? '-'))) ?></span><?php endif; ?></td>
+            <?php else: /* ไม่ใส่รายละเอียด → ค่าใช้จ่ายของหมวด (ไม่มี = รายการ / ชื่อหมวด) — สีเดียวกับรายละเอียด */ ?><?= h(($s['activity'] ?? '') !== '' ? $s['activity'] : (($s['expense'] ?? '') !== '' ? $s['expense'] : ($s['label'] ?? '-'))) ?><?php endif; ?></td>
           <td class="text-end text-nowrap"><?= $sp ? '' : bud_money($t['amount']) ?></td>
           <td class="text-end text-nowrap"><?= $sp ? bud_money($t['amount']) : '' ?></td>
           <?php if (bud_can('editor')): ?><td class="no-print"><a href="txn_form?id=<?= (int)$t['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a></td><?php endif; ?>

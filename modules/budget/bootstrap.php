@@ -315,24 +315,48 @@ function bud_work_options(array $works, ?int $sel, string $empty = '— เล�
 }
 
 /**
- * โอนเปลี่ยนแปลง: รายการ (รับเข้า/เบิกจ่าย) ที่ช่อง "รายการ" ขึ้นต้นด้วย "โอนเปลี่ยนแปลงครั้งที่ N/ปี" ของปีงบประมาณ
- * คืน [N => ['n', 'year', 'label' => '3/2570', 'count', 'receive', 'spend', 'from', 'to', 'txns' => [...]]] เรียงตามครั้งที่
+ * โอนเปลี่ยนแปลง: ผูกด้วย "ที่เอกสาร" — 1 เลขที่เอกสาร = 1 รายการโอน (ทุกแถวที่ใช้เลขที่เอกสารเดียวกัน ไม่ว่าช่องรายการจะเขียนอย่างไร)
+ *   นับเป็นการโอนเมื่อมีอย่างน้อย 1 แถวในเอกสารนั้นที่ช่องรายการมีคำว่า "โอน" (โอนเปลี่ยนแปลงครั้งที่ N/ปี, โอนครั้งที่ N …)
+ *   แถวที่ไม่มีเลขที่เอกสาร: จัดกลุ่มตาม "ครั้งที่ N/ปี" ในช่องรายการ (แบบเดิม)
+ * คืน [key => ['k', 'doc', 'n', 'label' => '3/2570', 'title' => 'โอนเปลี่ยนแปลงครั้งที่ 3/2570', 'count', 'receive', 'spend', 'from', 'to', 'txns']]
+ *   key = เลขที่เอกสาร (ไม่มี = "x" + ครั้งที่/ปี) · เรียงตามครั้งที่ แล้ววันที่ แล้วเลขที่เอกสาร
  */
 function bud_transfers(int $fy): array
 {
     $digits = ['๐' => '0', '๑' => '1', '๒' => '2', '๓' => '3', '๔' => '4', '๕' => '5', '๖' => '6', '๗' => '7', '๘' => '8', '๙' => '9'];
-    $st = db()->prepare("SELECT * FROM bud_txns WHERE fiscal_year = ? AND description LIKE '%โอนเปลี่ยนแปลง%' ORDER BY txn_date, id");
+    $parse = function (string $desc) use ($digits, $fy): ?array {          // "ครั้งที่ N/ปี" → [n, ปี]
+        if (!preg_match('/โอน\S*\s*ครั้งที่\s*([0-9]+)\s*(?:\/\s*([0-9]{2,4}))?/u', strtr($desc, $digits), $m)) {
+            return null;
+        }
+        $y = isset($m[2]) && $m[2] !== '' ? (int)$m[2] : $fy;
+        return [(int)$m[1], $y < 100 ? $y + 2500 : $y];                      // 70 → 2570
+    };
+    $st = db()->prepare("SELECT * FROM bud_txns WHERE fiscal_year = ? ORDER BY txn_date, id");
     $st->execute([$fy]);
-    $out = [];
+    $groups = [];
     foreach ($st as $t) {
-        if (!preg_match('/โอนเปลี่ยนแปลง\s*ครั้งที่\s*([0-9]+)\s*(?:\/\s*([0-9]{2,4}))?/u', strtr($t['description'], $digits), $m)) {
+        $doc = trim((string)$t['doc_no']);
+        $isTr = str_contains((string)$t['description'], 'โอน');
+        if ($doc !== '') {
+            $key = $doc;
+        } elseif ($isTr && ($p = $parse((string)$t['description']))) {
+            $key = 'x' . $p[0] . '/' . $p[1];
+        } else {
             continue;
         }
-        $n = (int)$m[1];
-        $y = isset($m[2]) && $m[2] !== '' ? (int)$m[2] : $fy;
-        $y = $y < 100 ? $y + 2500 : $y;                     // 70 → 2570
-        $g = &$out[$n];
-        $g ??= ['n' => $n, 'year' => $y, 'label' => $n . '/' . $y, 'count' => 0, 'receive' => 0.0, 'spend' => 0.0, 'from' => $t['txn_date'], 'to' => $t['txn_date'], 'txns' => []];
+        $g = &$groups[$key];
+        $g ??= ['k' => $key, 'doc' => $doc, 'n' => null, 'year' => null, 'label' => '', 'title' => '', 'is' => false,
+                'count' => 0, 'receive' => 0.0, 'spend' => 0.0, 'from' => $t['txn_date'], 'to' => $t['txn_date'], 'txns' => []];
+        if ($isTr) {
+            $g['is'] = true;
+            if ($g['title'] === '') {                                          // ชื่อการโอน = แถวแรกที่มีคำว่า "โอน"
+                $p = $parse((string)$t['description']);
+                $g['n'] = $p[0] ?? null;
+                $g['year'] = $p[1] ?? null;
+                $g['label'] = $p ? $p[0] . '/' . $p[1] : '';
+                $g['title'] = $p ? 'โอนเปลี่ยนแปลงครั้งที่ ' . $g['label'] : trim((string)$t['description']);
+            }
+        }
         $g['count']++;
         $g[$t['txn_type'] === 'spend' ? 'spend' : 'receive'] += (float)$t['amount'];
         $g['from'] = min($g['from'], $t['txn_date']);
@@ -340,6 +364,7 @@ function bud_transfers(int $fy): array
         $g['txns'][] = $t;
         unset($g);
     }
-    ksort($out);
+    $out = array_filter($groups, fn($g) => $g['is']);
+    uasort($out, fn($a, $b) => [$a['year'] ?? PHP_INT_MAX, $a['n'] ?? PHP_INT_MAX, $a['from'], $a['doc']] <=> [$b['year'] ?? PHP_INT_MAX, $b['n'] ?? PHP_INT_MAX, $b['from'], $b['doc']]);
     return $out;
 }
