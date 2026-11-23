@@ -6,9 +6,13 @@ require_once __DIR__ . '/bootstrap.php';
 $me = require_module(KPI_MODULE);
 $pdo = db();
 [$fy, $round] = kpi_period_param();
+// ประเภท: ทั้งหมด / ตัวชี้วัดจากสำนักงาน / ตัวชี้วัดอื่น (ต้องรัน migration 20261213 ก่อน)
+$hasOffice = kpi_has_office();
+$src = $hasOffice && in_array($_GET['src'] ?? '', ['office', 'other'], true) ? $_GET['src'] : '';
 $st = $pdo->prepare('SELECT i.*, g.name AS work_group_name, c.full_name AS controller_name FROM kpi_indicators i
                      LEFT JOIN core_work_groups g ON g.id = i.work_group_id LEFT JOIN core_users c ON c.id = i.controller_id
-                     WHERE i.fiscal_year = ? AND i.round_no = ? ORDER BY i.sort_order, i.code + 0, i.code, i.id');
+                     WHERE i.fiscal_year = ? AND i.round_no = ?' . ($src ? ' AND i.is_office = ' . ($src === 'office' ? 1 : 0) : '') . '
+                     ORDER BY i.sort_order, i.code + 0, i.code, i.id');
 $st->execute([$fy, $round]);
 $rows = $st->fetchAll();
 $indUsers = kpi_indicator_users(array_column($rows, 'id'));
@@ -49,11 +53,18 @@ require __DIR__ . '/header.php';
     <form class="d-flex align-items-center gap-2">
       <label class="small text-muted">ปีงบประมาณ</label>
       <select name="fy" class="form-select form-select-sm w-auto" onchange="this.form.submit()"><?php foreach (kpi_years() as $y): ?><option value="<?= $y ?>" <?= $y === $fy ? 'selected' : '' ?>><?= $y ?></option><?php endforeach; ?></select>
-      <input type="hidden" name="r" value="<?= $round ?>">
+      <input type="hidden" name="r" value="<?= $round ?>"><?php if ($src): ?><input type="hidden" name="src" value="<?= h($src) ?>"><?php endif; ?>
     </form>
     <ul class="nav nav-pills">
-      <?php foreach ([1, 2] as $r): ?><li class="nav-item"><a class="nav-link py-1<?= $r === $round ? ' active' : '' ?>" href="?<?= h(http_build_query(['fy' => $fy, 'r' => $r])) ?>"><?= h(kpi_round_text($fy, $r)) ?></a></li><?php endforeach; ?>
+      <?php foreach ([1, 2] as $r): ?><li class="nav-item"><a class="nav-link py-1<?= $r === $round ? ' active' : '' ?>" href="?<?= h(http_build_query(array_filter(['fy' => $fy, 'r' => $r, 'src' => $src]))) ?>"><?= h(kpi_round_text($fy, $r)) ?></a></li><?php endforeach; ?>
     </ul>
+    <?php if ($hasOffice): ?>
+    <div class="btn-group btn-group-sm ms-auto">
+      <?php foreach (['' => 'ทั้งหมด', 'office' => 'จากสำนักงาน', 'other' => 'ตัวชี้วัดอื่น'] as $k => $lb): ?>
+        <a href="?<?= h(http_build_query(array_filter(['fy' => $fy, 'r' => $round, 'src' => $k]))) ?>" class="btn btn-outline-secondary<?= $src === $k ? ' active' : '' ?>"><?= $lb ?></a>
+      <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
   </div>
 </div>
 
@@ -79,6 +90,7 @@ require __DIR__ . '/header.php';
         <tr class="<?= $mine ? 'kpi-mine' : '' ?>">
           <td class="fw-semibold"><?= h($r['code'] ?: (string)($i + 1)) ?></td>
           <td><a href="indicator?id=<?= (int)$r['id'] ?>" class="fw-semibold text-decoration-none"><?= h($r['name']) ?></a>
+            <?= !empty($r['is_office']) ? ' <span class="badge kpi-badge-office" title="ตัวชี้วัดจากสำนักงาน"><i class="bi bi-building-check"></i> สำนักงาน</span>' : '' ?>
             <div class="small text-muted"><?= h($r['work_group_name'] ?: '-') ?><?= $r['controller_name'] ? ' · ผู้ควบคุม: ' . h(preg_replace('/\s+/u', ' ', $r['controller_name'])) : '' ?>
               <?= $mine ? ' · <span class="badge kpi-badge-mine">ผู้ปฏิบัติ</span>' : '' ?>
               <?= $s['overdue'] ? ' · <span class="badge text-bg-danger">เกินกำหนด ' . $s['overdue'] . '</span>' : ($s['soon'] ? ' · <span class="badge text-bg-warning">ใกล้ครบกำหนด ' . $s['soon'] . '</span>' : '') ?></div></td>

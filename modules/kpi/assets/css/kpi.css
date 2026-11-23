@@ -6,6 +6,7 @@
 .stat-card .kpi-bar .bar-fill { background: #fff; }
 .kpi-table tr.kpi-mine td { background: #fff5f5; }
 .kpi-badge-mine { background: #ee1c29; color: #fff; }
+.kpi-badge-office { background: #fee2e2; color: #b91c1c; font-weight: 600; }
 .kpi-desc { white-space: normal; line-height: 1.7; }
 /* ฟอร์มเกณฑ์การให้คะแนน */
 .kpi-level .card-header .form-control { text-shadow: none; }

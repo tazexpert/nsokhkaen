@@ -1058,6 +1058,7 @@ CREATE TABLE IF NOT EXISTS kpi_indicators (
   id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   fiscal_year    SMALLINT UNSIGNED NOT NULL,              -- ปีงบประมาณ (พ.ศ.)
   round_no       TINYINT UNSIGNED  NOT NULL DEFAULT 1,    -- รอบที่ 1 = 1 ต.ค. – 31 มี.ค. · รอบที่ 2 = 1 เม.ย. – 30 ก.ย.
+  is_office      TINYINT(1)   NOT NULL DEFAULT 1,         -- 1 = ตัวชี้วัดจากสำนักงาน · 0 = ไม่ใช่
   code           VARCHAR(20)  NULL,                       -- ลำดับตัวชี้วัด เช่น 2, 1.1
   name           VARCHAR(500) NOT NULL,
   unit           VARCHAR(100) NULL,                       -- หน่วยวัด

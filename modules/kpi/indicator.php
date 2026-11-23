@@ -127,6 +127,9 @@ $names_of = fn(array $ids) => implode(', ', array_filter(array_map(fn($u) => $na
   <div class="card-body kpi-detail">
     <dl class="row mb-0">
       <dt class="col-sm-3 col-lg-2">ตัวชี้วัด<?= $ind['code'] !== null && $ind['code'] !== '' ? 'ที่ ' . h($ind['code']) : '' ?></dt><dd class="col-sm-9 col-lg-10 fw-semibold"><?= h($ind['name']) ?></dd>
+      <?php if (isset($ind['is_office'])): ?>
+      <dt class="col-sm-3 col-lg-2">ประเภท</dt><dd class="col-sm-9 col-lg-10"><?= (int)$ind['is_office'] ? '<span class="badge kpi-badge-office"><i class="bi bi-building-check"></i> ตัวชี้วัดจากสำนักงาน</span>' : '<span class="badge text-bg-secondary">ตัวชี้วัดอื่น / ภายในหน่วยงาน</span>' ?></dd>
+      <?php endif; ?>
       <dt class="col-sm-3 col-lg-2">หน่วยวัด</dt><dd class="col-sm-9 col-lg-10"><?= h($ind['unit'] ?: '-') ?></dd>
       <dt class="col-sm-3 col-lg-2">น้ำหนัก</dt><dd class="col-sm-9 col-lg-10"><?= $ind['weight'] !== null ? 'ร้อยละ ' . kpi_num($ind['weight']) : '-' ?></dd>
       <dt class="col-sm-3 col-lg-2">กลุ่มงานที่รับผิดชอบ</dt><dd class="col-sm-9 col-lg-10"><?= h($ind['work_group_name'] ?: '-') ?></dd>

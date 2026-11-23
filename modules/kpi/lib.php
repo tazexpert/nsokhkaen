@@ -61,6 +61,41 @@ function kpi_years(): array
     return $ys;
 }
 
+/** มีคอลัมน์ is_office (migration 20261213) แล้วหรือยัง — ยังไม่มี = ซ่อนตัวเลือก "ตัวชี้วัดจากสำนักงาน" */
+function kpi_has_office(): bool
+{
+    static $has = null;
+    if ($has === null) {
+        try {
+            $has = (bool)db()->query("SHOW COLUMNS FROM kpi_indicators LIKE 'is_office'")->fetch();
+        } catch (PDOException $e) {
+            $has = false;
+        }
+    }
+    return $has;
+}
+
+/**
+ * ผู้อำนวยการกลุ่ม (ตัวเลือกแรกของผู้ควบคุมตัวชี้วัด) [user_id => ['name', 'labels' => ['ผอ.กว', ...], 'groups' => [gid, ...]]]
+ * เรียงตามลำดับกลุ่มงาน (cal_work_groups) — คนเดียวเป็น ผอ. หลายกลุ่ม (ควบ/รักษาการ) แสดงครั้งเดียว
+ */
+function kpi_directors(): array
+{
+    $out = [];
+    $users = cal_users();
+    foreach (cal_work_groups() as $gid => $g) {
+        $d = $g['director'];
+        if (!$d || !isset($users[$d])) {
+            continue;
+        }
+        $out[$d] ??= ['name' => preg_replace('/\s+/u', ' ', trim($users[$d]['full_name'])), 'labels' => [], 'groups' => []];
+        $out[$d]['labels'][] = cal_position_abbr($g['director_label'] ?: (string)$users[$d]['position'], str_starts_with((string)$g['director_label'], 'รักษาการ') ? 'acting' : '')
+            ?? 'ผอ.' . $g['name'];
+        $out[$d]['groups'][] = (int)$gid;
+    }
+    return $out;
+}
+
 /** ตัวชี้วัด 1 รายการ (พร้อมชื่อกลุ่มงาน/ผู้ควบคุม/ผู้จัดเก็บข้อมูล) */
 function kpi_get(int $id): ?array
 {

@@ -18,8 +18,18 @@ if ($ind && !kpi_can_manage($ind)) {
     forbidden(KPI_MODULE, 'admin');
 }
 [$curFy, $curR] = kpi_period_param();
-$f = $ind ?: ['fiscal_year' => $curFy, 'round_no' => $curR, 'code' => '', 'name' => '', 'unit' => 'คะแนน', 'weight' => '', 'description' => '',
-              'work_group_id' => $me['work_group_id'] ?? null, 'note' => '', 'controller_id' => $me['id'], 'collector_id' => null, 'sort_order' => 0];
+$hasOffice = kpi_has_office();
+$directors = kpi_directors();                         // ผู้ควบคุมตัวชี้วัด: ผอ.กลุ่ม เป็นตัวเลือกแรก
+$dirOfGroup = [];                                     // กลุ่มงาน → ผอ.กลุ่ม (เลือกกลุ่มงานแล้วเลือกผู้ควบคุมให้)
+foreach ($directors as $uid => $d) {
+    foreach ($d['groups'] as $gid) {
+        $dirOfGroup[$gid] = $uid;
+    }
+}
+$myGroup = (int)($me['work_group_id'] ?? 0) ?: null;
+$f = $ind ?: ['fiscal_year' => $curFy, 'round_no' => $curR, 'is_office' => 1, 'code' => '', 'name' => '', 'unit' => 'คะแนน', 'weight' => '', 'description' => '',
+              'work_group_id' => $myGroup, 'note' => '', 'collector_id' => null, 'sort_order' => 0,
+              'controller_id' => $dirOfGroup[$myGroup] ?? (array_key_first($directors) ?? $me['id'])];
 $users = $id ? (kpi_indicator_users([$id])[$id] ?? []) : [];
 $levels = $id ? kpi_structure($id, $users) : [];
 $errors = [];
@@ -35,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('ลบตัวชี้วัด "' . $ind['name'] . '" แล้ว');
         redirect('./?' . http_build_query(['fy' => $ind['fiscal_year'], 'r' => $ind['round_no']]));
     }
-    $f = ['fiscal_year' => int_param('fiscal_year'), 'round_no' => int_param('round_no'), 'code' => trim(post('code')), 'name' => trim(post('name')),
+    $f = ['fiscal_year' => int_param('fiscal_year'), 'round_no' => int_param('round_no'), 'is_office' => post('is_office', '1') === '1' ? 1 : 0, 'code' => trim(post('code')), 'name' => trim(post('name')),
           'unit' => trim(post('unit')), 'weight' => $dec(post('weight')), 'description' => trim(post('description')),
           'work_group_id' => int_param('work_group_id') ?: null, 'note' => trim(post('note')),
           'controller_id' => int_param('controller_id') ?: null, 'collector_id' => int_param('collector_id') ?: null, 'sort_order' => int_param('sort_order')];
@@ -70,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$errors) {
         $pdo->beginTransaction();
         try {
-            $cols = ['fiscal_year', 'round_no', 'code', 'name', 'unit', 'weight', 'description', 'work_group_id', 'note', 'controller_id', 'collector_id', 'sort_order'];
+            $cols = array_merge(['fiscal_year', 'round_no'], $hasOffice ? ['is_office'] : [], ['code', 'name', 'unit', 'weight', 'description', 'work_group_id', 'note', 'controller_id', 'collector_id', 'sort_order']);
             $vals = array_map(fn($k) => $f[$k] === '' ? null : $f[$k], $cols);
             if ($id) {
                 $pdo->prepare('UPDATE kpi_indicators SET ' . implode(', ', array_map(fn($c) => "$c = ?", $cols)) . ' WHERE id = ?')->execute([...$vals, $id]);
@@ -199,6 +209,15 @@ $levelBox = function (string $L, array $l, string $acts) use ($num): string {
                 <label class="btn btn-outline-primary" for="round<?= $r ?>">รอบที่ <?= $r ?> <span class="small">(<?= $txt ?>)</span></label>
               <?php endforeach; ?>
             </div></div>
+          <?php if ($hasOffice): ?>
+          <div class="col-12"><label class="form-label">ตัวชี้วัดจากสำนักงาน</label>
+            <div class="btn-group w-100" role="group">
+              <input type="radio" class="btn-check" name="is_office" id="office1" value="1" <?= (int)$f['is_office'] === 1 ? 'checked' : '' ?>>
+              <label class="btn btn-outline-primary" for="office1"><i class="bi bi-building-check"></i> ใช่ — ตัวชี้วัดจากสำนักงาน</label>
+              <input type="radio" class="btn-check" name="is_office" id="office0" value="0" <?= (int)$f['is_office'] === 0 ? 'checked' : '' ?>>
+              <label class="btn btn-outline-primary" for="office0"><i class="bi bi-house"></i> ไม่ใช่ — ตัวชี้วัดอื่น / ภายในหน่วยงาน</label>
+            </div></div>
+          <?php endif; ?>
           <div class="col-sm-3"><label class="form-label">ตัวชี้วัดที่</label><input name="code" class="form-control" maxlength="20" value="<?= h($f['code']) ?>" placeholder="เช่น 2 หรือ 1.1"></div>
           <div class="col-sm-9"><label class="form-label">ชื่อตัวชี้วัด <span class="text-danger">*</span></label>
             <textarea name="name" class="form-control" rows="2" maxlength="500" required><?= h($f['name']) ?></textarea></div>
@@ -207,11 +226,17 @@ $levelBox = function (string $L, array $l, string $acts) use ($num): string {
           <div class="col-sm-4"><label class="form-label">ลำดับการแสดง</label><input name="sort_order" type="number" class="form-control" value="<?= (int)$f['sort_order'] ?>"></div>
           <div class="col-12"><label class="form-label">คำอธิบาย</label><textarea name="description" class="form-control" rows="6"><?= h($f['description']) ?></textarea></div>
           <div class="col-sm-6"><label class="form-label">กลุ่มงานที่รับผิดชอบ</label>
-            <select name="work_group_id" class="form-select"><option value="">— ไม่ระบุ —</option>
+            <select name="work_group_id" id="workGroup" class="form-select"><option value="">— ไม่ระบุ —</option>
               <?php foreach ($groups as $g): ?><option value="<?= (int)$g['id'] ?>" <?= (int)$f['work_group_id'] === (int)$g['id'] ? 'selected' : '' ?>><?= h($g['name']) ?></option><?php endforeach; ?></select></div>
           <div class="col-sm-6"><label class="form-label">ผู้ควบคุมตัวชี้วัด</label>
-            <select name="controller_id" class="form-select"><option value="">— ไม่ระบุ —</option>
-              <?php foreach ($staff as $u): ?><option value="<?= (int)$u['id'] ?>" <?= (int)$f['controller_id'] === (int)$u['id'] ? 'selected' : '' ?>><?= h($u['full_name']) ?></option><?php endforeach; ?></select></div>
+            <select name="controller_id" id="controller" class="form-select" data-dir-of-group="<?= h(json_encode($dirOfGroup)) ?>"><option value="">— ไม่ระบุ —</option>
+              <?php if ($directors): ?><optgroup label="ผู้อำนวยการกลุ่ม">
+                <?php foreach ($directors as $uid => $d): ?><option value="<?= (int)$uid ?>" <?= (int)$f['controller_id'] === (int)$uid ? 'selected' : '' ?>><?= h(implode(' / ', $d['labels']) . ' — ' . $d['name']) ?></option><?php endforeach; ?>
+              </optgroup><?php endif; ?>
+              <optgroup label="บุคลากรอื่น">
+                <?php foreach ($staff as $u): if (isset($directors[(int)$u['id']])) continue; ?><option value="<?= (int)$u['id'] ?>" <?= (int)$f['controller_id'] === (int)$u['id'] ? 'selected' : '' ?>><?= h($u['full_name']) ?></option><?php endforeach; ?>
+              </optgroup></select>
+            <div class="form-text">เลือกกลุ่มงานแล้วระบบเลือก ผอ.กลุ่ม ให้ (เปลี่ยนเองได้)</div></div>
           <div class="col-sm-6"><label class="form-label">ผู้จัดเก็บข้อมูล</label>
             <select name="collector_id" class="form-select"><option value="">— ไม่ระบุ —</option>
               <?php foreach ($staff as $u): ?><option value="<?= (int)$u['id'] ?>" <?= (int)$f['collector_id'] === (int)$u['id'] ? 'selected' : '' ?>><?= h($u['full_name']) ?></option><?php endforeach; ?></select></div>
@@ -314,6 +339,11 @@ $levelBox = function (string $L, array $l, string $acts) use ($num): string {
     document.getElementById('sumMax').textContent = Math.round(t * 100) / 100;
   };
   levels.addEventListener('input', sum);
+  // เลือกกลุ่มงาน → ผู้ควบคุมตัวชี้วัด = ผอ.กลุ่มนั้น (เฉพาะเมื่อยังไม่ได้เลือกเองเป็นคนอื่น)
+  const ctrl = document.getElementById('controller'), dirOf = JSON.parse(ctrl.dataset.dirOfGroup || '{}');
+  let autoCtrl = !ctrl.value || Object.values(dirOf).map(String).includes(ctrl.value);
+  ctrl.addEventListener('change', () => { autoCtrl = !ctrl.value || Object.values(dirOf).map(String).includes(ctrl.value); });
+  document.getElementById('workGroup').addEventListener('change', e => { if (autoCtrl && dirOf[e.target.value]) ctrl.value = dirOf[e.target.value]; });
   picker.addEventListener('pickchange', e => { people = e.detail; levels.querySelectorAll('.kpi-act').forEach(chips); });
   if (!levels.children.length) document.getElementById('addLevel').click();
   sum();
