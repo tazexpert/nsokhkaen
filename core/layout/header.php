@@ -133,7 +133,7 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
             </ul>
           </li>
         <?php endforeach; ?>
-        <?php if ($navMore): $__isCurMore = isset($navMore[$module]); ?>
+        <?php if ($navMore): $__isCurMore = $module !== null && isset($navMore[$module]);   // หน้าระบบกลาง $module = null (PHP 8.5: ห้ามใช้ null เป็น key) ?>
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle<?= $navActive($__isCurMore) ?>" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               <i class="bi bi-grid-3x3-gap"></i> ระบบอื่นๆ<?= $__isCurMore ? ': ' . h($navMore[$module]['short']) : '' ?></a>
