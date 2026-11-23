@@ -68,7 +68,7 @@ unset($bySrc);
 $count = array_sum(array_map('count', $books));
 $money = fn(float $v) => $v == 0 ? '-' : ($v < 0 ? '<span class="neg">' . bud_money($v) . '</span>' : bud_money($v));
 
-$pageTitle = 'ทะเบียนคุมเงินประจำงวดส่วนจังหวัด';
+$pageTitle = 'ทะเบียนคุมเงินประจำงวด (รายหมวด)';   // หัวกระดาษตอนพิมพ์ยังเป็น "ทะเบียนคุมเงินประจำงวดส่วนจังหวัด" ตามแบบฟอร์ม
 $active = 'ledger';
 $pageActions = '<button type="button" class="btn btn-outline-secondary" onclick="window.print()"><i class="bi bi-printer"></i> พิมพ์</button>';
 require __DIR__ . '/header.php';

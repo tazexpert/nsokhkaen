@@ -74,8 +74,9 @@ $txnRows = function (array $t, string $first, array $more, string $side) use ($e
     return $html;
 };
 
-$pageTitle = $tr ? $tr['title'] : 'โอนเปลี่ยนแปลง ปีงบประมาณ ' . $fy;
-$active = 'transfer';                       // เมนู "โอนเปลี่ยนแปลง" (ก่อนทะเบียนคุมเงินประจำงวด)
+// เมนู "ทะเบียนคุมเงินประจำงวด (ยอดโอน)" — คุมยอดทั้งการโอนแต่ละครั้ง ไม่แยกตามหมวด (ต่างจาก "(รายหมวด)" = ledger.php)
+$pageTitle = $tr ? 'ทะเบียนคุมเงินประจำงวด (ยอดโอน) · ' . $tr['title'] : 'ทะเบียนคุมเงินประจำงวด (ยอดโอน) ปีงบประมาณ ' . $fy;
+$active = 'transfer';
 $pageActions = '<a href="./?fy=' . $fy . '" class="btn btn-light"><i class="bi bi-arrow-left"></i> ภาพรวมงบประมาณ</a>'
     . '<button type="button" class="btn btn-outline-secondary" onclick="print()"><i class="bi bi-printer"></i> พิมพ์</button>';
 require __DIR__ . '/header.php';
