@@ -75,7 +75,7 @@ $txnRows = function (array $t, string $first, array $more, string $side) use ($e
 };
 
 $pageTitle = $tr ? $tr['title'] : 'โอนเปลี่ยนแปลง ปีงบประมาณ ' . $fy;
-$active = 'dashboard';
+$active = 'transfer';                       // เมนู "โอนเปลี่ยนแปลง" (ก่อนทะเบียนคุมเงินประจำงวด)
 $pageActions = '<a href="./?fy=' . $fy . '" class="btn btn-light"><i class="bi bi-arrow-left"></i> ภาพรวมงบประมาณ</a>'
     . '<button type="button" class="btn btn-outline-secondary" onclick="print()"><i class="bi bi-printer"></i> พิมพ์</button>';
 require __DIR__ . '/header.php';
