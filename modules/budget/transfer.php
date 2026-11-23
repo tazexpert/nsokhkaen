@@ -49,14 +49,30 @@ $catName = function (?array $s): string {
     }
     return isset($s['budget']) ? implode(' · ', array_filter([$s['budget'], $s['expense'], $s['activity']], fn($x) => trim((string)$x) !== '')) : $s['label'];
 };
-$itemText = function (array $t) use ($sources): string {          // ช่องรายการ: รายละเอียด (ถ้ามี) ไม่มี = ค่าใช้จ่ายของหมวด
+$lines = fn(string $text) => array_values(array_filter(array_map('trim', preg_split('/\R/u', $text)), fn($l) => $l !== ''));
+$itemLines = function (array $t) use ($sources, $lines): array {   // รับเข้า: รายละเอียด (บรรทัดละแถว) ไม่มี = ค่าใช้จ่ายของหมวด
     $s = $sources[bud_source_key($t)] ?? null;
-    if (trim((string)$t['detail']) !== '') {
-        return nl2br(h(trim($t['detail'])));
-    }
-    return h(($s['activity'] ?? '') !== '' ? $s['activity'] : (($s['expense'] ?? '') !== '' ? $s['expense'] : ($s['label'] ?? '-')));
+    return $lines((string)$t['detail']) ?: [($s['activity'] ?? '') !== '' ? $s['activity'] : (($s['expense'] ?? '') !== '' ? $s['expense'] : ($s['label'] ?? '-'))];
 };
 $edit = bud_can('editor');
+/**
+ * 1 รายการ = หลายแถว (รายละเอียดบรรทัดละแถว มีเส้นแบ่ง) — วันที่ · ที่เอกสาร · ยอดเงิน · ปุ่มแก้ไข แสดงครั้งเดียว (rowspan)
+ * $first = ข้อความแถวแรก (HTML) · $more = บรรทัดถัดไป (ข้อความ) · $side = 'r' ได้รับ / 's' เบิกจ่าย
+ */
+$txnRows = function (array $t, string $first, array $more, string $side) use ($edit): string {
+    $n = 1 + count($more);
+    $rs = $n > 1 ? ' rowspan="' . $n . '"' : '';
+    $amt = '<td class="text-end text-nowrap bt-amt-' . $side . '"' . $rs . '>' . bud_money($t['amount']) . '</td>';
+    $html = '<tr class="bt-row' . ($n > 1 ? ' bt-multi' : '') . '"><td class="text-nowrap bt-first"' . $rs . '>' . h(thai_date($t['txn_date'])) . '</td>'
+        . '<td class="font-monospace text-nowrap"' . $rs . '>' . h($t['doc_no']) . '</td><td' . ($side === 'r' && $more ? ' class="bt-bullet"' : '') . '>' . $first . '</td>'   // รับเข้า: ทุกบรรทัดเป็นรายการย่อยเท่ากัน
+        . ($side === 'r' ? $amt . '<td' . $rs . '></td>' : '<td' . $rs . '></td>' . $amt)
+        . ($edit ? '<td class="no-print"' . $rs . '><a href="txn_form?id=' . (int)$t['id'] . '" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a></td>' : '')
+        . '</tr>';
+    foreach ($more as $i => $l) {
+        $html .= '<tr class="bt-sub' . ($i === count($more) - 1 ? ' bt-sub-last' : '') . '"><td>' . h($l) . '</td></tr>';
+    }
+    return $html;
+};
 
 $pageTitle = $tr ? $tr['title'] : 'โอนเปลี่ยนแปลง ปีงบประมาณ ' . $fy;
 $active = 'dashboard';
@@ -97,15 +113,8 @@ require __DIR__ . '/header.php';
       <!-- ส่วนที่ 1: รับเข้า -->
       <tbody class="bt-recv">
         <tr class="bt-sec"><th colspan="<?= $edit ? 6 : 5 ?>"><i class="bi bi-box-arrow-in-down"></i> รับเข้า — <?= h($tr['title']) ?></th></tr>
-        <?php foreach ($recv as $t): ?>
-          <tr>
-            <td class="text-nowrap"><?= h(thai_date($t['txn_date'])) ?></td>
-            <td class="font-monospace text-nowrap"><?= h($t['doc_no']) ?></td>
-            <td><?= $itemText($t) ?></td>
-            <td class="text-end text-nowrap bt-amt-r"><?= bud_money($t['amount']) ?></td>
-            <td></td>
-            <?php if ($edit): ?><td class="no-print"><a href="txn_form?id=<?= (int)$t['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a></td><?php endif; ?>
-          </tr>
+        <?php foreach ($recv as $t): $ls = $itemLines($t); ?>
+          <?= $txnRows($t, h(array_shift($ls)), $ls, 'r') ?>
         <?php endforeach; ?>
         <tr class="bt-sum"><td colspan="3" class="text-end">รวมรับเข้า</td><td class="text-end"><?= bud_money($tr['receive']) ?></td><td></td><?php if ($edit): ?><td class="no-print"></td><?php endif; ?></tr>
       </tbody>
@@ -117,15 +126,8 @@ require __DIR__ . '/header.php';
           <tr class="bt-cat"><td colspan="3"><i class="bi bi-tag"></i> <?= h($catName($c['source'])) ?></td>
             <td class="text-end text-nowrap small">ได้รับ <?= bud_money($c['receive']) ?></td>
             <td class="text-end text-nowrap small">คงเหลือ <?= bud_money($c['receive'] - $c['spend']) ?></td><?php if ($edit): ?><td class="no-print"></td><?php endif; ?></tr>
-          <?php foreach ($c['txns'] as $t): ?>
-            <tr>
-              <td class="text-nowrap"><?= h(thai_date($t['txn_date'])) ?></td>
-              <td class="font-monospace text-nowrap"><?= h($t['doc_no']) ?></td>
-              <td><?= h(trim((string)$t['description'])) ?><?= trim((string)$t['detail']) !== '' ? '<div class="small">' . nl2br(h(trim($t['detail']))) . '</div>' : '' ?></td>
-              <td></td>
-              <td class="text-end text-nowrap bt-amt-s"><?= bud_money($t['amount']) ?></td>
-              <?php if ($edit): ?><td class="no-print"><a href="txn_form?id=<?= (int)$t['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a></td><?php endif; ?>
-            </tr>
+          <?php foreach ($c['txns'] as $t): /* เบิกจ่าย: แถวแรก = ช่องรายการ · รายละเอียดบรรทัดละแถว */ ?>
+            <?= $txnRows($t, h(trim((string)$t['description'])), $lines((string)$t['detail']), 's') ?>
           <?php endforeach; ?>
           <?php if (!$c['txns']): ?><tr><td colspan="<?= $edit ? 6 : 5 ?>" class="text-center small py-2">ยังไม่มีการเบิกจ่ายในหมวดนี้</td></tr><?php endif; ?>
         <?php endforeach; ?>
@@ -141,8 +143,14 @@ require __DIR__ . '/header.php';
   .bud-transfer .bt-sec th { font-weight: 700; color: #fff; }
   .bud-transfer .bt-recv .bt-sec th { background: <?= BUD_COLORS['receive'] ?>; }
   .bud-transfer .bt-spend .bt-sec th { background: <?= BUD_COLORS['spend'] ?>; }
-  .bud-transfer .bt-recv td:first-child { box-shadow: inset 4px 0 0 <?= BUD_COLORS['receive'] ?>; }
-  .bud-transfer .bt-spend td:first-child { box-shadow: inset 4px 0 0 <?= BUD_COLORS['spend'] ?>; }
+  .bud-transfer .bt-recv td.bt-first, .bud-transfer .bt-recv tr:not(.bt-row):not(.bt-sub) td:first-child { box-shadow: inset 4px 0 0 <?= BUD_COLORS['receive'] ?>; }
+  .bud-transfer .bt-spend td.bt-first, .bud-transfer .bt-spend tr:not(.bt-row):not(.bt-sub) td:first-child { box-shadow: inset 4px 0 0 <?= BUD_COLORS['spend'] ?>; }
+  /* รายละเอียดหลายบรรทัด: บรรทัดละแถว มีเส้นแบ่งบาง ๆ · เส้นหนาคั่นระหว่างรายการ · วันที่/ที่เอกสาร/ยอดเงินกึ่งกลาง */
+  .bud-transfer tr.bt-multi > td[rowspan] { vertical-align: middle; }
+  .bud-transfer tr.bt-multi > td:not([rowspan]), .bud-transfer tr.bt-sub > td { border-bottom: 1px dashed #dbe3ee; }
+  .bud-transfer tr.bt-sub > td, .bud-transfer td.bt-bullet { padding-left: 1.4rem; position: relative; }
+  .bud-transfer tr.bt-sub > td::before, .bud-transfer td.bt-bullet::before { content: '•'; position: absolute; left: .6rem; color: #94a3b8; }
+  .bud-transfer tr.bt-sub-last > td, .bud-transfer tr.bt-multi > td[rowspan] { border-bottom: 1px solid var(--bs-border-color); }
   .bud-transfer .bt-cat td { background: color-mix(in srgb, <?= BUD_COLORS['spend'] ?> 10%, #fff); font-weight: 600; }
   .bud-transfer .bt-sum td { font-weight: 700; background: #f8fafc; }
   .bud-transfer .bt-amt-r { color: <?= BUD_COLORS['receive'] ?>; font-weight: 600; }
