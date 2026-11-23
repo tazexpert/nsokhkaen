@@ -76,8 +76,8 @@ function kpi_has_office(): bool
 }
 
 /**
- * ผู้อำนวยการกลุ่ม (ตัวเลือกแรกของผู้ควบคุมตัวชี้วัด) [user_id => ['name', 'labels' => ['ผอ.กว', ...], 'groups' => [gid, ...]]]
- * เรียงตามลำดับกลุ่มงาน (cal_work_groups) — คนเดียวเป็น ผอ. หลายกลุ่ม (ควบ/รักษาการ) แสดงครั้งเดียว
+ * ผู้อำนวยการกลุ่ม (ตัวเลือกแรกของผู้ควบคุมตัวชี้วัด) — แยกรายกลุ่มงาน [gid => ['user_id', 'name', 'label' => 'ผอ.กว', 'group']]
+ * เรียงตามลำดับกลุ่มงาน (cal_work_groups) · คนเดียวเป็น ผอ. หลายกลุ่ม (ควบ/รักษาการ) = แสดงแยกแต่ละกลุ่ม
  */
 function kpi_directors(): array
 {
@@ -88,10 +88,9 @@ function kpi_directors(): array
         if (!$d || !isset($users[$d])) {
             continue;
         }
-        $out[$d] ??= ['name' => preg_replace('/\s+/u', ' ', trim($users[$d]['full_name'])), 'labels' => [], 'groups' => []];
-        $out[$d]['labels'][] = cal_position_abbr($g['director_label'] ?: (string)$users[$d]['position'], str_starts_with((string)$g['director_label'], 'รักษาการ') ? 'acting' : '')
-            ?? 'ผอ.' . $g['name'];
-        $out[$d]['groups'][] = (int)$gid;
+        $label = cal_position_abbr($g['director_label'] ?: (string)$users[$d]['position'], str_starts_with((string)$g['director_label'], 'รักษาการ') ? 'acting' : '');
+        $out[(int)$gid] = ['user_id' => (int)$d, 'name' => preg_replace('/\s+/u', ' ', trim($users[$d]['full_name'])),
+                           'label' => $label ?? 'ผอ.' . $g['name'], 'group' => $g['name']];
     }
     return $out;
 }

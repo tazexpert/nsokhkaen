@@ -19,17 +19,13 @@ if ($ind && !kpi_can_manage($ind)) {
 }
 [$curFy, $curR] = kpi_period_param();
 $hasOffice = kpi_has_office();
-$directors = kpi_directors();                         // ผู้ควบคุมตัวชี้วัด: ผอ.กลุ่ม เป็นตัวเลือกแรก
-$dirOfGroup = [];                                     // กลุ่มงาน → ผอ.กลุ่ม (เลือกกลุ่มงานแล้วเลือกผู้ควบคุมให้)
-foreach ($directors as $uid => $d) {
-    foreach ($d['groups'] as $gid) {
-        $dirOfGroup[$gid] = $uid;
-    }
-}
+$directors = kpi_directors();                         // ผู้ควบคุมตัวชี้วัด: ผอ.กลุ่ม (แยกรายกลุ่ม) เป็นตัวเลือกแรก
+$dirOfGroup = array_map(fn($d) => $d['user_id'], $directors);   // กลุ่มงาน → ผอ.กลุ่ม (เลือกกลุ่มงานแล้วเลือกผู้ควบคุมให้)
+$dirIds = array_flip($dirOfGroup);
 $myGroup = (int)($me['work_group_id'] ?? 0) ?: null;
 $f = $ind ?: ['fiscal_year' => $curFy, 'round_no' => $curR, 'is_office' => 1, 'code' => '', 'name' => '', 'unit' => 'คะแนน', 'weight' => '', 'description' => '',
               'work_group_id' => $myGroup, 'note' => '', 'collector_id' => null, 'sort_order' => 0,
-              'controller_id' => $dirOfGroup[$myGroup] ?? (array_key_first($directors) ?? $me['id'])];
+              'controller_id' => $dirOfGroup[$myGroup] ?? (reset($dirOfGroup) ?: $me['id'])];
 $users = $id ? (kpi_indicator_users([$id])[$id] ?? []) : [];
 $levels = $id ? kpi_structure($id, $users) : [];
 $errors = [];
@@ -231,10 +227,17 @@ $levelBox = function (string $L, array $l, string $acts) use ($num): string {
           <div class="col-sm-6"><label class="form-label">ผู้ควบคุมตัวชี้วัด</label>
             <select name="controller_id" id="controller" class="form-select" data-dir-of-group="<?= h(json_encode($dirOfGroup)) ?>"><option value="">— ไม่ระบุ —</option>
               <?php if ($directors): ?><optgroup label="ผู้อำนวยการกลุ่ม">
-                <?php foreach ($directors as $uid => $d): ?><option value="<?= (int)$uid ?>" <?= (int)$f['controller_id'] === (int)$uid ? 'selected' : '' ?>><?= h(implode(' / ', $d['labels']) . ' — ' . $d['name']) ?></option><?php endforeach; ?>
+                <?php // คนเดียวเป็น ผอ. หลายกลุ่ม = หลายตัวเลือก (ค่าเดียวกัน) — เลือกตัวที่ตรงกับกลุ่มงานของตัวชี้วัด ไม่มี = ตัวแรก
+                $selGid = null;
+                foreach ($directors as $gid => $d) {
+                    if ((int)$f['controller_id'] === $d['user_id'] && ($selGid === null || (int)$f['work_group_id'] === $gid)) {
+                        $selGid = $gid;
+                    }
+                }
+                foreach ($directors as $gid => $d): ?><option value="<?= $d['user_id'] ?>" data-group="<?= $gid ?>" title="ผู้อำนวยการ<?= h($d['group']) ?>" <?= $gid === $selGid ? 'selected' : '' ?>><?= h($d['label'] . ' — ' . $d['name']) ?></option><?php endforeach; ?>
               </optgroup><?php endif; ?>
               <optgroup label="บุคลากรอื่น">
-                <?php foreach ($staff as $u): if (isset($directors[(int)$u['id']])) continue; ?><option value="<?= (int)$u['id'] ?>" <?= (int)$f['controller_id'] === (int)$u['id'] ? 'selected' : '' ?>><?= h($u['full_name']) ?></option><?php endforeach; ?>
+                <?php foreach ($staff as $u): if (isset($dirIds[(int)$u['id']])) continue; ?><option value="<?= (int)$u['id'] ?>" <?= (int)$f['controller_id'] === (int)$u['id'] ? 'selected' : '' ?>><?= h($u['full_name']) ?></option><?php endforeach; ?>
               </optgroup></select>
             <div class="form-text">เลือกกลุ่มงานแล้วระบบเลือก ผอ.กลุ่ม ให้ (เปลี่ยนเองได้)</div></div>
           <div class="col-sm-6"><label class="form-label">ผู้จัดเก็บข้อมูล</label>
@@ -343,7 +346,10 @@ $levelBox = function (string $L, array $l, string $acts) use ($num): string {
   const ctrl = document.getElementById('controller'), dirOf = JSON.parse(ctrl.dataset.dirOfGroup || '{}');
   let autoCtrl = !ctrl.value || Object.values(dirOf).map(String).includes(ctrl.value);
   ctrl.addEventListener('change', () => { autoCtrl = !ctrl.value || Object.values(dirOf).map(String).includes(ctrl.value); });
-  document.getElementById('workGroup').addEventListener('change', e => { if (autoCtrl && dirOf[e.target.value]) ctrl.value = dirOf[e.target.value]; });
+  document.getElementById('workGroup').addEventListener('change', e => {
+    const opt = ctrl.querySelector('option[data-group="' + CSS.escape(e.target.value) + '"]');   // ตัวเลือก ผอ. ของกลุ่มนั้น (แยกรายกลุ่ม)
+    if (autoCtrl && opt) opt.selected = true;
+  });
   picker.addEventListener('pickchange', e => { people = e.detail; levels.querySelectorAll('.kpi-act').forEach(chips); });
   if (!levels.children.length) document.getElementById('addLevel').click();
   sum();
