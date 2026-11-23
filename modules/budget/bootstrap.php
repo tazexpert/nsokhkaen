@@ -315,11 +315,11 @@ function bud_work_options(array $works, ?int $sel, string $empty = '— เล�
 }
 
 /**
- * โอนเปลี่ยนแปลง: ผูกด้วย "ที่เอกสาร" — 1 เลขที่เอกสาร = 1 รายการโอน (ทุกแถวที่ใช้เลขที่เอกสารเดียวกัน ไม่ว่าช่องรายการจะเขียนอย่างไร)
- *   นับเป็นการโอนเมื่อมีอย่างน้อย 1 แถวในเอกสารนั้นที่ช่องรายการมีคำว่า "โอน" (โอนเปลี่ยนแปลงครั้งที่ N/ปี, โอนครั้งที่ N …)
- *   แถวที่ไม่มีเลขที่เอกสาร ไม่แสดง
- * คืน [key => ['k', 'doc', 'n', 'label' => '3/2570', 'title' => 'โอนเปลี่ยนแปลงครั้งที่ 3/2570', 'count', 'receive', 'spend', 'from', 'to', 'txns']]
- *   key = เลขที่เอกสาร · เรียงตามครั้งที่ แล้ววันที่ แล้วเลขที่เอกสาร
+ * โอนเปลี่ยนแปลง: ผูกด้วย "ที่เอกสาร" — ทุกแถวที่ใช้เลขที่เอกสารเดียวกันเป็นของการโอนเดียวกัน ไม่ว่าช่องรายการจะเขียนอย่างไร
+ *   เอกสารเป็นการโอนเมื่อมีอย่างน้อย 1 แถวที่ช่องรายการมีคำว่า "โอน" (โอนเปลี่ยนแปลงครั้งที่ N/ปี, โอนครั้งที่ N …)
+ *   แล้วรวมเอกสารที่เป็น "ครั้งที่" เดียวกันเป็นการ์ดเดียว (ไม่แยกตามที่เอกสาร) · แถวที่ไม่มีเลขที่เอกสาร ไม่แสดง
+ * คืน [key => ['k' => '3/2570', 'docs' => [...], 'n', 'label' => '3/2570', 'title' => 'โอนเปลี่ยนแปลงครั้งที่ 3/2570', 'count', 'receive', 'spend', 'from', 'to', 'txns']]
+ *   key = ครั้งที่/ปี (ไม่ระบุครั้งที่ = ช่องรายการ) · เรียงตามปี ครั้งที่ แล้ววันที่
  */
 function bud_transfers(int $fy): array
 {
@@ -361,7 +361,30 @@ function bud_transfers(int $fy): array
         $g['txns'][] = $t;
         unset($g);
     }
-    $out = array_filter($groups, fn($g) => $g['is']);
-    uasort($out, fn($a, $b) => [$a['year'] ?? PHP_INT_MAX, $a['n'] ?? PHP_INT_MAX, $a['from'], $a['doc']] <=> [$b['year'] ?? PHP_INT_MAX, $b['n'] ?? PHP_INT_MAX, $b['from'], $b['doc']]);
+    // รวมเอกสารที่เป็นครั้งที่เดียวกัน
+    $out = [];
+    foreach (array_filter($groups, fn($g) => $g['is']) as $g) {
+        $key = $g['label'] !== '' ? $g['label'] : $g['title'];
+        if (!isset($out[$key])) {
+            $out[$key] = ['k' => $key, 'docs' => []] + $g;
+            $out[$key]['count'] = 0;
+            $out[$key]['receive'] = $out[$key]['spend'] = 0.0;
+            $out[$key]['txns'] = [];
+        }
+        $o = &$out[$key];
+        $o['docs'][] = $g['doc'];
+        $o['count'] += $g['count'];
+        $o['receive'] += $g['receive'];
+        $o['spend'] += $g['spend'];
+        $o['from'] = min($o['from'], $g['from']);
+        $o['to'] = max($o['to'], $g['to']);
+        $o['txns'] = array_merge($o['txns'], $g['txns']);
+        unset($o);
+    }
+    foreach ($out as &$o) {
+        usort($o['txns'], fn($a, $b) => [$a['txn_date'], $a['doc_no'], (int)$a['id']] <=> [$b['txn_date'], $b['doc_no'], (int)$b['id']]);
+    }
+    unset($o);
+    uasort($out, fn($a, $b) => [$a['year'] ?? PHP_INT_MAX, $a['n'] ?? PHP_INT_MAX, $a['from']] <=> [$b['year'] ?? PHP_INT_MAX, $b['n'] ?? PHP_INT_MAX, $b['from']]);
     return $out;
 }

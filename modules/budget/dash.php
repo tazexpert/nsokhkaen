@@ -30,14 +30,13 @@ uasort($rank, fn($a, $b) => $b['receive'] <=> $a['receive']);
 <?php if ($transfers): ?>
 <div class="dz-card mb-3">
   <div class="dz-card-h"><i class="bi bi-arrow-left-right text-primary"></i> โอนเปลี่ยนแปลง
-    <span class="ms-auto small fw-normal dz-muted"><?= count($transfers) ?> เอกสาร · คลิกเพื่อดูรายการ</span></div>
+    <span class="ms-auto small fw-normal dz-muted"><?= count($transfers) ?> ครั้ง · คลิกเพื่อดูรายการ</span></div>
   <div class="dz-card-b">
     <div class="row g-2" data-reveal>
       <?php $i = 0; foreach ($transfers as $tr): $i++; ?>
       <div class="col-sm-6 col-lg-4 col-xxl-3 reveal-item" style="--d:<?= min($i, 8) * 60 ?>ms">
         <a class="dz-transfer dz-link" href="transfer?<?= h(http_build_query(['fy' => $fy, 'k' => $tr['k']])) ?>">
           <div class="fw-semibold"><?= h($tr['title']) ?></div>
-          <div class="small"><i class="bi bi-file-earmark-text"></i> ที่เอกสาร <span class="font-monospace"><?= h($tr['doc']) ?></span></div>
           <div class="small dz-muted"><?= h(thai_date($tr['from'])) ?><?= $tr['to'] !== $tr['from'] ? ' – ' . h(thai_date($tr['to'])) : '' ?> · <?= (int)$tr['count'] ?> รายการ</div>
           <div class="dz-num mt-1">
             <?php if ($tr['receive']): ?><span style="color:<?= BUD_COLORS['receive'] ?>">ได้รับ <?= bud_money($tr['receive']) ?></span><?php endif; ?>

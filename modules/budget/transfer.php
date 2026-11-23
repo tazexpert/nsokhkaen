@@ -1,7 +1,7 @@
 <?php
 /**
- * รายละเอียดโอนเปลี่ยนแปลง (คลิกจากภาพรวมงบประมาณ) — 1 ที่เอกสาร = 1 รายการโอน (bud_transfers)
- *   แสดง วันที่ · ที่เอกสาร · รายการ · ได้รับ / เบิกจ่าย ของทุกแถวที่ใช้เลขที่เอกสารนั้น
+ * รายละเอียดโอนเปลี่ยนแปลงครั้งที่ N/ปี (คลิกจากภาพรวมงบประมาณ) — ทุกแถวของเอกสารที่เป็นการโอนครั้งนั้น (bud_transfers ผูกด้วยที่เอกสาร)
+ *   แสดง วันที่ · ที่เอกสาร · รายการ · ได้รับ / เบิกจ่าย
  *   ช่องรายการ: ข้อความในรายละเอียด (ถ้ามี) ไม่มี = ค่าใช้จ่ายของหมวด
  */
 require_once __DIR__ . '/bootstrap.php';
@@ -26,7 +26,7 @@ require __DIR__ . '/header.php';
 <?php else: ?>
 <ul class="nav nav-pills mb-3 no-print">
   <?php foreach ($transfers as $x): ?>
-    <li class="nav-item"><a class="nav-link<?= (string)$x['k'] === $k ? ' active' : '' ?>" href="transfer?<?= h(http_build_query(['fy' => $fy, 'k' => $x['k']])) ?>" title="<?= h($x['title']) ?>"><?= h($x['label'] !== '' ? 'ครั้งที่ ' . $x['label'] : mb_strimwidth($x['title'], 0, 30, '…')) ?><?= $x['doc'] !== '' ? ' <span class="small font-monospace opacity-75">' . h($x['doc']) . '</span>' : '' ?></a></li>
+    <li class="nav-item"><a class="nav-link<?= (string)$x['k'] === $k ? ' active' : '' ?>" href="transfer?<?= h(http_build_query(['fy' => $fy, 'k' => $x['k']])) ?>" title="<?= h($x['title']) ?>"><?= h($x['label'] !== '' ? 'ครั้งที่ ' . $x['label'] : mb_strimwidth($x['title'], 0, 30, '…')) ?></a></li>
   <?php endforeach; ?>
 </ul>
 
@@ -44,7 +44,7 @@ require __DIR__ . '/header.php';
 </div>
 
 <div class="card">
-  <div class="card-header"><strong><?= h($tr['title']) ?></strong><?= $tr['doc'] !== '' ? ' <span class="ms-2">ที่เอกสาร <span class="font-monospace">' . h($tr['doc']) . '</span></span>' : '' ?>
+  <div class="card-header"><strong><?= h($tr['title']) ?></strong>
     <span class="small text-muted ms-2"><?= h(thai_date($tr['from'])) ?><?= $tr['to'] !== $tr['from'] ? ' – ' . h(thai_date($tr['to'])) : '' ?></span></div>
   <div class="table-responsive">
     <table class="table table-sm align-middle mb-0 bud-transfer">
