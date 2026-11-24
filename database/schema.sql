@@ -959,12 +959,23 @@ CREATE TABLE IF NOT EXISTS cal_rota_turns (
   official_name     VARCHAR(150) NOT NULL,
   skipped_names     VARCHAR(500) NULL,                 -- ข้าราชการที่ถูกข้าม (ยังอยู่ในคิวถัดไป)
   dress             VARCHAR(255) NULL,                 -- การแต่งกาย
-  group_no          TINYINT UNSIGNED NOT NULL,
+  group_no          TINYINT UNSIGNED NOT NULL,         -- 0 = ไม่เลือกกลุ่มเจ้าหน้าที่ (เฉพาะข้าราชการ)
   created_by        INT UNSIGNED NULL,
   created_at        DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_cal_rota_turns_event (event_id),
   CONSTRAINT fk_cal_rota_turns_event FOREIGN KEY (event_id) REFERENCES cal_events(id) ON DELETE CASCADE,
   CONSTRAINT fk_cal_rota_turns_by FOREIGN KEY (created_by) REFERENCES core_users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ข้าราชการของเวร (หลายคน / ทุกคน) — เวรแบบเดิม (1 คน + กลุ่ม) ไม่มีแถว · ไม่เลือกกลุ่ม = cal_rota_turns.group_no 0
+CREATE TABLE IF NOT EXISTS cal_rota_turn_officials (
+  turn_id     INT UNSIGNED NOT NULL,
+  sort_order  INT          NOT NULL,
+  user_id     INT UNSIGNED NULL,
+  name        VARCHAR(150) NOT NULL,
+  counted     TINYINT(1)   NOT NULL DEFAULT 1,      -- 1 = นับเป็นคิวข้าราชการของคนนั้น · 0 = ไม่นับ (ข้าราชการทุกคน)
+  PRIMARY KEY (turn_id, sort_order),
+  CONSTRAINT fk_cal_rota_to_turn FOREIGN KEY (turn_id) REFERENCES cal_rota_turns(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ----------------------------------------------------------------------------

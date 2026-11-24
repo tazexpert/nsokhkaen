@@ -107,8 +107,35 @@ function rota_choices(array $queue, ?array $chief, bool $chiefJoins): array
 /** เวรที่จัดแล้ว เรียงตามลำดับที่จัด (เก่า → ใหม่) พร้อมข้อมูลกิจกรรม */
 function rota_turns(): array
 {
-    return db()->query('SELECT t.*, e.event_date, e.start_time, e.end_time, e.title, e.location
+    $turns = db()->query('SELECT t.*, e.event_date, e.start_time, e.end_time, e.title, e.location
         FROM cal_rota_turns t JOIN cal_events e ON e.id = t.event_id ORDER BY t.id')->fetchAll();
+    // ข้าราชการหลายคน / ทุกคน (migration 20261214) — 'officials' = [['user_id', 'name', 'counted'], ...] · ว่าง = เวรแบบเดิม 1 คน
+    $extra = [];
+    if (rota_has_multi() && $turns) {
+        foreach (db()->query('SELECT * FROM cal_rota_turn_officials WHERE turn_id IN (' . implode(',', array_map('intval', array_column($turns, 'id'))) . ') ORDER BY turn_id, sort_order') as $r) {
+            $extra[(int)$r['turn_id']][] = ['user_id' => $r['user_id'] ? (int)$r['user_id'] : null, 'name' => $r['name'], 'counted' => (bool)$r['counted']];
+        }
+    }
+    foreach ($turns as &$t) {
+        $t['officials'] = $extra[(int)$t['id']] ?? [];
+        $t['all_officials'] = $t['officials'] && !array_filter($t['officials'], fn($o) => $o['counted']);   // ข้าราชการทุกคน (ไม่นับคิว)
+    }
+    unset($t);
+    return $turns;
+}
+
+/** มีตาราง cal_rota_turn_officials (migration 20261214) แล้วหรือยัง */
+function rota_has_multi(): bool
+{
+    static $has = null;
+    if ($has === null) {
+        try {
+            $has = (bool)db()->query("SHOW TABLES LIKE 'cal_rota_turn_officials'")->fetch();
+        } catch (PDOException $e) {
+            $has = false;
+        }
+    }
+    return $has;
 }
 
 /**
@@ -151,6 +178,15 @@ function rota_state(?array $members = null, ?array $turns = null): array
             $k = rota_key($t['chief_user_id'] ? (int)$t['chief_user_id'] : null, (string)$t['chief_name']);
             $hist[] = $alias[$k] ?? $k;
         }
+        if (!empty($t['officials'])) {             // ข้าราชการหลายคน: นับเฉพาะที่ counted (ข้าราชการทุกคน = ไม่กระทบคิว)
+            foreach ($t['officials'] as $o) {
+                if ($o['counted']) {
+                    $k = rota_key($o['user_id'], $o['name']);
+                    $hist[] = $alias[$k] ?? $k;
+                }
+            }
+            continue;
+        }
         $k = rota_key($t['official_user_id'] ? (int)$t['official_user_id'] : null, $t['official_name']);
         $hist[] = $alias[$k] ?? $k;
     }
@@ -169,7 +205,8 @@ function rota_state(?array $members = null, ?array $turns = null): array
     $lastG = (string)(int)setting('cal_rota_last_group', '0');
     $startG = in_array($lastG, $gOrder, true) ? array_slice($gOrder, 0, array_search($lastG, $gOrder, true) + 1) : [];
     [$oRound, $oQueue] = rota_queue(array_keys($byKey), array_merge($startO, $hist));
-    [$gRound, $gQueue] = rota_queue($gOrder, array_merge($startG, array_map(fn($t) => (string)$t['group_no'], $turns)));
+    $gTurns = array_filter($turns, fn($t) => (int)$t['group_no'] > 0);       // ไม่เลือกกลุ่ม (group_no 0) ไม่กระทบคิวกลุ่ม
+    [$gRound, $gQueue] = rota_queue($gOrder, array_merge($startG, array_map(fn($t) => (string)$t['group_no'], $gTurns)));
     return ['official_round' => $oRound, 'officials' => array_map(fn($k) => $byKey[$k], $oQueue),
             'group_round' => $gRound, 'groups' => array_map('intval', $gQueue), 'members' => $members];
 }
@@ -217,12 +254,20 @@ function rota_line_text(array $t, array $members): string
     if (!empty($t['chief_name'])) {
         $heads[] = $label($t['chief_user_id'] ? (int)$t['chief_user_id'] : null, (string)$t['chief_name'], true);
     }
-    $heads[] = $label($t['official_user_id'] ? (int)$t['official_user_id'] : null, (string)$t['official_name']);
+    $offs = [];                                    // ข้าราชการของเวร (หลายคนได้)
+    foreach ($t['officials'] ?? [] ?: [['user_id' => $t['official_user_id'] ? (int)$t['official_user_id'] : null, 'name' => (string)$t['official_name']]] as $o) {
+        $lb = $label($o['user_id'], $o['name']);
+        if (!in_array($lb, $heads, true) && !in_array($lb, $offs, true)) {
+            $offs[] = $lb;
+        }
+    }
     $g = (int)$t['group_no'];
+    $toLine = !empty($t['all_officials']) ? array_merge($heads, ['ข้าราชการทุกท่าน']) : array_merge($heads, $offs);
+    $heads = array_merge($heads, $offs);
     $title = trim((string)$t['title']);
     $date = (int)substr($t['event_date'], 8, 2) . ' ' . thai_month_long((int)substr($t['event_date'], 5, 2)) . ' ' . ((int)substr($t['event_date'], 0, 4) + 543);
     $lines = [
-        'เรียน ' . implode(', ', $heads) . ' และเจ้าหน้าที่กลุ่มที่ ' . $g,
+        'เรียน ' . implode(', ', $toLine) . ($g ? ' และเจ้าหน้าที่กลุ่มที่ ' . $g : ''),
         '           ' . (preg_match('/^เข้าร่วม/u', $title) ? '' : 'เข้าร่วม') . $title . ' ในวันที่ ' . $date
             . ($t['start_time'] ? ' เวลา ' . substr($t['start_time'], 0, 5) . ' น.' : ''),
     ];
@@ -237,9 +282,11 @@ function rota_line_text(array $t, array $members): string
     foreach ($heads as $h) {
         $lines[] = '  ' . $h;
     }
-    $lines[] = ' เจ้าหน้าที่กลุ่มที่ ' . $g;
-    foreach ($members['groups'][$g] ?? [] as $m) {
-        $lines[] = '  - ' . rota_first_name($m['name']);
+    if ($g) {                                      // ไม่เลือกกลุ่ม (เฉพาะข้าราชการ) = ไม่มีส่วนเจ้าหน้าที่กลุ่ม
+        $lines[] = ' เจ้าหน้าที่กลุ่มที่ ' . $g;
+        foreach ($members['groups'][$g] ?? [] as $m) {
+            $lines[] = '  - ' . rota_first_name($m['name']);
+        }
     }
     return implode("\n", $lines);
 }

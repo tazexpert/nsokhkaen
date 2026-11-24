@@ -5,14 +5,18 @@
  *   ยืนยัน = เพิ่มกิจกรรมลงปฏิทิน (ผู้รับผิดชอบ = ข้าราชการ + สมาชิกกลุ่มที่มีบัญชี → ได้รับการแจ้งเตือน)
  *   ข้าราชการข้ามได้ 1–3 คิว (คนที่ถูกข้ามได้คิวถัดไป) · ลบกิจกรรมในปฏิทิน = คืนคิว
  *   กล่องแรก: สถิติจังหวัดเข้าร่วมด้วยหรือไม่ — ผู้รักษาการที่ถึงคิวข้าราชการพอดี = นับเป็นคิวแล้ว เลือกข้าราชการคิวถัดไป
+ *   รูปแบบ (mode): one = ข้าราชการ 1 คน + กลุ่มกิจกรรม (เดิม) · multi = เฉพาะข้าราชการ เลือกได้หลายคน (นับคิวทุกคนที่เลือก)
+ *                  all = ข้าราชการทุกคน (ไม่เลือกกลุ่ม · ไม่กระทบคิว) — multi/all ต้องรัน migration 20261214
  */
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/rota_lib.php';
 $me = require_module(CAL_MODULE, 'admin');
 $pdo = db();
 
-$f = ['title' => '', 'event_date' => date('Y-m-d'), 'start_time' => '08:30', 'end_time' => '16:30', 'location' => '', 'dress' => '', 'pick' => '', 'chief' => ''];
+$f = ['title' => '', 'event_date' => date('Y-m-d'), 'start_time' => '08:30', 'end_time' => '16:30', 'location' => '', 'dress' => '', 'pick' => '', 'chief' => '', 'mode' => 'one'];
 $errors = [];
+$hasMulti = rota_has_multi();
+$picks = [];
 $hasChief = rota_has_chief();
 $chief = $hasChief ? rota_chief() : null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -20,6 +24,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach (array_keys($f) as $k) {
         $f[$k] = trim((string)post($k));
     }
+    $f['mode'] = $hasMulti && in_array($f['mode'], ['multi', 'all'], true) ? $f['mode'] : 'one';
+    $picks = array_values(array_unique(array_map('strval', (array)($_POST['picks'] ?? []))));
     $state = rota_state();
     $chiefJoins = $chief && $f['chief'] === '1';
     [$choices, $chiefCounted] = rota_choices($state['officials'], $chief, $chiefJoins);
@@ -41,18 +47,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($st && $et && $et < $st) {
         $errors[] = 'เวลาสิ้นสุดต้องไม่ก่อนเวลาเริ่ม';
     }
-    if ($pickIdx === false) {
-        $errors[] = 'คิวข้าราชการเปลี่ยนไปแล้ว — กรุณาเลือกข้าราชการอีกครั้ง';
-    }
-    if ($groupNo === null) {
-        $errors[] = 'ยังไม่มีกลุ่มกิจกรรม — เพิ่มที่ "รายชื่อและกลุ่ม"';
+    $byKey = array_column($state['members']['officials'], null, 'key');
+    $chiefKey = $chiefJoins ? rota_key($chief['user_id'], $chief['name']) : '';
+    $offList = [];                                    // ข้าราชการของเวรนี้ (multi/all)
+    if ($f['mode'] === 'one') {
+        if ($pickIdx === false) {
+            $errors[] = 'คิวข้าราชการเปลี่ยนไปแล้ว — กรุณาเลือกข้าราชการอีกครั้ง';
+        }
+        if ($groupNo === null) {
+            $errors[] = 'ยังไม่มีกลุ่มกิจกรรม — เพิ่มที่ "รายชื่อและกลุ่ม"';
+        }
+    } elseif ($f['mode'] === 'multi') {
+        foreach ($picks as $k) {
+            if (isset($byKey[$k]) && $k !== $chiefKey) {
+                $offList[] = $byKey[$k];
+            }
+        }
+        if (!$offList) {
+            $errors[] = 'กรุณาเลือกข้าราชการอย่างน้อย 1 คน';
+        }
+    } else {
+        $offList = array_values(array_filter($state['members']['officials'], fn($m) => $m['key'] !== $chiefKey));
+        $chiefCounted = false;                        // ข้าราชการทุกคน = ไม่กระทบคิว
     }
     if (!$errors) {
-        $official = $choices[$pickIdx];
-        $skipped = array_column(array_slice($choices, 0, $pickIdx), 'name');
-        $group = $state['members']['groups'][$groupNo];
+        $one = $f['mode'] === 'one';
+        $official = $one ? $choices[$pickIdx] : ($f['mode'] === 'multi' ? $offList[0] : ['user_id' => null, 'name' => 'ข้าราชการทุกคน']);
+        $skipped = $one ? array_column(array_slice($choices, 0, $pickIdx), 'name') : [];
+        $groupNo = $one ? $groupNo : 0;
+        $group = $one ? $state['members']['groups'][$groupNo] : [];
         $note = 'การแต่งกาย: ' . $f['dress'];             // หมายเหตุในตาราง: การแต่งกายอย่างเดียว (รายชื่ออยู่ในผู้รับผิดชอบ)
-        $users = array_values(array_unique(array_filter(array_merge([$chiefJoins ? $chief['user_id'] : null, $official['user_id']], array_column($group, 'user_id')))));
+        $users = array_values(array_unique(array_filter(array_merge([$chiefJoins ? $chief['user_id'] : null, $official['user_id']], array_column($offList, 'user_id'), array_column($group, 'user_id')))));
         $pdo->beginTransaction();
         try {
             $pdo->prepare("INSERT INTO cal_events (kind, visibility, event_date, start_time, end_time, title, location, note, created_by)
@@ -66,9 +91,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare('INSERT INTO cal_rota_turns (event_id, official_user_id, official_name, skipped_names, dress, group_no, created_by)
                 VALUES (?, ?, ?, ?, ?, ?, ?)')
                 ->execute([$eid, $official['user_id'], $official['name'], $skipped ? implode(', ', $skipped) : null, $f['dress'] ?: null, $groupNo, $me['id']]);
+            $tid = (int)$pdo->lastInsertId();
             if ($chiefJoins) {
                 $pdo->prepare('UPDATE cal_rota_turns SET chief_user_id = ?, chief_name = ?, chief_counted = ? WHERE event_id = ?')
                     ->execute([$chief['user_id'], $chief['name'], $chiefCounted ? 1 : 0, $eid]);
+            }
+            if (!$one) {                                  // ข้าราชการหลายคน (นับคิว) / ทุกคน (ไม่นับคิว)
+                $insO = $pdo->prepare('INSERT INTO cal_rota_turn_officials (turn_id, sort_order, user_id, name, counted) VALUES (?, ?, ?, ?, ?)');
+                foreach ($offList as $i => $o) {
+                    $insO->execute([$tid, $i + 1, $o['user_id'], $o['name'], $f['mode'] === 'multi' ? 1 : 0]);
+                }
             }
             $pdo->commit();
         } catch (Throwable $ex) {
@@ -76,8 +108,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw $ex;
         }
         $chiefText = $chiefJoins ? ' · สถิติจังหวัด ' . $chief['name'] . ($chiefCounted ? ' (นับเป็นคิวข้าราชการแล้ว)' : '') : '';
-        audit_log('cal_rota', '#' . $eid . ' ' . $f['title'] . $chiefText . ' · ' . $official['name'] . ($skipped ? ' (ข้าม ' . implode(', ', $skipped) . ')' : '') . ' · กลุ่ม ' . $groupNo, CAL_MODULE);
-        flash('จัดเวรกิจกรรม "' . $f['title'] . '" แล้ว: ' . ($chiefJoins ? ltrim($chiefText, ' ·') . ' · ข้าราชการ ' : '') . $official['name'] . ' และกลุ่มที่ ' . $groupNo . ' — เพิ่มลงปฏิทินและแจ้งเตือน ' . count($users) . ' คน');
+        $offText = $one ? $official['name'] : ($f['mode'] === 'all' ? 'ทุกคน (' . count($offList) . ' คน)' : implode(', ', array_column($offList, 'name')));
+        audit_log('cal_rota', '#' . $eid . ' ' . $f['title'] . $chiefText . ' · ' . $offText . ($skipped ? ' (ข้าม ' . implode(', ', $skipped) . ')' : '') . ($groupNo ? ' · กลุ่ม ' . $groupNo : ' · ไม่เลือกกลุ่ม'), CAL_MODULE);
+        flash('จัดเวรกิจกรรม "' . $f['title'] . '" แล้ว: ' . ($chiefJoins ? ltrim($chiefText, ' ·') . ' · ' : '') . 'ข้าราชการ ' . $offText . ($groupNo ? ' และกลุ่มที่ ' . $groupNo : '') . ' — เพิ่มลงปฏิทินและแจ้งเตือน ' . count($users) . ' คน');
         redirect('rota?line=' . $eid);                    // เปิดข้อความไลน์ของเวรที่เพิ่งจัดให้ทันที
     }
 }
@@ -140,7 +173,7 @@ require __DIR__ . '/header.php';
   </div>
 </div>
 
-<?php if ($choices && $groupNo !== null): ?>
+<?php if ($members['officials']): ?>
 <form method="post" class="card mb-3" id="rotaForm">
   <?= csrf_field() ?>
   <div class="card-header"><strong><i class="bi bi-calendar-plus"></i> จัดเวรกิจกรรม</strong></div>
@@ -183,6 +216,18 @@ require __DIR__ . '/header.php';
       <?php elseif (!$hasChief): ?>
       <div class="alert alert-warning small py-2">ตัวเลือก "สถิติจังหวัดเข้าร่วมด้วย" ต้องรัน migration <code>20261211_cal_rota_chief.sql</code> ก่อน</div>
       <?php endif; ?>
+      <?php if ($hasMulti): ?>
+      <label class="form-label">รูปแบบ</label>
+      <div class="btn-group w-100 mb-3 flex-wrap" role="group" id="rotaMode">
+        <?php foreach (['one' => ['bi-person-plus', 'ข้าราชการ 1 คน + กลุ่มกิจกรรม'], 'multi' => ['bi-people', 'เฉพาะข้าราชการ (หลายคน)'], 'all' => ['bi-people-fill', 'ข้าราชการทุกคน']] as $k => [$ic, $lb]): ?>
+          <input type="radio" class="btn-check" name="mode" id="mode_<?= $k ?>" value="<?= $k ?>" <?= $f['mode'] === $k ? 'checked' : '' ?><?= $k === 'one' && $groupNo === null ? ' disabled' : '' ?>>
+          <label class="btn btn-outline-primary btn-sm" for="mode_<?= $k ?>"><i class="bi <?= $ic ?>"></i> <?= $lb ?></label>
+        <?php endforeach; ?>
+      </div>
+      <?php else: ?>
+      <div class="alert alert-warning small py-2">เลือกข้าราชการหลายคน / ข้าราชการทุกคน ต้องรัน migration <code>20261214_cal_rota_multi.sql</code> ก่อน</div>
+      <?php endif; ?>
+      <div data-mode="one">
       <label class="form-label">ข้าราชการ <span class="small text-muted">— เลือกข้ามได้ 1–<?= ROTA_MAX_SKIP ?> คิว (คนที่ถูกข้ามได้คิวถัดไป)</span></label>
       <div class="list-group mb-3" id="officialChoices">
         <?php foreach ($choices as $i => $m): ?>
@@ -194,9 +239,30 @@ require __DIR__ . '/header.php';
         <?php endforeach; ?>
       </div>
       <label class="form-label">กลุ่มกิจกรรม</label>
+      <?php if ($groupNo !== null): ?>
       <div class="border rounded p-2 mb-2"><strong>กลุ่มที่ <?= (int)$groupNo ?></strong>
         <div class="small"><?= h(rota_group_names($members, $groupNo)) ?></div></div>
-      <div class="small text-muted">ยืนยันแล้วเพิ่มกิจกรรมลงปฏิทิน ผู้รับผิดชอบ = ข้าราชการ + สมาชิกกลุ่ม และแจ้งเตือนแต่ละคน
+      <?php else: ?><div class="text-muted small mb-2">ยังไม่มีกลุ่มกิจกรรม — เพิ่มที่ "รายชื่อและกลุ่ม"</div><?php endif; ?>
+      </div>
+      <?php if ($hasMulti): $doneKeys = array_column($doneOfficials, 'key'); ?>
+      <div data-mode="multi" class="d-none">
+        <label class="form-label">ข้าราชการ <span class="small text-muted">— เลือกได้หลายคน (นับเป็นคิวของทุกคนที่เลือก) · ไม่เลือกกลุ่มเจ้าหน้าที่</span></label>
+        <div class="list-group mb-3" id="multiChoices">
+          <?php foreach (array_merge($state['officials'], $doneOfficials) as $i => $m): $done = in_array($m['key'], $doneKeys, true); ?>
+            <label class="list-group-item d-flex align-items-center gap-2" data-key="<?= h($m['key']) ?>"<?= $m['key'] === $chiefKey ? ' data-chief="1"' : '' ?>>
+              <input class="form-check-input m-0" type="checkbox" name="picks[]" value="<?= h($m['key']) ?>" data-name="<?= h($m['name']) ?>" <?= in_array($m['key'], $picks, true) ? 'checked' : '' ?>>
+              <span><?= h($m['name']) ?></span>
+              <span class="ms-auto small <?= $done ? 'text-muted' : ($i === 0 ? 'text-primary fw-semibold' : 'text-muted') ?>"><?= $done ? 'ได้แล้วในรอบนี้' : ($i === 0 ? 'ถึงคิว' : 'คิวที่ ' . ($i + 1)) ?></span>
+            </label>
+          <?php endforeach; ?>
+        </div>
+      </div>
+      <div data-mode="all" class="d-none">
+        <label class="form-label">ข้าราชการทุกคน <span class="small text-muted">— ไม่เลือกกลุ่มเจ้าหน้าที่ · ไม่กระทบลำดับคิว</span></label>
+        <div class="border rounded p-2 mb-3 small"><?php foreach ($members['officials'] as $m): ?><span class="rota-chip"><?= h($m['name']) ?></span><?php endforeach; ?></div>
+      </div>
+      <?php endif; ?>
+      <div class="small text-muted">ยืนยันแล้วเพิ่มกิจกรรมลงปฏิทิน ผู้รับผิดชอบ = ข้าราชการ (+ สมาชิกกลุ่ม) และแจ้งเตือนแต่ละคน
         · ยกเลิกกิจกรรม (ลบในปฏิทิน) = คืนคิว</div>
     </div>
   </div>
@@ -217,8 +283,10 @@ require __DIR__ . '/header.php';
           <td class="small"><?= h($t['location'] ?: '-') ?></td>
           <td class="small"><?= h($t['dress'] ?: '-') ?></td>
           <td class="small"><?= !empty($t['chief_name']) ? h($t['chief_name']) . (!empty($t['chief_counted']) ? '<div class="text-success">นับเป็นคิวข้าราชการแล้ว</div>' : '') : '<span class="text-muted">-</span>' ?></td>
-          <td><?= h($t['official_name']) ?><?= $t['skipped_names'] ? '<div class="small text-warning-emphasis">ข้าม: ' . h($t['skipped_names']) . '</div>' : '' ?></td>
-          <td class="text-nowrap">กลุ่มที่ <?= (int)$t['group_no'] ?></td>
+          <td><?php if (!empty($t['all_officials'])): ?>ข้าราชการทุกคน <span class="small text-muted">(<?= count($t['officials']) ?> คน · ไม่นับคิว)</span>
+            <?php elseif (!empty($t['officials'])): ?><?= h(implode(', ', array_column($t['officials'], 'name'))) ?>
+            <?php else: ?><?= h($t['official_name']) ?><?php endif; ?><?= $t['skipped_names'] ? '<div class="small text-warning-emphasis">ข้าม: ' . h($t['skipped_names']) . '</div>' : '' ?></td>
+          <td class="text-nowrap"><?= (int)$t['group_no'] ? 'กลุ่มที่ ' . (int)$t['group_no'] : '<span class="text-muted">ไม่เลือกกลุ่ม</span>' ?></td>
           <td class="text-end"><button type="button" class="btn btn-sm btn-success text-nowrap" data-event="<?= (int)$t['event_id'] ?>" data-line="<?= h(rota_line_text($t, $members)) ?>" data-title="<?= h($t['title']) ?>"><i class="bi bi-chat-dots"></i> ข้อความไลน์</button></td>
         </tr>
       <?php endforeach; ?>
@@ -288,13 +356,32 @@ const lineEv = new URLSearchParams(location.search).get('line');
 if (lineEv) document.querySelector('[data-line][data-event="' + CSS.escape(lineEv) + '"]')?.click();
 document.querySelectorAll('[name=chief]').forEach(r => r.addEventListener('change', rotaChoices));
 rotaChoices();
+// รูปแบบการจัดเวร: แสดงส่วนของรูปแบบที่เลือก · เฉพาะข้าราชการ: ซ่อนผู้รักษาการเมื่อเข้าร่วมในฐานะสถิติจังหวัด
+const rotaMode = () => (document.querySelector('[name=mode]:checked') || { value: 'one' }).value;
+const syncMode = () => {
+  const m = rotaMode(), joins = document.getElementById('chief1')?.checked;
+  document.querySelectorAll('[data-mode]').forEach(el => el.classList.toggle('d-none', el.dataset.mode !== m));
+  document.querySelectorAll('#multiChoices [data-chief]').forEach(el => { el.classList.toggle('d-none', !!joins); if (joins) el.querySelector('input').checked = false; });
+  document.querySelectorAll('#officialChoices input').forEach(r => r.required = m === 'one');
+};
+document.querySelectorAll('[name=mode], [name=chief]').forEach(r => r.addEventListener('change', syncMode));
+syncMode();
 document.getElementById('rotaForm')?.addEventListener('submit', e => {
-  const p = document.querySelector('[name=pick]:checked');
-  const c = document.getElementById('chief1');
+  const m = rotaMode(), c = document.getElementById('chief1');
+  let who;
+  if (m === 'one') {
+    const p = document.querySelector('[name=pick]:checked');
+    who = 'ข้าราชการ: ' + p.dataset.name + (p.dataset.skip ? '\n(ข้าม: ' + p.dataset.skip + ' — ได้คิวถัดไป)' : '') + '\nกลุ่มที่ <?= (int)$groupNo ?>';
+  } else if (m === 'multi') {
+    const names = [...document.querySelectorAll('#multiChoices input:checked')].filter(x => !x.closest('.d-none')).map(x => x.dataset.name);
+    if (!names.length) { e.preventDefault(); alert('กรุณาเลือกข้าราชการอย่างน้อย 1 คน'); return; }
+    who = 'ข้าราชการ: ' + names.join(', ') + '\n(ไม่เลือกกลุ่มเจ้าหน้าที่)';
+  } else {
+    who = 'ข้าราชการทุกคน (ไม่เลือกกลุ่มเจ้าหน้าที่ · ไม่กระทบคิว)';
+  }
   const msg = 'ยืนยันจัดเวรกิจกรรม "' + document.querySelector('[name=title]').value + '"\n'
     + (c?.checked ? 'สถิติจังหวัด: ' + <?= json_encode($chief['name'] ?? '', JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT) ?> + '\n' : '')
-    + 'ข้าราชการ: ' + p.dataset.name + (p.dataset.skip ? '\n(ข้าม: ' + p.dataset.skip + ' — ได้คิวถัดไป)' : '')
-    + '\nกลุ่มที่ <?= (int)$groupNo ?>\n\nเพิ่มลงปฏิทินและแจ้งเตือนผู้รับผิดชอบ?';
+    + who + '\n\nเพิ่มลงปฏิทินและแจ้งเตือนผู้รับผิดชอบ?';
   if (!confirm(msg)) e.preventDefault();
 });
 </script>
