@@ -134,7 +134,8 @@ require __DIR__ . '/header.php';
 ?>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>
 
-<div class="row g-3 mb-3" data-reveal>
+<?php ob_start(); // ลำดับข้าราชการ + กลุ่มกิจกรรม — แสดงในแบบฟอร์มจัดเวรกิจกรรม (ไม่มีรายชื่อข้าราชการ = แสดงลำพัง) ?>
+<div class="row g-3 rota-queue" data-reveal>
   <div class="col-lg-6 reveal-item">
     <div class="card h-100">
       <div class="card-header d-flex align-items-center"><strong><i class="bi bi-person-badge text-primary"></i> ลำดับข้าราชการ</strong>
@@ -172,6 +173,8 @@ require __DIR__ . '/header.php';
     </div>
   </div>
 </div>
+<?php $queueHtml = ob_get_clean(); ?>
+<?php if (!$members['officials']): ?><div class="mb-3"><?= $queueHtml ?></div><?php endif; ?>
 
 <?php if ($members['officials']): ?>
 <?= cal_letter_reader_box('rotaForm', [], true, 'อ่านได้: ชื่อกิจกรรม ("เข้าร่วม…" / "๑. …") · วันที่ · เวลา · สถานที่ ("ณ …") · การแต่งกาย — ผู้ร่วมกิจกรรมจัดตามคิวเวรด้านล่าง') ?>
@@ -179,6 +182,7 @@ require __DIR__ . '/header.php';
   <?= csrf_field() ?>
   <div class="card-header"><strong><i class="bi bi-calendar-plus"></i> จัดเวรกิจกรรม</strong></div>
   <div class="card-body row g-3">
+    <div class="col-12"><?= $queueHtml ?></div>
     <div class="col-lg-6">
       <div class="row g-3">
         <div class="col-12"><label class="form-label">ชื่อกิจกรรม <span class="text-danger">*</span></label>
