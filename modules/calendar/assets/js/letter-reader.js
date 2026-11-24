@@ -294,6 +294,19 @@
     }
     return lines;
   };
+  // โดเมนที่ใช้บ่อยในหนังสือราชการ — OCR อ่านผิด 1 ตัวอักษร (เช่น de.th) → ปรับเป็นโดเมนที่รู้จัก (dg.th)
+  const KNOWN_HOSTS = ['dg.th', 'bit.ly', 'tinyurl.com', 'forms.gle', 'shorturl.at', 'cutt.ly', 'rebrand.ly', 's.id', 'zoom.us', 'meet.google.com',
+    'docs.google.com', 'drive.google.com', 'forms.office.com', 'teams.microsoft.com', 'teams.live.com', 'webex.com', 'line.me', 'youtu.be',
+    'youtube.com', 'facebook.com', 'fb.me', 'nso.go.th', 'kkportal.nso.go.th', 'khonkaen.go.th', 'saraban.nso.go.th'];
+  const snapHost = url => {
+    const m = url.match(/^(https?:\/\/)([^/\s]+)(.*)$/i);
+    if (!m) return url;
+    const host = m[2].toLowerCase();
+    if (KNOWN_HOSTS.some(k => host === k || host.endsWith('.' + k))) return url;
+    const diff = (x, y) => x.length === y.length ? [...x].filter((c, i) => c !== y[i]).length : 9;
+    const hit = KNOWN_HOSTS.find(k => diff(host, k) === 1);
+    return hit ? m[1] + hit + m[3] : url;
+  };
   // บรรทัดที่มี URL: อ่านซ้ำเฉพาะบรรทัดนั้นด้วยภาษาอังกฤษอย่างเดียว หลายแบบ (ขยาย 2/3/4 เท่า · ขาวดำ) แล้วเลือก URL ที่ความมั่นใจรวมสูงสุด
   //   (ตัวละตินเล็ก ๆ เช่น dg.th / de.th อ่านต่างกันตามการย่อขยายภาพของแต่ละเบราว์เซอร์ — ใช้การโหวตแทนการอ่านครั้งเดียว)
   const fixUrls = async (T, img, lines) => {
@@ -320,11 +333,12 @@
             const u = (wd.text.match(/https?:\/\/\S+/i) || [])[0];
             if (u && (!best || wd.confidence > best.conf)) best = { u: u.replace(/[.,;)]+$/, ''), conf: wd.confidence };
           }
-          if (best) votes[best.u] = (votes[best.u] || 0) + best.conf + 20;   // +20 = 1 เสียงต่อ 1 แบบ
+          if (best) { const u = snapHost(best.u); votes[u] = (votes[u] || 0) + best.conf + 20; }   // +20 = 1 เสียงต่อ 1 แบบ · ปรับโดเมนที่รู้จัก
         } catch (e) { /* ข้าม */ }
       }
       const win = Object.entries(votes).sort((a, b2) => b2[1] - a[1])[0];
       if (win) ln.text = ln.text.replace(/https?:\/\/\S+/i, win[0]);
+      else ln.text = ln.text.replace(/https?:\/\/\S+/i, u => snapHost(u));
       ln.urlVotes = votes;
     }
     return lines;
