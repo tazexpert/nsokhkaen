@@ -304,3 +304,17 @@ a.cal-day-person:hover { box-shadow: 0 4px 14px rgba(15, 23, 42, .15); transform
 .lr-drop.over { outline: 3px dashed #0ea5c9; outline-offset: 4px; }
 .rota-mini { font-size: .85rem; line-height: 1.55; }
 .rota-mini .badge { font-size: .7rem; }
+
+/* แท็บหน้าเพิ่มกิจกรรม (ประชุม/อบรม/สัมมนา · งานพิธี) — สีเด่นตามธีมปฏิทิน */
+.cal-add-tabs { border-bottom: 3px solid #0b8fb3; gap: .35rem; }
+.cal-add-tabs .nav-link {
+  font-size: 1.02rem; padding: .6rem 1.15rem; border: 1px solid rgba(14, 165, 201, .35); border-bottom: 0;
+  background: rgba(14, 165, 201, .09); color: #0b7fa0; border-radius: .6rem .6rem 0 0; transition: background .2s, color .2s;
+}
+.cal-add-tabs .nav-link:hover { background: rgba(14, 165, 201, .2); color: #075e77; }
+.cal-add-tabs .nav-link.active {
+  background: linear-gradient(135deg, #0b8fb3, #0ea5c9); color: #fff; border-color: transparent; font-weight: 600;
+  box-shadow: 0 -2px 10px rgba(14, 165, 201, .3);
+}
+.cal-add-tabs .nav-link.active i { color: #fff; }
+@media (max-width: 575.98px) { .cal-add-tabs .nav-link { padding: .5rem .7rem; font-size: .92rem; } }
