@@ -187,6 +187,9 @@ function rota_state(?array $members = null, ?array $turns = null): array
             }
             continue;
         }
+        if ((string)$t['official_name'] === '' && !$t['official_user_id']) {
+            continue;                              // สถิติจังหวัดไปโดยไม่มีข้าราชการ = คิวข้าราชการคงเดิม
+        }
         $k = rota_key($t['official_user_id'] ? (int)$t['official_user_id'] : null, $t['official_name']);
         $hist[] = $alias[$k] ?? $k;
     }
@@ -256,6 +259,9 @@ function rota_line_text(array $t, array $members): string
     }
     $offs = [];                                    // ข้าราชการของเวร (หลายคนได้)
     foreach ($t['officials'] ?? [] ?: [['user_id' => $t['official_user_id'] ? (int)$t['official_user_id'] : null, 'name' => (string)$t['official_name']]] as $o) {
+        if ($o['name'] === '' && !$o['user_id']) {
+            continue;                              // ไม่มีข้าราชการไปด้วย
+        }
         $lb = $label($o['user_id'], $o['name']);
         if (!in_array($lb, $heads, true) && !in_array($lb, $offs, true)) {
             $offs[] = $lb;
