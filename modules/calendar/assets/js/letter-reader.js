@@ -294,20 +294,38 @@
     }
     return lines;
   };
-  // บรรทัดที่มี URL: อ่านซ้ำเฉพาะบรรทัดนั้นด้วยภาษาอังกฤษอย่างเดียว (อ่านตัวอักษรละตินแม่นกว่า เช่น dg.th ไม่กลายเป็น de.th)
-  const fixUrls = async (T, canvas, lines) => {
+  // บรรทัดที่มี URL: อ่านซ้ำเฉพาะบรรทัดนั้นด้วยภาษาอังกฤษอย่างเดียว หลายแบบ (ขยาย 2/3/4 เท่า · ขาวดำ) แล้วเลือก URL ที่ความมั่นใจรวมสูงสุด
+  //   (ตัวละตินเล็ก ๆ เช่น dg.th / de.th อ่านต่างกันตามการย่อขยายภาพของแต่ละเบราว์เซอร์ — ใช้การโหวตแทนการอ่านครั้งเดียว)
+  const fixUrls = async (T, img, lines) => {
     for (const ln of lines) {
       if (!/https?:\/\//i.test(ln.text)) continue;
-      const b = ln.bbox, m = 10, p = 30, c = document.createElement('canvas');
-      const w = b.x1 - b.x0 + m * 2, h = b.y1 - b.y0 + m * 2;
-      c.width = w + p * 2; c.height = h + p * 2;
-      const cx = c.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height);
-      cx.drawImage(canvas, b.x0 - m, b.y0 - m, w, h, p, p, w, h);
-      try {
-        const { data } = await T.recognize(c, 'eng');
-        const u = (data.text.match(/https?:\/\/\S+/i) || [])[0];
-        if (u) ln.text = ln.text.replace(/https?:\/\/\S+/i, u);
-      } catch (e) { /* ใช้ผลเดิม */ }
+      const b = ln.bbox, sx = Math.max(0, (b.x0 - PAD) / SCALE - 3), sy = Math.max(0, (b.y0 - PAD) / SCALE - 3);
+      const sw = Math.min(img.width - sx, (b.x1 - b.x0) / SCALE + 6), sh = Math.min(img.height - sy, (b.y1 - b.y0) / SCALE + 6);
+      const votes = {};
+      for (const [k, bw] of [[2, false], [3, false], [4, false], [3, true]]) {
+        const c = document.createElement('canvas'), p = 30;
+        c.width = Math.round(sw * k) + p * 2; c.height = Math.round(sh * k) + p * 2;
+        const cx = c.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height);
+        cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high';
+        cx.drawImage(img, sx, sy, sw, sh, p, p, Math.round(sw * k), Math.round(sh * k));
+        if (bw) {
+          const id = cx.getImageData(0, 0, c.width, c.height), d = id.data;
+          for (let q = 0; q < d.length; q += 4) { const v = (d[q] * 299 + d[q + 1] * 587 + d[q + 2] * 114) / 1000 < 160 ? 0 : 255; d[q] = d[q + 1] = d[q + 2] = v; }
+          cx.putImageData(id, 0, 0);
+        }
+        try {
+          const { data } = await T.recognize(c, 'eng', {}, { text: true, blocks: true });
+          let best = null;
+          for (const bl of data.blocks || []) for (const pa of bl.paragraphs) for (const li of pa.lines) for (const wd of li.words) {
+            const u = (wd.text.match(/https?:\/\/\S+/i) || [])[0];
+            if (u && (!best || wd.confidence > best.conf)) best = { u: u.replace(/[.,;)]+$/, ''), conf: wd.confidence };
+          }
+          if (best) votes[best.u] = (votes[best.u] || 0) + best.conf + 20;   // +20 = 1 เสียงต่อ 1 แบบ
+        } catch (e) { /* ข้าม */ }
+      }
+      const win = Object.entries(votes).sort((a, b2) => b2[1] - a[1])[0];
+      if (win) ln.text = ln.text.replace(/https?:\/\/\S+/i, win[0]);
+      ln.urlVotes = votes;
     }
     return lines;
   };
@@ -322,8 +340,7 @@
       const px = cx.getImageData(0, 0, W, H).data, ink = new Uint8Array(W * H);
       for (let q = 0; q < W * H; q++) { const g = (px[q * 4] * 299 + px[q * 4 + 1] * 587 + px[q * 4 + 2] * 114) / 1000; px[q * 4] = px[q * 4 + 1] = px[q * 4 + 2] = g; ink[q] = g < 170 ? 1 : 0; }
       cx.putImageData(new ImageData(px, W, H), 0, 0);
-      URL.revokeObjectURL(img.src);
-      ok({ canvas: c, ink, W });
+      ok({ canvas: c, ink, W, img });
     };
     img.onerror = () => fail(new Error('เปิดไฟล์ภาพไม่ได้'));
     img.src = URL.createObjectURL(file);
@@ -340,7 +357,12 @@
       }, { text: true, blocks: true });
       let txt;
       box.lrDebug = data;                            // ตรวจสอบผล OCR ดิบได้จาก console (#letterReader.lrDebug)
-      try { txt = (await fixUrls(T, pic.canvas, fixDigits(data, pic.ink, pic.W))).map(l => l.text).join('\n'); } catch (e) { txt = ''; }
+      try {
+        const lines = await fixUrls(T, pic.img, fixDigits(data, pic.ink, pic.W));
+        box.lrUrlVotes = lines.filter(l => l.urlVotes).map(l => l.urlVotes);   // ตรวจผลโหวต URL ได้จาก console
+        txt = lines.map(l => l.text).join('\n');
+      } catch (e) { txt = ''; }
+      URL.revokeObjectURL(pic.img.src);
       if (!txt.trim()) txt = data.text;
       txt = txt.replace(/\s+(?=[ะ-ฺ็-๎])/g, '').trim();   // ตัดช่องว่างหน้าสระ/วรรณยุกต์ที่ OCR แทรก
       ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + txt;
