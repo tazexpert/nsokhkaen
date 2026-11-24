@@ -16,7 +16,7 @@ return [
     'roles' => [
         'viewer' => 'ผู้ใช้งาน — ดูตารางการปฏิบัติงาน และกิจกรรมที่ตนรับผิดชอบ',
         'editor' => 'ผู้บันทึกกิจกรรม — เพิ่มกิจกรรม แก้ไข/ลบกิจกรรมที่ตนบันทึก แก้ไขแผนการปฏิบัติงานของตนเอง และจัดเวรกิจกรรม',
-        'admin'  => 'ผู้ดูแลปฏิทิน — แก้ไข/ลบกิจกรรมได้ทุกรายการ นำเข้ากิจกรรม CSV / เวรสำนักงาน จัดทำแผนการปฏิบัติงาน จัดเวรกิจกรรม และแก้ไขรายชื่อ/กลุ่มเวรกิจกรรม',
+        'admin'  => 'ผู้ดูแลปฏิทิน — แก้ไข/ลบกิจกรรมได้ทุกรายการ นำเข้าเวรสำนักงาน / เวลาปฏิบัติราชการ จัดทำแผนการปฏิบัติงาน จัดเวรกิจกรรม และแก้ไขรายชื่อ/กลุ่มเวรกิจกรรม',
     ],
     'menu' => [
         ['id' => 'month', 'label' => 'ปฏิทินรายเดือน',   'href' => '',          'icon' => 'bi-calendar3',      'role' => 'viewer'],
@@ -24,7 +24,6 @@ return [
         ['id' => 'plan',  'label' => 'แผนการปฏิบัติงาน',  'href' => 'plan',           'icon' => 'bi-grid-3x3',       'role' => 'viewer', 'guest' => false],
         ['id' => 'mine',  'label' => 'งานของฉัน',         'href' => 'list?mine=1',    'icon' => 'bi-person-check',   'role' => 'viewer', 'guest' => false],
         ['id' => 'add',   'label' => 'เพิ่มกิจกรรม',       'href' => 'event_form',     'icon' => 'bi-plus-circle',    'role' => 'editor'],
-        ['id' => 'import', 'label' => 'นำเข้า CSV',        'href' => 'import',         'icon' => 'bi-filetype-csv',   'role' => 'admin'],
         ['id' => 'duty',  'label' => 'นำเข้าเวรสำนักงาน',  'href' => 'duty_import',    'icon' => 'bi-shield-check',   'role' => 'admin'],
         ['id' => 'att',   'label' => 'นำเข้าเวลาปฏิบัติราชการ', 'href' => 'att_import', 'icon' => 'bi-clock-history', 'role' => 'admin'],
     ],

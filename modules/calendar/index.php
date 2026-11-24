@@ -14,8 +14,7 @@ $calAutoOpen = true;
 
 $active = $mine ? 'mine' : 'month';
 $pageTitle = 'ปฏิทินการปฏิบัติงาน';
-$pageActions = (cal_can('admin') ? '<a href="import" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> นำเข้า CSV</a>' : '')
-    . (cal_can('editor') ? '<a href="event_form" class="btn btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มกิจกรรม</a>' : '');
+$pageActions = (cal_can('editor') ? '<a href="event_form" class="btn btn-primary"><i class="bi bi-plus-lg"></i> เพิ่มกิจกรรม</a>' : '');
 require __DIR__ . '/header.php';
 ?>
 <?php require __DIR__ . '/month_view.php'; ?>
