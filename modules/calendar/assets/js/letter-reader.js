@@ -372,6 +372,27 @@
       ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + txt;
       ocrMsg.className = 'small mt-1 text-warning-emphasis';
       ocrMsg.innerHTML = '<i class="bi bi-exclamation-triangle"></i> อ่านจากภาพแล้ว — ตรวจข้อความในกล่องอีกครั้ง (โดยเฉพาะตัวเลข) แล้วกด "อ่านข้อความและกรอกฟอร์ม"';
+      // URL ที่อ่านได้หลายแบบ → แสดงให้เลือก (คะแนนความมั่นใจรวม · ตัวแรก = ที่ใส่ในกล่องแล้ว)
+      for (const v of box.lrUrlVotes || []) {
+        const opts = Object.entries(v).sort((a, b) => b[1] - a[1]);
+        if (opts.length < 2) continue;
+        const div = document.createElement('div');
+        div.className = 'mt-1 text-body';
+        div.innerHTML = '<i class="bi bi-link-45deg"></i> URL อ่านได้หลายแบบ — คลิกเลือกที่ถูกต้อง: ';
+        opts.forEach(([u, sc], k) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'btn btn-sm me-1 mb-1 ' + (k ? 'btn-outline-secondary' : 'btn-primary');
+          btn.textContent = u + ' (' + Math.round(sc) + ')';
+          btn.addEventListener('click', () => {
+            ta.value = ta.value.replace(/https?:\/\/\S+/i, u);
+            div.querySelectorAll('button').forEach(x => x.className = 'btn btn-sm me-1 mb-1 btn-outline-secondary');
+            btn.className = 'btn btn-sm me-1 mb-1 btn-primary';
+          });
+          div.appendChild(btn);
+        });
+        ocrMsg.appendChild(div);
+      }
       ta.focus();
     } catch (e) {
       ocrMsg.className = 'small mt-1 text-danger';
