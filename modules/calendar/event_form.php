@@ -149,6 +149,27 @@ $headExtra = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpick
 require __DIR__ . '/header.php';
 ?>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>
+<?php
+// อ่านข้อความจากหนังสือ → กรอกฟอร์มอัตโนมัติ (assets/js/letter-reader.js) — ข้อมูลบุคลากรสำหรับจับคู่ "เรียน ผอ กว" / ชื่อ
+$lrUsers = [];
+foreach ($users as $u) {
+    $nm = preg_replace('/\s+/u', ' ', trim($u['full_name']));
+    $bare = preg_replace('/^(นางสาว|นาง|นาย|ว่าที่ร้อยตรี|ว่าที่\s*ร\.ต\.|ดร\.)\s*/u', '', $nm);
+    $lrUsers[] = ['id' => (int)$u['id'], 'name' => $bare, 'first' => explode(' ', $bare)[0], 'abbrs' => array_keys(cal_person_abbr_options($u))];
+}
+?>
+<div class="card mb-3" id="letterReader" data-users="<?= h(json_encode($lrUsers, JSON_UNESCAPED_UNICODE)) ?>">
+  <div class="card-header d-flex align-items-center"><strong><i class="bi bi-magic"></i> อ่านข้อความจากหนังสือ — กรอกอัตโนมัติ</strong>
+    <button type="button" class="btn btn-sm btn-light ms-auto" data-bs-toggle="collapse" data-bs-target="#lrBody">ซ่อน / เปิด</button></div>
+  <div class="collapse<?= $id ? '' : ' show' ?>" id="lrBody"><div class="card-body">
+    <textarea id="lrText" class="form-control" rows="5" placeholder="วางข้อความจากหนังสือเชิญ และบันทึกสั่งการ เช่น&#10;… ขอเชิญท่านหรือผู้แทนหน่วยงาน เข้าร่วมกิจกรรมถ่ายทอดความรู้แบบ Bootcamp ในระหว่างวันที่ ๒๙ - ๓๐ มกราคม ๒๕๗๐ ณ ห้องประชุม … จังหวัดขอนแก่น โดยมีรายละเอียด …&#10;เรียน ผอ กว&#10;เพื่อเข้าร่วมกิจกรรม"></textarea>
+    <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+      <button type="button" class="btn btn-primary btn-sm" id="lrRead"><i class="bi bi-magic"></i> อ่านข้อความและกรอกฟอร์ม</button>
+      <span class="small text-muted">อ่านได้: กิจกรรม ("เข้าร่วม…") · วันที่/ถึงวันที่ · เวลา · สถานที่ ("ณ …") · ผู้รับผิดชอบ (บรรทัด "เรียน …" เช่น ผอ กว / ชื่อ / ทุกคน)</span>
+    </div>
+    <div id="lrResult"></div>
+  </div></div>
+</div>
 <form method="post" class="row g-3" id="evForm">
   <?= csrf_field() ?>
   <div class="col-xl-6">
@@ -241,6 +262,7 @@ require __DIR__ . '/header.php';
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" integrity="sha384-5JqMv4L/Xa0hfvtF06qboNdhvuYXUku9ZrhZh3bSk8VXF0A/RuSLHpLsSV9Zqhl6" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/th.js" integrity="sha384-E6OVFg1zUc/pckGxry0YZ6VeZ1E17l7Jl8ZQx58jbEfxxkz9LqknQhiIrA9zg/8b" crossorigin="anonymous"></script>
 <script src="<?= h(asset_v('modules/calendar/assets/js/thai-picker.js')) ?>"></script>
+<script src="<?= h(asset_v('modules/calendar/assets/js/letter-reader.js')) ?>"></script>
 <script>
 (() => {
   const boxes = () => [...document.querySelectorAll('#userPick input[name="users[]"]')];

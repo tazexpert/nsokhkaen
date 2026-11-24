@@ -297,3 +297,6 @@ a.cal-day-person:hover { box-shadow: 0 4px 14px rgba(15, 23, 42, .15); transform
   .cal-theme .table > thead th.we:not(.plan-sum):not(.plan-sum-head) { background: #a9b7c6; }
   .cal-theme .table td.we { background-color: #f4f6f9; }
 }
+
+/* อ่านข้อความจากหนังสือ: ช่องที่กรอกอัตโนมัติ เน้นสีชั่วคราว */
+.lr-filled { box-shadow: 0 0 0 .2rem rgba(14, 165, 201, .35) !important; border-color: #0ea5c9 !important; transition: box-shadow .3s; }
