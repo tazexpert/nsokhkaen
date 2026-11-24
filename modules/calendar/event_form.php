@@ -162,10 +162,16 @@ foreach ($users as $u) {
   <div class="card-header d-flex align-items-center"><strong><i class="bi bi-magic"></i> อ่านข้อความจากหนังสือ — กรอกอัตโนมัติ</strong>
     <button type="button" class="btn btn-sm btn-light ms-auto" data-bs-toggle="collapse" data-bs-target="#lrBody">ซ่อน / เปิด</button></div>
   <div class="collapse<?= $id ? '' : ' show' ?>" id="lrBody"><div class="card-body">
-    <textarea id="lrText" class="form-control" rows="5" placeholder="วางข้อความจากหนังสือเชิญ และบันทึกสั่งการ เช่น&#10;… ขอเชิญท่านหรือผู้แทนหน่วยงาน เข้าร่วมกิจกรรมถ่ายทอดความรู้แบบ Bootcamp ในระหว่างวันที่ ๒๙ - ๓๐ มกราคม ๒๕๗๐ ณ ห้องประชุม … จังหวัดขอนแก่น โดยมีรายละเอียด …&#10;เรียน ผอ กว&#10;เพื่อเข้าร่วมกิจกรรม"></textarea>
+    <div class="lr-drop" id="lrDrop" tabindex="0">
+      <textarea id="lrText" class="form-control" rows="5" aria-label="ข้อความจากหนังสือ"></textarea>
+      <div class="small text-muted mt-1"><i class="bi bi-image"></i> วางภาพที่ capture (Ctrl+V) ในกล่องนี้ หรือ
+        <label class="btn btn-link btn-sm p-0 align-baseline">เลือกไฟล์ภาพ<input type="file" id="lrImage" accept="image/*" hidden></label>
+        — ระบบอ่านตัวอักษรจากภาพ (OCR) ใส่ในกล่องให้ <b>ตัวเลขไทยในภาพอาจอ่านผิด ตรวจวันที่/เวลาก่อนบันทึก</b></div>
+      <div class="small mt-1" id="lrOcr"></div>
+    </div>
     <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
       <button type="button" class="btn btn-primary btn-sm" id="lrRead"><i class="bi bi-magic"></i> อ่านข้อความและกรอกฟอร์ม</button>
-      <span class="small text-muted">อ่านได้: กิจกรรม ("เข้าร่วม…") · วันที่/ถึงวันที่ · เวลา · สถานที่ ("ณ …") · ผู้รับผิดชอบ (บรรทัด "เรียน …" เช่น ผอ กว / ชื่อ / ทุกคน)</span>
+      <span class="small text-muted">อ่านได้: กิจกรรม ("เข้าร่วม…" / "๑. หลักสูตร…") · วันที่/ถึงวันที่ · เวลา · สถานที่ ("ณ …") · ลิงก์/Meeting ID · ผู้รับผิดชอบ (บรรทัด "เรียน …" เช่น ผอ กว / ชื่อ / ทุกคน)</span>
     </div>
     <div id="lrResult"></div>
   </div></div>

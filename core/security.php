@@ -24,7 +24,7 @@ function security_csp(): string
 {
     return implode('; ', [
         "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://code.jquery.com",
+        "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://code.jquery.com",   // wasm-unsafe-eval: WebAssembly ของตัวอ่านภาพ (OCR) ในหน้าเพิ่มกิจกรรม — ไม่เปิด eval ของ JavaScript
         "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com",
         "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net",
         "img-src 'self' data: blob: https://cdn.jsdelivr.net https://*.tile.openstreetmap.org https://server.arcgisonline.com",
