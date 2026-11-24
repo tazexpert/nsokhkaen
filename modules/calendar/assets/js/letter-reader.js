@@ -345,16 +345,20 @@
     img.onerror = () => fail(new Error('เปิดไฟล์ภาพไม่ได้'));
     img.src = URL.createObjectURL(file);
   });
+  // ตัวอ่าน (worker) สร้างครั้งเดียวแล้วใช้ซ้ำ — Tesseract.recognize() สร้าง worker ใหม่ทุกครั้ง (โหลดซ้ำ ช้า)
+  const workers = {};
+  const getWorker = (T, lang) => workers[lang] || (workers[lang] = T.createWorker(lang).catch(e => { delete workers[lang]; throw e; }));
+  const reader = T => ({ recognize: async (img, lang, opts, out) => (await getWorker(T, lang)).recognize(img, opts || {}, out) });
   const ocr = async file => {
     if (!file || !/^image\//.test(file.type)) return;
     const ta = document.getElementById('lrText');
     ocrMsg.className = 'small mt-1 text-primary';
     ocrMsg.innerHTML = '<span class="spinner-border spinner-border-sm"></span> กำลังอ่านตัวอักษรจากภาพ… (ครั้งแรกโหลดข้อมูลภาษาไทยประมาณ 2 MB)';
     try {
-      const [T, pic] = await Promise.all([loadTess(), prepare(file), loadTpls()]);
-      const { data } = await T.recognize(pic.canvas, 'tha+eng', {
-        logger: m => { if (m.status === 'recognizing text') ocrMsg.lastChild.textContent = ' กำลังอ่านตัวอักษรจากภาพ… ' + Math.round(m.progress * 100) + '%'; },
-      }, { text: true, blocks: true });
+      const [Tess, pic] = await Promise.all([loadTess(), prepare(file), loadTpls()]);
+      const T = reader(Tess);
+      ocrMsg.lastChild.textContent = ' กำลังอ่านตัวอักษรจากภาพ…';
+      const { data } = await T.recognize(pic.canvas, 'tha+eng', {}, { text: true, blocks: true });
       let txt;
       box.lrDebug = data;                            // ตรวจสอบผล OCR ดิบได้จาก console (#letterReader.lrDebug)
       try {

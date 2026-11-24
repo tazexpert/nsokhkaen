@@ -28,7 +28,7 @@ function security_csp(): string
         "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://fonts.googleapis.com",
         "font-src 'self' data: https://fonts.gstatic.com https://cdn.jsdelivr.net",
         "img-src 'self' data: blob: https://cdn.jsdelivr.net https://*.tile.openstreetmap.org https://server.arcgisonline.com",
-        "connect-src 'self' https://cdn.jsdelivr.net",
+        "connect-src 'self' data: blob: https://cdn.jsdelivr.net",   // data:/blob: = ตัวอ่านภาพ (OCR) โหลด WebAssembly/ภาพภายในเบราว์เซอร์
         "frame-src 'self' https://app.powerbi.com",
         "media-src 'self' blob:",
         "worker-src 'self' blob:",
