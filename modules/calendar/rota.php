@@ -182,7 +182,6 @@ require __DIR__ . '/header.php';
   <?= csrf_field() ?>
   <div class="card-header"><strong><i class="bi bi-calendar-plus"></i> จัดเวรกิจกรรม</strong></div>
   <div class="card-body row g-3">
-    <div class="col-12"><?= $queueHtml ?></div>
     <div class="col-lg-6">
       <div class="row g-3">
         <div class="col-12"><label class="form-label">ชื่อกิจกรรม <span class="text-danger">*</span></label>
@@ -195,6 +194,32 @@ require __DIR__ . '/header.php';
           <input name="location" class="form-control" maxlength="255" required value="<?= h($f['location']) ?>"></div>
         <div class="col-12"><label class="form-label">การแต่งกาย <span class="text-danger">*</span></label>
           <textarea name="dress" class="form-control" rows="3" maxlength="255" required placeholder="เช่น ชุดกีฬาสีขาว / เครื่องแบบปกติขาว (ขึ้นบรรทัดใหม่ได้)"><?= h($f['dress']) ?></textarea></div>
+        <div class="col-12"><label class="form-label">ลำดับคิว</label>
+          <div class="row g-2 rota-mini" data-reveal>
+            <div class="col-sm-6 reveal-item"><div class="border rounded p-2 h-100">
+              <div class="d-flex align-items-center mb-1"><i class="bi bi-person-badge text-primary me-1"></i><strong>ข้าราชการ</strong>
+                <span class="text-muted ms-auto">รอบที่ <?= (int)$state['official_round'] ?></span></div>
+              <ol class="mb-0 ps-3">
+                <?php foreach ($state['officials'] as $i => $m): ?>
+                  <li<?= $i === 0 ? ' class="fw-semibold text-primary"' : '' ?>><?= h($m['name']) ?><?= $i === 0 ? ' <span class="badge text-bg-primary">ถึงคิว</span>' : '' ?></li>
+                <?php endforeach; ?>
+                <?php foreach ($doneOfficials as $m): ?>
+                  <li class="text-muted" title="ได้แล้วในรอบนี้"><s><?= h($m['name']) ?></s> <i class="bi bi-check2"></i></li>
+                <?php endforeach; ?>
+              </ol>
+            </div></div>
+            <div class="col-sm-6 reveal-item" style="--d:70ms"><div class="border rounded p-2 h-100">
+              <div class="d-flex align-items-center mb-1"><i class="bi bi-people-fill text-success me-1"></i><strong>กลุ่มกิจกรรม</strong>
+                <span class="text-muted ms-auto">รอบที่ <?= (int)$state['group_round'] ?></span></div>
+              <?php foreach ($members['groups'] as $g => $list): $pos = array_search($g, $state['groups'], true); ?>
+                <div class="d-flex align-items-center<?= $pos === 0 ? ' fw-semibold text-success' : ($pos === false ? ' text-muted' : '') ?>" title="<?= h(implode(', ', array_column($list, 'name'))) ?>">
+                  <span>กลุ่มที่ <?= (int)$g ?> <span class="fw-normal text-muted">(<?= count($list) ?> คน)</span></span>
+                  <span class="ms-auto"><?= $pos === 0 ? '<span class="badge text-bg-success">ถึงคิว</span>' : ($pos === false ? '<i class="bi bi-check2"></i> ได้แล้ว' : 'คิวที่ ' . ($pos + 1)) ?></span>
+                </div>
+              <?php endforeach; ?>
+              <?php if (!$members['groups']): ?><div class="text-muted">ยังไม่มีกลุ่มกิจกรรม</div><?php endif; ?>
+            </div></div>
+          </div></div>
       </div>
     </div>
     <div class="col-lg-6">

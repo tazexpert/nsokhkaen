@@ -302,3 +302,5 @@ a.cal-day-person:hover { box-shadow: 0 4px 14px rgba(15, 23, 42, .15); transform
 .lr-filled { box-shadow: 0 0 0 .2rem rgba(14, 165, 201, .35) !important; border-color: #0ea5c9 !important; transition: box-shadow .3s; }
 .lr-drop { border-radius: 8px; }
 .lr-drop.over { outline: 3px dashed #0ea5c9; outline-offset: 4px; }
+.rota-mini { font-size: .85rem; line-height: 1.55; }
+.rota-mini .badge { font-size: .7rem; }
