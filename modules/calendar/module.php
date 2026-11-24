@@ -15,14 +15,14 @@ return [
     'guest_role' => 'viewer',
     'roles' => [
         'viewer' => 'ผู้ใช้งาน — ดูตารางการปฏิบัติงาน และกิจกรรมที่ตนรับผิดชอบ',
-        'editor' => 'ผู้บันทึกกิจกรรม — เพิ่มกิจกรรม แก้ไข/ลบกิจกรรมที่ตนบันทึก และแก้ไขแผนการปฏิบัติงานของตนเอง',
-        'admin'  => 'ผู้ดูแลปฏิทิน — แก้ไข/ลบกิจกรรมได้ทุกรายการ นำเข้ากิจกรรม CSV / เวรสำนักงาน จัดทำแผนการปฏิบัติงาน และจัดเวรกิจกรรม',
+        'editor' => 'ผู้บันทึกกิจกรรม — เพิ่มกิจกรรม แก้ไข/ลบกิจกรรมที่ตนบันทึก แก้ไขแผนการปฏิบัติงานของตนเอง และจัดเวรกิจกรรม',
+        'admin'  => 'ผู้ดูแลปฏิทิน — แก้ไข/ลบกิจกรรมได้ทุกรายการ นำเข้ากิจกรรม CSV / เวรสำนักงาน จัดทำแผนการปฏิบัติงาน จัดเวรกิจกรรม และแก้ไขรายชื่อ/กลุ่มเวรกิจกรรม',
     ],
     'menu' => [
         ['id' => 'month', 'label' => 'ปฏิทินรายเดือน',   'href' => '',          'icon' => 'bi-calendar3',      'role' => 'viewer'],
         ['id' => 'list',  'label' => 'ตารางกิจกรรม',      'href' => 'list',           'icon' => 'bi-list-task',      'role' => 'viewer'],
         ['id' => 'plan',  'label' => 'แผนการปฏิบัติงาน',  'href' => 'plan',           'icon' => 'bi-grid-3x3',       'role' => 'viewer', 'guest' => false],
-        ['id' => 'rota',  'label' => 'เวรกิจกรรม',          'href' => 'rota',           'icon' => 'bi-arrow-repeat',   'role' => 'admin'],
+        ['id' => 'rota',  'label' => 'เวรกิจกรรม',          'href' => 'rota',           'icon' => 'bi-arrow-repeat',   'role' => 'editor'],
         ['id' => 'mine',  'label' => 'งานของฉัน',         'href' => 'list?mine=1',    'icon' => 'bi-person-check',   'role' => 'viewer', 'guest' => false],
         ['id' => 'add',   'label' => 'เพิ่มกิจกรรม',       'href' => 'event_form',     'icon' => 'bi-plus-circle',    'role' => 'editor'],
         ['id' => 'import', 'label' => 'นำเข้า CSV',        'href' => 'import',         'icon' => 'bi-filetype-csv',   'role' => 'admin'],

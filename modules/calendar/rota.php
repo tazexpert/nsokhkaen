@@ -11,7 +11,7 @@
  */
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/rota_lib.php';
-$me = require_module(CAL_MODULE, 'admin');
+$me = require_module(CAL_MODULE, 'editor');           // ผู้บันทึกกิจกรรมจัดเวรได้ · แก้รายชื่อ/กลุ่ม (rota_members) เฉพาะผู้ดูแลปฏิทิน
 $pdo = db();
 
 $f = ['title' => '', 'event_date' => date('Y-m-d'), 'start_time' => '08:30', 'end_time' => '16:30', 'location' => '', 'dress' => '', 'pick' => '', 'chief' => '', 'mode' => 'one'];
@@ -130,7 +130,7 @@ $doneOfficials = array_filter($members['officials'], fn($m) => !in_array($m['key
 
 $active = 'rota';
 $pageTitle = 'เวรกิจกรรม';
-$pageActions = '<a href="rota_members" class="btn btn-outline-secondary"><i class="bi bi-people"></i> รายชื่อและกลุ่ม</a>';
+$pageActions = !cal_can('admin') ? '' : '<a href="rota_members" class="btn btn-outline-secondary"><i class="bi bi-people"></i> รายชื่อและกลุ่ม</a>';
 $headExtra = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" integrity="sha384-RkASv+6KfBMW9eknReJIJ6b3UnjKOKC5bOUaNgIY778NFbQ8MtWq9Lr/khUgqtTt" crossorigin="anonymous">';
 require __DIR__ . '/header.php';
 ?>
