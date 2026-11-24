@@ -7,7 +7,7 @@
  *   ผู้รับผิดชอบ: บรรทัด "เรียน …" บรรทัดสุดท้าย (บันทึกสั่งการ) — ตำแหน่งย่อ (ผอ กว / ผอ.กป / สถจ.) หรือชื่อ · "ทุกคน"
  *   ออนไลน์    : URL → ลิงก์ประกอบ · Meeting ID / Passcode → หมายเหตุ · ไม่มี "ณ" = สถานที่ "ออนไลน์"
  *   ภาพ        : วาง (Ctrl+V) / เลือกไฟล์ภาพ → อ่านตัวอักษร (OCR: tesseract.js ภาษาไทย+อังกฤษ โหลดจาก CDN เมื่อใช้ครั้งแรก)
- *                → ใส่ข้อความในกล่องแล้วอ่านต่อ (ตัวเลขไทยจากภาพหน้าจอมักอ่านผิด — ให้ผู้ใช้ตรวจ)
+ *                ขยายภาพ 3 เท่า + ขอบขาว · แก้ตัวเลขไทยด้วยการเทียบรูปทรงกับ ๐–๙ (TH Sarabun New) → ใส่ข้อความในกล่องให้ตรวจ
  *   ข้อมูลบุคลากร: data-users ของกล่อง (#letterReader) = [{id, name, first, abbrs:[...]}]
  */
 (() => {
@@ -156,20 +156,196 @@
     sc.onerror = () => { tess = null; fail(new Error('โหลดตัวอ่านภาพไม่ได้ (ตรวจการเชื่อมต่ออินเทอร์เน็ต)')); };
     document.head.appendChild(sc);
   }));
+  // ---- แก้ตัวเลขไทยหลัง OCR: แยกก้อนหมึกของตัวเลขแต่ละตัว แล้วเทียบรูปทรงกับ ๐–๙ (ฟอนต์ TH Sarabun New) ----
+  //   tesseract อ่านเลขไทยจากภาพหน้าจอผิดบ่อย (๑๗→๑๓, ๖→๒, ๙→๕) แต่หาตำแหน่งได้ — จึงใช้ตำแหน่งจาก OCR แล้วจำแนกรูปทรงเอง
+  const DIG = '๐๑๒๓๔๕๖๗๘๙', CONF = 'ฒซ«»beoใไจ', RUNC = DIG + CONF + '.:-–', GRID = 24, SCALE = 3, PAD = 40;
+  let tpls = null;
+  const featOf = (get, w, h) => {                     // ครอบเฉพาะหมึก → ย่อ/ขยายเป็น 24×24 · สัดส่วนกว้าง/สูง
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const cx = c.getContext('2d'), id = cx.createImageData(w, h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const k = (y * w + x) * 4, v = get(x, y) ? 255 : 0; id.data[k] = id.data[k + 1] = id.data[k + 2] = v; id.data[k + 3] = 255; }
+    cx.putImageData(id, 0, 0);
+    const g = document.createElement('canvas'); g.width = g.height = GRID;
+    const gx = g.getContext('2d'); gx.imageSmoothingEnabled = true; gx.drawImage(c, 0, 0, GRID, GRID);
+    const d = gx.getImageData(0, 0, GRID, GRID).data, a = new Float32Array(GRID * GRID);
+    let mean = 0;
+    for (let q = 0; q < a.length; q++) { a[q] = d[q * 4] / 255; mean += a[q]; }
+    mean /= a.length; let nn = 0;
+    for (let q = 0; q < a.length; q++) { a[q] -= mean; nn += a[q] * a[q]; }
+    return { a, n: Math.sqrt(nn) || 1, ar: w / h };
+  };
+  const bboxFeat = (mask, W, H) => {                   // mask: (x,y)=>bool ในกรอบ W×H → ตัดขอบว่าง
+    let x0 = W, x1 = -1, y0 = H, y1 = -1;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (mask(x, y)) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 < 0) return null;
+    return featOf((x, y) => mask(x + x0, y + y0), x1 - x0 + 1, y1 - y0 + 1);
+  };
+  const loadTpls = async () => {
+    if (tpls) return tpls;
+    const base = (typeof BASE_URL_JS !== 'undefined' ? BASE_URL_JS : '/') + 'assets/fonts/';
+    const fonts = [new FontFace('LrSarabun', 'url(' + base + 'THSarabunNew.ttf)'), new FontFace('LrSarabun', 'url(' + base + 'THSarabunNew-Bold.ttf)', { weight: '700' })];
+    await Promise.all(fonts.map(f => f.load().then(ff => document.fonts.add(ff)).catch(() => null)));
+    tpls = [];
+    for (const wt of ['400', '700']) for (const size of [40, 64]) for (const d of DIG) {
+      const c = document.createElement('canvas'); c.width = c.height = 120;
+      const cx = c.getContext('2d'); cx.fillStyle = '#000'; cx.fillRect(0, 0, 120, 120);
+      cx.fillStyle = '#fff'; cx.font = wt + ' ' + size + 'px LrSarabun, "TH Sarabun New", sans-serif'; cx.textBaseline = 'top'; cx.fillText(d, 10, 0);
+      const px = cx.getImageData(0, 0, 120, 120).data;
+      const f = bboxFeat((x, y) => px[(y * 120 + x) * 4] > 128, 120, 120);
+      if (f) tpls.push({ d, ...f });
+    }
+    tpls.asp = tpls.reduce((s, t) => s + t.ar, 0) / tpls.length;
+    return tpls;
+  };
+  const classify = f => {
+    let best = -9, bd = '?';
+    for (const t of tpls) {
+      let dot = 0; for (let q = 0; q < f.a.length; q++) dot += f.a[q] * t.a[q];
+      const sc = dot / (f.n * t.n) - 0.5 * Math.abs(Math.log(f.ar / t.ar));
+      if (sc > best) { best = sc; bd = t.d; }
+    }
+    return bd;
+  };
+  // ป้ายชื่อก้อนหมึก (8 ทิศ) ในกรอบบรรทัด
+  const label = (ink, W, x0, y0, w, h) => {
+    const lab = new Int32Array(w * h), comps = [];
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      if (lab[y * w + x] || !ink[(y + y0) * W + x + x0]) continue;
+      const id = comps.length + 1, st = [y * w + x]; lab[y * w + x] = id;
+      const c = { id, x0: x, x1: x, y0: y, y1: y, n: 0 };
+      while (st.length) {
+        const p = st.pop(), px = p % w, py = (p - px) / w; c.n++;
+        if (px < c.x0) c.x0 = px; if (px > c.x1) c.x1 = px; if (py < c.y0) c.y0 = py; if (py > c.y1) c.y1 = py;
+        for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const nx = px + dx, ny = py + dy;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          const q = ny * w + nx;
+          if (!lab[q] && ink[(ny + y0) * W + nx + x0]) { lab[q] = id; st.push(q); }
+        }
+      }
+      comps.push(c);
+    }
+    return { lab, comps, w };
+  };
+  const runText = (L, xa, xb, widen) => {
+    const { lab, comps, w } = L, ov = (c, a, b) => Math.min(c.x1 + 1, b) - Math.max(c.x0, a);
+    const core = comps.filter(c => ov(c, xa, xb) >= 0.3 * (c.x1 - c.x0 + 1));
+    if (!core.length) return '';
+    const tall = core.reduce((m, c) => (c.y1 - c.y0 > m.y1 - m.y0 ? c : m)), H = tall.y1 - tall.y0 + 1;
+    const top = tall.y0 - H * 0.15, bot = tall.y1 + H * 0.15, xa2 = widen ? xa - H * 0.7 : xa;
+    const raw = comps.filter(c => { const cy = (c.y0 + c.y1) / 2; return cy >= top && cy <= bot && c.n >= 6 && ov(c, xa2, xb) >= 0.3 * (c.x1 - c.x0 + 1); })
+      .sort((a, b) => a.x0 - b.x0);
+    const sel = [];                                    // ตัวเลขที่ขาดเป็นหลายก้อน (ภาพความละเอียดต่ำ) — ก้อนที่ซ้อนกันแนวนอนรวมเป็นตัวเดียว
+    for (const c of raw) {
+      const g = sel[sel.length - 1];
+      if (g && c.x0 <= g.x1 - 2) { g.x1 = Math.max(g.x1, c.x1); g.y0 = Math.min(g.y0, c.y0); g.y1 = Math.max(g.y1, c.y1); g.ids.add(c.id); g.n += c.n; }
+      else sel.push({ x0: c.x0, x1: c.x1, y0: c.y0, y1: c.y1, n: c.n, ids: new Set([c.id]) });
+    }
+    const Wd = H * tpls.asp;
+    let out = '', prev = null;
+    for (const c of sel) {
+      if (prev !== null && c.x0 - prev > H * 0.45) out += ' ';
+      prev = c.x1 + 1;
+      const cw = c.x1 - c.x0 + 1, ch = c.y1 - c.y0 + 1;
+      if (ch < H * 0.4) { out += cw > ch * 2 ? '-' : '.'; continue; }
+      // ตัวเลขติดกัน (กว้างเกิน) → ตัดที่คอลัมน์หมึกน้อยสุดช่วงกลาง
+      const parts = [[c.x0, c.x1]];
+      for (let k = 0; k < parts.length; k++) {
+        const [a, b] = parts[k], pw = b - a + 1;
+        if (pw < Wd * 1.4) continue;
+        let cut = a + Math.floor(pw * 0.3), mn = 1e9;
+        for (let x = a + Math.floor(pw * 0.3); x <= a + Math.floor(pw * 0.7); x++) {
+          let s2 = 0; for (let y = c.y0; y <= c.y1; y++) if (c.ids.has(lab[y * w + x])) s2++;
+          if (s2 < mn) { mn = s2; cut = x; }
+        }
+        parts.splice(k, 1, [a, cut - 1], [cut, b]); k--;
+      }
+      for (const [a, b] of parts) {
+        const f = bboxFeat((x, y) => c.ids.has(lab[(y + c.y0) * w + x + a]), b - a + 1, c.y1 - c.y0 + 1);
+        if (f) out += classify(f);
+      }
+    }
+    return out;
+  };
+  const isLatin = ch => /^[A-Za-z]$/.test(ch);
+  const fixDigits = (data, ink, W) => {
+    const lines = [];
+    for (const b of data.blocks || []) for (const p of b.paragraphs) for (const l of p.lines) {
+      const sy = [], lb = l.bbox, gapMin = (lb.y1 - lb.y0) * 0.3;    // ภาษาไทยไม่เว้นวรรคระหว่างคำ: เว้นเฉพาะช่องว่างจริงในภาพ
+      l.words.forEach((wd, wi) => wd.symbols.forEach((s, si) => sy.push({ t: s.text, b: s.bbox, sp: wi > 0 && si === 0 && wd.bbox.x0 - l.words[wi - 1].bbox.x1 > gapMin })));
+      const L = label(ink, W, lb.x0, lb.y0, lb.x1 - lb.x0 + 1, lb.y1 - lb.y0 + 1);
+      let out = '', i = 0;
+      while (i < sy.length) {
+        const t = sy[i].t, prev = i ? sy[i - 1].t : ' ';
+        const start = DIG.includes(t) || (CONF.includes(t) && !isLatin(prev) && sy.slice(i + 1, i + 3).some(s => DIG.includes(s.t)));
+        if (!start) { out += (sy[i].sp ? ' ' : '') + t; i++; continue; }
+        let j = i;
+        while (j < sy.length && RUNC.includes(sy[j].t) && !(isLatin(sy[j].t) && j + 1 < sy.length && isLatin(sy[j + 1].t))) j++;
+        j = Math.max(j, i + 1);
+        let trimmed = false;
+        while (j > i + 1 && '.:-–'.includes(sy[j - 1].t)) { j--; trimmed = true; }
+        const xa = Math.min(...sy.slice(i, j).map(s => s.b.x0)) - lb.x0 - 2, xb = Math.max(...sy.slice(i, j).map(s => s.b.x1)) - lb.x0 + 2;
+        let r = runText(L, xa, xb, !(i && '([{"“\'‘:/-–'.includes(sy[i - 1].t)));
+        if (trimmed) r = r.replace(/[.\-]+$/, '');
+        out += (sy[i].sp ? ' ' : '') + (r || sy.slice(i, j).map(s => s.t).join(''));
+        i = j;
+      }
+      lines.push({ text: out, bbox: lb });
+    }
+    return lines;
+  };
+  // บรรทัดที่มี URL: อ่านซ้ำเฉพาะบรรทัดนั้นด้วยภาษาอังกฤษอย่างเดียว (อ่านตัวอักษรละตินแม่นกว่า เช่น dg.th ไม่กลายเป็น de.th)
+  const fixUrls = async (T, canvas, lines) => {
+    for (const ln of lines) {
+      if (!/https?:\/\//i.test(ln.text)) continue;
+      const b = ln.bbox, m = 10, p = 30, c = document.createElement('canvas');
+      const w = b.x1 - b.x0 + m * 2, h = b.y1 - b.y0 + m * 2;
+      c.width = w + p * 2; c.height = h + p * 2;
+      const cx = c.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, c.width, c.height);
+      cx.drawImage(canvas, b.x0 - m, b.y0 - m, w, h, p, p, w, h);
+      try {
+        const { data } = await T.recognize(c, 'eng');
+        const u = (data.text.match(/https?:\/\/\S+/i) || [])[0];
+        if (u) ln.text = ln.text.replace(/https?:\/\/\S+/i, u);
+      } catch (e) { /* ใช้ผลเดิม */ }
+    }
+    return lines;
+  };
+  // ภาพ → ขยาย 3 เท่า + ขอบขาว (ตัวอักษรเล็กจากภาพหน้าจออ่านได้ดีขึ้น · URL ไม่หลุด)
+  const prepare = file => new Promise((ok, fail) => {
+    const img = new Image();
+    img.onload = () => {
+      const W = img.width * SCALE + PAD * 2, H = img.height * SCALE + PAD * 2, c = document.createElement('canvas');
+      c.width = W; c.height = H;
+      const cx = c.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, W, H);
+      cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high'; cx.drawImage(img, PAD, PAD, img.width * SCALE, img.height * SCALE);
+      const px = cx.getImageData(0, 0, W, H).data, ink = new Uint8Array(W * H);
+      for (let q = 0; q < W * H; q++) { const g = (px[q * 4] * 299 + px[q * 4 + 1] * 587 + px[q * 4 + 2] * 114) / 1000; px[q * 4] = px[q * 4 + 1] = px[q * 4 + 2] = g; ink[q] = g < 170 ? 1 : 0; }
+      cx.putImageData(new ImageData(px, W, H), 0, 0);
+      URL.revokeObjectURL(img.src);
+      ok({ canvas: c, ink, W });
+    };
+    img.onerror = () => fail(new Error('เปิดไฟล์ภาพไม่ได้'));
+    img.src = URL.createObjectURL(file);
+  });
   const ocr = async file => {
     if (!file || !/^image\//.test(file.type)) return;
     const ta = document.getElementById('lrText');
     ocrMsg.className = 'small mt-1 text-primary';
     ocrMsg.innerHTML = '<span class="spinner-border spinner-border-sm"></span> กำลังอ่านตัวอักษรจากภาพ… (ครั้งแรกโหลดข้อมูลภาษาไทยประมาณ 2 MB)';
     try {
-      const T = await loadTess();
-      const { data } = await T.recognize(file, 'tha+eng', {
+      const [T, pic] = await Promise.all([loadTess(), prepare(file), loadTpls()]);
+      const { data } = await T.recognize(pic.canvas, 'tha+eng', {
         logger: m => { if (m.status === 'recognizing text') ocrMsg.lastChild.textContent = ' กำลังอ่านตัวอักษรจากภาพ… ' + Math.round(m.progress * 100) + '%'; },
-      });
-      const txt = data.text.replace(/\s+(?=[ะ-ฺ็-๎])/g, '').trim();   // ตัดช่องว่างหน้าสระ/วรรณยุกต์ที่ OCR แทรก
+      }, { text: true, blocks: true });
+      let txt;
+      box.lrDebug = data;                            // ตรวจสอบผล OCR ดิบได้จาก console (#letterReader.lrDebug)
+      try { txt = (await fixUrls(T, pic.canvas, fixDigits(data, pic.ink, pic.W))).map(l => l.text).join('\n'); } catch (e) { txt = ''; }
+      if (!txt.trim()) txt = data.text;
+      txt = txt.replace(/\s+(?=[ะ-ฺ็-๎])/g, '').trim();   // ตัดช่องว่างหน้าสระ/วรรณยุกต์ที่ OCR แทรก
       ta.value = (ta.value.trim() ? ta.value.trim() + '\n' : '') + txt;
       ocrMsg.className = 'small mt-1 text-warning-emphasis';
-      ocrMsg.innerHTML = '<i class="bi bi-exclamation-triangle"></i> อ่านจากภาพแล้ว — <b>ตรวจ/แก้ข้อความในกล่อง (โดยเฉพาะตัวเลขวันที่และเวลา)</b> แล้วกด "อ่านข้อความและกรอกฟอร์ม"';
+      ocrMsg.innerHTML = '<i class="bi bi-exclamation-triangle"></i> อ่านจากภาพแล้ว — ตรวจข้อความในกล่องอีกครั้ง (โดยเฉพาะตัวเลข) แล้วกด "อ่านข้อความและกรอกฟอร์ม"';
       ta.focus();
     } catch (e) {
       ocrMsg.className = 'small mt-1 text-danger';

@@ -166,7 +166,7 @@ foreach ($users as $u) {
       <textarea id="lrText" class="form-control" rows="5" aria-label="ข้อความจากหนังสือ"></textarea>
       <div class="small text-muted mt-1"><i class="bi bi-image"></i> วางภาพที่ capture (Ctrl+V) ในกล่องนี้ หรือ
         <label class="btn btn-link btn-sm p-0 align-baseline">เลือกไฟล์ภาพ<input type="file" id="lrImage" accept="image/*" hidden></label>
-        — ระบบอ่านตัวอักษรจากภาพ (OCR) ใส่ในกล่องให้ <b>ตัวเลขไทยในภาพอาจอ่านผิด ตรวจวันที่/เวลาก่อนบันทึก</b></div>
+        — ระบบอ่านตัวอักษรจากภาพ (OCR) ใส่ในกล่องให้ <b>ตรวจข้อความอีกครั้งก่อนกรอก</b></div>
       <div class="small mt-1" id="lrOcr"></div>
     </div>
     <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
