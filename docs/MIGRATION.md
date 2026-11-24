@@ -285,6 +285,7 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 | `20261212_kpi.sql` | ระบบตัวชี้วัด (`kpi_indicators`, `kpi_indicator_users`, `kpi_levels`, `kpi_activities`, `kpi_activity_users`, `kpi_progress`, `kpi_files`) · ไฟล์หลักฐานเก็บที่ `uploads/kpi/` (ให้เว็บเซิร์ฟเวอร์เขียนได้) |
 | `20261213_kpi_office.sql` | ระบบตัวชี้วัด: ระบุว่าเป็น "ตัวชี้วัดจากสำนักงาน" หรือไม่ (`kpi_indicators.is_office`) · เซิร์ฟเวอร์ที่ไม่มีสิทธิ์ ALTER TABLE ใช้ `database/noalter/20261213_kpi_office.sql` แทน (สำรองข้อมูล → สร้างตารางใหม่ → ใส่ข้อมูลคืน · รันครั้งเดียว) |
 | `20261214_cal_rota_multi.sql` | ปฏิทิน: เวรกิจกรรม — เลือกเฉพาะข้าราชการได้หลายคน / ข้าราชการทุกคน โดยไม่เลือกกลุ่มเจ้าหน้าที่ (`cal_rota_turn_officials`) · CREATE TABLE อย่างเดียว (ไม่ต้องใช้สิทธิ์ ALTER) |
+| `20261215_cal_guard_shifts.sql` | ปฏิทิน: นำเข้าเวรศาลากลางจากไฟล์ PDF คำสั่งจังหวัด (`cal_guard_shifts`) — ผู้ปฏิบัติหน้าที่เวร/ผู้ตรวจเวร · กลางวัน/กลางคืน · CREATE TABLE อย่างเดียว |
 | `20261208_payslip_loan_gsb.sql` | สลิปเงินเดือน: รายการหักข้อ 7 เงินกู้ธนาคารออมสิน (`pay_slips.loan_gsb`) · นำเข้าไฟล์ได้จากคอลัมน์ "เงินกู้ธนาคารออมสิน" |
 | `20261207_cal_rota.sql` | ปฏิทิน: การจัดเวรกิจกรรม (`cal_rota_members`, `cal_rota_turns`) — ลำดับข้าราชการ 6 คน + กลุ่มกิจกรรม 3 กลุ่ม (ใส่รายชื่อเริ่มต้นให้เมื่อยังว่าง) |
 
@@ -338,6 +339,7 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261212_kpi.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261213_kpi_office.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261214_cal_rota_multi.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261215_cal_guard_shifts.sql
 ```
 
 หลังอัปเดต:

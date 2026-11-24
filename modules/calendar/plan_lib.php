@@ -224,6 +224,10 @@ function plan_save(int $y, int $m, array $people, ?string $note, int $actorId): 
  */
 function plan_sync_guard(int $y, int $m, int $actorId): array
 {
+    require_once __DIR__ . '/guard_lib.php';
+    if (guard_month_has($y, $m)) {                 // เดือนที่นำเข้าเวรศาลากลางจากคำสั่งจังหวัดแล้ว ใช้ข้อมูลนั้นแทน (guard_import.php)
+        return [0, 0, 0];
+    }
     $pdo = db();
     $from = sprintf('%04d-%02d-01', $y, $m);
     $to = date('Y-m-t', strtotime($from));

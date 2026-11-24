@@ -638,3 +638,22 @@ function cal_add_tabs(string $cur): string
     }
     return $out . '</ul>';
 }
+
+/** แท็บหน้า "นำเข้าเวรสนง./ศาลากลาง": เวรสำนักงาน (duty_import · Excel) · เวรศาลากลาง (guard_import · PDF คำสั่งจังหวัด) */
+function cal_duty_tabs(string $cur): string
+{
+    $tabs = ['office' => ['duty_import', 'bi-shield-check', 'เวรสำนักงาน (Excel)'], 'guard' => ['guard_import', 'bi-building', 'เวรศาลากลาง (PDF คำสั่งจังหวัด)']];
+    $out = '<ul class="nav nav-tabs cal-add-tabs mb-3">';
+    foreach ($tabs as $k => [$href, $ic, $lb]) {
+        $on = $k === $cur;
+        $out .= '<li class="nav-item"><a class="nav-link' . ($on ? ' active fw-semibold' : '') . '" href="' . $href . '"' . ($on ? ' aria-current="page"' : '')
+            . '><i class="bi ' . $ic . '"></i> ' . h($lb) . '</a></li>';
+    }
+    return $out . '</ul>';
+}
+
+/** ข้อความเวรศาลากลางแบบสั้นในช่องปฏิทิน: "เวรศาลากลาง-กลางคืน · ผู้ตรวจเวร" → "เวรศาลากลาง-กลางคืน (ผู้ตรวจเวร)" · ผู้ปฏิบัติหน้าที่เวร = ไม่ต่อท้าย */
+function cal_guard_short(string $title): string
+{
+    return str_replace([' · ผู้ปฏิบัติหน้าที่เวร', ' · ผู้ตรวจเวร'], ['', ' (ผู้ตรวจเวร)'], $title);
+}

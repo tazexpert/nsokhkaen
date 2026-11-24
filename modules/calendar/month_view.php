@@ -52,9 +52,13 @@ foreach ($byDay as $d => $list) {
     foreach ($list as $e) {
         $ids = $assignees[(int)$e['id']] ?? [];
         $names = array_values(array_filter(array_map(fn($id) => $nameOf[$id] ?? null, $ids)));
-        if (cal_is_duty($e) || cal_is_guard($e)) {
-            $k = cal_is_duty($e) ? 'duty' : 'guard';
-            $info[$k] = array_values(array_unique(array_merge($info[$k], $names ?: [$e['title']])));
+        if (cal_is_duty($e)) {
+            $info['duty'] = array_values(array_unique(array_merge($info['duty'], $names ?: [$e['title']])));
+            continue;
+        }
+        if (cal_is_guard($e)) {                        // "เวรศาลากลาง-กลางคืน (ผู้ตรวจเวร): ชื่อ, ชื่อ" แยกบรรทัดตามช่วง/หน้าที่
+            usort($ids, fn($a, $b) => [$staffOrder[$a] ?? PHP_INT_MAX, $a] <=> [$staffOrder[$b] ?? PHP_INT_MAX, $b]);
+            $info['guard'][] = cal_guard_short($e['title']) . ': ' . (implode(', ', array_filter(array_map(fn($id) => $nameOf[$id] ?? null, $ids))) ?: '-');
             continue;
         }
         $item = ['id' => (int)$e['id'], 'title' => $e['title'], 'loc' => (string)$e['location'], 'priv' => cal_is_private($e),
@@ -72,7 +76,7 @@ $dutyLabel = function (array $e) use ($assignees, $staffOrder, $nameOf, $firstNa
     $ids = $assignees[(int)$e['id']] ?? [];
     usort($ids, fn($a, $b) => [$staffOrder[$a] ?? PHP_INT_MAX, $a] <=> [$staffOrder[$b] ?? PHP_INT_MAX, $b]);
     $names = array_filter(array_map(fn($id) => isset($nameOf[$id]) ? $firstName($nameOf[$id]) : null, $ids));
-    return (cal_is_duty($e) ? 'เวร สนง.' : CAL_GUARD_TITLE) . ' : ' . ($names ? implode(', ', $names) : '-');
+    return (cal_is_duty($e) ? 'เวร สนง.' : cal_guard_short($e['title'])) . ' : ' . ($names ? implode(', ', $names) : '-');
 };
 
 $ts = strtotime($first);
@@ -101,7 +105,7 @@ $today = date('Y-m-d');
         <div class="cal-dnum"><?php if (cal_can('editor')): ?><a href="<?= h($calBase) ?>event_form?date=<?= $d ?>" class="cal-add" title="เพิ่มกิจกรรมวันนี้"><i class="bi bi-plus"></i></a><?php endif; ?><?= $d === $today ? '<span class="cal-today-tag">วันนี้</span>' : '' ?><span class="cal-n"><?= substr($d, 8, 2) ?></span></div>
         <?php foreach ($byDay[$d] ?? [] as $e): $isMine = in_array($me['id'], $assignees[(int)$e['id']] ?? [], true); ?>
           <a href="<?= h($calBase) ?>event_view?id=<?= (int)$e['id'] ?>" class="cal-ev<?= cal_is_duty($e) ? ' duty' : '' ?><?= cal_is_guard($e) ? ' guard' : '' ?><?= $isMine ? ' mine' : '' ?>" title="<?= h(cal_is_shift($e) ? $e['title'] . ': ' . implode(', ', array_map(fn($id) => $nameOf[$id] ?? '', $assignees[(int)$e['id']] ?? [])) : cal_time_text($e) . ' ' . $e['title'] . ($e['location'] ? ' @ ' . $e['location'] : '')) ?>">
-            <?php if ($e['start_time'] && $d === $e['event_date']): ?><span class="t"><?= cal_time_thai($e['start_time']) ?></span><?php endif; ?><?= cal_is_private($e) ? '<i class="bi bi-lock-fill me-1" title="ส่วนตัว"></i>' : '' ?><?= h(cal_is_shift($e) ? $dutyLabel($e) : $e['title']) ?></a>
+            <?php if ($e['start_time'] && $d === $e['event_date'] && !cal_is_guard($e)): ?><span class="t"><?= cal_time_thai($e['start_time']) ?></span><?php endif; ?><?= cal_is_private($e) ? '<i class="bi bi-lock-fill me-1" title="ส่วนตัว"></i>' : '' ?><?= h(cal_is_shift($e) ? $dutyLabel($e) : $e['title']) ?></a>
         <?php endforeach; ?>
         <?php if (isset($attItems[$d])): $ai = $attItems[$d]; ?>
           <a href="<?= h($calBase) ?>att_view?date=<?= $d ?>" class="cal-ev att-ev<?= $ai['cls'] === 'att-cert' ? ' done' : ($ai['cls'] === 'att-late' ? ' late' : '') ?>" title="<?= h($ai['title']) ?> (เห็นเฉพาะคุณ)"><i class="bi bi-lock-fill me-1"></i><?= h(att_item_title($ai)) ?></a>
@@ -146,7 +150,7 @@ $today = date('Y-m-d');
     document.getElementById('dayPanelM').textContent = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'][mm];
     let html = `<div class="cal-day-sec duty"><div class="cal-day-h"><i class="bi bi-shield-check"></i> 1. เวรสำนักงาน</div><div class="cal-day-c">`
       + (d.duty.length ? d.duty.map(esc).join(', ') : '<span class="text-muted">-</span>')
-      + (d.guard.length ? `<div class="cal-day-guard"><i class="bi bi-building"></i> เวรศาลากลาง: ${d.guard.map(esc).join(', ')}</div>` : '') + '</div></div>';
+      + d.guard.map(g => `<div class="cal-day-guard"><i class="bi bi-building"></i> ${esc(g)}</div>`).join('') + '</div></div>';
     html += `<div class="cal-day-sec people"><div class="cal-day-h"><i class="bi bi-list-check"></i> 2. กิจกรรม <span class="badge rounded-pill ms-auto">${d.events.length} รายการ</span></div><div class="cal-day-c">`
       + (d.events.length ? d.events.map(evCard).join('') : '<div class="text-muted">ไม่มีกิจกรรม</div>') + '</div></div>';
     body.innerHTML = html;

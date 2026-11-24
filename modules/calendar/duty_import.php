@@ -205,10 +205,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $active = 'duty';
-$pageTitle = 'นำเข้าเวรสำนักงาน';
+$pageTitle = 'นำเข้าเวรสนง./ศาลากลาง';
 $pageActions = '<a href="?template=1&amp;fy=' . $curFy . '" class="btn btn-outline-success" id="tplLink"><i class="bi bi-download"></i> ดาวน์โหลดแบบฟอร์ม</a>';
 require __DIR__ . '/header.php';
 ?>
+<?= cal_duty_tabs('office') ?>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>
 
 <?php if ($step === 'upload'): ?>
