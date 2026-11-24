@@ -128,12 +128,13 @@ $f['pick'] = in_array($f['pick'], array_column($visible, 'key'), true) || ($f['p
 $groupNo = $state['groups'][0] ?? null;
 $doneOfficials = array_filter($members['officials'], fn($m) => !in_array($m['key'], array_column($state['officials'], 'key'), true));
 
-$active = 'rota';
-$pageTitle = 'เวรกิจกรรม';
+$active = 'add';                                      // แท็บ "กิจกรรมงานพิธี" ในหน้าเพิ่มกิจกรรม (ไม่มีเมนูแยก)
+$pageTitle = 'เพิ่มกิจกรรม';
 $pageActions = !cal_can('admin') ? '' : '<a href="rota_members" class="btn btn-outline-secondary"><i class="bi bi-people"></i> รายชื่อและกลุ่ม</a>';
 $headExtra = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" integrity="sha384-RkASv+6KfBMW9eknReJIJ6b3UnjKOKC5bOUaNgIY778NFbQ8MtWq9Lr/khUgqtTt" crossorigin="anonymous">';
 require __DIR__ . '/header.php';
 ?>
+<?= cal_add_tabs('rota') ?>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>
 
 <?php ob_start(); // ลำดับข้าราชการ + กลุ่มกิจกรรม — แสดงในแบบฟอร์มจัดเวรกิจกรรม (ไม่มีรายชื่อข้าราชการ = แสดงลำพัง) ?>

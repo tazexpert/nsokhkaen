@@ -148,6 +148,7 @@ $allDay = $e['start_time'] === null && $e['end_time'] === null;
 $headExtra = '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css" integrity="sha384-RkASv+6KfBMW9eknReJIJ6b3UnjKOKC5bOUaNgIY778NFbQ8MtWq9Lr/khUgqtTt" crossorigin="anonymous">';
 require __DIR__ . '/header.php';
 ?>
+<?= $id ? '' : cal_add_tabs('event') ?>
 <?php if ($errors): ?><div class="alert alert-danger"><?= implode('<br>', array_map('h', $errors)) ?></div><?php endif; ?>
 <?= cal_letter_reader_box('evForm', $users, !$id) ?>
 <form method="post" class="row g-3" id="evForm">

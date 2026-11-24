@@ -625,3 +625,16 @@ function cal_letter_reader_box(string $formId, array $users = [], bool $open = t
 <?php
     return ob_get_clean();
 }
+
+/** แท็บหน้า "เพิ่มกิจกรรม": กิจกรรมประชุม/อบรม/สัมมนา (event_form) · กิจกรรมงานพิธี (rota = จัดเวรกิจกรรม) */
+function cal_add_tabs(string $cur): string
+{
+    $tabs = ['event' => ['event_form', 'bi-people', 'กิจกรรมประชุม/อบรม/สัมมนา'], 'rota' => ['rota', 'bi-flag', 'กิจกรรมงานพิธี']];
+    $out = '<ul class="nav nav-tabs cal-add-tabs mb-3">';
+    foreach ($tabs as $k => [$href, $ic, $lb]) {
+        $on = $k === $cur;
+        $out .= '<li class="nav-item"><a class="nav-link' . ($on ? ' active fw-semibold' : '') . '" href="' . $href . '"' . ($on ? ' aria-current="page"' : '')
+            . '><i class="bi ' . $ic . '"></i> ' . h($lb) . '</a></li>';
+    }
+    return $out . '</ul>';
+}

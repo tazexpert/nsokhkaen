@@ -45,9 +45,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $members = rota_members();
 $groups = $members['groups'] + [];
-$active = 'rota';
+$active = 'add';
 $pageTitle = 'รายชื่อเวรกิจกรรม';
-$pageActions = '<a href="rota" class="btn btn-light"><i class="bi bi-arrow-left"></i> เวรกิจกรรม</a>';
+$pageActions = '<a href="rota" class="btn btn-light"><i class="bi bi-arrow-left"></i> กิจกรรมงานพิธี</a>';
 require __DIR__ . '/header.php';
 $text = fn(array $list) => implode("\n", array_column($list, 'name'));
 $status = function (array $list) {
