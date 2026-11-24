@@ -174,6 +174,7 @@ require __DIR__ . '/header.php';
 </div>
 
 <?php if ($members['officials']): ?>
+<?= cal_letter_reader_box('rotaForm', [], true, 'อ่านได้: ชื่อกิจกรรม ("เข้าร่วม…" / "๑. …") · วันที่ · เวลา · สถานที่ ("ณ …") · การแต่งกาย — ผู้ร่วมกิจกรรมจัดตามคิวเวรด้านล่าง') ?>
 <form method="post" class="card mb-3" id="rotaForm">
   <?= csrf_field() ?>
   <div class="card-header"><strong><i class="bi bi-calendar-plus"></i> จัดเวรกิจกรรม</strong></div>
@@ -317,6 +318,7 @@ require __DIR__ . '/header.php';
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js" integrity="sha384-5JqMv4L/Xa0hfvtF06qboNdhvuYXUku9ZrhZh3bSk8VXF0A/RuSLHpLsSV9Zqhl6" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/th.js" integrity="sha384-E6OVFg1zUc/pckGxry0YZ6VeZ1E17l7Jl8ZQx58jbEfxxkz9LqknQhiIrA9zg/8b" crossorigin="anonymous"></script>
 <script src="<?= h(asset_v('modules/calendar/assets/js/thai-picker.js')) ?>"></script>
+<script src="<?= h(asset_v('modules/calendar/assets/js/letter-reader.js')) ?>"></script>
 <script>
 // สถิติจังหวัดเข้าร่วม → ตัดผู้รักษาการออกจากตัวเลือกข้าราชการ (ถึงคิวพอดี = นับเป็นคิวแล้ว) · แสดงถึงคิว + ข้ามได้ <?= ROTA_MAX_SKIP ?> คิว
 const rotaChoices = () => {

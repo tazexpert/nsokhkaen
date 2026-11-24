@@ -587,3 +587,41 @@ function cal_modal_script(): string
 </script>
 HTML;
 }
+
+/**
+ * กล่อง "อ่านข้อความจากหนังสือ — กรอกอัตโนมัติ" (assets/js/letter-reader.js) — ใช้ในหน้าเพิ่มกิจกรรมและเวรกิจกรรม
+ * $formId = id ของฟอร์มที่จะกรอก · $users = cal_users() สำหรับจับคู่ "เรียน ผอ กว" / ชื่อ (ว่าง = ไม่อ่านผู้รับผิดชอบ)
+ */
+function cal_letter_reader_box(string $formId, array $users = [], bool $open = true, string $hint = ''): string
+{
+    $lrUsers = [];
+    foreach ($users as $u) {
+        $nm = preg_replace('/\s+/u', ' ', trim($u['full_name']));
+        $bare = preg_replace('/^(นางสาว|นาง|นาย|ว่าที่ร้อยตรี|ว่าที่\s*ร\.ต\.|ดร\.)\s*/u', '', $nm);
+        $lrUsers[] = ['id' => (int)$u['id'], 'name' => $bare, 'first' => explode(' ', $bare)[0], 'abbrs' => array_keys(cal_person_abbr_options($u))];
+    }
+    if ($hint === '') {
+        $hint = 'อ่านได้: กิจกรรม ("เข้าร่วม…" / "๑. หลักสูตร…") · วันที่/ถึงวันที่ · เวลา · สถานที่ ("ณ …") · ลิงก์/Meeting ID · ผู้รับผิดชอบ (บรรทัด "เรียน …" เช่น ผอ กว / ชื่อ / ทุกคน)';
+    }
+    ob_start(); ?>
+<div class="card mb-3" id="letterReader" data-form="<?= h($formId) ?>" data-users="<?= h(json_encode($lrUsers, JSON_UNESCAPED_UNICODE)) ?>">
+  <div class="card-header d-flex align-items-center"><strong><i class="bi bi-magic"></i> อ่านข้อความจากหนังสือ — กรอกอัตโนมัติ</strong>
+    <button type="button" class="btn btn-sm btn-light ms-auto" data-bs-toggle="collapse" data-bs-target="#lrBody">ซ่อน / เปิด</button></div>
+  <div class="collapse<?= $open ? ' show' : '' ?>" id="lrBody"><div class="card-body">
+    <div class="lr-drop" id="lrDrop" tabindex="0">
+      <textarea id="lrText" class="form-control" rows="5" aria-label="ข้อความจากหนังสือ"></textarea>
+      <div class="small text-muted mt-1"><i class="bi bi-image"></i> วางภาพที่ capture (Ctrl+V) ในกล่องนี้ หรือ
+        <label class="btn btn-link btn-sm p-0 align-baseline">เลือกไฟล์ภาพ<input type="file" id="lrImage" accept="image/*" hidden></label>
+        — ระบบอ่านตัวอักษรจากภาพ (OCR) ใส่ในกล่องให้ <b>ตรวจข้อความอีกครั้งก่อนกรอก</b></div>
+      <div class="small mt-1" id="lrOcr"></div>
+    </div>
+    <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+      <button type="button" class="btn btn-primary btn-sm" id="lrRead"><i class="bi bi-magic"></i> อ่านข้อความและกรอกฟอร์ม</button>
+      <span class="small text-muted"><?= h($hint) ?></span>
+    </div>
+    <div id="lrResult"></div>
+  </div></div>
+</div>
+<?php
+    return ob_get_clean();
+}

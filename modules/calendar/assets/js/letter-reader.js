@@ -14,7 +14,7 @@
   const box = document.getElementById('letterReader');
   if (!box) return;
   const users = JSON.parse(box.dataset.users || '[]');
-  const form = document.getElementById('evForm');
+  const form = document.getElementById(box.dataset.form || 'evForm');   // ฟอร์มที่จะกรอก (เพิ่มกิจกรรม / เวรกิจกรรม)
   const field = n => form.querySelector('[name="' + n + '"]');
   const TH = '๐๑๒๓๔๕๖๗๘๙';
   const MONTHS = [['มกราคม', 'ม.ค.'], ['กุมภาพันธ์', 'ก.พ.'], ['มีนาคม', 'มี.ค.'], ['เมษายน', 'เม.ย.'], ['พฤษภาคม', 'พ.ค.'], ['มิถุนายน', 'มิ.ย.'],
@@ -76,9 +76,14 @@
       if (m[3]) out.t2 = pad(m[3]) + '.' + m[4];
     }
     // สถานที่
-    if ((m = flat.match(/(?:^|\s)ณ\s*([\s\S]*?)(?=\s*(?:โดย|ทั้งนี้|จึงเรียน|จึงขอ|และขอ|ตามกำหนดการ|เวลา\s*\d|ใน(?:ระหว่าง)?วัน[ก-๙]*ที่|ระหว่างวันที่|วัน[ก-๙]*ที่\s*\d|สิ่งที่ส่งมาด้วย|เรียน|เพื่อ(?:ทราบ|โปรด|เข้าร่วม|พิจารณา|ดำเนินการ)|$))/))) {
-      const loc = m[1].replace(/[,\s]+$/, '').trim();
+    if ((m = flat.match(/(?:^|\s)ณ\s*([\s\S]*?)(?=\s*(?:โดย|ทั้งนี้|จึงเรียน|จึงขอ|และขอ|ตามกำหนดการ|เวลา\s*\d|ใน(?:ระหว่าง)?วัน[ก-๙]*ที่|ระหว่างวันที่|วัน[ก-๙]*ที่\s*\d|สิ่งที่ส่งมาด้วย|เรียน|(?:การ)?แต่งกาย|เพื่อ(?:ทราบ|โปรด|เข้าร่วม|พิจารณา|ดำเนินการ)|$))/))) {
+      const loc = m[1].replace(/[,.\s]+$/, '').trim();
       if (loc) out.location = ('ณ ' + loc).slice(0, 255);                      // คง "ณ" ไว้หน้าสถานที่ตามหนังสือ
+    }
+    // การแต่งกาย (หน้าเวรกิจกรรม): "แต่งกาย(ด้วย)ชุด…" / "การแต่งกาย : …"
+    if ((m = flat.match(/แต่งกาย\s*(?:ด้วย|โดย)?\s*:?\s*([\s\S]*?)(?=\s*(?:ทั้งนี้|จึงเรียน|จึงขอ|และขอ|ตามกำหนดการ|เรียน|ณ\s|เวลา\s*\d|$)|[.。](?:\s|$))/))) {
+      const d = m[1].replace(/[,\s]+$/, '').trim();
+      if (d) out.dress = d.slice(0, 255);
     }
     // ออนไลน์: URL / Meeting ID / Passcode
     if ((m = flat.match(/https?:\/\/[^\s"'<>)]+/))) out.link = m[0].replace(/[.,]+$/, '');
@@ -107,21 +112,26 @@
     if (r.title) { setVal('title', r.title); done.push('กิจกรรม'); } else miss.push('กิจกรรม');
     if (r.start) {
       setVal('event_date', r.start, true);
-      if (r.end && r.end !== r.start) setVal('end_date', r.end, true); else if (field('end_date')._flatpickr) field('end_date')._flatpickr.clear();
-      done.push(r.end && r.end !== r.start ? 'วันที่–ถึงวันที่' : 'วันที่');
+      const ed = field('end_date');
+      if (ed && r.end && r.end !== r.start) setVal('end_date', r.end, true); else if (ed && ed._flatpickr) ed._flatpickr.clear();
+      done.push(ed && r.end && r.end !== r.start ? 'วันที่–ถึงวันที่' : 'วันที่');
     } else miss.push('วันที่');
     if (r.t1) {
       const allDay = document.getElementById('allDay');
-      if (allDay.checked) allDay.click();
+      if (allDay && allDay.checked) allDay.click();
       setVal('start_time', r.t1);
       if (r.t2) setVal('end_time', r.t2);
       done.push('เวลา');
     }
     if (r.location) { setVal('location', r.location); done.push('สถานที่'); } else miss.push('สถานที่');
-    if (r.link) { setVal('link', r.link); done.push('ลิงก์'); }
-    if (r.note) { const n = field('note'); n.value = (n.value.trim() ? n.value.trim() + '\n' : '') + r.note; done.push('หมายเหตุ (Meeting ID)'); }
-    if (r.all) document.querySelector('[data-add="*"]')?.click();
-    if (r.people && (r.people.length || r.all)) {
+    if (r.dress && field('dress')) { setVal('dress', r.dress); done.push('การแต่งกาย'); }
+    if (r.link && field('link')) { setVal('link', r.link); done.push('ลิงก์'); }
+    const n = field('note');
+    if (r.note && n) { n.value = (n.value.trim() ? n.value.trim() + '\n' : '') + r.note; done.push('หมายเหตุ (Meeting ID)'); }
+    const pick = form.querySelector('#userPick');            // หน้าเวรกิจกรรม: ผู้รับผิดชอบมาจากคิวเวร ไม่ต้องเลือก
+    if (pick && r.all) document.querySelector('[data-add="*"]')?.click();
+    if (!pick) { /* ข้าม */ }
+    else if (r.people && (r.people.length || r.all)) {
       r.people.forEach(p => {
         const cb = form.querySelector('#userPick input[name="users[]"][value="' + p.id + '"]');
         if (cb && !cb.checked) cb.click();
