@@ -7,7 +7,8 @@
  *   จุดเริ่มต้น (ก่อนใช้ระบบ): คิวล่าสุดที่ได้ไปแล้ว — ข้าราชการ (core_settings.cal_rota_last_official = ชื่อ)
  *   และกลุ่ม (cal_rota_last_group) → ถือว่าตั้งแต่ลำดับแรกถึงคน/กลุ่มนั้นได้ไปแล้ว คิวเริ่มที่ลำดับถัดไป
  *   สถิติจังหวัดเข้าร่วมด้วย (เลือกต่อกิจกรรม): ถ้ายังไม่มีสถิติจังหวัดและผู้รักษาการเป็นข้าราชการที่ "ถึงคิว" พอดี
- *   → นับเป็นคิวของผู้รักษาการแล้ว (chief_counted) และเลือกข้าราชการคิวถัดไปเป็นข้าราชการของกิจกรรม
+ *   → นับเป็นคิวของผู้รักษาการแล้ว และเลือกข้าราชการคิวถัดไปได้ (หรือไม่มีข้าราชการไปด้วย)
+ *   "ถึงคิวพอดี" = หัวคิว หรือคนถัดไปตามวงกลม (ต่อจากคนล่าสุดที่ได้คิว) — ตัดสินจากประวัติทุกครั้ง (rota_state()['chief_counted'])
  */
 
 const ROTA_MAX_SKIP = 3;
@@ -139,25 +140,64 @@ function rota_has_multi(): bool
 }
 
 /**
- * คิวในรอบปัจจุบัน: ไล่ประวัติตามลำดับ — คนที่ได้แล้วออกจากรอบ ครบทุกคนเริ่มรอบใหม่
- * $order = คีย์ตามลำดับรายชื่อ · $picked = คีย์ที่ได้ในแต่ละเวร (ตามลำดับ)
- * คืน [round, remaining keys (ตามลำดับ)]
+ * คิวแบบวงกลม: ไล่ประวัติตามลำดับที่จัดเวร — คนที่ได้แล้วออกจากรอบ ครบทุกคนเริ่มรอบใหม่ (วนกลับลำดับแรก)
+ * $order = คีย์ตามลำดับรายชื่อ · $picked = คีย์ หรือ [คีย์, turn_id, เป็นสถิติจังหวัด] ตามลำดับที่จัด
+ *   คนถัดไปตามวงกลม (next) = คนต่อจากคนล่าสุดที่ได้คิวในลำดับรายชื่อ (คนสุดท้าย → วนกลับคนแรก)
+ *   สถิติจังหวัด (ผู้รักษาการ) เข้าร่วม: นับเป็นคิวเมื่อเป็น "หัวคิว" หรือ "คนถัดไปตามวงกลม" ในขณะนั้น
+ *   ถ้าได้คิวในรอบนี้ไปแล้ว = นับเป็นคิวของรอบถัดไป · ไม่ถึงคิว = คิวคงเดิม
+ * คืน [round, remaining keys (ตามลำดับ), [turn_id => true] ที่สถิติจังหวัดถูกนับคิว, next]
  */
 function rota_queue(array $order, array $picked): array
 {
+    $n = count($order);
     $round = 1;
     $done = [];
-    foreach ($picked as $k) {
+    $credit = [];                              // ได้คิวล่วงหน้าของรอบถัดไป (สถิติจังหวัด)
+    $chief = [];
+    $last = null;
+    $nextOf = fn($last) => $last === null ? ($order[0] ?? null) : $order[(array_search($last, $order, true) + 1) % $n];
+    foreach ($picked as $p) {
+        [$k, $tid, $isChief] = is_array($p) ? $p : [$p, 0, false];
         if (!in_array($k, $order, true)) {
             continue;                          // ไม่อยู่ในรายชื่อแล้ว
         }
+        if ($isChief) {
+            $head = null;
+            foreach ($order as $o) {
+                if (!isset($done[$o])) {
+                    $head = $o;
+                    break;
+                }
+            }
+            if ($k !== $head && $k !== $nextOf($last)) {
+                continue;                      // ยังไม่ถึงคิว = คิวคงเดิม
+            }
+            $chief[$tid] = true;
+            if (isset($done[$k])) {
+                $credit[$k] = true;            // ได้แล้วในรอบนี้ → นับเป็นคิวของรอบถัดไป
+                $last = $k;
+                continue;
+            }
+        }
         $done[$k] = true;
-        if (count($done) >= count($order)) {
+        $last = $k;
+        if (count($done) >= $n) {
             $round++;
-            $done = [];
+            $done = $credit;
+            $credit = [];
         }
     }
-    return [$round, array_values(array_filter($order, fn($k) => !isset($done[$k])))];
+    return [$round, array_values(array_filter($order, fn($k) => !isset($done[$k]))), $chief, $nextOf($last)];
+}
+
+/** สถิติจังหวัด (ผู้รักษาการ) ถึงคิวข้าราชการพอดีหรือไม่ — หัวคิว หรือคนถัดไปตามวงกลม (เข้าร่วม = นับเป็นคิว) */
+function rota_chief_due(array $state, ?array $chief): bool
+{
+    if (!$chief) {
+        return false;
+    }
+    $k = rota_key($chief['user_id'], $chief['name']);
+    return ($state['officials'][0]['key'] ?? null) === $k || ($state['next'] ?? null) === $k;
 }
 
 /**
@@ -173,10 +213,10 @@ function rota_state(?array $members = null, ?array $turns = null): array
         $alias[rota_key(null, $m['name'])] = $m['key'];
     }
     $hist = [];
-    foreach ($turns as $t) {                       // ผู้รักษาการที่นับเป็นคิวแล้ว (chief_counted) มาก่อนข้าราชการของกิจกรรมนั้น
-        if (!empty($t['chief_counted'])) {
+    foreach ($turns as $t) {                       // สถิติจังหวัดเข้าร่วม: ตัดสินว่าถึงคิวพอดีหรือไม่ตอนไล่คิว (rota_queue) ก่อนข้าราชการของกิจกรรมนั้น
+        if (!empty($t['chief_name']) && empty($t['all_officials'])) {
             $k = rota_key($t['chief_user_id'] ? (int)$t['chief_user_id'] : null, (string)$t['chief_name']);
-            $hist[] = $alias[$k] ?? $k;
+            $hist[] = [$alias[$k] ?? $k, (int)$t['id'], true];
         }
         if (!empty($t['officials'])) {             // ข้าราชการหลายคน: นับเฉพาะที่ counted (ข้าราชการทุกคน = ไม่กระทบคิว)
             foreach ($t['officials'] as $o) {
@@ -207,11 +247,13 @@ function rota_state(?array $members = null, ?array $turns = null): array
     $gOrder = array_map('strval', array_keys($members['groups']));
     $lastG = (string)(int)setting('cal_rota_last_group', '0');
     $startG = in_array($lastG, $gOrder, true) ? array_slice($gOrder, 0, array_search($lastG, $gOrder, true) + 1) : [];
-    [$oRound, $oQueue] = rota_queue(array_keys($byKey), array_merge($startO, $hist));
+    [$oRound, $oQueue, $chiefCounted, $next] = rota_queue(array_keys($byKey), array_merge($startO, $hist));
     $gTurns = array_filter($turns, fn($t) => (int)$t['group_no'] > 0);       // ไม่เลือกกลุ่ม (group_no 0) ไม่กระทบคิวกลุ่ม
     [$gRound, $gQueue] = rota_queue($gOrder, array_merge($startG, array_map(fn($t) => (string)$t['group_no'], $gTurns)));
     return ['official_round' => $oRound, 'officials' => array_map(fn($k) => $byKey[$k], $oQueue),
-            'group_round' => $gRound, 'groups' => array_map('intval', $gQueue), 'members' => $members];
+            'group_round' => $gRound, 'groups' => array_map('intval', $gQueue), 'members' => $members,
+            'chief_counted' => $chiefCounted,      // [turn_id => true] เวรที่สถิติจังหวัดเข้าร่วมตอนถึงคิว = นับเป็นคิวแล้ว
+            'next' => $next];                      // คนถัดไปตามวงกลม (ต่อจากคนล่าสุดที่ได้คิว)
 }
 
 /** ข้อความรายชื่อสมาชิกกลุ่ม */
