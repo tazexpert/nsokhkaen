@@ -119,7 +119,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $state = rota_state();
 $members = $state['members'];
-$turns = array_reverse(rota_turns());
+$turns = rota_turns();
+usort($turns, fn($a, $b) => [$b['event_date'], (string)$b['start_time'], (int)$b['id']] <=> [$a['event_date'], (string)$a['start_time'], (int)$a['id']]);   // วันที่ล่าสุดก่อน
 $chiefKey = $chief ? rota_key($chief['user_id'], $chief['name']) : '';
 $chiefPos = $chief ? array_search($chiefKey, array_column($state['officials'], 'key'), true) : false;
 $choices = array_slice($state['officials'], 0, ROTA_MAX_SKIP + 2);       // +1 เผื่อผู้รักษาการถูกตัดออกเมื่อเข้าร่วมในฐานะสถิติจังหวัด (JS เลือกแสดง)
@@ -324,7 +325,7 @@ require __DIR__ . '/header.php';
           <td><a href="event_view?id=<?= (int)$t['event_id'] ?>"><?= h($t['title']) ?></a></td>
           <td class="small"><?= h($t['location'] ?: '-') ?></td>
           <td class="small"><?= h($t['dress'] ?: '-') ?></td>
-          <td class="small"><?= !empty($t['chief_name']) ? h($t['chief_name']) . (!empty($t['chief_counted']) ? '<div class="text-success">นับเป็นคิวข้าราชการแล้ว</div>' : '') : '<span class="text-muted">-</span>' ?></td>
+          <td class="small"><?= !empty($t['chief_name']) ? h($t['chief_name']) . (!empty($state['chief_counted'][(int)$t['id']]) ? '<div class="text-success">นับเป็นคิวข้าราชการแล้ว</div>' : '') : '<span class="text-muted">-</span>' ?></td>
           <td><?php if (!empty($t['all_officials'])): ?>ข้าราชการทุกคน <span class="small text-muted">(<?= count($t['officials']) ?> คน · ไม่นับคิว)</span>
             <?php elseif (!empty($t['officials'])): ?><?= h(implode(', ', array_column($t['officials'], 'name'))) ?>
             <?php elseif ($t['official_name'] === ''): ?><span class="text-muted">- ไม่มีข้าราชการ</span>
