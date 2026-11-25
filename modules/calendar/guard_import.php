@@ -103,7 +103,8 @@ require __DIR__ . '/header.php';
       <div class="card-body">
         <label class="form-label">ไฟล์ PDF ที่สแกน (หรือภาพหน้าตาราง)</label>
         <input type="file" class="form-control" id="giFile" accept="application/pdf,image/*" multiple>
-        <div class="small text-muted mt-2">ระบบอ่านตาราง "บัญชีรายละเอียดแนบท้ายคำสั่ง" ในเบราว์เซอร์ (ไม่ส่งไฟล์ไปที่ใด) ใช้เวลาราว 1–3 นาที
+        <button type="button" class="btn btn-primary mt-2" id="giRead" disabled><i class="bi bi-eye"></i> ตรวจสอบข้อมูลก่อนนำเข้า</button>
+        <div class="small text-muted mt-2">ระบบอ่านตาราง "บัญชีรายละเอียดแนบท้ายคำสั่ง" ในเบราว์เซอร์ (ไม่ส่งไฟล์ไปที่ใด) กดปุ่มแล้วรอราว 1–3 นาที รายการที่อ่านได้จะแสดงในช่องที่ 2 ให้ตรวจก่อนกดบันทึก
           · เลือกเฉพาะบุคลากรของสำนักงานสถิติจังหวัดขอนแก่น ในช่อง <b>ผู้ปฏิบัติหน้าที่เวร</b> และ <b>ผู้ตรวจเวร</b></div>
         <div class="progress mt-3 d-none" id="giProg" role="progressbar" aria-label="ความคืบหน้า"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width:0%"></div></div>
         <div class="small mt-2" id="giMsg"></div>

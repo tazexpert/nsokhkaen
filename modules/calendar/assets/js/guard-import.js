@@ -237,8 +237,8 @@
     return out;
   };
   const run = async files => {
-    const input = document.getElementById('giFile');
-    input.disabled = true;
+    const input = document.getElementById('giFile'), btn = document.getElementById('giRead');
+    input.disabled = btn.disabled = true;
     const raw = [], rows = [], votes = {};
     let prev = null, tables = 0, firstDay = null;
     try {
@@ -299,11 +299,18 @@
       msg.innerHTML = '<span class="text-danger"><i class="bi bi-x-circle"></i> ' + esc(e.message || String(e)) + '</span>';
       console.error(e);
     } finally {
-      input.disabled = false;
+      input.disabled = btn.disabled = false;
       prog.classList.add('d-none');
       if (raw.length) { document.getElementById('giRaw').textContent = raw.join('\n'); document.getElementById('giRawBox').classList.remove('d-none'); }
     }
   };
-  document.getElementById('giFile').addEventListener('change', e => { if (e.target.files.length) run([...e.target.files]); });
+  // เลือกไฟล์ → กด "ตรวจสอบข้อมูลก่อนนำเข้า" จึงเริ่มอ่าน (ยังไม่บันทึกจนกด "บันทึกและลงปฏิทิน")
+  const fileIn = document.getElementById('giFile'), readBtn = document.getElementById('giRead');
+  fileIn.addEventListener('change', () => { readBtn.disabled = !fileIn.files.length; });
+  readBtn.addEventListener('click', () => {
+    if (!fileIn.files.length) return;
+    if (body.dataset.dirty && !confirm('มีรายการที่แก้ไขไว้ในช่องที่ 2 — อ่านไฟล์ใหม่จะแทนที่รายการเหล่านั้น ดำเนินการต่อ?')) return;
+    run([...fileIn.files]);
+  });
   window.guardImportDebug = { norm, approx, people, findGrid };      // ใช้ทดสอบ
 })();
