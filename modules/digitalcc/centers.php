@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
-require_module(DCC_MODULE, 'viewer');
+require_module(DCC_MODULE, 'inspector');
 $pdo = db();
 
 // ลบศูนย์

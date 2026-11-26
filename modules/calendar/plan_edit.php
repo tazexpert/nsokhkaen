@@ -4,12 +4,15 @@
  * - ตารางคน × วัน: พิมพ์รหัสในช่องได้เหมือน Excel (เช่น สพค, สพค*, โพล สรง) หรือเลือกรหัสจากแถบด้านบนแล้วคลิก/ลากบนช่อง
  * - เพิ่มรายชื่อ: ผู้มีบัญชีในระบบ หรือพิมพ์ชื่อ (ผู้ไม่มีบัญชี) · ไม่มีการลบรายชื่อ/ลบแผน (ป้องกันข้อมูลหาย) · แผนใหม่เริ่มจากรายชื่อเดือนก่อน (ไม่มี = บุคลากรทั้งหมด)
  * - บันทึก = แทนที่แผนของเดือนนั้น + ปรับเวรศาลากลางในปฏิทิน · เวรสำนักงานแสดงจากปฏิทิน (แก้ที่ "นำเข้าเวรสำนักงาน")
- * - ผู้บันทึกกิจกรรม (editor ที่ไม่ใช่ผู้ดูแล): "แผนของฉัน" แก้ได้เฉพาะแถวของตนในแผนที่ผู้ดูแลสร้างแล้ว
- *   (รายชื่อ/แถวของผู้อื่น/หมายเหตุ/เวรศาลากลาง คงเดิม)
+ * - ผู้ใช้งานทุกคน (ไม่ใช่ผู้ดูแล): "แผนของฉัน" แก้ได้เฉพาะแถวของตน — เดือนที่ยังไม่มีแผนก็แก้ได้
+ *   (บันทึกครั้งแรก = สร้างแผนจากรายชื่อเริ่มต้น plan_default_people) · รายชื่อ/แถวของผู้อื่น/หมายเหตุ/เวรศาลากลาง คงเดิม
  */
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/plan_lib.php';
-$me = require_module(CAL_MODULE, 'editor');
+$me = require_module(CAL_MODULE);
+if (!empty($me['is_guest'])) {                       // ผู้เยี่ยมชม (ไม่ login) ดูได้อย่างเดียว
+    redirect('plan');
+}
 [$y, $m] = plan_ym($_GET['m'] ?? null);
 $ym = sprintf('%04d-%02d', $y, $m);
 $days = (int)date('t', strtotime($ym . '-01'));
@@ -17,15 +20,16 @@ $codes = plan_codes();
 $plan = plan_get($y, $m);
 $errors = [];
 $notice = '';
-$selfOnly = !cal_can('admin');                       // ผู้บันทึกกิจกรรม: แก้เฉพาะแถวของตน
+$selfOnly = !cal_can('admin');                       // ผู้ใช้งานทั่วไป: แก้เฉพาะแถวของตน
 $myId = (int)$me['id'];
-if ($selfOnly && !$plan) {
-    flash('ยังไม่มีแผนการปฏิบัติงานเดือน' . plan_month_text($y, $m) . ' — รอผู้ดูแลปฏิทินสร้างแผนก่อน', 'warning');
-    redirect('plan?m=' . $ym);
-}
-// แถวของฉันในแผนปัจจุบัน (ช่องเดิม รวมเวรศาลากลาง)
+// แถวของฉันในแผนปัจจุบัน (ช่องเดิม รวมเวรศาลากลาง) · ยังไม่มีแผน = เวรศาลากลางตามคำสั่งจังหวัด (ถ้านำเข้าแล้ว)
 $myOld = [];
-if ($selfOnly) {
+if ($selfOnly && !$plan) {
+    foreach (plan_guard_days($y, $m)[$myId] ?? [] as $d => $_) {
+        $myOld[$d] = [PLAN_GUARD_ID];
+    }
+}
+if ($selfOnly && $plan) {
     $allCells = plan_cells((int)$plan['id']);
     foreach (plan_people((int)$plan['id']) as $pp) {
         if ((int)$pp['user_id'] === $myId) {
@@ -91,8 +95,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $full = [];
         $found = false;
-        $allCells = plan_cells((int)$plan['id']);
-        foreach (plan_people((int)$plan['id']) as $pp) {
+        if ($plan) {
+            $allCells = plan_cells((int)$plan['id']);
+            $base = plan_people((int)$plan['id']);
+        } else {                                       // ยังไม่มีแผน: สร้างจากรายชื่อเริ่มต้น + เวรศาลากลางตามคำสั่งจังหวัด
+            $base = plan_default_people($y, $m);
+            $allCells = [];
+            $gd = plan_guard_days($y, $m);
+            foreach ($base as $bp) {
+                foreach ($gd[(int)$bp['user_id']] ?? [] as $d => $_) {
+                    $allCells[(int)$bp['id']][$d] = [PLAN_GUARD_ID];
+                }
+            }
+        }
+        foreach ($base as $pp) {
             $isMe = (int)$pp['user_id'] === $myId;
             $found = $found || $isMe;
             $full[] = ['user_id' => $pp['user_id'] ? (int)$pp['user_id'] : null, 'name' => $pp['name'],
@@ -101,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!$found) {
             $full[] = ['user_id' => $myId, 'name' => $me['full_name'], 'cells' => $newCells];
         }
-        plan_save($y, $m, $full, $plan['note'], $myId);
+        plan_save($y, $m, $full, $plan['note'] ?? null, $myId);
         audit_log('cal_plan_self', 'แก้ไขแผนการปฏิบัติงานของตนเอง ' . plan_month_text($y, $m), CAL_MODULE);
         flash('บันทึกแผนของคุณเดือน' . plan_month_text($y, $m) . ' แล้ว');
         redirect('plan?m=' . $ym);

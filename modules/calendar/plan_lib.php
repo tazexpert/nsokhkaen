@@ -209,6 +209,9 @@ function plan_save(int $y, int $m, array $people, ?string $note, int $actorId): 
             }
         }
         $guard = plan_sync_guard($y, $m, $actorId);
+        if (guard_month_has($y, $m)) {            // เวรศาลากลางตามคำสั่งจังหวัด (นำเข้า PDF) = เครื่องหมาย * ในแผน
+            guard_mark_plan($y, $m);
+        }
         $pdo->commit();
         return ['plan_id' => $planId, 'guard' => $guard];
     } catch (Throwable $e) {
@@ -441,4 +444,42 @@ function plan_parse_xlsx(string $path, array $codes): array
         $res['errors'][] = 'ไม่พบรายชื่อผู้ปฏิบัติงานในไฟล์';
     }
     return $res;
+}
+
+/**
+ * รายชื่อเริ่มต้นของเดือนที่ยังไม่มีแผน: รายชื่อแผนเดือนก่อน (ไม่มี = บุคลากรทั้งหมด)
+ * คืนแถวรูปแบบเดียวกับ plan_people() — id ติดลบ (ยังไม่บันทึก) · เรียงตามลำดับบุคลากร
+ */
+function plan_default_people(int $y, int $m): array
+{
+    $rows = [];
+    [$py, $pm] = plan_ym(date('Y-m', strtotime(sprintf('%04d-%02d-01', $y, $m) . ' -1 month')));
+    if ($prev = plan_get($py, $pm)) {
+        foreach (plan_people((int)$prev['id']) as $p) {
+            $rows[] = ['user_id' => $p['user_id'] ? (int)$p['user_id'] : null, 'name' => $p['name'], 'username' => $p['username'], 'sort_order' => $p['sort_order'], 'position' => $p['position']];
+        }
+    } else {
+        foreach (cal_users() as $u) {
+            $rows[] = ['user_id' => (int)$u['id'], 'name' => $u['full_name'], 'username' => $u['username'], 'sort_order' => $u['sort_order'], 'position' => $u['position']];
+        }
+    }
+    $rows = plan_sort_people($rows);
+    foreach ($rows as $i => &$r) {
+        $r['id'] = -($i + 1);
+    }
+    unset($r);
+    return $rows;
+}
+
+/** เวรศาลากลางตามคำสั่งจังหวัด (นำเข้า PDF) ของเดือน → [user_id => [day => true]] (ใช้กับแผนที่ยังไม่บันทึก) */
+function plan_guard_days(int $y, int $m): array
+{
+    require_once __DIR__ . '/guard_lib.php';
+    $out = [];
+    foreach (guard_month_rows($y, $m) as $r) {
+        if ($r['user_id']) {
+            $out[(int)$r['user_id']][(int)substr($r['guard_date'], 8, 2)] = true;
+        }
+    }
+    return $out;
 }

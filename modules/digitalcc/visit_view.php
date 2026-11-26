@@ -1,7 +1,7 @@
 <?php
 /** แสดง/พิมพ์ แบบฟอร์มการตรวจเยี่ยมศูนย์ดิจิทัลชุมชน (รูปแบบเดียวกับแบบฟอร์มกระดาษ) */
 require_once __DIR__ . '/bootstrap.php';
-require_module(DCC_MODULE, 'viewer');
+require_module(DCC_MODULE, 'inspector');
 $pdo = db();
 $id = int_param('id');
 $st = $pdo->prepare('SELECT v.*, c.name AS cur_name, c.house_no, c.village, c.moo, c.address, c.subdistrict, c.district, c.center_type

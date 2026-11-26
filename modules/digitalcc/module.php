@@ -9,17 +9,17 @@ return [
     'color'       => '#96c93e',
     'description' => 'ข้อมูลศูนย์ ผู้ดูแล กิจกรรม และการตรวจเยี่ยมศูนย์ดิจิทัลชุมชน 26 อำเภอ',
     'order'       => 20,
-    'default_role' => 'viewer',                       // บุคลากรทุกคนดูข้อมูลได้ (บันทึกการตรวจเยี่ยม = ผู้ตรวจเยี่ยมขึ้นไป)
+    'default_role' => 'viewer',                       // บุคลากรทุกคนดูหน้าภาพรวม/เว็บไซต์ได้ (ข้อมูลศูนย์/ตรวจเยี่ยม = ผู้ตรวจเยี่ยมขึ้นไป)
     'roles' => [
-        'viewer'    => 'ผู้ใช้งาน — ดูข้อมูลศูนย์ การตรวจเยี่ยม และภาพรวม',
+        'viewer'    => 'ผู้ใช้งาน — ดูหน้าภาพรวม และหน้าเว็บไซต์ศูนย์ดิจิทัลชุมชน',
         'inspector' => 'ผู้ตรวจเยี่ยม — ดูข้อมูลศูนย์ และบันทึกการตรวจเยี่ยม',
         'editor'    => 'เจ้าหน้าที่ — จัดการศูนย์ ผู้ดูแล กิจกรรม พิกัด และการตรวจเยี่ยม',
         'admin'     => 'ผู้ดูแลระบบศูนย์ฯ — ทำได้ทั้งหมด รวมถึงการลบข้อมูล',
     ],
     'menu' => [
         ['id' => 'dashboard',  'label' => 'ภาพรวม',            'href' => '',      'icon' => 'bi-speedometer2',    'role' => 'viewer'],
-        ['id' => 'centers',    'label' => 'ศูนย์ดิจิทัลชุมชน',   'href' => 'centers',    'icon' => 'bi-building',        'role' => 'viewer'],
-        ['id' => 'visits',     'label' => 'ตรวจเยี่ยมศูนย์',     'href' => 'visits',     'icon' => 'bi-clipboard-check', 'role' => 'viewer'],
+        ['id' => 'centers',    'label' => 'ศูนย์ดิจิทัลชุมชน',   'href' => 'centers',    'icon' => 'bi-building',        'role' => 'inspector'],
+        ['id' => 'visits',     'label' => 'ตรวจเยี่ยมศูนย์',     'href' => 'visits',     'icon' => 'bi-clipboard-check', 'role' => 'inspector'],
         ['id' => 'activities', 'label' => 'กิจกรรม',            'href' => 'activities', 'icon' => 'bi-calendar-event',  'role' => 'editor'],
         ['id' => 'site',       'label' => 'ดูหน้าเว็บไซต์',      'href' => 'public/',        'icon' => 'bi-box-arrow-up-right', 'role' => 'viewer', 'target' => '_blank'],
     ],

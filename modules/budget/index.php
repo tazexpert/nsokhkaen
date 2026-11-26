@@ -5,7 +5,7 @@
  *   กราฟรับเข้า-เบิกจ่ายรายเดือน · อันดับโครงการตามยอดได้รับ (คลิกไปหน้ารายละเอียดโครงการ)
  */
 require_once __DIR__ . '/bootstrap.php';
-require_module(BUD_MODULE, 'viewer');
+require_module(BUD_MODULE, 'user');                // ผู้ใช้งานทุกคนดูหน้าภาพรวมได้
 $fy = bud_fy_param();
 $months = bud_fy_months($fy);
 $totals = bud_totals($fy);
@@ -89,5 +89,9 @@ foreach (bud_fy_list() as $y) {
 }
 $pageActions .= '</select></form>' . (bud_can('editor') ? '<a href="txn_form?type=receive" class="btn btn-primary"><i class="bi bi-box-arrow-in-down"></i> รับเข้า</a><a href="txn_form?type=spend" class="btn btn-warning"><i class="bi bi-box-arrow-up"></i> เบิกจ่าย</a>' : '');
 require __DIR__ . '/header.php';
+if (!bud_can('viewer')): ?><div class="bud-dash-only"><?php endif;   // ผู้ใช้งาน: ดูได้เฉพาะภาพรวม — ลิงก์ไปหน้ารายละเอียดใช้ไม่ได้
 require __DIR__ . '/dash.php';
+if (!bud_can('viewer')): ?></div>
+<style>.bud-dash-only a[href] { pointer-events: none; cursor: default; } .bud-dash-only a[href^="report"].ms-auto { display: none; }</style>
+<?php endif;
 require __DIR__ . '/footer.php';

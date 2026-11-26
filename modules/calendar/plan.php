@@ -2,7 +2,8 @@
 /**
  * แผนการปฏิบัติงาน (รายเดือน) — ตารางคน × วัน เหมือนไฟล์ Excel เดิม · ทุกคนที่ login ดูได้
  * - สรุปจำนวนวันต่อรหัสงาน / เวรสำนักงาน / เวรศาลากลาง คำนวณอัตโนมัติ + แถวรวมคนออกสนามรายวัน
- * - เวรสำนักงานดึงจากปฏิทิน · แก้ไข/นำเข้า/รหัสงาน: ผู้ดูแลปฏิทิน · ผู้บันทึกกิจกรรมแก้ไขแถวของตนได้ (plan_edit.php)
+ * - เวรสำนักงานดึงจากปฏิทิน · แก้ไข/นำเข้า/รหัสงาน: ผู้ดูแลปฏิทิน · ผู้ใช้งานทุกคนแก้ไขแถวของตนได้ (plan_edit.php)
+ * - เดือนที่ยังไม่มีแผน: แสดงตารางรายชื่อเริ่มต้น (plan_default_people) ให้ดู/แก้แผนของตนได้เลย
  */
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/plan_lib.php';
@@ -29,8 +30,17 @@ $isAdmin = cal_can('admin');
 
 $plan = plan_get($y, $m);
 $codes = plan_codes();
-$people = $plan ? plan_people((int)$plan['id']) : [];
+$people = $plan ? plan_people((int)$plan['id']) : plan_default_people($y, $m);   // ยังไม่มีแผน = ตารางรายชื่อเริ่มต้น (แก้แผนของตนเองได้)
 $cells = $plan ? plan_cells((int)$plan['id']) : [];
+if (!$plan) {
+    $gd = plan_guard_days($y, $m);
+    foreach ($people as $p) {
+        foreach ($gd[(int)$p['user_id']] ?? [] as $d => $_) {
+            $cells[(int)$p['id']][$d] = [PLAN_GUARD_ID];
+        }
+    }
+}
+$canSelf = empty($me['is_guest']);                 // ผู้ใช้งานทุกคน (login) แก้แผนของตนเองได้
 $duty = plan_duty_map($y, $m);
 $att = att_month($y, $m);                 // เวลาปฏิบัติราชการ [user_id][day]
 $trips = att_trip_map($y, $m);           // กิจกรรมไปราชการ [user_id][day]
@@ -58,7 +68,7 @@ $pageActions = '<button type="button" class="btn btn-outline-secondary" onclick=
         . '<a href="plan_import?m=' . $ym . '" class="btn btn-outline-primary"><i class="bi bi-file-earmark-excel"></i> นำเข้า Excel</a>'
         . '<a href="att_import" class="btn btn-outline-primary"><i class="bi bi-clock-history"></i> นำเข้าเวลาปฏิบัติราชการ</a>'
         . '<a href="' . h(module_url('ea', 'projects')) . '" class="btn btn-outline-secondary"><i class="bi bi-kanban"></i> โครงการ</a>'
-        : (cal_can('editor') && $plan ? '<a href="plan_edit?m=' . $ym . '" class="btn btn-primary"><i class="bi bi-pencil-square"></i> แก้ไขแผนของฉัน</a>' : ''));
+        : ($canSelf ? '<a href="plan_edit?m=' . $ym . '" class="btn btn-primary"><i class="bi bi-pencil-square"></i> แก้ไขแผนของฉัน</a>' : ''));
 $wd = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
 $today = date('Y-m-d');
 require __DIR__ . '/header.php';
@@ -74,13 +84,11 @@ require __DIR__ . '/header.php';
   <h1 class="plan-print-title d-none d-print-block">แผนการปฏิบัติงานสนามโครงการต่าง ๆ ประจำเดือน <?= h(plan_month_text($y, $m)) ?><br><?= h(ORG_NAME) ?></h1>
 
   <?php if (!$plan): ?>
-    <div class="card-body text-center text-muted py-5">
-      <i class="bi bi-grid-3x3 fs-1 d-block mb-2"></i>ยังไม่มีแผนการปฏิบัติงานเดือน<?= h(plan_month_text($y, $m)) ?>
-      <?php if ($isAdmin): ?><div class="mt-3 d-flex gap-2 justify-content-center">
-        <a href="plan_import?m=<?= $ym ?>" class="btn btn-primary"><i class="bi bi-file-earmark-excel"></i> นำเข้าจาก Excel</a>
-        <a href="plan_edit?m=<?= $ym ?>" class="btn btn-outline-primary"><i class="bi bi-pencil-square"></i> สร้างแผนในหน้าเว็บ</a></div><?php endif; ?>
+    <div class="alert alert-light border-0 border-bottom rounded-0 mb-0 small no-print d-flex flex-wrap align-items-center gap-2">
+      <span><i class="bi bi-info-circle"></i> ยังไม่มีการบันทึกแผนเดือน<?= h(plan_month_text($y, $m)) ?> — แสดงรายชื่อเริ่มต้น<?= $canSelf ? ' · กด "แก้ไขแผนของฉัน" เพื่อบันทึกแผนของคุณได้เลย' : '' ?></span>
+      <?php if ($isAdmin): ?><a href="plan_import?m=<?= $ym ?>" class="btn btn-sm btn-outline-primary ms-auto"><i class="bi bi-file-earmark-excel"></i> นำเข้าจาก Excel</a><?php endif; ?>
     </div>
-  <?php else: ?>
+  <?php endif; ?>
   <div class="table-responsive plan-scroll">
     <table class="table table-bordered table-sm align-middle mb-0 plan-grid">
       <thead>
@@ -186,9 +194,8 @@ require __DIR__ . '/header.php';
       <span class="me-2 text-nowrap"><span class="att-chip att-trip">ร</span> ไปราชการ</span>
       <span class="me-2 text-nowrap"><span class="att-chip att-absent">ข</span> ขาดราชการ (เจ้าของคลิกเพื่อรับรอง เมื่อทำใบรับรองแล้ว)</span>
       <span class="me-2 text-nowrap"><span class="att-chip att-leave">ป</span> การลาตามไฟล์</span></div>
-    <?php if ($plan['note']): ?><div class="mt-2"><b>หมายเหตุ:</b> <?= nl2br(h($plan['note'])) ?></div><?php endif; ?>
+    <?php if (!empty($plan['note'])): ?><div class="mt-2"><b>หมายเหตุ:</b> <?= nl2br(h($plan['note'])) ?></div><?php endif; ?>
   </div>
-  <?php endif; ?>
 </div>
 <style>
   .plan-scroll { max-height: 78vh; }

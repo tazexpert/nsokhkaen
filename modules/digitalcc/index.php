@@ -44,7 +44,7 @@ require __DIR__ . '/header.php';
   <?php endforeach; ?>
 </div>
 
-<?php if ((int)$stats['no_location'] > 0): ?>
+<?php if ((int)$stats['no_location'] > 0 && dcc_can('inspector')): ?>
   <div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i>
     มี <?= (int)$stats['no_location'] ?> ศูนย์ที่ยังไม่ได้ระบุพิกัด lat/long จึงยังไม่แสดงบนแผนที่ — <a href="centers?nolocation=1" class="alert-link">ดูรายการ</a></div>
 <?php endif; ?>
@@ -98,10 +98,12 @@ require __DIR__ . '/header.php';
                   </span>
                 </div>
               <?php endforeach; ?>
+              <?php if (dcc_can('inspector')): ?>
               <div class="d-flex gap-3 small pt-1">
                 <a href="centers?district=<?= urlencode($r['district']) ?>"><i class="bi bi-building"></i> จัดการศูนย์ในอำเภอนี้</a>
                 <a href="visits?district=<?= urlencode($r['district']) ?>"><i class="bi bi-clipboard-check"></i> ตรวจเยี่ยม</a>
               </div>
+              <?php endif; ?>
             </div>
           </details>
         <?php endforeach; ?>
