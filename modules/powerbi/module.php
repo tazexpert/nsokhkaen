@@ -8,7 +8,7 @@ return [
     'logo'        => 'assets/img/logo.svg',
     'color'       => '#d97706',
     'description' => 'แผนที่พิกัดเขตแจงนับ (EA) ตัวอย่างโครงการ (Power BI)',
-    'order'       => 40,
+    'order'       => 35,
     'default_role' => 'viewer',                       // บุคลากรทุกคนดูได้ (แก้ไขลิงก์ = ผู้ดูแล)
     'roles' => [
         'viewer' => 'ผู้ใช้งาน — เห็นเมนูและเปิดดูพิกัด EA ตัวอย่างโครงการ',

@@ -58,7 +58,7 @@ foreach ($widgets as $widget) {
   <?php endif; ?>
 </div>
 <div class="alert alert-info py-2 small d-none" id="arrangeHelp"><i class="bi bi-info-circle"></i>
-  ลากกล่องเพื่อสลับตำแหน่ง หรือใช้ปุ่มลูกศร — ลำดับนี้ใช้กับเมนูด้านบนด้วย<?= count($mods) > 5 ? ' (เมนูด้านบนแสดง 4 ระบบแรก ที่เหลืออยู่ใน "ระบบอื่นๆ")' : '' ?></div>
+  ลากกล่องเพื่อสลับตำแหน่ง หรือใช้ปุ่มลูกศร — ลำดับนี้ใช้กับเมนูด้านบนด้วย<?= count($mods) > 8 ? ' (เมนูด้านบนแสดง 7 ระบบแรก ที่เหลืออยู่ใน "ระบบอื่นๆ")' : '' ?></div>
 
 <div class="row g-3 mb-4" id="modGrid" data-reveal>
   <?php foreach ($mods as $m): ?>
