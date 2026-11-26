@@ -21,6 +21,40 @@ const CAL_FIXED_HOLIDAYS = [
     '12-10' => 'วันรัฐธรรมนูญ', '12-31' => 'วันสิ้นปี',
 ];
 
+const CAL_COMP_PREFIX = 'วันหยุดชดเชย';
+
+/**
+ * วันหยุดตรงเสาร์-อาทิตย์ → เพิ่มวันหยุดชดเชยในวันทำการถัดไป (วันจันทร์ หรือวันถัดไปที่ไม่ใช่วันหยุด)
+ * ชื่อ "วันหยุดชดเชย" + ชื่อวันหยุด · มีครบแล้ว (ภายใน 10 วัน) = ไม่เพิ่มซ้ำ (กดซ้ำได้) · คืนวันที่ชดเชยที่เพิ่ม หรือ null
+ */
+function cal_holiday_comp(PDO $pdo, string $date, string $name, int $uid): ?string
+{
+    $w = (int)date('w', strtotime($date));
+    if (($w !== 0 && $w !== 6) || str_starts_with($name, CAL_COMP_PREFIX)) {
+        return null;
+    }
+    $compName = mb_substr(CAL_COMP_PREFIX . $name, 0, 150);
+    $until = date('Y-m-d', strtotime($date . ' +10 days'));
+    // ไม่เพิ่มซ้ำ: วันหยุดชื่อเดียวกันตรงเสาร์-อาทิตย์ติดกัน (เช่น สงกรานต์ เสาร์+อาทิตย์) ต้องได้วันชดเชยครบตามจำนวนวัน
+    $st = $pdo->prepare('SELECT holiday_date FROM cal_holidays WHERE name = ? AND holiday_date >= ? AND holiday_date < ?');
+    $st->execute([$name, date('Y-m-d', strtotime($date . ' -10 days')), $date]);
+    $need = 1 + count(array_filter($st->fetchAll(PDO::FETCH_COLUMN), fn($d) => in_array((int)date('w', strtotime($d)), [0, 6], true)));
+    $st = $pdo->prepare('SELECT COUNT(*) FROM cal_holidays WHERE name = ? AND holiday_date > ? AND holiday_date <= ?');
+    $st->execute([$compName, $date, $until]);
+    if ((int)$st->fetchColumn() >= $need) {
+        return null;
+    }
+    $taken = cal_holidays(date('Y-m-d', strtotime($date . ' +1 day')), $until);
+    for ($d = date('Y-m-d', strtotime($date . ' +1 day')); $d <= $until; $d = date('Y-m-d', strtotime($d . ' +1 day'))) {
+        $dw = (int)date('w', strtotime($d));
+        if ($dw !== 0 && $dw !== 6 && !isset($taken[$d])) {
+            $pdo->prepare('INSERT INTO cal_holidays (holiday_date, name, created_by) VALUES (?, ?, ?)')->execute([$d, $compName, $uid]);
+            return $d;
+        }
+    }
+    return null;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $hasTable) {
     check_csrf();
     $action = post('action');
@@ -32,13 +66,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $hasTable) {
         } else {
             $pdo->prepare('INSERT INTO cal_holidays (holiday_date, name, created_by) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name)')
                 ->execute([$date, mb_substr($name, 0, 150), $me['id']]);
-            audit_log('cal_holiday_add', $date . ' ' . $name, CAL_MODULE);
-            flash('บันทึกวันหยุด ' . thai_date($date) . ' — ' . $name . ' แล้ว');
+            $comp = cal_holiday_comp($pdo, $date, $name, (int)$me['id']);     // ตรงเสาร์-อาทิตย์ → วันหยุดชดเชย
+            audit_log('cal_holiday_add', $date . ' ' . $name . ($comp ? ' · ชดเชย ' . $comp : ''), CAL_MODULE);
+            flash('บันทึกวันหยุด ' . thai_date($date) . ' — ' . $name . ' แล้ว'
+                . ($comp ? ' · ตรงวันเสาร์-อาทิตย์ เพิ่ม' . CAL_COMP_PREFIX . ' ' . cal_date_text($comp) . ' ให้แล้ว' : ''));
             $year = (int)substr($date, 0, 4);
         }
     } elseif ($action === 'delete') {
         $date = post('date');
+        $st = $pdo->prepare('SELECT name FROM cal_holidays WHERE holiday_date = ?');
+        $st->execute([$date]);
+        $name = (string)$st->fetchColumn();
         $pdo->prepare('DELETE FROM cal_holidays WHERE holiday_date = ?')->execute([$date]);
+        if ($name !== '') {                                       // ลบวันหยุดชดเชยของวันนั้นด้วย
+            $pdo->prepare('DELETE FROM cal_holidays WHERE name = ? AND holiday_date > ? AND holiday_date <= ?')
+                ->execute([mb_substr(CAL_COMP_PREFIX . $name, 0, 150), $date, date('Y-m-d', strtotime($date . ' +10 days'))]);
+        }
         audit_log('cal_holiday_delete', $date, CAL_MODULE);
         flash('ลบวันหยุด ' . thai_date($date) . ' แล้ว');
         $year = (int)substr($date, 0, 4);
@@ -49,8 +92,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $hasTable) {
             $ins->execute([$year . '-' . $md, $name, $me['id']]);
             $n += $ins->rowCount();
         }
-        audit_log('cal_holiday_preset', 'ปี ' . ($year + 543) . ' เพิ่ม ' . $n . ' วัน', CAL_MODULE);
-        flash('เพิ่มวันหยุดประจำปี ' . ($year + 543) . ' แล้ว ' . $n . ' วัน (วันที่มีอยู่แล้วไม่เปลี่ยน)');
+        $comps = 0;                                               // ตรงเสาร์-อาทิตย์ → วันหยุดชดเชย (ตามลำดับวันที่ เช่น สงกรานต์ต่อเนื่อง)
+        foreach (CAL_FIXED_HOLIDAYS as $md => $name) {
+            $comps += cal_holiday_comp($pdo, $year . '-' . $md, $name, (int)$me['id']) ? 1 : 0;
+        }
+        audit_log('cal_holiday_preset', 'ปี ' . ($year + 543) . ' เพิ่ม ' . $n . ' วัน · ชดเชย ' . $comps . ' วัน', CAL_MODULE);
+        flash('เพิ่มวันหยุดประจำปี ' . ($year + 543) . ' แล้ว ' . $n . ' วัน' . ($comps ? ' + วันหยุดชดเชย ' . $comps . ' วัน' : '') . ' (วันที่มีอยู่แล้วไม่เปลี่ยน)');
     }
     redirect('holidays?y=' . $year);
 }
@@ -75,7 +122,7 @@ require __DIR__ . '/header.php';
         <div class="mb-3"><label class="form-label">ชื่อวันหยุด <span class="text-danger">*</span></label>
           <input name="name" class="form-control" maxlength="150" required placeholder="เช่น วันหยุดชดเชย / วันหยุดพิเศษ"></div>
         <button class="btn btn-primary"><i class="bi bi-check2"></i> บันทึก</button>
-        <div class="small text-muted mt-2">วันที่มีอยู่แล้ว = แก้ชื่อวันหยุด · เสาร์-อาทิตย์เป็นวันหยุดอยู่แล้ว ไม่ต้องเพิ่ม</div>
+        <div class="small text-muted mt-2">วันที่มีอยู่แล้ว = แก้ชื่อวันหยุด · วันหยุดที่ตรงเสาร์-อาทิตย์ ระบบเพิ่ม<b>วันหยุดชดเชย</b>ในวันทำการถัดไป (วันจันทร์) ให้อัตโนมัติ · ลบวันหยุด = ลบวันหยุดชดเชยของวันนั้นด้วย</div>
       </div>
     </form>
     <form method="post" class="card" onsubmit="return confirm('เพิ่มวันหยุดราชการประจำปี <?= $year + 543 ?> (<?= count(CAL_FIXED_HOLIDAYS) ?> วันที่วันที่คงที่)?')">
