@@ -87,7 +87,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
     <div class="mb-4">
       <label class="form-label">รหัสผ่าน</label>
-      <input name="password" type="password" class="form-control form-control-lg" required autocomplete="current-password">
+      <div class="input-group input-group-lg">   <!-- ปุ่มตา = แสดง/ซ่อนรหัสผ่านที่พิมพ์ -->
+        <input name="password" type="password" class="form-control" required autocomplete="current-password">
+        <button type="button" class="btn btn-outline-secondary" tabindex="-1" title="แสดงรหัสผ่าน" aria-label="แสดงรหัสผ่าน" onclick="const i=this.previousElementSibling,s=i.type==='password';i.type=s?'text':'password';this.firstElementChild.className=s?'bi bi-eye-slash':'bi bi-eye';this.title=this.ariaLabel=s?'ซ่อนรหัสผ่าน':'แสดงรหัสผ่าน';i.focus()"><i class="bi bi-eye"></i></button>
+      </div>
     </div>
     <button class="btn btn-primary btn-lg w-100">เข้าสู่ระบบ</button>
     <div class="text-center mt-3 small">

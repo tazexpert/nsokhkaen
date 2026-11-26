@@ -207,7 +207,10 @@ $navActive = fn(bool $on) => $on ? ' active' : '';
         </div>
         <div class="mb-4">
           <label class="form-label" for="loginPass">รหัสผ่าน</label>
-          <input name="password" id="loginPass" type="password" class="form-control form-control-lg" required autocomplete="current-password">
+          <div class="input-group input-group-lg">   <!-- ปุ่มตา = แสดง/ซ่อนรหัสผ่านที่พิมพ์ -->
+            <input name="password" id="loginPass" type="password" class="form-control" required autocomplete="current-password">
+            <button type="button" class="btn btn-outline-secondary" tabindex="-1" title="แสดงรหัสผ่าน" aria-label="แสดงรหัสผ่าน" onclick="const i=this.previousElementSibling,s=i.type==='password';i.type=s?'text':'password';this.firstElementChild.className=s?'bi bi-eye-slash':'bi bi-eye';this.title=this.ariaLabel=s?'ซ่อนรหัสผ่าน':'แสดงรหัสผ่าน';i.focus()"><i class="bi bi-eye"></i></button>
+          </div>
         </div>
         <button class="btn btn-primary btn-lg w-100" id="loginSubmit"><span class="spinner-border spinner-border-sm d-none me-1"></span>เข้าสู่ระบบ</button>
         <div class="text-center mt-3 small"><a href="<?= h(url('pin')) ?>"><i class="bi bi-grid-3x3-gap"></i> เข้าใช้ด้วย PIN 6 หลัก</a></div>
