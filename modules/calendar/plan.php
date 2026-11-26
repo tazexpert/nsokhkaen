@@ -49,7 +49,7 @@ $attAt->execute([sprintf('%04d-%02d-01', $y, $m), date('Y-m-t', strtotime(sprint
 $attAt = $attAt->fetchColumn();
 $guardId = plan_guard_code_id($codes);
 
-// คอลัมน์สรุป: โครงการที่ดำเนินการในเดือนนี้ + โครงการที่มีในแผนเดือนนี้
+// คอลัมน์สรุปจำนวนวัน: เฉพาะโครงการที่มีคนลงแผนในเดือนนี้
 $used = [];
 foreach ($cells as $byDay) {
     foreach ($byDay as $ids) {
@@ -58,8 +58,7 @@ foreach ($cells as $byDay) {
         }
     }
 }
-$monthProjects = plan_month_projects($codes, $y, $m);
-$fieldCodes = array_filter($codes, fn($c) => $c['kind'] === 'field' && (isset($monthProjects[(int)$c['id']]) || isset($used[(int)$c['id']])));
+$fieldCodes = array_filter($codes, fn($c) => $c['kind'] === 'field' && isset($used[(int)$c['id']]));   // สรุปจำนวนวัน: เฉพาะโครงการที่มีคนลงแผนในเดือนนี้
 
 $pageTitle = 'แผนการปฏิบัติงาน';
 $active = 'plan';
