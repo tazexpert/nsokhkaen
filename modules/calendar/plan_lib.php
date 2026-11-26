@@ -4,6 +4,7 @@
  * - รหัสงาน = ตัวย่อโครงการที่รับผิดชอบ (core_projects จัดการที่ระบบบริหารโครงการ → โครงการที่รับผิดชอบ) + "*" = เวรศาลากลาง
  *   เก็บใน cal_plan_work (คน × วัน × โครงการ) และ cal_plan_guard (คน × วัน)
  * - ในโค้ด "รหัสงาน" [id => row] = โครงการ (kind 'field') + เวรศาลากลาง (id = PLAN_GUARD_ID, kind 'guard')
+ *   + การลา (kind 'leave': ลก ลากิจ / ลป ลาป่วย / ลพ ลาพักผ่อน — PLAN_LEAVES, เก็บใน cal_plan_leave) ผู้ใช้งานลงของตนเองได้
  * - ช่องหนึ่งมีได้หลายรหัส เช่น "สพค*" = ออกสนาม สพค และอยู่เวรศาลากลาง
  * - เวรศาลากลาง → กิจกรรม kind = 'guard' ในปฏิทิน (ตารางการปฏิบัติงาน + แจ้งเตือน) ผ่าน plan_sync_guard()
  * - เวรสำนักงาน ("เวร") ไม่เก็บในแผน — ดึงจากปฏิทิน (kind = 'duty') มาแสดง
@@ -13,6 +14,32 @@ require_once __DIR__ . '/lib.php';
 
 const PLAN_DUTY_WORD = 'เวร';
 const PLAN_GUARD_ID = -1;
+// การลา (ผู้ใช้งานลงแผนการลาของตนเองได้) — id ติดลบ เก็บใน cal_plan_leave (migration 20261216)
+const PLAN_LEAVES = [
+    -2 => ['code' => 'ลก', 'name' => 'ลากิจ', 'type' => 'personal', 'color' => '#d97706'],
+    -3 => ['code' => 'ลป', 'name' => 'ลาป่วย', 'type' => 'sick', 'color' => '#db2777'],
+    -4 => ['code' => 'ลพ', 'name' => 'ลาพักผ่อน', 'type' => 'vacation', 'color' => '#0d9488'],
+];
+
+/** มีตาราง cal_plan_leave แล้วหรือยัง */
+function plan_has_leave(): bool
+{
+    static $has = null;
+    if ($has === null) {
+        try {
+            $has = (bool)db()->query("SHOW TABLES LIKE 'cal_plan_leave'")->fetch();
+        } catch (PDOException $e) {
+            $has = false;
+        }
+    }
+    return $has;
+}
+
+/** รหัสการลา [id => row] (ว่าง = ยังไม่ได้รัน migration) */
+function plan_leave_codes(array $codes): array
+{
+    return array_filter($codes, fn($c) => $c['kind'] === 'leave');
+}
 const PLAN_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
 
 /** รหัสงานทั้งหมด [id => row]: โครงการ (เรียงตามลำดับ) + เวรศาลากลาง (id = PLAN_GUARD_ID) */
@@ -24,6 +51,12 @@ function plan_codes(): array
     }
     $out[PLAN_GUARD_ID] = ['id' => PLAN_GUARD_ID, 'code' => '*', 'name' => CAL_GUARD_TITLE, 'kind' => 'guard', 'color' => '#dc2626',
                            'is_active' => 1, 'start_date' => null, 'end_date' => null];
+    if (plan_has_leave()) {
+        foreach (PLAN_LEAVES as $id => $l) {
+            $out[$id] = ['id' => $id, 'code' => $l['code'], 'name' => $l['name'], 'kind' => 'leave', 'leave_type' => $l['type'], 'color' => $l['color'],
+                         'is_active' => 1, 'start_date' => null, 'end_date' => null];
+        }
+    }
     return $out;
 }
 
@@ -95,6 +128,15 @@ function plan_cells(int $planId): array
     $st->execute([$planId]);
     foreach ($st as $r) {
         $out[(int)$r['person_id']][(int)$r['day']][] = PLAN_GUARD_ID;
+    }
+    if (plan_has_leave()) {                       // การลา
+        $byType = array_flip(array_column(PLAN_LEAVES, 'type'));
+        $ids = array_keys(PLAN_LEAVES);
+        $st = db()->prepare('SELECT l.person_id, l.day, l.leave_type FROM cal_plan_leave l JOIN cal_plan_people pp ON pp.id = l.person_id WHERE pp.plan_id = ?');
+        $st->execute([$planId]);
+        foreach ($st as $r) {
+            $out[(int)$r['person_id']][(int)$r['day']][] = $ids[$byType[$r['leave_type']]];
+        }
     }
     return $out;
 }
@@ -191,6 +233,7 @@ function plan_save(int $y, int $m, array $people, ?string $note, int $actorId): 
         $insP = $pdo->prepare('INSERT INTO cal_plan_people (plan_id, user_id, name, sort_order) VALUES (?, ?, ?, ?)');
         $insW = $pdo->prepare('INSERT IGNORE INTO cal_plan_work (person_id, day, project_id) VALUES (?, ?, ?)');
         $insG = $pdo->prepare('INSERT IGNORE INTO cal_plan_guard (person_id, day) VALUES (?, ?)');
+        $insL = plan_has_leave() ? $pdo->prepare('INSERT IGNORE INTO cal_plan_leave (person_id, day, leave_type) VALUES (?, ?, ?)') : null;
         $seen = [];
         foreach (array_values($people) as $i => $p) {
             $uid = !empty($p['user_id']) ? (int)$p['user_id'] : null;
@@ -203,7 +246,13 @@ function plan_save(int $y, int $m, array $people, ?string $note, int $actorId): 
             foreach ($p['cells'] ?? [] as $day => $ids) {
                 if ((int)$day >= 1 && (int)$day <= $days) {
                     foreach ($ids as $cid) {
-                        (int)$cid === PLAN_GUARD_ID ? $insG->execute([$pid, (int)$day]) : $insW->execute([$pid, (int)$day, (int)$cid]);
+                        if ((int)$cid === PLAN_GUARD_ID) {
+                            $insG->execute([$pid, (int)$day]);
+                        } elseif (isset(PLAN_LEAVES[(int)$cid])) {     // การลา: 1 วันได้ 1 ประเภท (ตัวแรก)
+                            $insL?->execute([$pid, (int)$day, PLAN_LEAVES[(int)$cid]['type']]);
+                        } elseif ((int)$cid > 0) {
+                            $insW->execute([$pid, (int)$day, (int)$cid]);
+                        }
                     }
                 }
             }

@@ -98,7 +98,7 @@ require __DIR__ . '/header.php';
           <?php for ($d = 1; $d <= $days; $d++): $date = sprintf('%s-%02d', $ym, $d); $w = (int)date('w', strtotime($date)); ?>
             <th class="text-center plan-day<?= $w === 0 || $w === 6 ? ' we' : '' ?><?= $date === $today ? ' today' : '' ?>"><?= $d ?></th>
           <?php endfor; ?>
-          <th colspan="<?= count($fieldCodes) + 4 ?>" class="text-center plan-sum-head">สรุปจำนวนวัน</th>
+          <th colspan="<?= count($fieldCodes) + 5 ?>" class="text-center plan-sum-head">สรุปจำนวนวัน</th>
         </tr>
         <tr>
           <?php for ($d = 1; $d <= $days; $d++): $date = sprintf('%s-%02d', $ym, $d); $w = (int)date('w', strtotime($date)); ?>
@@ -109,6 +109,7 @@ require __DIR__ . '/header.php';
           <th class="text-center plan-sum" style="--c:#dc2626" title="เวรศาลากลาง">*</th>
           <th class="text-center plan-sum" style="--c:#b45309" title="สาย (จากเวลาปฏิบัติราชการ)">ส</th>
           <th class="text-center plan-sum" style="--c:#dc2626" title="ขาดราชการ">ข</th>
+          <th class="text-center plan-sum" style="--c:#0d9488" title="ลา (ลากิจ / ลาป่วย / ลาพักผ่อน ตามแผน)">ลา</th>
         </tr>
       </thead>
       <tbody>
@@ -120,6 +121,7 @@ require __DIR__ . '/header.php';
         $guardN = 0;
         $lateN = 0;
         $absentN = 0;
+        $leaveN = 0;
         $uid = (int)$p['user_id'];
         $mine = (int)$p['user_id'] === (int)$me['id']; ?>
         <tr class="<?= $mine ? 'plan-me' : '' ?>">
@@ -146,14 +148,18 @@ require __DIR__ . '/header.php';
             $as = $uid && ($mine || $isAdmin) ? att_status($att[$uid][$d] ?? null, $field, $trips[$uid][$d] ?? null) : null;
             if ($as && $as['code'] === 'ส') { $lateN++; }
             if ($as && $as['code'] === 'ข') { $absentN++; }
+            $leave = null;                                // การลาตามแผน (ลก / ลป / ลพ)
+            foreach ($ids as $cid) { if (($codes[$cid]['kind'] ?? '') === 'leave') { $leave = $codes[$cid]; } }
+            if ($leave) { $leaveN++; }
             if ($hasDuty) { $dutyN++; }
             if ($hasGuard) { $guardN++; }
             $title = implode(' + ', array_filter(array_merge(
-                array_map(fn($cid) => $codes[$cid]['kind'] === 'field' ? $codes[$cid]['code'] . ($codes[$cid]['name'] !== $codes[$cid]['code'] ? ' (' . $codes[$cid]['name'] . ')' : '') : '', $ids),
+                array_map(fn($cid) => in_array($codes[$cid]['kind'], ['field', 'leave'], true) ? $codes[$cid]['code'] . ($codes[$cid]['name'] !== $codes[$cid]['code'] ? ' (' . $codes[$cid]['name'] . ')' : '') : '', $ids),
                 [$hasDuty ? 'เวรสำนักงาน' : '', $hasGuard ? 'เวรศาลากลาง' : '', $as ? $as['title'] : '']))); ?>
             <td class="text-center plan-cell<?= $w === 0 || $w === 6 ? ' we' : '' ?><?= $date === $today ? ' today' : '' ?><?= $first ? ' has' : '' ?>"
                 <?= $first ? 'style="--c:' . h($first['color']) . '"' : '' ?><?= $title !== '' ? ' title="' . h($d . ' ' . thai_month_long($m) . ': ' . $title) . '"' : '' ?>>
               <?php foreach ($ids as $cid): if (($codes[$cid]['kind'] ?? '') === 'field'): ?><span class="pc"><?= h($codes[$cid]['code']) ?></span><?php endif; endforeach; ?>
+              <?php if ($leave): ?><span class="pc-leave" style="--lc:<?= h($leave['color']) ?>"><?= h($leave['code']) ?></span><?php endif; ?>
               <?php if ($hasDuty): ?><span class="pc-duty">เวร</span><?php endif; ?>
               <?php if ($hasGuard): ?><span class="pc-guard">*</span><?php endif; ?>
               <?php if ($as): if (!empty($as['certifiable']) && $mine): ?><button type="button" class="att-chip <?= $as['cls'] ?>" data-att-certify data-date="<?= $date ?>"><?= h($as['code']) ?></button>
@@ -165,9 +171,10 @@ require __DIR__ . '/header.php';
           <td class="text-center plan-sumv"><?= $guardN ?: '' ?></td>
           <td class="text-center plan-sumv" style="color:#b45309"><?= $lateN ?: '' ?></td>
           <td class="text-center plan-sumv" style="color:#dc2626"><?= $absentN ?: '' ?></td>
+          <td class="text-center plan-sumv" style="color:#0d9488"><?= $leaveN ?: '' ?></td>
         </tr>
       <?php endforeach; ?>
-      <?php if (!$people): ?><tr><td colspan="<?= $days + count($fieldCodes) + 6 ?>" class="text-center text-muted py-4">ยังไม่มีรายชื่อในแผน</td></tr><?php endif; ?>
+      <?php if (!$people): ?><tr><td colspan="<?= $days + count($fieldCodes) + 7 ?>" class="text-center text-muted py-4">ยังไม่มีรายชื่อในแผน</td></tr><?php endif; ?>
       </tbody>
       <?php if ($people): ?>
       <tfoot>
@@ -176,7 +183,7 @@ require __DIR__ . '/header.php';
           <?php for ($d = 1; $d <= $days; $d++): $w = (int)date('w', strtotime(sprintf('%s-%02d', $ym, $d))); ?>
             <td class="text-center<?= $w === 0 || $w === 6 ? ' we' : '' ?>"><?= $dayField[$d] ?: '' ?></td>
           <?php endfor; ?>
-          <td colspan="<?= count($fieldCodes) + 4 ?>"></td>
+          <td colspan="<?= count($fieldCodes) + 5 ?>"></td>
         </tr>
       </tfoot>
       <?php endif; ?>
@@ -186,6 +193,7 @@ require __DIR__ . '/header.php';
     <?php foreach ($fieldCodes as $c): ?><span class="me-3 text-nowrap"><span class="plan-chip" style="--c:<?= h($c['color']) ?>"><?= h($c['code']) ?></span> <?= h($c['name'] !== $c['code'] ? $c['name'] : '') ?></span><?php endforeach; ?>
     <span class="me-3 text-nowrap"><span class="pc-duty">เวร</span> เวรสำนักงาน (จากปฏิทิน)</span>
     <span class="me-3 text-nowrap"><span class="pc-guard">*</span> <?= h($codes[$guardId]['name'] ?? 'เวรศาลากลาง') ?></span>
+    <?php foreach (plan_leave_codes($codes) as $c): ?><span class="me-3 text-nowrap"><span class="pc-leave" style="--lc:<?= h($c['color']) ?>"><?= h($c['code']) ?></span> <?= h($c['name']) ?></span><?php endforeach; ?>
     <div class="mt-1">เวลาปฏิบัติราชการ<?= $isAdmin ? '' : ' (แสดงเฉพาะของคุณ)' ?><?= $attAt ? ' (ข้อมูล ณ ' . h(thai_date(substr($attAt, 0, 10)) . ' ' . substr($attAt, 11, 5)) . ' น.)' : ' (ยังไม่ได้นำเข้า)' ?>:
       <span class="me-2 text-nowrap"><span class="att-chip att-late">ส</span> สาย</span>
       <span class="me-2 text-nowrap"><span class="att-chip att-half">ลาเช้า</span>/<span class="att-chip att-half">ลาบ่าย</span></span>
@@ -212,6 +220,7 @@ require __DIR__ . '/header.php';
   .plan-cell .pc + .pc::before { content: ' '; }
   .pc-duty { display: inline-block; font-size: .68rem; padding: 0 .25rem; border-radius: .25rem; background: #dcfce7; color: #15803d; font-weight: 600; }
   .pc-guard { color: #dc2626; font-weight: 700; font-size: 1rem; line-height: 1; }
+  .pc-leave { display: inline-block; background: var(--lc); color: #fff; border-radius: 4px; padding: 0 3px; font-size: .72rem; font-weight: 600; line-height: 1.35; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .plan-sum { color: var(--c); }
   .plan-sumv { font-weight: 600; background: #f8fafc; }
   .plan-sum-head { background: #f8fafc !important; }

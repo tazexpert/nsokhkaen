@@ -137,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $note = $plan['note'] ?? '';
     if ($selfOnly) {
         $rows[] = ['user_id' => $myId, 'name' => $me['full_name'], 'texts' => array_map(fn($ids) => plan_cell_text($ids, $codes), $myOld)];
-        $notice = 'แก้ไขเฉพาะแผนของคุณ — เลือกรหัสโครงการแล้วคลิกวัน หรือพิมพ์ในช่อง · เวรศาลากลางกำหนดโดยผู้ดูแลปฏิทิน';
+        $notice = 'แก้ไขเฉพาะแผนของคุณ — เลือกรหัสโครงการหรือการลา (ลก = ลากิจ · ลป = ลาป่วย · ลพ = ลาพักผ่อน) แล้วคลิกวัน หรือพิมพ์ในช่อง · เวรศาลากลางกำหนดโดยผู้ดูแลปฏิทิน';
     } elseif ($plan) {
         $cells = plan_cells((int)$plan['id']);
         foreach (plan_people((int)$plan['id']) as $p) {
@@ -175,7 +175,8 @@ if ($selfOnly) {
 }
 $rows = plan_sort_people($rows);
 $duty = plan_duty_map($y, $m);
-$activeCodes = plan_month_projects($codes, $y, $m) + ($selfOnly ? [] : [PLAN_GUARD_ID => $codes[PLAN_GUARD_ID]]);   // แถบเครื่องมือ: โครงการที่ดำเนินการในเดือนนี้ + เวรศาลากลาง (ผู้ดูแล)
+$monthProjects = plan_month_projects($codes, $y, $m);
+$activeCodes = $monthProjects + plan_leave_codes($codes) + ($selfOnly ? [] : [PLAN_GUARD_ID => $codes[PLAN_GUARD_ID]]);   // + การลา (ทุกคนลงของตนเองได้)   // แถบเครื่องมือ: โครงการที่ดำเนินการในเดือนนี้ + เวรศาลากลาง (ผู้ดูแล)
 $colors = [];
 foreach ($codes as $c) {
     $colors[$c['code']] = $c['color'];
@@ -196,10 +197,11 @@ require __DIR__ . '/header.php';
     <div class="card-header d-flex flex-wrap align-items-center gap-2">
       <h2 class="h5 mb-0 me-2"><?= h(plan_month_text($y, $m)) ?></h2>
       <span class="small text-muted me-1">เครื่องมือ:</span>
-      <?php if (count($activeCodes) <= ($selfOnly ? 0 : 1)): ?><span class="small text-danger">ไม่มีโครงการที่ดำเนินการในเดือนนี้ — <a href="<?= h(module_url('ea', 'projects')) ?>">เพิ่ม/แก้ช่วงเวลาโครงการ</a></span><?php endif; ?>
+      <?php if (!$monthProjects): ?><span class="small text-danger">ไม่มีโครงการที่ดำเนินการในเดือนนี้ — <a href="<?= h(module_url('ea', 'projects')) ?>">เพิ่ม/แก้ช่วงเวลาโครงการ</a></span><?php endif; ?>
       <div class="btn-group btn-group-sm flex-wrap plan-palette" role="group" aria-label="เลือกรหัสแล้วคลิกช่อง">
         <input type="radio" class="btn-check" name="tool" id="tool-type" value="" checked><label class="btn btn-outline-secondary" for="tool-type" title="พิมพ์ในช่องเอง"><i class="bi bi-cursor-text"></i> พิมพ์</label>
         <?php foreach ($activeCodes as $c): ?>
+          <?php if ($c['kind'] === 'leave' && !isset($__leaveSep)): $__leaveSep = true; ?><span class="plan-tool-sep" aria-hidden="true"></span><?php endif; ?>
           <input type="radio" class="btn-check" name="tool" id="tool-<?= (int)$c['id'] ?>" value="<?= h($c['code']) ?>">
           <label class="btn btn-outline-secondary plan-tool" for="tool-<?= (int)$c['id'] ?>" style="--c:<?= h($c['color']) ?>" title="<?= h($c['name']) ?>"><?= h($c['code']) ?></label>
         <?php endforeach; ?>
@@ -293,12 +295,14 @@ require __DIR__ . '/header.php';
   .plan-in.bad { background: #fee2e2; color: #b91c1c; }
   td.has-duty { box-shadow: inset 0 -3px 0 #22c55e; }
   .plan-tool { color: var(--c); font-weight: 600; }
+  .plan-tool-sep { width: 1px; background: var(--bs-border-color); margin: 0 .35rem; align-self: stretch; }
   .btn-check:checked + .plan-tool { background: var(--c); border-color: var(--c); color: #fff; }
   .plan-painting .plan-in { cursor: cell; caret-color: transparent; }
 </style>
 <script>
 (() => {
   const COLORS = <?= json_encode($colors, JSON_UNESCAPED_UNICODE) ?>;
+  const LEAVES = <?= json_encode(array_values(array_column(plan_leave_codes($codes), 'code')), JSON_UNESCAPED_UNICODE) ?>;   // ลก ลป ลพ
   const form = document.getElementById('planForm'), body = document.getElementById('planRows');
   const tool = () => form.querySelector('[name=tool]:checked').value;
   let dirty = false;
@@ -328,7 +332,10 @@ require __DIR__ . '/header.php';
       const has = t === '*' ? p.star : p.codes.includes(t);
       if (first) adding = !has;
       if (t === '*') p.star = adding;
-      else if (adding && !has) p.codes.push(t);
+      else if (adding && !has) {
+        if (LEAVES.includes(t)) p.codes = p.codes.filter(c => !LEAVES.includes(c));   // การลา 1 วัน = 1 ประเภท
+        p.codes.push(t);
+      }
       else if (!adding && has) p.codes = p.codes.filter(c => c !== t);
       inp.value = build(p);
     }

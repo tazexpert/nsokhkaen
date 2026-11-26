@@ -140,7 +140,7 @@ require __DIR__ . '/header.php';
       <strong><i class="bi bi-info-circle"></i> รูปแบบไฟล์</strong>
       <ul class="mt-2 mb-0">
         <li>ใช้ไฟล์ "แผนการปฏิบัติงานสนามโครงการต่าง ๆ ประจำเดือน …" รูปแบบเดิมได้เลย (หัวตารางมีวันที่ 1–31 และชื่อ-นามสกุลอยู่ทางซ้าย)</li>
-        <li>รหัสในช่อง: <?php foreach ($codes as $c): if ($c['kind'] === 'field' && $c['is_active']): ?><code><?= h($c['code']) ?></code> <?php endif; endforeach; ?> · <code>*</code> = เวรศาลากลาง (เช่น <code>สพค*</code>)</li>
+        <li>รหัสในช่อง: <?php foreach ($codes as $c): if ($c['kind'] === 'field' && $c['is_active']): ?><code><?= h($c['code']) ?></code> <?php endif; endforeach; ?> · <code>*</code> = เวรศาลากลาง (เช่น <code>สพค*</code>)<?php foreach (plan_leave_codes($codes) as $c): ?> · <code><?= h($c['code']) ?></code> = <?= h($c['name']) ?><?php endforeach; ?></li>
         <li><code>เวร</code> (เวรสำนักงาน) ไม่นำเข้า — ระบบใช้เวรสำนักงานจากปฏิทิน และจะแสดงจุดที่ไม่ตรงกันให้ตรวจ</li>
         <li>คอลัมน์สรุปจำนวนวันในไฟล์ไม่ใช้ — ระบบคำนวณให้เอง</li>
         <li>นำเข้าเดือนที่มีแผนอยู่แล้ว = แทนที่แผนเดิมของเดือนนั้นทั้งหมด</li>
