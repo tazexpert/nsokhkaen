@@ -22,3 +22,6 @@
 /storage/*
 !/storage/.htaccess
 !/storage/web.config
+
+# ภาพประกอบคู่มือการใช้งาน (manual.php แสดงผ่าน PHP ให้ผู้ login เท่านั้น)
+!/storage/manual/

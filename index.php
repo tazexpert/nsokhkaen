@@ -34,7 +34,10 @@ require APP_ROOT . '/core/layout/header.php';
   <?php if ($isGuest): ?>
     <a href="<?= h(url('login')) ?>" class="btn btn-primary ms-auto" data-login-modal><i class="bi bi-box-arrow-in-right"></i> เข้าสู่ระบบเพื่อใช้งานระบบงาน</a>
   <?php else: ?>
-    <a href="<?= h(url('logout')) ?>" class="btn btn-outline-danger ms-auto"><i class="bi bi-box-arrow-right"></i> ออกจากระบบ</a>
+    <div class="d-flex flex-wrap gap-2 ms-auto">
+      <a href="<?= h(url('manual')) ?>" class="btn btn-outline-primary"><i class="bi bi-book"></i> คู่มือการใช้งาน</a>
+      <a href="<?= h(url('logout')) ?>" class="btn btn-outline-danger"><i class="bi bi-box-arrow-right"></i> ออกจากระบบ</a>
+    </div>
   <?php endif; ?>
 </section>
 
