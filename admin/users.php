@@ -8,6 +8,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     check_csrf();
     $id = int_param('id');
     $action = post('action');
+    if ($action === 'unlock') {                       // ปลดล็อคการเข้าสู่ระบบที่ถูกระงับ 15 นาที (กรอกผิดหลายครั้ง)
+        $kind = post('kind');
+        if ($kind === 'all') {
+            login_unlock('all');
+            flash('ปลดล็อคการเข้าสู่ระบบทั้งหมดแล้ว');
+        } elseif (in_array($kind, ['ip', 'username'], true) && post('key') !== '') {
+            login_unlock($kind, post('key'));
+            flash('ปลดล็อค' . ($kind === 'ip' ? ' IP ' : 'ชื่อผู้ใช้ ') . post('key') . ' แล้ว — เข้าสู่ระบบได้ทันที');
+        }
+        redirect(url('admin/users'));
+    }
     if ($id === $me['id']) {
         flash('ไม่สามารถปิดการใช้งานหรือลบบัญชีของตนเองได้', 'danger');
     } elseif ($action === 'toggle') {
@@ -60,6 +71,7 @@ foreach ($pdo->query('SELECT user_id, module_key, role FROM core_user_roles') as
     $roles[$r['user_id']][$r['module_key']] = $r['role'];
 }
 $mods = modules();
+$locks = login_locks();                               // ถูกระงับการเข้าสู่ระบบอยู่ (ผิดหลายครั้ง)
 
 $pageTitle = 'ผู้ใช้งานและสิทธิ์';
 $active = 'users';
@@ -67,6 +79,28 @@ $pageActions = '<a href="' . h(url('staff')) . '" class="btn btn-outline-primary
 $bodyClass = trim(($bodyClass ?? '') . ' mod-theme theme-admin');   // ผู้ดูแลระบบ: สีน้ำเงินเดียวกับเมนูหลัก
 require APP_ROOT . '/core/layout/header.php';
 ?>
+<?php if ($locks): ?>
+<div class="card border-danger mb-3">
+  <div class="card-header d-flex flex-wrap align-items-center gap-2 text-danger"><strong><i class="bi bi-lock-fill"></i> ระงับการเข้าสู่ระบบชั่วคราว (<?= count($locks) ?>)</strong>
+    <span class="small text-muted">กรอกรหัสผ่าน/PIN ผิด <?= LOGIN_LOCK_FAILS ?> ครั้งขึ้นไปใน <?= LOGIN_LOCK_MINUTES ?> นาที — ปลดล็อคเพื่อให้เข้าสู่ระบบได้ทันทีโดยไม่ต้องรอ</span>
+    <?php if (count($locks) > 1): ?><form method="post" class="ms-auto"><?= csrf_field() ?><input type="hidden" name="action" value="unlock"><input type="hidden" name="kind" value="all">
+      <button class="btn btn-sm btn-danger"><i class="bi bi-unlock"></i> ปลดล็อคทั้งหมด</button></form><?php endif; ?>
+  </div>
+  <div class="table-responsive"><table class="table table-sm align-middle mb-0">
+    <thead><tr><th>ถูกระงับ</th><th class="text-center">ผิด (ครั้ง)</th><th>ครั้งล่าสุด</th><th>ปลดล็อคเองเวลา</th><th></th></tr></thead>
+    <tbody><?php foreach ($locks as $l): ?>
+      <tr>
+        <td><?= $l['kind'] === 'ip' ? '<i class="bi bi-hdd-network"></i> IP <code>' . h($l['key']) . '</code>' : '<i class="bi bi-person"></i> ชื่อผู้ใช้ <code>' . h($l['key']) . '</code>' . ($l['user'] ? ' ' . h($l['user']) : '') ?></td>
+        <td class="text-center"><?= (int)$l['fails'] ?></td>
+        <td class="small"><?= h(substr($l['last'], 11, 5)) ?> น.</td>
+        <td class="small"><?= h(substr($l['until'], 11, 5)) ?> น.</td>
+        <td class="text-end"><form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="unlock"><input type="hidden" name="kind" value="<?= h($l['kind']) ?>"><input type="hidden" name="key" value="<?= h($l['key']) ?>">
+          <button class="btn btn-sm btn-outline-danger"><i class="bi bi-unlock"></i> ปลดล็อค</button></form></td>
+      </tr>
+    <?php endforeach; ?></tbody>
+  </table></div>
+</div>
+<?php endif; ?>
 <div class="card">
   <div class="card-header">
     <form class="row g-2 align-items-center">

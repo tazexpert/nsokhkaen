@@ -318,12 +318,12 @@ function throttle_failed_logins(?string $username = null): ?string
     try {
         $since = date('Y-m-d H:i:s', time() - LOGIN_LOCK_MINUTES * 60);
         $st = db()->prepare("SELECT COUNT(*) FROM core_audit_log WHERE action IN ('login_failed', 'login_pin_failed') AND ip = ? AND created_at >= ?");
-        $st->execute([client_ip(), $since]);
+        $st->execute([client_ip(), max($since, login_unlocked_at('ip', client_ip()))]);
         $byIp = (int)$st->fetchColumn();
         $byUser = 0;
         if ($username !== null && $username !== '') {
             $st = db()->prepare("SELECT COUNT(*) FROM core_audit_log WHERE action = 'login_failed' AND detail = ? AND created_at >= ?");
-            $st->execute(['username: ' . $username, $since]);
+            $st->execute(['username: ' . $username, max($since, login_unlocked_at('username', $username))]);
             $byUser = (int)$st->fetchColumn();
         }
     } catch (Throwable $e) {
@@ -334,4 +334,68 @@ function throttle_failed_logins(?string $username = null): ?string
         return 'เข้าสู่ระบบผิดหลายครั้งเกินไป ระบบระงับการเข้าสู่ระบบชั่วคราว กรุณารอ ' . LOGIN_LOCK_MINUTES . ' นาทีแล้วลองใหม่';
     }
     return null;
+}
+
+/**
+ * เวลาที่ผู้ดูแลระบบกลางปลดล็อคล่าสุด (บันทึกการใช้งาน action 'login_unlock' detail "ip: …" / "username: …" / "all")
+ * นับการกรอกผิดเฉพาะหลังเวลานี้ — ไม่ลบประวัติการเข้าสู่ระบบไม่สำเร็จ
+ */
+function login_unlocked_at(string $kind, string $key): string
+{
+    try {
+        $st = db()->prepare("SELECT MAX(created_at) FROM core_audit_log WHERE action = 'login_unlock' AND detail IN (?, 'all')");
+        $st->execute([$kind . ': ' . $key]);
+        return (string)($st->fetchColumn() ?: '0000-00-00 00:00:00');
+    } catch (Throwable $e) {
+        return '0000-00-00 00:00:00';
+    }
+}
+
+/**
+ * รายการที่ถูกระงับการเข้าสู่ระบบอยู่ตอนนี้ (ผิด ≥ LOGIN_LOCK_FAILS ครั้งใน LOGIN_LOCK_MINUTES นาที หลังการปลดล็อคล่าสุด)
+ * คืน [['kind' => 'ip'|'username', 'key' => …, 'fails' => n, 'last' => datetime, 'until' => datetime, 'user' => ชื่อ-สกุล|null], ...]
+ */
+function login_locks(): array
+{
+    $since = date('Y-m-d H:i:s', time() - LOGIN_LOCK_MINUTES * 60);
+    $out = [];
+    try {
+        $rows = db()->prepare("SELECT action, detail, ip, created_at FROM core_audit_log
+            WHERE action IN ('login_failed', 'login_pin_failed') AND created_at >= ? ORDER BY created_at");
+        $rows->execute([$since]);
+        $rows = $rows->fetchAll();
+    } catch (Throwable $e) {
+        return [];
+    }
+    $groups = [];
+    foreach ($rows as $r) {
+        $groups['ip|' . $r['ip']][] = $r['created_at'];
+        if ($r['action'] === 'login_failed' && str_starts_with((string)$r['detail'], 'username: ')) {
+            $groups['username|' . substr($r['detail'], 10)][] = $r['created_at'];
+        }
+    }
+    foreach ($groups as $g => $times) {
+        [$kind, $key] = explode('|', $g, 2);
+        $unlock = login_unlocked_at($kind, $key);
+        $times = array_values(array_filter($times, fn($t) => $t >= $unlock));
+        if (count($times) >= LOGIN_LOCK_FAILS) {
+            $last = end($times);
+            $user = null;
+            if ($kind === 'username') {
+                $st = db()->prepare('SELECT full_name FROM core_users WHERE username = ?');
+                $st->execute([$key]);
+                $user = $st->fetchColumn() ?: null;
+            }
+            // ระงับจนกว่าการกรอกผิดครั้งที่ (n - LOGIN_LOCK_FAILS + 1) จะเก่ากว่า LOGIN_LOCK_MINUTES นาที
+            $until = date('Y-m-d H:i:s', strtotime($times[count($times) - LOGIN_LOCK_FAILS]) + LOGIN_LOCK_MINUTES * 60);
+            $out[] = ['kind' => $kind, 'key' => $key, 'fails' => count($times), 'last' => $last, 'until' => $until, 'user' => $user];
+        }
+    }
+    return $out;
+}
+
+/** ปลดล็อคการเข้าสู่ระบบ (ผู้ดูแลระบบกลาง): $kind 'ip' / 'username' / 'all' */
+function login_unlock(string $kind, string $key = ''): void
+{
+    audit_log('login_unlock', $kind === 'all' ? 'all' : $kind . ': ' . $key, 'core');
 }
