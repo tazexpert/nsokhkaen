@@ -11,6 +11,36 @@ $me = pay_require('manager');
 $pdo = db();
 $sessKey = 'pay_import';
 
+// ดาวน์โหลดไฟล์สำหรับนำเข้า (.xlsx ชีต "Payroll") — ข้อมูลสลิปเดือนล่าสุดในระบบ ให้นำไปแก้แล้วนำเข้าใหม่
+//   ?download=same = เดือน/ปีเดิม (แก้ไขข้อมูลเดือนล่าสุด) · ?download=next = เปลี่ยนเป็นเดือนถัดไป (เตรียมข้อมูลเดือนใหม่)
+if (isset($_GET['download'])) {
+    $last = $pdo->query('SELECT year, month FROM pay_slips ORDER BY year DESC, month DESC LIMIT 1')->fetch();
+    if (!$last) {
+        flash('ยังไม่มีข้อมูลสลิปในระบบ', 'warning');
+        redirect('import');
+    }
+    [$y, $m] = [(int)$last['year'], (int)$last['month']];
+    [$fy, $fm] = $_GET['download'] === 'next' ? ($m === 12 ? [$y + 1, 1] : [$y, $m + 1]) : [$y, $m];
+    $st = $pdo->prepare('SELECT s.*, e.code FROM pay_slips s JOIN pay_employees e ON e.id = s.employee_id WHERE s.year = ? AND s.month = ? ORDER BY e.code');
+    $st->execute([$y, $m]);
+    $head = array_merge(['ชื่อ สกุล', 'เดือน', 'ปี', 'เลขที่'], array_values(PAY_INCOME), [PAY_TOTALS['total_income']], array_values(PAY_DEDUCT),
+        [PAY_TOTALS['total_deduct'], PAY_TOTALS['net_pay']]);
+    $keys = array_merge(array_keys(PAY_INCOME), ['total_income'], array_keys(PAY_DEDUCT), ['total_deduct', 'net_pay']);
+    $rows = [$head];
+    foreach ($st as $s) {
+        $r = [$s['full_name'], $fm, $fy, "\0" . $s['code']];          // "\0" = เก็บเป็นข้อความ (คงเลข 0 นำหน้า เช่น 001)
+        foreach ($keys as $k) {
+            $r[] = $s[$k] === null ? '' : (float)$s[$k];
+        }
+        $rows[] = $r;
+    }
+    audit_log('pay_template', 'ดาวน์โหลดไฟล์สำหรับนำเข้า จากข้อมูล ' . pay_period($y, $m) . ' (' . (count($rows) - 1) . ' รายการ) · เดือนในไฟล์ ' . pay_period($fy, $fm), PAY_MODULE);
+    require_once APP_ROOT . '/libs/simplexlsx/SimpleXLSXGen.php';
+    \Shuchkin\SimpleXLSXGen::fromArray($rows, 'Payroll')->downloadAs(sprintf('payroll_%04d-%02d.xlsx', $fy, $fm));
+    exit;
+}
+$latest = $pdo->query('SELECT year, month, COUNT(*) AS n FROM pay_slips GROUP BY year, month ORDER BY year DESC, month DESC LIMIT 1')->fetch();
+
 /** หัวคอลัมน์ → ฟิลด์ (ตรวจตามลำดับ; แต่ละฟิลด์ใช้คอลัมน์แรกที่ตรง) */
 function pay_header_field(string $h): ?string
 {
@@ -232,6 +262,23 @@ require __DIR__ . '/header.php';
         <button class="btn btn-primary"><i class="bi bi-eye"></i> ตรวจสอบข้อมูลก่อนนำเข้า</button>
       </div>
     </form>
+    <div class="card mt-3">
+      <div class="card-header"><strong><i class="bi bi-download"></i> ดาวน์โหลดไฟล์สำหรับนำเข้า</strong></div>
+      <div class="card-body">
+        <?php if ($latest): ?>
+          <p class="small mb-2">ไฟล์ Excel รูปแบบเดียวกับที่ใช้นำเข้า จากข้อมูลสลิป<strong>เดือนล่าสุด</strong> ในระบบ:
+            <strong><?= h(pay_period((int)$latest['year'], (int)$latest['month'])) ?></strong> (<?= (int)$latest['n'] ?> รายการ) — แก้ไขยอดในไฟล์แล้วนำเข้าที่กล่องด้านบน</p>
+          <?php [$ny, $nm] = (int)$latest['month'] === 12 ? [(int)$latest['year'] + 1, 1] : [(int)$latest['year'], (int)$latest['month'] + 1]; ?>
+          <div class="d-flex flex-wrap gap-2">
+            <a href="import?download=next" class="btn btn-success btn-sm"><i class="bi bi-file-earmark-excel"></i> เตรียมเดือนใหม่: <?= h(pay_period($ny, $nm)) ?></a>
+            <a href="import?download=same" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-excel"></i> แก้ไขเดือน <?= h(pay_period((int)$latest['year'], (int)$latest['month'])) ?></a>
+          </div>
+          <div class="small text-muted mt-2">เตรียมเดือนใหม่ = เปลี่ยนเดือน/ปีในไฟล์เป็นเดือนถัดไปให้ · แก้ไขเดือนเดิม = นำเข้าแล้วจะแทนยอดของสลิปเดือนนั้น (กลับเป็นรออนุมัติ)</div>
+        <?php else: ?>
+          <p class="small text-muted mb-0">ยังไม่มีข้อมูลสลิปในระบบ — นำเข้าครั้งแรกจากไฟล์ Google Sheet เดิม</p>
+        <?php endif; ?>
+      </div>
+    </div>
   </div>
   <div class="col-lg-6"><div class="card"><div class="card-body small">
     <strong>รูปแบบไฟล์</strong> — ใช้ไฟล์ Google Sheet เดิมได้ทันที: <em>ไฟล์ → ดาวน์โหลด → Microsoft Excel (.xlsx)</em>
