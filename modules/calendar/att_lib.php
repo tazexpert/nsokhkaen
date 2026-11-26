@@ -259,7 +259,7 @@ function att_status(?array $a, bool $hasWork, ?string $trip): ?array
     $out = $a['time_out'] ? substr($a['time_out'], 0, 5) : null;
     $times = 'เข้า ' . ($in ?? '-') . ' · ออก ' . ($out ?? '-');
     if ($a['override_code'] === 'ล') {
-        return ['code' => 'ล', 'cls' => 'att-cert', 'title' => 'รับรองการมาปฏิบัติราชการ (แก้จากขาดราชการ)'];
+        return ['code' => 'ล', 'cls' => 'att-cert', 'title' => 'รับรองการมาปฏิบัติราชการ (เจ้าของยืนยันว่าทำใบรับรองแล้ว) · ' . $times];
     }
     $leave = trim((string)$a['leave_code']);
     if ($leave !== '') {
@@ -287,7 +287,7 @@ function att_status(?array $a, bool $hasWork, ?string $trip): ?array
         return null;                                  // ปกติ — ไม่แสดง
     }
     if ($in || $out) {
-        return ['code' => 'ล', 'cls' => 'att-pending', 'title' => 'ลงเวลาไม่ครบ (' . $times . ') — ต้องรับรองการมาปฏิบัติราชการ'];
+        return ['code' => 'ล', 'cls' => 'att-pending', 'title' => 'ลงเวลาไม่ครบ (' . $times . ') — ต้องรับรองการมาปฏิบัติราชการ', 'certifiable' => true];
     }
     if ($hasWork) {
         return null;                                  // ปฏิบัติงานตามแผน (แสดงรหัสโครงการอยู่แล้ว)
@@ -349,8 +349,8 @@ function att_item_title(array $s): string
 }
 
 /**
- * เจ้าของรายการเปลี่ยน "ข" (ขาดราชการ) → "ล" (รับรองการมาปฏิบัติราชการ) หลังทำใบรับรองแล้ว
- * คืน true เมื่อบันทึกสำเร็จ (ตรวจสถานะใหม่ทุกครั้ง แก้ได้เฉพาะวันที่เป็น ข)
+ * เจ้าของรายการเปลี่ยน "ข" (ขาดราชการ) / "ล" สีแดง (ลงเวลาไม่ครบ) → "ล" (รับรองการมาปฏิบัติราชการ) หลังทำใบรับรองแล้ว
+ * คืน true เมื่อบันทึกสำเร็จ (ตรวจสถานะใหม่ทุกครั้ง แก้ได้เฉพาะวันที่เป็น ข / ลงเวลาไม่ครบ)
  */
 function att_certify(int $uid, string $date): bool
 {
@@ -363,6 +363,6 @@ function att_certify(int $uid, string $date): bool
     }
     db()->prepare("UPDATE cal_attendance SET override_code = 'ล', override_by = ?, override_at = NOW() WHERE id = ?")
         ->execute([$uid, $s['row']['id']]);
-    audit_log('cal_att_certify', 'เปลี่ยนขาดราชการเป็นรับรองการมาปฏิบัติราชการ วันที่ ' . thai_date($date), CAL_MODULE);
+    audit_log('cal_att_certify', 'เปลี่ยน' . ($s['cls'] === 'att-pending' ? 'ลงเวลาไม่ครบ' : 'ขาดราชการ') . 'เป็นรับรองการมาปฏิบัติราชการ วันที่ ' . thai_date($date), CAL_MODULE);
     return true;
 }

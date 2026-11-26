@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'att_certify') {
     if (att_certify((int)$me['id'], $date)) {
         flash('บันทึกรับรองการมาปฏิบัติราชการ วันที่ ' . thai_date($date) . ' แล้ว');
     } else {
-        flash('แก้ได้เฉพาะวันที่เป็น "ขาดราชการ" ของตนเองเท่านั้น', 'warning');
+        flash('แก้ได้เฉพาะวันที่เป็น "ขาดราชการ" หรือ "ลงเวลาไม่ครบ" ของตนเองเท่านั้น', 'warning');
     }
     redirect('plan?m=' . (preg_match('/^\d{4}-\d{2}/', $date) ? substr($date, 0, 7) : sprintf('%04d-%02d', $y, $m)));
 }
@@ -165,7 +165,7 @@ require __DIR__ . '/header.php';
               <?php if ($leave): ?><span class="pc-leave" style="--lc:<?= h($leave['color']) ?>"><?= h($leave['name']) ?></span><?php endif; ?>
               <?php if ($hasDuty): ?><span class="pc-duty">เวร</span><?php endif; ?>
               <?php if ($hasGuard): ?><span class="pc-guard">*</span><?php endif; ?>
-              <?php if ($as): if (!empty($as['certifiable']) && $mine): ?><button type="button" class="att-chip <?= $as['cls'] ?>" data-att-certify data-date="<?= $date ?>"><?= h($as['code']) ?></button>
+              <?php if ($as): if (!empty($as['certifiable']) && $mine): ?><button type="button" class="att-chip <?= $as['cls'] ?>" data-att-certify data-date="<?= $date ?>" data-kind="<?= $as['cls'] === 'att-pending' ? 'ลงเวลาไม่ครบ' : 'ขาดราชการ (ไม่ได้ลงเวลา)' ?>"><?= h($as['code']) ?></button>
               <?php else: ?><span class="att-chip <?= $as['cls'] ?>"><?= h($as['code']) ?></span><?php endif; endif; ?>
             </td>
           <?php endfor; ?>
@@ -201,7 +201,7 @@ require __DIR__ . '/header.php';
     <div class="mt-1">เวลาปฏิบัติราชการ<?= $isAdmin ? '' : ' (แสดงเฉพาะของคุณ)' ?><?= $attAt ? ' (ข้อมูล ณ ' . h(thai_date(substr($attAt, 0, 10)) . ' ' . substr($attAt, 11, 5)) . ' น.)' : ' (ยังไม่ได้นำเข้า)' ?>:
       <span class="me-2 text-nowrap"><span class="att-chip att-late">ส</span> สาย</span>
       <span class="me-2 text-nowrap"><span class="att-chip att-half">ลาเช้า</span>/<span class="att-chip att-half">ลาบ่าย</span></span>
-      <span class="me-2 text-nowrap"><span class="att-chip att-pending">ล</span> ลงเวลาไม่ครบ</span>
+      <span class="me-2 text-nowrap"><span class="att-chip att-pending">ล</span> ลงเวลาไม่ครบ (เจ้าของคลิกเพื่อรับรอง)</span>
       <span class="me-2 text-nowrap"><span class="att-chip att-cert">ล</span> รับรองการมาปฏิบัติราชการ</span>
       <span class="me-2 text-nowrap"><span class="att-chip att-trip">ร</span> ไปราชการ</span>
       <span class="me-2 text-nowrap"><span class="att-chip att-absent">ข</span> ขาดราชการ (เจ้าของคลิกเพื่อรับรอง เมื่อทำใบรับรองแล้ว)</span>
@@ -262,9 +262,9 @@ require __DIR__ . '/header.php';
 </style>
 <form method="post" id="attCertForm" class="d-none"><?= csrf_field() ?><input type="hidden" name="action" value="att_certify"><input type="hidden" name="date"></form>
 <script>
-// เจ้าของคลิก "ข" → ยืนยันว่าทำใบรับรองแล้ว → เปลี่ยนเป็น "ล" รับรองการมาปฏิบัติราชการ
+// เจ้าของคลิก "ข" / "ล" สีแดง (ลงเวลาไม่ครบ) → ยืนยันว่าทำใบรับรองแล้ว → เปลี่ยนเป็น "ล" รับรองการมาปฏิบัติราชการ
 document.querySelectorAll('[data-att-certify]').forEach(b => b.addEventListener('click', () => {
-  if (!confirm('วันที่ ' + b.dataset.date.split('-').reverse().join('/') + ' ขาดราชการ (ไม่ได้ลงเวลา)\nทำใบรับรองการมาปฏิบัติราชการแล้ว — เปลี่ยนเป็น "รับรองการมาปฏิบัติราชการ (ล)"?')) { return; }
+  if (!confirm('วันที่ ' + b.dataset.date.split('-').reverse().join('/') + ' ' + b.dataset.kind + '\nทำใบรับรองการมาปฏิบัติราชการแล้ว — เปลี่ยนเป็น "รับรองการมาปฏิบัติราชการ (ล)"?')) { return; }
   const f = document.getElementById('attCertForm');
   f.date.value = b.dataset.date;
   f.submit();

@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && post('action') === 'certify') {
     if (att_certify((int)$me['id'], $date)) {
         flash('บันทึกรับรองการมาปฏิบัติราชการ วันที่ ' . thai_date($date) . ' แล้ว');
     } else {
-        flash('แก้ได้เฉพาะวันที่เป็น "ขาดราชการ" เท่านั้น', 'warning');
+        flash('แก้ได้เฉพาะวันที่เป็น "ขาดราชการ" หรือ "ลงเวลาไม่ครบ" เท่านั้น', 'warning');
     }
     redirect('att_view?date=' . $date);
 }
@@ -64,7 +64,13 @@ require __DIR__ . '/header.php';
         </form>
       </div>
     <?php elseif ($s && $s['cls'] === 'att-pending'): ?>
-      <div class="alert alert-warning mt-3 mb-0">ลงเวลาไม่ครบ — <b>กรุณายื่นรับรองการมาปฏิบัติราชการในระบบลงเวลา</b> รายการนี้จะหายไปเมื่อนำเข้าไฟล์เวลาปฏิบัติราชการรอบถัดไป</div>
+      <div class="alert alert-warning mt-3 mb-0">
+        ลงเวลาไม่ครบ — <b>กรุณาทำใบรับรองการมาปฏิบัติราชการ</b> แล้วกดปุ่มด้านล่างเพื่อเปลี่ยนเป็น "รับรองการมาปฏิบัติราชการ"
+        <form method="post" class="mt-2" onsubmit="return confirm('ยืนยันว่าทำใบรับรองการมาปฏิบัติราชการวันที่ <?= h(thai_date($date)) ?> แล้ว?')">
+          <?= csrf_field() ?><input type="hidden" name="action" value="certify"><input type="hidden" name="date" value="<?= $date ?>">
+          <button class="btn btn-primary"><i class="bi bi-check2-circle"></i> ทำใบรับรองแล้ว — เปลี่ยนเป็นรับรองการมาปฏิบัติราชการ</button>
+        </form>
+      </div>
     <?php endif; ?>
   </div>
 </div>
