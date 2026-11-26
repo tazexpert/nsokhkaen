@@ -287,6 +287,7 @@ Navicat: คลิกขวาที่ connection → Execute SQL File… → �
 | `20261214_cal_rota_multi.sql` | ปฏิทิน: เวรกิจกรรม — เลือกเฉพาะข้าราชการได้หลายคน / ข้าราชการทุกคน โดยไม่เลือกกลุ่มเจ้าหน้าที่ (`cal_rota_turn_officials`) · CREATE TABLE อย่างเดียว (ไม่ต้องใช้สิทธิ์ ALTER) |
 | `20261215_cal_guard_shifts.sql` | ปฏิทิน: นำเข้าเวรศาลากลางจากไฟล์ PDF คำสั่งจังหวัด (`cal_guard_shifts`) — ผู้ปฏิบัติหน้าที่เวร/ผู้ตรวจเวร · กลางวัน/กลางคืน · CREATE TABLE อย่างเดียว |
 | `20261216_cal_plan_leave.sql` | ปฏิทิน: ลงแผนการลาในแผนการปฏิบัติงาน — ลากิจ (ลก) / ลาป่วย (ลป) / ลาพักผ่อน (ลพ) (`cal_plan_leave`) · CREATE TABLE อย่างเดียว |
+| `20261217_cal_holidays.sql` | ปฏิทิน: วันหยุดราชการ/วันหยุดพิเศษนอกจากเสาร์-อาทิตย์ (`cal_holidays`) — เมนู "วันหยุด" (ผู้ดูแลปฏิทิน) · CREATE TABLE อย่างเดียว |
 | `20261208_payslip_loan_gsb.sql` | สลิปเงินเดือน: รายการหักข้อ 7 เงินกู้ธนาคารออมสิน (`pay_slips.loan_gsb`) · นำเข้าไฟล์ได้จากคอลัมน์ "เงินกู้ธนาคารออมสิน" |
 | `20261207_cal_rota.sql` | ปฏิทิน: การจัดเวรกิจกรรม (`cal_rota_members`, `cal_rota_turns`) — ลำดับข้าราชการ 6 คน + กลุ่มกิจกรรม 3 กลุ่ม (ใส่รายชื่อเริ่มต้นให้เมื่อยังว่าง) |
 
@@ -342,6 +343,7 @@ mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261214_cal_rota_multi.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261215_cal_guard_shifts.sql
 mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261216_cal_plan_leave.sql
+mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261217_cal_holidays.sql
 ```
 
 หลังอัปเดต:

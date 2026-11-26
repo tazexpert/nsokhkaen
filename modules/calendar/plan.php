@@ -26,6 +26,10 @@ $ym = sprintf('%04d-%02d', $y, $m);
 $prev = date('Y-m', strtotime($ym . '-01 -1 month'));
 $next = date('Y-m', strtotime($ym . '-01 +1 month'));
 $days = (int)date('t', strtotime($ym . '-01'));
+$hol = [];                                            // วันหยุดราชการ/วันหยุดพิเศษ [วันที่ => ชื่อ] — แสดงสีเทาเหมือนเสาร์-อาทิตย์
+foreach (cal_holidays($ym . '-01', date('Y-m-t', strtotime($ym . '-01'))) as $hd => $hn) {
+    $hol[(int)substr($hd, 8, 2)] = $hn;
+}
 $isAdmin = cal_can('admin');
 
 $plan = plan_get($y, $m);
@@ -95,13 +99,13 @@ require __DIR__ . '/header.php';
           <th rowspan="2" class="text-center plan-no">ที่</th>
           <th rowspan="2" class="plan-name">รายชื่อผู้ปฏิบัติงาน</th>
           <?php for ($d = 1; $d <= $days; $d++): $date = sprintf('%s-%02d', $ym, $d); $w = (int)date('w', strtotime($date)); ?>
-            <th class="text-center plan-day<?= $w === 0 || $w === 6 ? ' we' : '' ?><?= $date === $today ? ' today' : '' ?>"><?= $d ?></th>
+            <th class="text-center plan-day<?= $w === 0 || $w === 6 || isset($hol[$d]) ? ' we' : '' ?><?= $date === $today ? ' today' : '' ?>"<?= isset($hol[$d]) ? ' title="วันหยุด: ' . h($hol[$d]) . '"' : '' ?>><?= $d ?><?= isset($hol[$d]) ? '<i class="bi bi-flag-fill plan-hol"></i>' : '' ?></th>
           <?php endfor; ?>
           <th colspan="<?= count($fieldCodes) + 5 ?>" class="text-center plan-sum-head">สรุปจำนวนวัน</th>
         </tr>
         <tr>
           <?php for ($d = 1; $d <= $days; $d++): $date = sprintf('%s-%02d', $ym, $d); $w = (int)date('w', strtotime($date)); ?>
-            <th class="text-center plan-wd<?= $w === 0 || $w === 6 ? ' we' : '' ?><?= $date === $today ? ' today' : '' ?>"><?= $wd[$w] ?></th>
+            <th class="text-center plan-wd<?= $w === 0 || $w === 6 || isset($hol[$d]) ? ' we' : '' ?><?= $date === $today ? ' today' : '' ?>"><?= $wd[$w] ?></th>
           <?php endfor; ?>
           <?php foreach ($fieldCodes as $c): ?><th class="text-center plan-sum" style="--c:<?= h($c['color']) ?>" title="<?= h($c['name']) ?>"><?= h($c['code']) ?></th><?php endforeach; ?>
           <th class="text-center plan-sum" style="--c:#16a34a" title="เวรสำนักงาน (จากปฏิทิน)">เวร</th>
@@ -155,7 +159,7 @@ require __DIR__ . '/header.php';
             $title = implode(' + ', array_filter(array_merge(
                 array_map(fn($cid) => in_array($codes[$cid]['kind'], ['field', 'leave'], true) ? $codes[$cid]['code'] . ($codes[$cid]['name'] !== $codes[$cid]['code'] ? ' (' . $codes[$cid]['name'] . ')' : '') : '', $ids),
                 [$hasDuty ? 'เวรสำนักงาน' : '', $hasGuard ? 'เวรศาลากลาง' : '', $as ? $as['title'] : '']))); ?>
-            <td class="text-center plan-cell<?= $w === 0 || $w === 6 ? ' we' : '' ?><?= $date === $today ? ' today' : '' ?><?= $first ? ' has' : '' ?>"
+            <td class="text-center plan-cell<?= $w === 0 || $w === 6 || isset($hol[$d]) ? ' we' : '' ?><?= $date === $today ? ' today' : '' ?><?= $first ? ' has' : '' ?>"
                 <?= $first ? 'style="--c:' . h($first['color']) . '"' : '' ?><?= $title !== '' ? ' title="' . h($d . ' ' . thai_month_long($m) . ': ' . $title) . '"' : '' ?>>
               <?php foreach ($ids as $cid): if (($codes[$cid]['kind'] ?? '') === 'field'): ?><span class="pc"><?= h($codes[$cid]['code']) ?></span><?php endif; endforeach; ?>
               <?php if ($leave): ?><span class="pc-leave" style="--lc:<?= h($leave['color']) ?>"><?= h($leave['name']) ?></span><?php endif; ?>
@@ -180,7 +184,7 @@ require __DIR__ . '/header.php';
         <tr class="plan-total">
           <td></td><td class="plan-name">ออกสนาม (คน)</td>
           <?php for ($d = 1; $d <= $days; $d++): $w = (int)date('w', strtotime(sprintf('%s-%02d', $ym, $d))); ?>
-            <td class="text-center<?= $w === 0 || $w === 6 ? ' we' : '' ?>"><?= $dayField[$d] ?: '' ?></td>
+            <td class="text-center<?= $w === 0 || $w === 6 || isset($hol[$d]) ? ' we' : '' ?>"><?= $dayField[$d] ?: '' ?></td>
           <?php endfor; ?>
           <td colspan="<?= count($fieldCodes) + 5 ?>"></td>
         </tr>
@@ -191,6 +195,7 @@ require __DIR__ . '/header.php';
   <div class="card-footer small plan-legend">
     <?php foreach ($fieldCodes as $c): ?><span class="me-3 text-nowrap"><span class="plan-chip" style="--c:<?= h($c['color']) ?>"><?= h($c['code']) ?></span> <?= h($c['name'] !== $c['code'] ? $c['name'] : '') ?></span><?php endforeach; ?>
     <span class="me-3 text-nowrap"><span class="pc-duty">เวร</span> เวรสำนักงาน (จากปฏิทิน)</span>
+    <?php if ($hol): ?><div class="mb-1"><i class="bi bi-flag-fill text-danger"></i> วันหยุด: <?= h(implode(' · ', array_map(fn($d, $n) => $d . ' ' . $n, array_keys($hol), $hol))) ?></div><?php endif; ?>
     <span class="me-3 text-nowrap"><span class="pc-guard">*</span> <?= h($codes[$guardId]['name'] ?? 'เวรศาลากลาง') ?></span>
     <?php foreach (plan_leave_codes($codes) as $c): ?><span class="me-3 text-nowrap"><span class="pc-leave" style="--lc:<?= h($c['color']) ?>"><?= h($c['name']) ?></span> (พิมพ์ในช่อง: <?= h($c['code']) ?>)</span><?php endforeach; ?>
     <div class="mt-1">เวลาปฏิบัติราชการ<?= $isAdmin ? '' : ' (แสดงเฉพาะของคุณ)' ?><?= $attAt ? ' (ข้อมูล ณ ' . h(thai_date(substr($attAt, 0, 10)) . ' ' . substr($attAt, 11, 5)) . ' น.)' : ' (ยังไม่ได้นำเข้า)' ?>:
@@ -214,6 +219,7 @@ require __DIR__ . '/header.php';
   .plan-grid thead .plan-name { z-index: 3; }
   .plan-day, .plan-wd { min-width: 2.4rem; }
   .plan-grid .we { background-color: #f1f5f9; }
+  .plan-hol { font-size: .55rem; color: #fecaca; margin-left: 1px; vertical-align: top; }
   .plan-grid th.today, .plan-grid td.today { box-shadow: inset 0 0 0 2px #f59e0b; }
   .plan-cell.has { background: color-mix(in srgb, var(--c) 16%, white); color: color-mix(in srgb, var(--c) 85%, black); font-weight: 600; }
   .plan-cell .pc + .pc::before { content: ' '; }

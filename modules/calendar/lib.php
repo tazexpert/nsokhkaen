@@ -452,6 +452,7 @@ function cal_render_table(array $events, string $from, int $meId, bool $showActi
         $groups[max($e['event_date'], $from)][] = $e;
     }
     ksort($groups);
+    $hol = $groups ? cal_holidays(array_key_first($groups), array_key_last($groups)) : [];   // วันหยุดราชการ/วันหยุดพิเศษ
     $today = date('Y-m-d');
     $tomorrow = date('Y-m-d', strtotime('+1 day'));
     $base = module_url(CAL_MODULE);
@@ -460,8 +461,8 @@ function cal_render_table(array $events, string $from, int $meId, bool $showActi
     foreach ($groups as $day => $list) {
         $tag = $day === $today ? ' <span class="badge cal-badge-today">วันนี้</span>' : ($day === $tomorrow ? ' <span class="badge text-bg-warning">พรุ่งนี้</span>' : '');
         $w = (int)date('w', strtotime($day));                // สีประจำวันเหมือนปฏิทินรายเดือน · เสาร์-อาทิตย์ = เทา · วันนี้ = ชมพู
-        $html .= '<tr class="cal-day wd' . $w . ($w === 0 || $w === 6 ? ' we' : '') . ($day === $today ? ' today' : '') . '"><th colspan="5"><span class="cal-n">' . substr($day, 8, 2) . '</span> '
-            . h(cal_date_text($day)) . $tag . '</th></tr>';
+        $html .= '<tr class="cal-day wd' . $w . ($w === 0 || $w === 6 ? ' we' : '') . (isset($hol[$day]) ? ' holiday' : '') . ($day === $today ? ' today' : '') . '"><th colspan="5"><span class="cal-n">' . substr($day, 8, 2) . '</span> '
+            . h(cal_date_text($day)) . $tag . (isset($hol[$day]) ? ' <span class="cal-hol-name"><i class="bi bi-flag-fill"></i> ' . h($hol[$day]) . '</span>' : '') . '</th></tr>';
         foreach ($list as $e) {
             $ids = $assignees[(int)$e['id']] ?? [];
             $mine = in_array($meId, $ids, true);
@@ -656,4 +657,37 @@ function cal_duty_tabs(string $cur): string
 function cal_guard_short(string $title): string
 {
     return str_replace([' · ผู้ปฏิบัติหน้าที่เวร', ' · ผู้ตรวจเวร'], ['', ' (ผู้ตรวจเวร)'], $title);
+}
+
+/* ---------- วันหยุดราชการ / วันหยุดพิเศษ (cal_holidays — migration 20261217) ---------- */
+
+function cal_has_holidays(): bool
+{
+    static $has = null;
+    if ($has === null) {
+        try {
+            $has = (bool)db()->query("SHOW TABLES LIKE 'cal_holidays'")->fetch();
+        } catch (PDOException $e) {
+            $has = false;
+        }
+    }
+    return $has;
+}
+
+/** วันหยุดในช่วง [Y-m-d => ชื่อวันหยุด] (ไม่รวมเสาร์-อาทิตย์ที่ไม่ได้กำหนดไว้) */
+function cal_holidays(string $from, string $to): array
+{
+    if (!cal_has_holidays()) {
+        return [];
+    }
+    $st = db()->prepare('SELECT holiday_date, name FROM cal_holidays WHERE holiday_date BETWEEN ? AND ? ORDER BY holiday_date');
+    $st->execute([$from, $to]);
+    return $st->fetchAll(PDO::FETCH_KEY_PAIR);
+}
+
+/** เป็นวันหยุดหรือไม่: เสาร์-อาทิตย์ หรือวันหยุดที่กำหนด ($holidays จาก cal_holidays()) */
+function cal_is_off(string $date, array $holidays): bool
+{
+    $w = (int)date('w', strtotime($date));
+    return $w === 0 || $w === 6 || isset($holidays[$date]);
 }

@@ -318,3 +318,11 @@ a.cal-day-person:hover { box-shadow: 0 4px 14px rgba(15, 23, 42, .15); transform
 }
 .cal-add-tabs .nav-link.active i { color: #fff; }
 @media (max-width: 575.98px) { .cal-add-tabs .nav-link { padding: .5rem .7rem; font-size: .92rem; } }
+
+/* วันหยุดราชการ/วันหยุดพิเศษ (cal_holidays) — สีเทาเหมือนเสาร์-อาทิตย์ + ชื่อวันหยุด */
+.cal-cell.holiday { background: #f4f6f9; }
+.cal-cell.holiday.out { background: #eaeef3; }
+.cal-holiday { font-size: .72rem; line-height: 1.25; color: #b91c1c; font-weight: 600; margin: 0 0 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-day-holiday { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 8px; padding: .4rem .6rem; margin-bottom: .6rem; font-weight: 600; font-size: .9rem; }
+.cal-table tr.cal-day.holiday th { background: #eef1f5; color: #475569; }
+.cal-table .cal-hol-name { color: #b91c1c; font-weight: 600; font-size: .85rem; }

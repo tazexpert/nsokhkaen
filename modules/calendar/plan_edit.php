@@ -16,6 +16,10 @@ if (!empty($me['is_guest'])) {                       // ผู้เยี่ย
 [$y, $m] = plan_ym($_GET['m'] ?? null);
 $ym = sprintf('%04d-%02d', $y, $m);
 $days = (int)date('t', strtotime($ym . '-01'));
+$hol = [];                                            // วันหยุดราชการ/วันหยุดพิเศษ [วันที่ => ชื่อ] — แสดงสีเทาเหมือนเสาร์-อาทิตย์
+foreach (cal_holidays($ym . '-01', date('Y-m-t', strtotime($ym . '-01'))) as $hd => $hn) {
+    $hol[(int)substr($hd, 8, 2)] = $hn;
+}
 $codes = plan_codes();
 $plan = plan_get($y, $m);
 $errors = [];
@@ -218,7 +222,7 @@ require __DIR__ . '/header.php';
           <tr>
             <th class="plan-name">รายชื่อผู้ปฏิบัติงาน</th>
             <?php for ($d = 1; $d <= $days; $d++): $w = (int)date('w', strtotime(sprintf('%s-%02d', $ym, $d))); ?>
-              <th class="text-center<?= $w === 0 || $w === 6 ? ' we' : '' ?>"><?= $d ?><div class="small fw-normal plan-wdn"><?= $wd[$w] ?></div></th>
+              <th class="text-center<?= $w === 0 || $w === 6 || isset($hol[$d]) ? ' we' : '' ?>"><?= $d ?><div class="small fw-normal plan-wdn"><?= $wd[$w] ?></div></th>
             <?php endfor; ?>
           </tr>
         </thead>
@@ -232,7 +236,7 @@ require __DIR__ . '/header.php';
             <?php for ($d = 1; $d <= $days; $d++):
               $w = (int)date('w', strtotime(sprintf('%s-%02d', $ym, $d)));
               $hasDuty = $r['user_id'] && !empty($duty[$r['user_id']][$d]); ?>
-              <td class="p-0<?= $w === 0 || $w === 6 ? ' we' : '' ?><?= $hasDuty ? ' has-duty' : '' ?>"<?= $hasDuty ? ' title="เวรสำนักงาน (จากปฏิทิน)"' : '' ?>>
+              <td class="p-0<?= $w === 0 || $w === 6 || isset($hol[$d]) ? ' we' : '' ?><?= $hasDuty ? ' has-duty' : '' ?>"<?= $hasDuty ? ' title="เวรสำนักงาน (จากปฏิทิน)"' : '' ?>>
                 <input name="p[<?= $i ?>][c][<?= $d ?>]" class="plan-in" value="<?= h($r['texts'][$d] ?? '') ?>" autocomplete="off" aria-label="วันที่ <?= $d ?>"></td>
             <?php endfor; ?>
           </tr>
@@ -280,7 +284,7 @@ require __DIR__ . '/header.php';
       <input type="hidden" name="p[__I__][uid]" value="__UID__"><input type="hidden" name="p[__I__][name]" class="nm-in">
     </td>
     <?php for ($d = 1; $d <= $days; $d++): $w = (int)date('w', strtotime(sprintf('%s-%02d', $ym, $d))); ?>
-      <td class="p-0<?= $w === 0 || $w === 6 ? ' we' : '' ?>"><input name="p[__I__][c][<?= $d ?>]" class="plan-in" autocomplete="off" aria-label="วันที่ <?= $d ?>"></td>
+      <td class="p-0<?= $w === 0 || $w === 6 || isset($hol[$d]) ? ' we' : '' ?>"><input name="p[__I__][c][<?= $d ?>]" class="plan-in" autocomplete="off" aria-label="วันที่ <?= $d ?>"></td>
     <?php endfor; ?>
   </tr>
 </template>

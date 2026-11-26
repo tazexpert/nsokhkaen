@@ -13,6 +13,7 @@ $gridStart = date('Y-m-d', strtotime($first . ' -' . date('w', strtotime($first)
 $gridEnd = date('Y-m-d', strtotime($last . ' +' . (6 - (int)date('w', strtotime($last))) . ' days'));    // เสาร์หลังวันสุดท้าย
 $events = cal_events_between($gridStart, $gridEnd, $mine ? $me['id'] : null);
 $assignees = cal_assignees(array_column($events, 'id'));
+$holidays = cal_holidays($gridStart, $gridEnd);       // วันหยุดราชการ/วันหยุดพิเศษ (นอกจากเสาร์-อาทิตย์) — แสดงสีเทา + ชื่อวันหยุด
 $byDay = [];
 foreach ($events as $e) {
     $d = max($e['event_date'], $gridStart);
@@ -101,8 +102,9 @@ $today = date('Y-m-d');
     <?php foreach (CAL_WEEKDAYS_SHORT as $i => $w): ?><div class="cal-wd<?= $i === 0 ? ' sun' : '' ?>"><?= $w ?></div><?php endforeach; ?>
     <?php for ($d = $gridStart; $d <= $gridEnd; $d = date('Y-m-d', strtotime($d . ' +1 day'))):
         $out = substr($d, 0, 7) !== $m; ?>
-      <div class="cal-cell<?= $out ? ' out' : '' ?><?= $d === $today ? ' today' : '' ?>" data-date="<?= $d ?>" data-label="<?= h(cal_date_text($d)) ?>">
+      <div class="cal-cell<?= $out ? ' out' : '' ?><?= $d === $today ? ' today' : '' ?><?= isset($holidays[$d]) ? ' holiday' : '' ?>" data-date="<?= $d ?>" data-label="<?= h(cal_date_text($d)) ?>"<?= isset($holidays[$d]) ? ' data-holiday="' . h($holidays[$d]) . '"' : '' ?>>
         <div class="cal-dnum"><?php if (cal_can('editor')): ?><a href="<?= h($calBase) ?>event_form?date=<?= $d ?>" class="cal-add" title="เพิ่มกิจกรรมวันนี้"><i class="bi bi-plus"></i></a><?php endif; ?><?= $d === $today ? '<span class="cal-today-tag">วันนี้</span>' : '' ?><span class="cal-n"><?= substr($d, 8, 2) ?></span></div>
+        <?php if (isset($holidays[$d])): ?><div class="cal-holiday" title="วันหยุด"><i class="bi bi-flag-fill"></i> <?= h($holidays[$d]) ?></div><?php endif; ?>
         <?php foreach ($byDay[$d] ?? [] as $e): $isMine = in_array($me['id'], $assignees[(int)$e['id']] ?? [], true); ?>
           <a href="<?= h($calBase) ?>event_view?id=<?= (int)$e['id'] ?>" class="cal-ev<?= cal_is_duty($e) ? ' duty' : '' ?><?= cal_is_guard($e) ? ' guard' : '' ?><?= $isMine ? ' mine' : '' ?>" title="<?= h(cal_is_shift($e) ? $e['title'] . ': ' . implode(', ', array_map(fn($id) => $nameOf[$id] ?? '', $assignees[(int)$e['id']] ?? [])) : cal_time_text($e) . ' ' . $e['title'] . ($e['location'] ? ' @ ' . $e['location'] : '')) ?>">
             <?php if ($e['start_time'] && $d === $e['event_date'] && !cal_is_guard($e)): ?><span class="t"><?= cal_time_thai($e['start_time']) ?></span><?php endif; ?><?= cal_is_private($e) ? '<i class="bi bi-lock-fill me-1" title="ส่วนตัว"></i>' : '' ?><?= h(cal_is_shift($e) ? $dutyLabel($e) : $e['title']) ?></a>
@@ -148,7 +150,8 @@ $today = date('Y-m-d');
     const [, mm, dd] = cell.dataset.date.split('-').map(Number);
     document.getElementById('dayPanelD').textContent = dd;
     document.getElementById('dayPanelM').textContent = ['', 'ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'][mm];
-    let html = `<div class="cal-day-sec duty"><div class="cal-day-h"><i class="bi bi-shield-check"></i> 1. เวรสำนักงาน</div><div class="cal-day-c">`
+    let html = (cell.dataset.holiday ? `<div class="cal-day-holiday"><i class="bi bi-flag-fill"></i> วันหยุด: ${esc(cell.dataset.holiday)}</div>` : '')
+      + `<div class="cal-day-sec duty"><div class="cal-day-h"><i class="bi bi-shield-check"></i> 1. เวรสำนักงาน</div><div class="cal-day-c">`
       + (d.duty.length ? d.duty.map(esc).join(', ') : '<span class="text-muted">-</span>')
       + d.guard.map(g => `<div class="cal-day-guard"><i class="bi bi-building"></i> ${esc(g)}</div>`).join('') + '</div></div>';
     html += `<div class="cal-day-sec people"><div class="cal-day-h"><i class="bi bi-list-check"></i> 2. กิจกรรม <span class="badge rounded-pill ms-auto">${d.events.length} รายการ</span></div><div class="cal-day-c">`
