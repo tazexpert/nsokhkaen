@@ -203,7 +203,7 @@ require __DIR__ . '/header.php';
         <?php foreach ($activeCodes as $c): ?>
           <?php if ($c['kind'] === 'leave' && !isset($__leaveSep)): $__leaveSep = true; ?><span class="plan-tool-sep" aria-hidden="true"></span><?php endif; ?>
           <input type="radio" class="btn-check" name="tool" id="tool-<?= (int)$c['id'] ?>" value="<?= h($c['code']) ?>">
-          <label class="btn btn-outline-secondary plan-tool" for="tool-<?= (int)$c['id'] ?>" style="--c:<?= h($c['color']) ?>" title="<?= h($c['name']) ?>"><?= h($c['code']) ?></label>
+          <label class="btn btn-outline-secondary plan-tool" for="tool-<?= (int)$c['id'] ?>" style="--c:<?= h($c['color']) ?>" title="<?= h($c['name']) ?>"><?= h($c['kind'] === 'leave' ? $c['name'] : ($c['kind'] === 'guard' ? '* ' . $c['name'] : $c['code'])) ?></label>
         <?php endforeach; ?>
         <input type="radio" class="btn-check" name="tool" id="tool-erase" value="-"><label class="btn btn-outline-secondary" for="tool-erase" title="ล้างช่อง"><i class="bi bi-eraser"></i> ล้าง</label>
       </div>
