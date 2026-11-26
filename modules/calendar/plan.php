@@ -159,7 +159,7 @@ require __DIR__ . '/header.php';
             <td class="text-center plan-cell<?= $w === 0 || $w === 6 ? ' we' : '' ?><?= $date === $today ? ' today' : '' ?><?= $first ? ' has' : '' ?>"
                 <?= $first ? 'style="--c:' . h($first['color']) . '"' : '' ?><?= $title !== '' ? ' title="' . h($d . ' ' . thai_month_long($m) . ': ' . $title) . '"' : '' ?>>
               <?php foreach ($ids as $cid): if (($codes[$cid]['kind'] ?? '') === 'field'): ?><span class="pc"><?= h($codes[$cid]['code']) ?></span><?php endif; endforeach; ?>
-              <?php if ($leave): ?><span class="pc-leave" style="--lc:<?= h($leave['color']) ?>"><?= h($leave['code']) ?></span><?php endif; ?>
+              <?php if ($leave): ?><span class="pc-leave" style="--lc:<?= h($leave['color']) ?>"><?= h($leave['name']) ?></span><?php endif; ?>
               <?php if ($hasDuty): ?><span class="pc-duty">เวร</span><?php endif; ?>
               <?php if ($hasGuard): ?><span class="pc-guard">*</span><?php endif; ?>
               <?php if ($as): if (!empty($as['certifiable']) && $mine): ?><button type="button" class="att-chip <?= $as['cls'] ?>" data-att-certify data-date="<?= $date ?>"><?= h($as['code']) ?></button>
@@ -193,7 +193,7 @@ require __DIR__ . '/header.php';
     <?php foreach ($fieldCodes as $c): ?><span class="me-3 text-nowrap"><span class="plan-chip" style="--c:<?= h($c['color']) ?>"><?= h($c['code']) ?></span> <?= h($c['name'] !== $c['code'] ? $c['name'] : '') ?></span><?php endforeach; ?>
     <span class="me-3 text-nowrap"><span class="pc-duty">เวร</span> เวรสำนักงาน (จากปฏิทิน)</span>
     <span class="me-3 text-nowrap"><span class="pc-guard">*</span> <?= h($codes[$guardId]['name'] ?? 'เวรศาลากลาง') ?></span>
-    <?php foreach (plan_leave_codes($codes) as $c): ?><span class="me-3 text-nowrap"><span class="pc-leave" style="--lc:<?= h($c['color']) ?>"><?= h($c['code']) ?></span> <?= h($c['name']) ?></span><?php endforeach; ?>
+    <?php foreach (plan_leave_codes($codes) as $c): ?><span class="me-3 text-nowrap"><span class="pc-leave" style="--lc:<?= h($c['color']) ?>"><?= h($c['name']) ?></span> (พิมพ์ในช่อง: <?= h($c['code']) ?>)</span><?php endforeach; ?>
     <div class="mt-1">เวลาปฏิบัติราชการ<?= $isAdmin ? '' : ' (แสดงเฉพาะของคุณ)' ?><?= $attAt ? ' (ข้อมูล ณ ' . h(thai_date(substr($attAt, 0, 10)) . ' ' . substr($attAt, 11, 5)) . ' น.)' : ' (ยังไม่ได้นำเข้า)' ?>:
       <span class="me-2 text-nowrap"><span class="att-chip att-late">ส</span> สาย</span>
       <span class="me-2 text-nowrap"><span class="att-chip att-half">ลาเช้า</span>/<span class="att-chip att-half">ลาบ่าย</span></span>
@@ -220,7 +220,7 @@ require __DIR__ . '/header.php';
   .plan-cell .pc + .pc::before { content: ' '; }
   .pc-duty { display: inline-block; font-size: .68rem; padding: 0 .25rem; border-radius: .25rem; background: #dcfce7; color: #15803d; font-weight: 600; }
   .pc-guard { color: #dc2626; font-weight: 700; font-size: 1rem; line-height: 1; }
-  .pc-leave { display: inline-block; background: var(--lc); color: #fff; border-radius: 4px; padding: 0 3px; font-size: .72rem; font-weight: 600; line-height: 1.35; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .pc-leave { display: inline-block; background: var(--lc); color: #fff; border-radius: 4px; padding: 0 3px; font-size: .68rem; font-weight: 600; line-height: 1.35; white-space: nowrap; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .plan-sum { color: var(--c); }
   .plan-sumv { font-weight: 600; background: #f8fafc; }
   .plan-sum-head { background: #f8fafc !important; }

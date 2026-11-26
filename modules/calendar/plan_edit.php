@@ -137,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $note = $plan['note'] ?? '';
     if ($selfOnly) {
         $rows[] = ['user_id' => $myId, 'name' => $me['full_name'], 'texts' => array_map(fn($ids) => plan_cell_text($ids, $codes), $myOld)];
-        $notice = 'แก้ไขเฉพาะแผนของคุณ — เลือกรหัสโครงการหรือการลา (ลก = ลากิจ · ลป = ลาป่วย · ลพ = ลาพักผ่อน) แล้วคลิกวัน หรือพิมพ์ในช่อง · เวรศาลากลางกำหนดโดยผู้ดูแลปฏิทิน';
+        $notice = 'แก้ไขเฉพาะแผนของคุณ — เลือกรหัสโครงการหรือการลา (ลากิจ · ลาป่วย · ลาพักผ่อน) แล้วคลิกวัน หรือพิมพ์ในช่อง (การลาพิมพ์ชื่อเต็มหรือตัวย่อ ลก / ลป / ลพ ก็ได้) · เวรศาลากลางกำหนดโดยผู้ดูแลปฏิทิน';
     } elseif ($plan) {
         $cells = plan_cells((int)$plan['id']);
         foreach (plan_people((int)$plan['id']) as $p) {
@@ -180,6 +180,9 @@ $activeCodes = $monthProjects + plan_leave_codes($codes) + ($selfOnly ? [] : [PL
 $colors = [];
 foreach ($codes as $c) {
     $colors[$c['code']] = $c['color'];
+    if ($c['kind'] === 'leave') {
+        $colors[$c['name']] = $c['color'];      // พิมพ์ชื่อเต็มการลาได้
+    }
 }
 $wd = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
 
@@ -202,7 +205,7 @@ require __DIR__ . '/header.php';
         <input type="radio" class="btn-check" name="tool" id="tool-type" value="" checked><label class="btn btn-outline-secondary" for="tool-type" title="พิมพ์ในช่องเอง"><i class="bi bi-cursor-text"></i> พิมพ์</label>
         <?php foreach ($activeCodes as $c): ?>
           <?php if ($c['kind'] === 'leave' && !isset($__leaveSep)): $__leaveSep = true; ?><span class="plan-tool-sep" aria-hidden="true"></span><?php endif; ?>
-          <input type="radio" class="btn-check" name="tool" id="tool-<?= (int)$c['id'] ?>" value="<?= h($c['code']) ?>">
+          <input type="radio" class="btn-check" name="tool" id="tool-<?= (int)$c['id'] ?>" value="<?= h($c['kind'] === 'leave' ? $c['name'] : $c['code']) ?>">
           <label class="btn btn-outline-secondary plan-tool" for="tool-<?= (int)$c['id'] ?>" style="--c:<?= h($c['color']) ?>" title="<?= h($c['name']) ?>"><?= h($c['kind'] === 'leave' ? $c['name'] : ($c['kind'] === 'guard' ? '* ' . $c['name'] : $c['code'])) ?></label>
         <?php endforeach; ?>
         <input type="radio" class="btn-check" name="tool" id="tool-erase" value="-"><label class="btn btn-outline-secondary" for="tool-erase" title="ล้างช่อง"><i class="bi bi-eraser"></i> ล้าง</label>
@@ -290,6 +293,7 @@ require __DIR__ . '/header.php';
   .plan-edit thead .plan-name { z-index: 3; }
   .plan-edit .we { background-color: #f1f5f9; }
   .plan-in { width: 2.9rem; border: 0; background: transparent; text-align: center; font-weight: 600; padding: .3rem 0; font-size: .8rem; outline: none; }
+  .plan-in.lv { width: 4.4rem; font-size: .72rem; }
   .plan-in:focus { box-shadow: inset 0 0 0 2px #3b82f6; background: #fff; }
   .plan-in.has { background: color-mix(in srgb, var(--c) 18%, white); color: color-mix(in srgb, var(--c) 85%, black); }
   .plan-in.bad { background: #fee2e2; color: #b91c1c; }
@@ -302,7 +306,7 @@ require __DIR__ . '/header.php';
 <script>
 (() => {
   const COLORS = <?= json_encode($colors, JSON_UNESCAPED_UNICODE) ?>;
-  const LEAVES = <?= json_encode(array_values(array_column(plan_leave_codes($codes), 'code')), JSON_UNESCAPED_UNICODE) ?>;   // ลก ลป ลพ
+  const LEAVES = <?= json_encode(array_merge(array_column(plan_leave_codes($codes), 'code'), array_column(plan_leave_codes($codes), 'name')), JSON_UNESCAPED_UNICODE) ?>;   // ลก ลป ลพ
   const form = document.getElementById('planForm'), body = document.getElementById('planRows');
   const tool = () => form.querySelector('[name=tool]:checked').value;
   let dirty = false;
@@ -318,6 +322,7 @@ require __DIR__ . '/header.php';
     inp.classList.toggle('has', !bad && known.length > 0);
     if (known.length) inp.style.setProperty('--c', COLORS[known[0]]); else inp.style.removeProperty('--c');
     inp.style.color = !known.length && p.star ? '#dc2626' : '';
+    inp.classList.toggle('lv', p.codes.some(c => LEAVES.includes(c) && c.length > 2));   // ชื่อเต็มการลา = ช่องกว้างขึ้น
   };
   form.querySelectorAll('.plan-in').forEach(paint);
 

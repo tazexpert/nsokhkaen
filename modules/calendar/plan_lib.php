@@ -172,6 +172,9 @@ function plan_parse_cell(string $v, array $codes): array
     $byCode = [];
     foreach ($codes as $id => $c) {
         $byCode[mb_strtolower($c['code'])] = $id;
+        if ($c['kind'] === 'leave') {
+            $byCode[$c['name']] = $id;            // พิมพ์ชื่อเต็มได้ (ลากิจ / ลาป่วย / ลาพักผ่อน)
+        }
     }
     $ids = [];
     $unknown = [];
@@ -204,8 +207,8 @@ function plan_cell_text(array $ids, array $codes): string
         }
         if ($codes[$id]['kind'] === 'guard') {
             $guard = true;
-        } else {
-            $txt .= ($txt === '' ? '' : ' ') . $codes[$id]['code'];
+        } else {                                   // การลาแสดงชื่อเต็ม (ลากิจ / ลาป่วย / ลาพักผ่อน)
+            $txt .= ($txt === '' ? '' : ' ') . ($codes[$id]['kind'] === 'leave' ? $codes[$id]['name'] : $codes[$id]['code']);
         }
     }
     return $txt . ($guard ? '*' : '');
