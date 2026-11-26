@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
-require_module(DCC_MODULE, 'inspector');
+require_module(DCC_MODULE, 'viewer');
 $pageTitle = 'ภาพรวม';
 $active = 'dashboard';
 $pdo = db();
@@ -94,7 +94,7 @@ require __DIR__ . '/header.php';
                   <span class="dc-tags">
                     <?= $c['lat'] !== null ? '<i class="bi bi-geo-alt-fill text-success" title="มีพิกัดแล้ว"></i>' : '<i class="bi bi-geo-alt text-danger" title="ยังไม่มีพิกัด"></i>' ?>
                     <?php if ($c['visit_count'] > 0): ?><span class="badge text-bg-success">ตรวจ <?= (int)$c['visit_count'] ?> ครั้ง</span>
-                    <?php else: ?><a href="visit_form?center_id=<?= (int)$c['id'] ?>" class="badge text-bg-warning text-decoration-none">ยังไม่ตรวจเยี่ยม</a><?php endif; ?>
+                    <?php elseif (dcc_can('inspector')): ?><a href="visit_form?center_id=<?= (int)$c['id'] ?>" class="badge text-bg-warning text-decoration-none">ยังไม่ตรวจเยี่ยม</a><?php else: ?><span class="badge text-bg-warning">ยังไม่ตรวจเยี่ยม</span><?php endif; ?>
                   </span>
                 </div>
               <?php endforeach; ?>

@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
-require_module(DCC_MODULE, 'inspector');
+require_module(DCC_MODULE, 'viewer');
 $pdo = db();
 
 // ลบการตรวจเยี่ยม (รวมกิจกรรมและภาพที่ผูกกัน)
@@ -134,7 +134,7 @@ $pct = $total ? round($visited / $total * 100) : 0;
             <?php if ($c['visit_count'] > 0): ?>
               <a href="<?= h($url(['center_id' => (int)$c['id']])) ?>#history" class="btn btn-sm btn-light text-nowrap" title="ดูประวัติ"><i class="bi bi-clock-history"></i></a>
             <?php endif; ?>
-            <a href="visit_form?center_id=<?= (int)$c['id'] ?>" class="btn btn-sm btn-success text-nowrap"><i class="bi bi-clipboard-plus"></i> ตรวจเยี่ยม<?= $c['visit_count'] > 0 ? ' ครั้งที่ ' . ($c['visit_count'] + 1) : '' ?></a>
+            <?php if (dcc_can('inspector')): ?><a href="visit_form?center_id=<?= (int)$c['id'] ?>" class="btn btn-sm btn-success text-nowrap"><i class="bi bi-clipboard-plus"></i> ตรวจเยี่ยม<?= $c['visit_count'] > 0 ? ' ครั้งที่ ' . ($c['visit_count'] + 1) : '' ?></a><?php endif; ?>
           </div>
         <?php endforeach; ?>
         <?php if (!$centers): ?><div class="list-group-item text-center text-muted py-4">ไม่พบศูนย์ตามเงื่อนไข</div><?php endif; ?>
@@ -162,7 +162,7 @@ $pct = $total ? round($visited / $total * 100) : 0;
               <td class="text-center"><?= (int)$r['photo_count'] ?></td>
               <td class="text-end text-nowrap">
                 <a href="visit_view?id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-light" title="ดู/พิมพ์"><i class="bi bi-printer"></i></a>
-                <a href="visit_form?id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a>
+                <?php if (dcc_can('inspector')): ?><a href="visit_form?id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a><?php endif; ?>
                 <?php if (dcc_can('admin')): ?>
                 <form method="post" class="d-inline" data-confirm="ลบบันทึกการตรวจเยี่ยมครั้งที่ <?= (int)$r['visit_no'] ?> ของ <?= h($r['center_name']) ?> และภาพทั้งหมด?">
                   <?= csrf_field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="id" value="<?= (int)$r['id'] ?>">

@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
-require_module(DCC_MODULE, 'inspector');
+require_module(DCC_MODULE, 'viewer');
 $pdo = db();
 
 // ลบศูนย์
@@ -133,7 +133,7 @@ require __DIR__ . '/header.php';
             <?php if (dcc_can('editor')): ?>
             <a href="center_form?id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-light" title="แก้ไข"><i class="bi bi-pencil"></i></a>
             <?php endif; ?>
-            <a href="visit_form?center_id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-light text-success" title="ตรวจเยี่ยม"><i class="bi bi-clipboard-check"></i></a>
+            <?php if (dcc_can('inspector')): ?><a href="visit_form?center_id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-light text-success" title="ตรวจเยี่ยม"><i class="bi bi-clipboard-check"></i></a><?php endif; ?>
             <?php if (dcc_can('editor')): ?>
             <a href="activity_form?center_id=<?= (int)$r['id'] ?>" class="btn btn-sm btn-light" title="เพิ่มกิจกรรม"><i class="bi bi-calendar-plus"></i></a>
             <?php endif; ?>

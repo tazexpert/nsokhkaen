@@ -1,7 +1,7 @@
 <?php
 /** แสดง/พิมพ์ แบบฟอร์มการตรวจเยี่ยมศูนย์ดิจิทัลชุมชน (รูปแบบเดียวกับแบบฟอร์มกระดาษ) */
 require_once __DIR__ . '/bootstrap.php';
-require_module(DCC_MODULE, 'inspector');
+require_module(DCC_MODULE, 'viewer');
 $pdo = db();
 $id = int_param('id');
 $st = $pdo->prepare('SELECT v.*, c.name AS cur_name, c.house_no, c.village, c.moo, c.address, c.subdistrict, c.district, c.center_type
@@ -83,8 +83,10 @@ $typeSel = visit_type_option((string)$s['center_type']);
 <body>
 <div class="toolbar">
   <a href="visits?center_id=<?= (int)$v['center_id'] ?>#history"><i class="bi bi-arrow-left"></i> กลับ</a>
+  <?php if (dcc_can('inspector')): ?>
   <a href="visit_form?center_id=<?= (int)$v['center_id'] ?>&amp;copy=1"><i class="bi bi-clipboard-plus"></i> ตรวจเยี่ยมครั้งถัดไป</a>
   <a href="visit_form?id=<?= (int)$v['id'] ?>"><i class="bi bi-pencil"></i> แก้ไข</a>
+  <?php endif; ?>
   <a href="public/center.html?id=<?= (int)$v['center_id'] ?>#act-<?= (int)$v['activity_id'] ?>" target="_blank"><i class="bi bi-eye"></i> ดูบนเว็บไซต์</a>
   <button class="primary" onclick="print()"><i class="bi bi-printer"></i> พิมพ์ / บันทึก PDF</button>
 </div>
