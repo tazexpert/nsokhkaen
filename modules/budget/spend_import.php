@@ -30,6 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $lastWork[bud_source_key($r)] = [bud_txn_plan($r), (int)$r['work_id']];
             }
             $dup = $pdo->prepare("SELECT id FROM bud_txns WHERE txn_type = 'spend' AND doc_no = ? AND amount = ? LIMIT 1");
+            $seen = [];                                       // ซ้ำกันเองในไฟล์ที่เลือก: เลขที่เอกสาร + บรรทัด + จำนวนเงิน → ไฟล์แรกที่พบ
             foreach (array_slice($files, 0, 100) as $f) {
                 $name = mb_substr((string)($f['name'] ?? ''), 0, 200);
                 $p = gfmis_parse(is_array($f['lines'] ?? null) ? $f['lines'] : []);
@@ -48,11 +49,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     $dup->execute([$p['doc_no'], $d['amount']]);
                     $isDup = (bool)$dup->fetchColumn();
+                    $fk = $p['doc_year'] . '-' . $p['doc_no'] . '|' . $d['line'] . '|' . $d['amount'];
+                    $dupFile = $seen[$fk] ?? null;            // ชื่อไฟล์แรกที่มีรายการเดียวกัน
+                    $seen[$fk] ??= $name;
                     $rows[] = ['file' => $name, 'doc_no' => $p['doc_no'], 'doc_year' => $p['doc_year'], 'date' => $p['date'], 'post_date' => $p['post_date'],
                                'status' => $p['status'], 'form' => $p['form'], 'account' => $d['account'] . ' ' . $d['account_name'],
                                'source' => $d['source'], 'budget_name' => $d['budget_name'], 'activity' => $d['activity'],
                                'description' => $desc, 'amount' => $d['amount'], 'src' => $sug['src'], 'how' => $sug['how'],
-                               'plan_id' => $sug['plan_id'] ?: null, 'work_id' => $sug['work_id'] ?: null, 'dup' => $isDup];
+                               'plan_id' => $sug['plan_id'] ?: null, 'work_id' => $sug['work_id'] ?: null, 'dup' => $isDup, 'dup_file' => $dupFile,
+                               'pick' => !$isDup && $dupFile === null];
                 }
             }
         }
@@ -67,6 +72,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $n = 0;
         $sum = 0.0;
         $bad = [];
+        $skipped = [];
+        $done = [];
+        $dupDb = $pdo->prepare("SELECT id FROM bud_txns WHERE txn_type = 'spend' AND doc_no = ? AND amount = ? LIMIT 1");
         $pdo->beginTransaction();
         foreach ($rows as $i => $r) {
             if (empty($_POST['pick'][$i])) {
@@ -86,6 +94,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $bad[] = 'แถว ' . ($i + 1) . ' (' . $r['doc_no'] . ')';
                 continue;
             }
+            $dk = $r['doc_no'] . '|' . round((float)$r['amount'], 2);
+            $dupDb->execute([$r['doc_no'], $r['amount']]);
+            if (isset($done[$dk]) || $dupDb->fetchColumn()) {   // ซ้ำกับที่บันทึกแล้ว / ซ้ำกันเองในรอบนี้ → ข้าม
+                $skipped[] = $r['doc_no'];
+                continue;
+            }
+            $done[$dk] = true;
             $note = 'GFMIS ' . trim(explode(' - ', $r['form'])[0]) . ' เลขที่ ' . $r['doc_year'] . '-' . $r['doc_no']
                 . ($r['post_date'] ? ' · ผ่านรายการ ' . thai_date($r['post_date']) : '') . ($r['status'] ? ' · ' . $r['status'] : '');
             $ins->execute(['spend', $r['date'], bud_fy($r['date']), $r['doc_no'], mb_substr($desc, 0, 500), '', $ids[0], $ids[1], $plan, $work,
@@ -109,7 +124,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->commit();
             unset($_SESSION[$sessKey]);
             audit_log('bud_spend_import', 'นำเข้าเบิกจ่ายจากใบเบิก GFMIS ' . $n . ' รายการ ' . bud_money($sum) . ' บาท', BUD_MODULE);
-            flash($n ? 'นำเข้ารายการเบิกจ่าย ' . $n . ' รายการ รวม ' . bud_money($sum) . ' บาท แล้ว' : 'ไม่ได้เลือกรายการ — ไม่มีการบันทึก', $n ? 'success' : 'warning');
+            flash(($n ? 'นำเข้ารายการเบิกจ่าย ' . $n . ' รายการ รวม ' . bud_money($sum) . ' บาท แล้ว' : 'ไม่มีรายการที่บันทึก')
+                . ($skipped ? ' · ข้ามรายการซ้ำ ' . count($skipped) . ' รายการ (' . implode(', ', array_unique($skipped)) . ')' : ''), $n ? 'success' : 'warning');
             redirect('txns?type=spend');
         }
     } elseif ($action === 'cancel') {
@@ -149,7 +165,7 @@ require __DIR__ . '/header.php';
       <li>วันที่ = <b>วันที่เอกสาร</b> · ที่เอกสาร = <b>เลขที่เอกสาร</b> (เช่น 3600000322) · จำนวนเงิน = จำนวนเงินที่ขอเบิกของบรรทัด <b>เดบิต</b></li>
       <li>รายการ = <b>ข้อความในรายการ</b> (เช่น ค่าตอบแทนพนักงานราชการ เดือนตุลาคม 2569) — แก้ไขได้ก่อนบันทึก</li>
       <li>หมวด/แผนงาน: ระบบแนะนำจากรายการเดิมที่ชื่อเหมือนกัน หรือชื่อค่าใช้จ่ายของหมวด — ตรวจและเลือกให้ครบ</li>
-      <li>เลขที่เอกสารและจำนวนเงินซ้ำกับที่บันทึกไว้แล้ว จะไม่ถูกเลือกให้ (กันนำเข้าซ้ำ)</li>
+      <li>กันนำเข้าซ้ำ: เลขที่เอกสารและจำนวนเงินซ้ำกับที่บันทึกไว้แล้ว (<b>บันทึกแล้ว</b>) หรือซ้ำกันเองในไฟล์ที่เลือก เช่น เลือกไฟล์เดียวกันสองครั้ง (<b>ซ้ำในไฟล์ที่เลือก</b>) จะไม่ถูกเลือกให้ และตอนบันทึกระบบข้ามรายการซ้ำให้อีกชั้น</li>
       <li>ข้อมูลอื่น (ประเภทเอกสาร วันที่ผ่านรายการ สถานะ) บันทึกไว้ในหมายเหตุ</li>
     </ul>
   </div></div></div>
@@ -210,11 +226,12 @@ require __DIR__ . '/header.php';
           <th style="min-width:260px">รายการ</th><th style="min-width:260px">หมวด</th><th style="min-width:220px">แผนงาน / งานและโครงการ</th><th class="text-end">จำนวนเงิน (บาท)</th></tr></thead>
         <tbody>
         <?php foreach ($rows as $i => $r): ?>
-          <tr class="<?= $r['dup'] ? 'table-secondary' : '' ?>">
+          <tr class="<?= $r['dup'] || !empty($r['dup_file']) ? 'table-secondary' : '' ?>">
             <td class="text-center"><input type="checkbox" class="form-check-input gi-pick" name="pick[<?= $i ?>]" value="1" <?= ($r['pick'] ?? !$r['dup']) ? 'checked' : '' ?> aria-label="เลือก"></td>
             <td class="text-nowrap"><?= $r['date'] ? h(thai_date($r['date'])) : '<span class="text-danger">-</span>' ?></td>
             <td class="text-nowrap" title="<?= h(implode("\n", array_filter([$r['file'], $r['form'], 'บัญชี: ' . $r['account'], 'แหล่งเงิน: ' . $r['source'], $r['budget_name'], $r['activity'], 'สถานะ: ' . $r['status']]))) ?>">
               <?= h($r['doc_no']) ?><?= $r['dup'] ? '<div><span class="badge text-bg-secondary">บันทึกแล้ว</span></div>' : '' ?>
+              <?= !empty($r['dup_file']) ? '<div><span class="badge text-bg-warning" title="รายการเดียวกับไฟล์ ' . h($r['dup_file']) . '">ซ้ำในไฟล์ที่เลือก</span></div>' : '' ?>
               <div class="small text-muted"><?= h($r['status']) ?></div></td>
             <td><input name="desc[<?= $i ?>]" class="form-control form-control-sm" maxlength="500" value="<?= h($r['description']) ?>">
               <div class="small text-muted text-truncate" style="max-width:360px"><?= h($r['account']) ?></div></td>
