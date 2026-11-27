@@ -246,8 +246,11 @@ function att_month(int $y, int $m): array
 /**
  * รหัสที่แสดงในแผน: null = ไม่แสดง · ['code', 'cls', 'title', 'certifiable' => ผู้ดูแลแก้เป็น ล ได้]
  * $hasWork = มีรหัสโครงการในแผนวันนั้น · $trip = ชื่อกิจกรรมไปราชการ (หรือ null)
+ * $planLeave = ลงการลาไว้ในแผนแล้ว (ลากิจ/ลาป่วย/ลาพักผ่อน) → ไม่แสดงเพิ่ม
+ * ช่อง "รับรองการมาปฏิบัติราชการ" ในไฟล์ที่เป็น "รร" / "ร*" = ไปราชการ → แสดง ร (ไม่ใช่ ล)
+ * วันที่พิมพ์รายงาน (วันที่อัปโหลดไฟล์) ยังไม่ตัดสิน — เวลาออกยังไม่มีใครลง
  */
-function att_status(?array $a, bool $hasWork, ?string $trip): ?array
+function att_status(?array $a, bool $hasWork, ?string $trip, bool $planLeave = false): ?array
 {
     if (!$a || $a['holiday']) {
         return null;
@@ -261,12 +264,20 @@ function att_status(?array $a, bool $hasWork, ?string $trip): ?array
     if ($a['override_code'] === 'ล') {
         return ['code' => 'ล', 'cls' => 'att-cert', 'title' => 'รับรองการมาปฏิบัติราชการ (เจ้าของยืนยันว่าทำใบรับรองแล้ว) · ' . $times];
     }
+    if ($planLeave) {
+        return null;                                  // ลงการลาไว้ในแผนแล้ว — ไม่ต้องแสดงซ้ำ
+    }
+    $cert = trim((string)$a['certify']);
+    if ($cert !== '' && mb_substr($cert, 0, 1) === 'ร') {   // รร / ร* = ไปราชการ (บันทึกในช่องรับรองการมาปฏิบัติราชการของไฟล์)
+        $d = trim(preg_replace('/\s*\[ผู้บันทึก:[^\]]*\]/u', '', (string)$a['detail']));
+        return ['code' => 'ร', 'cls' => 'att-trip', 'title' => ($d !== '' ? $d : 'ไปราชการ') . ($a['time_in'] || $a['time_out'] ? ' · ' . $times : '')];
+    }
     $leave = trim((string)$a['leave_code']);
     if ($leave !== '') {
         $c = mb_substr($leave, 0, 1);
         return ['code' => $c, 'cls' => $c === 'ร' ? 'att-trip' : 'att-leave', 'title' => (ATT_LEAVE_NAMES[$c] ?? 'ลา') . ' (' . $leave . ')' . ($a['detail'] ? ' ' . $a['detail'] : '')];
     }
-    if (trim((string)$a['certify']) !== '') {
+    if ($cert !== '') {
         return ['code' => 'ล', 'cls' => 'att-cert', 'title' => 'รับรองการมาปฏิบัติราชการ ' . $a['certify'] . ' · ' . $times];
     }
     if ($in && $out) {
@@ -318,12 +329,23 @@ function att_user_statuses(int $uid, string $from, string $to): array
     foreach ($st as $r) {
         $work[sprintf('%04d-%02d-%02d', $r['plan_year'], $r['plan_month'], $r['day'])] = true;
     }
+    $leaveDays = [];                                  // วันลาตามแผน (ลากิจ/ลาป่วย/ลาพักผ่อน)
+    try {
+        $st = db()->prepare('SELECT p.plan_year, p.plan_month, l.day FROM cal_plan_leave l JOIN cal_plan_people pp ON pp.id = l.person_id
+                             JOIN cal_plans p ON p.id = pp.plan_id WHERE pp.user_id = ?');
+        $st->execute([$uid]);
+        foreach ($st as $r) {
+            $leaveDays[sprintf('%04d-%02d-%02d', $r['plan_year'], $r['plan_month'], $r['day'])] = true;
+        }
+    } catch (PDOException $e) {
+        // ยังไม่ได้รัน migration 20261216 (cal_plan_leave)
+    }
     $trips = [];
     $out = [];
     foreach ($rows as $r) {
         $ym = substr($r['work_date'], 0, 7);
         $trips[$ym] ??= att_trip_map((int)substr($ym, 0, 4), (int)substr($ym, 5, 2))[$uid] ?? [];
-        $s = att_status($r, isset($work[$r['work_date']]), $trips[$ym][(int)substr($r['work_date'], 8, 2)] ?? null);
+        $s = att_status($r, isset($work[$r['work_date']]), $trips[$ym][(int)substr($r['work_date'], 8, 2)] ?? null, isset($leaveDays[$r['work_date']]));
         if ($s) {
             $out[$r['work_date']] = $s + ['row' => $r];
         }

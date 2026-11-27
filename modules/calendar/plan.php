@@ -148,11 +148,11 @@ require __DIR__ . '/header.php';
             if ($field) { $dayField[$d]++; }
             // เวลาปฏิบัติราชการ: ส / ลาเช้า / ลาบ่าย / ล / ร / ข / การลา
             // แสดงเฉพาะแถวของตนเอง (ผู้ดูแลปฏิทินดูได้ทุกแถว)
-            $as = $uid && ($mine || $isAdmin) ? att_status($att[$uid][$d] ?? null, $field, $trips[$uid][$d] ?? null) : null;
+            $leave = null;                                // การลาตามแผน (ลก / ลป / ลพ) — มีแล้วไม่แสดงการลาจากไฟล์ซ้ำ
+            foreach ($ids as $cid) { if (($codes[$cid]['kind'] ?? '') === 'leave') { $leave = $codes[$cid]; } }
+            $as = $uid && ($mine || $isAdmin) ? att_status($att[$uid][$d] ?? null, $field, $trips[$uid][$d] ?? null, $leave !== null) : null;
             if ($as && $as['code'] === 'ส') { $lateN++; }
             if ($as && $as['code'] === 'ข') { $absentN++; }
-            $leave = null;                                // การลาตามแผน (ลก / ลป / ลพ)
-            foreach ($ids as $cid) { if (($codes[$cid]['kind'] ?? '') === 'leave') { $leave = $codes[$cid]; } }
             if ($leave) { $leaveN++; }
             if ($hasDuty) { $dutyN++; }
             if ($hasGuard) { $guardN++; }
