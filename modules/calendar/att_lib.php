@@ -246,7 +246,7 @@ function att_month(int $y, int $m): array
 /**
  * รหัสที่แสดงในแผน: null = ไม่แสดง · ['code', 'cls', 'title', 'certifiable' => ผู้ดูแลแก้เป็น ล ได้]
  * $hasWork = มีรหัสโครงการในแผนวันนั้น · $trip = ชื่อกิจกรรมไปราชการ (หรือ null)
- * $planLeave = ลงการลาไว้ในแผนแล้ว (ลากิจ/ลาป่วย/ลาพักผ่อน) → ไม่แสดงเพิ่ม
+ * มีงานโครงการ ($hasWork) หรือการลา ($planLeave: ลากิจ/ลาป่วย/ลาพักผ่อน) ในแผนวันนั้น → ไม่แสดงอะไรเพิ่ม (ลงแผนไว้แล้วว่าไม่อยู่)
  * ช่อง "รับรองการมาปฏิบัติราชการ" ในไฟล์ที่เป็น "รร" / "ร*" = ไปราชการ → แสดง ร (ไม่ใช่ ล)
  * วันที่พิมพ์รายงาน (วันที่อัปโหลดไฟล์) ยังไม่ตัดสิน — เวลาออกยังไม่มีใครลง
  */
@@ -258,14 +258,14 @@ function att_status(?array $a, bool $hasWork, ?string $trip, bool $planLeave = f
     if ($a['report_at'] && $a['work_date'] >= substr($a['report_at'], 0, 10)) {
         return null;                                  // วันที่พิมพ์รายงานและหลังจากนั้น ยังไม่ตัดสิน
     }
+    if ($hasWork || $planLeave) {
+        return null;                                  // ลงแผนไว้แล้ว (งานโครงการ / การลา) = ไม่อยู่สำนักงาน — ไม่แสดงอักษรต่อท้าย
+    }
     $in = $a['time_in'] ? substr($a['time_in'], 0, 5) : null;
     $out = $a['time_out'] ? substr($a['time_out'], 0, 5) : null;
     $times = 'เข้า ' . ($in ?? '-') . ' · ออก ' . ($out ?? '-');
     if ($a['override_code'] === 'ล') {
         return ['code' => 'ล', 'cls' => 'att-cert', 'title' => 'รับรองการมาปฏิบัติราชการ (เจ้าของยืนยันว่าทำใบรับรองแล้ว) · ' . $times];
-    }
-    if ($planLeave) {
-        return null;                                  // ลงการลาไว้ในแผนแล้ว — ไม่ต้องแสดงซ้ำ
     }
     $cert = trim((string)$a['certify']);
     if ($cert !== '' && mb_substr($cert, 0, 1) === 'ร') {   // รร / ร* = ไปราชการ (บันทึกในช่องรับรองการมาปฏิบัติราชการของไฟล์)
@@ -299,9 +299,6 @@ function att_status(?array $a, bool $hasWork, ?string $trip, bool $planLeave = f
     }
     if ($in || $out) {
         return ['code' => 'ล', 'cls' => 'att-pending', 'title' => 'ลงเวลาไม่ครบ (' . $times . ') — ต้องรับรองการมาปฏิบัติราชการ', 'certifiable' => true];
-    }
-    if ($hasWork) {
-        return null;                                  // ปฏิบัติงานตามแผน (แสดงรหัสโครงการอยู่แล้ว)
     }
     if ($trip !== null) {
         return ['code' => 'ร', 'cls' => 'att-trip', 'title' => 'ไปราชการ: ' . $trip];
