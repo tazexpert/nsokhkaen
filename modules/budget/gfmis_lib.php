@@ -23,12 +23,12 @@ function gfmis_money(string $s): ?float
 }
 
 /**
- * $lines = [[cell, ...], ...] → ['doc_no', 'doc_year', 'date', 'post_date', 'status', 'doc_type', 'form', 'debits' => [...], 'errors' => [...]]
+ * $lines = [[cell, ...], ...] → ['doc_no', 'doc_year', 'ref' (การอ้างอิง), 'date', 'post_date', 'status', 'doc_type', 'form', 'debits' => [...], 'errors' => [...]]
  * debits: ['line', 'account', 'account_name', 'amount', 'source', 'budget_code', 'budget_name', 'activity', 'text']
  */
 function gfmis_parse(array $lines): array
 {
-    $r = ['doc_no' => '', 'doc_year' => '', 'date' => null, 'post_date' => null, 'status' => '', 'doc_type' => '', 'form' => '', 'debits' => [], 'errors' => []];
+    $r = ['doc_no' => '', 'doc_year' => '', 'ref' => '', 'date' => null, 'post_date' => null, 'status' => '', 'doc_type' => '', 'form' => '', 'debits' => [], 'errors' => []];
     $cells = array_values(array_map(fn($l) => array_values(array_filter(array_map(fn($c) => trim(preg_replace('/\s+/u', ' ', (string)$c)), (array)$l), fn($c) => $c !== '')), $lines));
     $value = function (array $cs, string $label): ?string {        // ช่องถัดจากหัวข้อ เช่น "เลขที่เอกสาร" → ": 2027 - 3600000324"
         foreach ($cs as $i => $c) {
@@ -61,6 +61,9 @@ function gfmis_parse(array $lines): array
         }
         if (($v = $value($cs, 'สถานะ')) !== null) {
             $r['status'] = $v;
+        }
+        if (($v = $value($cs, 'การอ้างอิง')) !== null) {          // เลขอ้างอิง เช่น P700000005 = "ที่เอกสาร" ในระบบงบประมาณ
+            $r['ref'] = $v;
         }
         if (($v = $value($cs, 'ประเภทเอกสาร')) !== null) {
             $r['doc_type'] = $v;

@@ -2,8 +2,8 @@
 /**
  * นำเข้ารายการเบิกจ่ายจากใบเบิก GFMIS (PDF "รายงานการขอเบิกเงินคงคลัง" เช่น ขบ02) — ผู้จัดทำงบประมาณ
  *   1) เลือกไฟล์ PDF (หลายไฟล์ได้) → เบราว์เซอร์อ่านข้อความด้วย pdf.js จัดเป็นบรรทัด → ส่งมาแยกข้อมูล (gfmis_lib.php)
- *   2) ตรวจสอบ: วันที่ (วันที่เอกสาร) · ที่เอกสาร (เลขที่เอกสาร GFMIS) · รายการ (ข้อความในรายการ) · หมวด/แผนงานที่แนะนำ · จำนวนเงิน
- *      เลขที่เอกสาร + จำนวนเงินซ้ำกับที่บันทึกแล้ว = ไม่เลือกให้ (กันนำเข้าซ้ำ)
+ *   2) ตรวจสอบ: วันที่ (วันที่เอกสาร) · ที่เอกสาร (การอ้างอิง เช่น P700000005) · รายการ (ข้อความในรายการ) · หมวด/แผนงานที่แนะนำ · จำนวนเงิน
+ *      ที่เอกสาร + จำนวนเงินซ้ำกับที่บันทึกแล้ว / ซ้ำกันเองในไฟล์ที่เลือก = ไม่เลือกให้ (กันนำเข้าซ้ำ)
  *   3) บันทึกเป็นรายการเบิกจ่ายงบประมาณ
  */
 require_once __DIR__ . '/bootstrap.php';
@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $lastWork[bud_source_key($r)] = [bud_txn_plan($r), (int)$r['work_id']];
             }
             $dup = $pdo->prepare("SELECT id FROM bud_txns WHERE txn_type = 'spend' AND doc_no = ? AND amount = ? LIMIT 1");
-            $seen = [];                                       // ซ้ำกันเองในไฟล์ที่เลือก: เลขที่เอกสาร + บรรทัด + จำนวนเงิน → ไฟล์แรกที่พบ
+            $seen = [];                                       // ซ้ำกันเองในไฟล์ที่เลือก: เลขที่เอกสาร GFMIS + บรรทัด + จำนวนเงิน → ไฟล์แรกที่พบ
             foreach (array_slice($files, 0, 100) as $f) {
                 $name = mb_substr((string)($f['name'] ?? ''), 0, 200);
                 $p = gfmis_parse(is_array($f['lines'] ?? null) ? $f['lines'] : []);
@@ -47,12 +47,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (!$sug['plan_id'] && count($plans) === 1) {
                         $sug['plan_id'] = (int)array_key_first($plans);
                     }
-                    $dup->execute([$p['doc_no'], $d['amount']]);
+                    $docNo = $p['ref'] !== '' ? $p['ref'] : $p['doc_no'];     // ที่เอกสาร = การอ้างอิง (เช่น P700000005) · ไม่มี = เลขที่เอกสาร GFMIS
+                    $dup->execute([$docNo, $d['amount']]);
                     $isDup = (bool)$dup->fetchColumn();
                     $fk = $p['doc_year'] . '-' . $p['doc_no'] . '|' . $d['line'] . '|' . $d['amount'];
                     $dupFile = $seen[$fk] ?? null;            // ชื่อไฟล์แรกที่มีรายการเดียวกัน
                     $seen[$fk] ??= $name;
-                    $rows[] = ['file' => $name, 'doc_no' => $p['doc_no'], 'doc_year' => $p['doc_year'], 'date' => $p['date'], 'post_date' => $p['post_date'],
+                    $rows[] = ['file' => $name, 'doc_no' => $docNo, 'gfmis_no' => $p['doc_no'], 'doc_year' => $p['doc_year'], 'date' => $p['date'], 'post_date' => $p['post_date'],
                                'status' => $p['status'], 'form' => $p['form'], 'account' => $d['account'] . ' ' . $d['account_name'],
                                'source' => $d['source'], 'budget_name' => $d['budget_name'], 'activity' => $d['activity'],
                                'description' => $desc, 'amount' => $d['amount'], 'src' => $sug['src'], 'how' => $sug['how'],
@@ -101,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 continue;
             }
             $done[$dk] = true;
-            $note = 'GFMIS ' . trim(explode(' - ', $r['form'])[0]) . ' เลขที่ ' . $r['doc_year'] . '-' . $r['doc_no']
+            $note = 'GFMIS ' . trim(explode(' - ', $r['form'])[0]) . ' เลขที่ ' . $r['doc_year'] . '-' . $r['gfmis_no']
                 . ($r['post_date'] ? ' · ผ่านรายการ ' . thai_date($r['post_date']) : '') . ($r['status'] ? ' · ' . $r['status'] : '');
             $ins->execute(['spend', $r['date'], bud_fy($r['date']), $r['doc_no'], mb_substr($desc, 0, 500), '', $ids[0], $ids[1], $plan, $work,
                            round((float)$r['amount'], 2), mb_substr($note, 0, 500), (int)$me['id']]);
@@ -162,11 +163,11 @@ require __DIR__ . '/header.php';
   <div class="col-lg-6 reveal-item" style="--d:70ms"><div class="card"><div class="card-body small">
     <strong>รูปแบบไฟล์</strong> — "รายงานการขอเบิกเงินคงคลัง" ที่พิมพ์จาก GFMIS เป็น PDF (เช่น ขบ02 - ขอเบิกเงินงบประมาณที่ไม่อ้างใบสั่งซื้อฯ)
     <ul class="mt-2 mb-0">
-      <li>วันที่ = <b>วันที่เอกสาร</b> · ที่เอกสาร = <b>เลขที่เอกสาร</b> (เช่น 3600000322) · จำนวนเงิน = จำนวนเงินที่ขอเบิกของบรรทัด <b>เดบิต</b></li>
+      <li>วันที่ = <b>วันที่เอกสาร</b> · ที่เอกสาร = <b>การอ้างอิง</b> (เช่น P700000005) · จำนวนเงิน = จำนวนเงินที่ขอเบิกของบรรทัด <b>เดบิต</b></li>
       <li>รายการ = <b>ข้อความในรายการ</b> (เช่น ค่าตอบแทนพนักงานราชการ เดือนตุลาคม 2569) — แก้ไขได้ก่อนบันทึก</li>
       <li>หมวด/แผนงาน: ระบบแนะนำจากรายการเดิมที่ชื่อเหมือนกัน หรือชื่อค่าใช้จ่ายของหมวด — ตรวจและเลือกให้ครบ</li>
-      <li>กันนำเข้าซ้ำ: เลขที่เอกสารและจำนวนเงินซ้ำกับที่บันทึกไว้แล้ว (<b>บันทึกแล้ว</b>) หรือซ้ำกันเองในไฟล์ที่เลือก เช่น เลือกไฟล์เดียวกันสองครั้ง (<b>ซ้ำในไฟล์ที่เลือก</b>) จะไม่ถูกเลือกให้ และตอนบันทึกระบบข้ามรายการซ้ำให้อีกชั้น</li>
-      <li>ข้อมูลอื่น (ประเภทเอกสาร วันที่ผ่านรายการ สถานะ) บันทึกไว้ในหมายเหตุ</li>
+      <li>กันนำเข้าซ้ำ: ที่เอกสาร (การอ้างอิง) และจำนวนเงินซ้ำกับที่บันทึกไว้แล้ว (<b>บันทึกแล้ว</b>) หรือซ้ำกันเองในไฟล์ที่เลือก เช่น เลือกไฟล์เดียวกันสองครั้ง (<b>ซ้ำในไฟล์ที่เลือก</b>) จะไม่ถูกเลือกให้ และตอนบันทึกระบบข้ามรายการซ้ำให้อีกชั้น</li>
+      <li>ข้อมูลอื่น (เลขที่เอกสาร GFMIS วันที่ผ่านรายการ สถานะ) บันทึกไว้ในหมายเหตุ</li>
     </ul>
   </div></div></div>
 </div>
@@ -219,7 +220,7 @@ require __DIR__ . '/header.php';
   <?= csrf_field() ?>
   <div class="card mb-3">
     <div class="card-header d-flex flex-wrap align-items-center gap-2"><strong><i class="bi bi-list-check"></i> ตรวจสอบรายการเบิกจ่าย (<?= count($rows) ?> รายการ)</strong>
-      <span class="small text-muted">เลือกหมวด/แผนงานให้ครบ แก้ "รายการ" ได้ — ชี้ที่เลขที่เอกสารเพื่อดูรายละเอียดจากใบเบิก</span></div>
+      <span class="small text-muted">เลือกหมวด/แผนงานให้ครบ แก้ "รายการ" ได้ — ชี้ที่ที่เอกสารเพื่อดูรายละเอียดจากใบเบิก</span></div>
     <div class="table-responsive">
       <table class="table table-sm align-middle mb-0">
         <thead><tr><th class="text-center"><input type="checkbox" class="form-check-input" id="giAll" checked aria-label="เลือกทั้งหมด"></th><th>วันที่</th><th>ที่เอกสาร</th>
@@ -232,7 +233,7 @@ require __DIR__ . '/header.php';
             <td class="text-nowrap" title="<?= h(implode("\n", array_filter([$r['file'], $r['form'], 'บัญชี: ' . $r['account'], 'แหล่งเงิน: ' . $r['source'], $r['budget_name'], $r['activity'], 'สถานะ: ' . $r['status']]))) ?>">
               <?= h($r['doc_no']) ?><?= $r['dup'] ? '<div><span class="badge text-bg-secondary">บันทึกแล้ว</span></div>' : '' ?>
               <?= !empty($r['dup_file']) ? '<div><span class="badge text-bg-warning" title="รายการเดียวกับไฟล์ ' . h($r['dup_file']) . '">ซ้ำในไฟล์ที่เลือก</span></div>' : '' ?>
-              <div class="small text-muted"><?= h($r['status']) ?></div></td>
+              <div class="small text-muted">GFMIS <?= h($r['gfmis_no'] ?? '') ?> · <?= h($r['status']) ?></div></td>
             <td><input name="desc[<?= $i ?>]" class="form-control form-control-sm" maxlength="500" value="<?= h($r['description']) ?>">
               <div class="small text-muted text-truncate" style="max-width:360px"><?= h($r['account']) ?></div></td>
             <td><select name="src[<?= $i ?>]" class="form-select form-select-sm<?= $r['src'] ? '' : ' is-invalid' ?>"><option value="">— เลือกหมวด —</option>
