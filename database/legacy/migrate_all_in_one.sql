@@ -736,11 +736,6 @@ CREATE TABLE IF NOT EXISTS cal_plan_guard (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- วันหยุดราชการ / วันหยุดพิเศษ (นอกจากเสาร์-อาทิตย์) — ผู้ดูแลปฏิทินกำหนด
-CREATE TABLE อย่างเดียว
---   แสดงเป็นวันหยุด (สีเทา + ชื่อวันหยุด) ในปฏิทินรายเดือน ตารางกิจกรรม และแผนการปฏิบัติงาน
---   mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261217_cal_holidays.sql
--- ============================================================================
-
 CREATE TABLE IF NOT EXISTS cal_holidays (
   holiday_date  DATE         NOT NULL PRIMARY KEY,
   name          VARCHAR(150) NOT NULL,
@@ -750,11 +745,6 @@ CREATE TABLE IF NOT EXISTS cal_holidays (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- การลาในแผนการปฏิบัติงาน (ลก = ลากิจ · ลป = ลาป่วย · ลพ = ลาพักผ่อน) — ผู้ใช้งานลงของตนเองได้
-CREATE TABLE อย่างเดียว
---   รหัสในแผน: ลก = ลากิจ · ลป = ลาป่วย · ลพ = ลาพักผ่อน (1 คน 1 วัน ลาได้ 1 ประเภท)
---   mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261216_cal_plan_leave.sql
--- ============================================================================
-
 CREATE TABLE IF NOT EXISTS cal_plan_leave (
   person_id   INT UNSIGNED NOT NULL,
   day         TINYINT UNSIGNED NOT NULL,
@@ -1006,13 +996,6 @@ CREATE TABLE IF NOT EXISTS cal_rota_turn_officials (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- เวรศาลากลางจากคำสั่งจังหวัด (นำเข้า PDF) — วันที่ × ช่วง (กลางวัน/กลางคืน) × หน้าที่ (ผู้ปฏิบัติหน้าที่เวร/ผู้ตรวจเวร) · เดือนที่มีข้อมูล = ใช้แทนเวรศาลากลางจากแผน
-CREATE TABLE อย่างเดียว
---   1 แถว = บุคลากร 1 คน ในเวร 1 ช่วง (วันที่ · กลางวัน/กลางคืน · ผู้ปฏิบัติหน้าที่เวร/ผู้ตรวจเวร)
---   ปฏิทิน: กิจกรรม kind 'guard' ต่อ วันที่ × ช่วง × หน้าที่ เช่น "เวรศาลากลาง-กลางคืน · ผู้ตรวจเวร"
---   เดือนที่มีข้อมูลในตารางนี้ = ใช้แทนเวรศาลากลางจากแผนการปฏิบัติงาน
---   mysql -u root -p --default-character-set=utf8mb4 nsokhkaen < database/migrations/20261215_cal_guard_shifts.sql
--- ============================================================================
-
 CREATE TABLE IF NOT EXISTS cal_guard_shifts (
   id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   guard_date  DATE         NOT NULL,

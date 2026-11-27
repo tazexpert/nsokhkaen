@@ -70,6 +70,7 @@ $qs = fn(array $p) => '?' . http_build_query(array_filter($p + ['type' => $type,
 $pageTitle = BUD_TYPE_PAGES[$type];
 $active = $type;
 $pageActions = (bud_can('editor') ? '<a href="txn_form?type=' . $type . '" class="btn btn-' . ($type === 'spend' ? 'warning' : 'primary') . '"><i class="bi bi-plus-lg"></i> บันทึก' . BUD_TYPE_PAGES[$type] . '</a>' : '')
+    . (bud_can('editor') && $type === 'spend' ? '<a href="spend_import" class="btn btn-outline-warning"><i class="bi bi-file-earmark-pdf"></i> นำเข้าจากใบเบิก (GFMIS)</a>' : '')
     . '<a href="' . h($qs(['export' => 'csv'])) . '" class="btn btn-outline-success"><i class="bi bi-filetype-csv"></i> ส่งออก CSV</a>';
 require __DIR__ . '/header.php';
 ?>
