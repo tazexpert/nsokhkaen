@@ -234,13 +234,14 @@ require __DIR__ . '/header.php';
     <div class="table-responsive">
       <table class="table table-sm align-middle mb-0">
         <thead><tr><th>ชื่อในไฟล์</th><th style="min-width:240px">บัญชีผู้ใช้</th><th class="text-center">วันทำงาน</th><th class="text-center">ครบ</th>
-          <th class="text-center">สาย</th><th class="text-center">ลงไม่ครบ</th><th class="text-center">ไม่ลงเวลา</th><th class="text-center">ลา/รับรอง</th></tr></thead>
+          <th class="text-center">สาย</th><th class="text-center">ลงไม่ครบ</th><th class="text-center">ไม่ลงเวลา</th><th class="text-center">ไปราชการ</th><th class="text-center">ลา/รับรอง</th></tr></thead>
         <tbody>
         <?php foreach ($res['people'] as $i => $p):
           $rows = array_filter($p['rows'], $judge);
-          $cnt = ['full' => 0, 'late' => 0, 'half' => 0, 'none' => 0, 'leave' => 0];
+          $cnt = ['full' => 0, 'late' => 0, 'half' => 0, 'none' => 0, 'trip' => 0, 'leave' => 0];
           foreach ($rows as $r) {
-              if ($r['leave_code'] !== '' || $r['certify'] !== '') { $cnt['leave']++; }
+              if (mb_substr(trim($r['certify']), 0, 1) === 'ร') { $cnt['trip']++; }           // รร / ร* = ไปราชการ (ช่องรับรองฯ ในไฟล์)
+              elseif ($r['leave_code'] !== '' || $r['certify'] !== '') { $cnt['leave']++; }
               elseif ($r['time_in'] && $r['time_out']) { $cnt['full']++; if ($r['late'] !== '') { $cnt['late']++; } }
               elseif ($r['time_in'] || $r['time_out']) { $cnt['half']++; }
               else { $cnt['none']++; }
@@ -255,6 +256,7 @@ require __DIR__ . '/header.php';
             <td class="text-center<?= $cnt['late'] ? ' text-warning fw-semibold' : '' ?>"><?= $cnt['late'] ?></td>
             <td class="text-center<?= $cnt['half'] ? ' text-danger fw-semibold' : '' ?>"><?= $cnt['half'] ?></td>
             <td class="text-center<?= $cnt['none'] ? ' fw-semibold' : '' ?>"><?= $cnt['none'] ?></td>
+            <td class="text-center"><?= $cnt['trip'] ?></td>
             <td class="text-center"><?= $cnt['leave'] ?></td>
           </tr>
         <?php endforeach; ?>
