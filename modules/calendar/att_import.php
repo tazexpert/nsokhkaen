@@ -185,7 +185,7 @@ require __DIR__ . '/header.php';
           <tr><td class="text-nowrap"><span class="att-chip">สรง</span></td><td>ไม่ลงเวลา แต่มีรหัสโครงการในแผน</td></tr>
           <tr><td><span class="att-chip att-trip">ร</span></td><td>ไม่ลงเวลา มีกิจกรรมในปฏิทินที่สถานที่ไม่ใช่ Zoom / ศาลากลางจังหวัดขอนแก่น / ห้องประชุมสำนักงานสถิติจังหวัดขอนแก่น</td></tr>
           <tr><td><span class="att-chip att-absent">ข</span></td><td>ขาดราชการ — แจ้งเตือนเจ้าตัวให้ทำใบรับรอง แล้ว<b>เจ้าของ</b>เปลี่ยนเป็น <span class="att-chip att-cert">ล</span> รับรองการมาปฏิบัติราชการ เอง (ในปฏิทิน/แผนของตน)</td></tr>
-          <tr><td><span class="att-chip att-leave">ป</span></td><td>การลาตามไฟล์ (ก ป พ ...)</td></tr>
+          <tr><td class="text-nowrap"><span class="badge" style="background:#db2777">ลาป่วย</span></td><td>การลาตามไฟล์ แสดงชื่อเต็มเหมือนการลาในแผน (ลากิจ / ลาป่วย / ลาพักผ่อน …) — ลงการลาในแผนไว้แล้วไม่แสดงซ้ำ</td></tr>
         </table>
       </div>
     </div>

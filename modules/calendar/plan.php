@@ -166,6 +166,7 @@ require __DIR__ . '/header.php';
               <?php if ($hasDuty): ?><span class="pc-duty">เวร</span><?php endif; ?>
               <?php if ($hasGuard): ?><span class="pc-guard">*</span><?php endif; ?>
               <?php if ($as): if (!empty($as['certifiable']) && $mine): ?><button type="button" class="att-chip <?= $as['cls'] ?>" data-att-certify data-date="<?= $date ?>" data-kind="<?= $as['cls'] === 'att-pending' ? 'ลงเวลาไม่ครบ' : 'ขาดราชการ (ไม่ได้ลงเวลา)' ?>"><?= h($as['code']) ?></button>
+              <?php elseif ($as['cls'] === 'att-leave'): ?><span class="pc-leave" style="--lc:<?= h($as['color'] ?? '#64748b') ?>"><?= h($as['code']) ?></span>
               <?php else: ?><span class="att-chip <?= $as['cls'] ?>"><?= h($as['code']) ?></span><?php endif; endif; ?>
             </td>
           <?php endfor; ?>
@@ -205,7 +206,7 @@ require __DIR__ . '/header.php';
       <span class="me-2 text-nowrap"><span class="att-chip att-cert">ล</span> รับรองการมาปฏิบัติราชการ</span>
       <span class="me-2 text-nowrap"><span class="att-chip att-trip">ร</span> ไปราชการ</span>
       <span class="me-2 text-nowrap"><span class="att-chip att-absent">ข</span> ขาดราชการ (เจ้าของคลิกเพื่อรับรอง เมื่อทำใบรับรองแล้ว)</span>
-      <span class="me-2 text-nowrap"><span class="att-chip att-leave">ป</span> การลาตามไฟล์</span></div>
+      <span class="me-2 text-nowrap">การลาตามไฟล์แสดงชื่อเต็มเหมือนการลาในแผน (เช่น <span class="pc-leave" style="--lc:#db2777">ลาป่วย</span>)</span></div>
     <?php if (!empty($plan['note'])): ?><div class="mt-2"><b>หมายเหตุ:</b> <?= nl2br(h($plan['note'])) ?></div><?php endif; ?>
   </div>
 </div>
